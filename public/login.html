@@ -22,7 +22,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 /* Logo */
 .logo-wrap{margin-bottom:2rem;text-align:center;}
-.logo{height:44px;background:#fff;border-radius:8px;padding:6px 18px;object-fit:contain;}
+.logo{display:block;width:min(292px,78vw);height:auto;object-fit:contain;margin:0 auto;}
 .logo-sub{color:rgba(255,255,255,.45);font-size:13px;margin-top:10px;letter-spacing:.01em;}
 
 /* Card */
@@ -78,7 +78,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 <body>
 
 <div class="logo-wrap">
-  <img class="logo" src="ci-logo-negative.png" alt="Cloud Inventory" onerror="this.src='ci-logo.png'"/>
+  <img class="logo" src="/ci-logo-negative.png" alt="Cloud Inventory"/>
   <div class="logo-sub">ROI Business Case Builder</div>
 </div>
 
@@ -153,13 +153,24 @@ async function handleLogin(e) {
   btn.textContent = 'Signing in';
 
   try {
-    const resp = await fetch('/api/auth/login/cookie', {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    const resp = await fetch('/api/auth/login', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      credentials: 'same-origin',
+      signal: controller.signal,
       body: JSON.stringify({ username, password })
     });
+    clearTimeout(timeoutId);
 
-    const data = await resp.json();
+    const responseText = await resp.text();
+    let data = {};
+    try { data = responseText ? JSON.parse(responseText) : {}; }
+    catch (_) {
+      throw new Error(`The server returned an unexpected response (HTTP ${resp.status}).`);
+    }
 
     if (!resp.ok) {
       btn.disabled = false;
@@ -194,7 +205,10 @@ async function handleLogin(e) {
     btn.classList.remove('loading');
     btn.textContent = 'Sign in';
     document.getElementById('errorBanner').classList.add('show');
-    document.getElementById('errorMsg').textContent = 'Network error. Check your connection and try again.';
+    document.getElementById('errorMsg').textContent =
+      err && err.name === 'AbortError'
+        ? 'The sign-in request timed out. Please try again.'
+        : (err && err.message ? err.message : 'Unable to contact the sign-in service. Please try again.');
   }
 }
 

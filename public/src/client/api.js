@@ -44,11 +44,7 @@
   /* ── logout ── */
   async function logout() {
     try {
-      /* Call both endpoints — cookie endpoint clears the httpOnly cookie server-side */
-      await Promise.allSettled([
-        apiFetch('/api/auth/logout',        { method: 'POST' }),
-        apiFetch('/api/auth/logout/cookie', { method: 'POST' })
-      ]);
+      await apiFetch('/api/auth/logout', { method: 'POST' });
     } catch(e) {}
     sessionStorage.removeItem('ci_token');
     sessionStorage.removeItem('ci_user');

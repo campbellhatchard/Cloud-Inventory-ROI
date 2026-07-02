@@ -24,6 +24,17 @@ const router = express.Router();
 const BCRYPT_ROUNDS      = parseInt(process.env.BCRYPT_ROUNDS || '12', 10);
 const MAX_FAILED_LOGINS  = 5;
 const LOCKOUT_MINUTES    = 15;
+const PROD               = process.env.NODE_ENV === 'production';
+
+function setAuthCookie(res, token, expiresAt) {
+  res.cookie('ci_auth', token, {
+    httpOnly: true,
+    secure: PROD,
+    sameSite: 'strict',
+    expires: expiresAt,
+    path: '/'
+  });
+}
 
 /* ── Rate limiter for all auth endpoints ── */
 const authLimiter = rateLimit({
@@ -145,6 +156,9 @@ router.post('/login', async (req, res) => {
       ipAddress: req.ip
     });
 
+    setAuthCookie(res, token, expiresAt);
+    res.set('Cache-Control', 'no-store');
+
     res.json({
       token,
       expiresAt,
@@ -173,10 +187,12 @@ router.post('/logout', requireAuth, async (req, res) => {
 
     await log({ userId: req.user.id, action: ACTIONS.USER_LOGOUT, ipAddress: req.ip });
 
+    res.clearCookie('ci_auth', { path: '/', secure: PROD, sameSite: 'strict' });
     res.status(204).send();
   } catch (err) {
     console.error('Logout error:', err.message);
     /* Even if DB delete fails, return success — client discards token */
+    res.clearCookie('ci_auth', { path: '/', secure: PROD, sameSite: 'strict' });
     res.status(204).send();
   }
 });

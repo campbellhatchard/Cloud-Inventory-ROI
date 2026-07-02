@@ -62,35 +62,36 @@ async function ensureBootstrapAdmin(client) {
     .compare(password, existing.password_hash)
     .catch(() => false);
 
-  if (configuredPasswordAlreadySet) {
-    console.log(`✅ Bootstrap Admin present: ${existing.username}`);
-    return;
-  }
+  if (existing.first_login) {
+    /* Before the first successful password change, render.yaml is the source
+       of truth for the bootstrap credential. This also clears an accidental
+       lockout caused during initial deployment testing. */
+    const passwordHash = configuredPasswordAlreadySet
+      ? existing.password_hash
+      : await bcrypt.hash(password, rounds);
 
-  /* Upgrade only the legacy package default. Never overwrite a password
-     that an administrator has already changed. */
-  const usesLegacyDefault = await bcrypt
-    .compare('CI2026', existing.password_hash)
-    .catch(() => false);
-
-  if (usesLegacyDefault) {
-    const passwordHash = await bcrypt.hash(password, rounds);
     await client.query(
       `UPDATE users
        SET password_hash = $1,
+           role = 'admin',
            first_login = TRUE,
+           is_active = TRUE,
            failed_login_count = 0,
            locked_until = NULL,
            updated_at = NOW()
        WHERE id = $2`,
       [passwordHash, existing.id]
     );
-    console.log(`✅ Legacy default Admin password upgraded for: ${existing.username}`);
-  } else {
-    console.log(
-      `✅ Bootstrap Admin present with a user-managed password: ${existing.username}`
-    );
+
+    console.log(`✅ Bootstrap Admin synchronized and unlocked: ${username}`);
+    return;
   }
+
+  /* Never overwrite a password after the administrator has completed the
+     mandatory first-login password change. */
+  console.log(
+    `✅ Bootstrap Admin present with a user-managed password: ${existing.username}`
+  );
 }
 
 async function runMigrations() {

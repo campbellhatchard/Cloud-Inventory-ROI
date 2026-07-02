@@ -246,7 +246,7 @@ app.get('/health', async (req, res) => {
     }
     res.json({
       status: 'ok',
-      version: '2.0.0',
+      version: '2.0.1',
       database: process.env.DATABASE_URL ? 'connected' : 'not-configured',
       phase: 'production'
     });
@@ -298,79 +298,7 @@ app.post('/api/enhance', requireAuth, async (req, res) => {
   }
 });
 
-/* ── ④ Cookie-based login endpoint ──────────────────────────────────
-   Supplements the existing /api/auth/login (which returns JSON with
-   the token). This endpoint does the same thing but also sets an
-   httpOnly, Secure, SameSite=Strict cookie — making the token
-   inaccessible to JavaScript (XSS protection).
-
-   The client-side code uses sessionStorage as primary storage and
-   the cookie as a secondary layer. The requireAuth middleware in
-   src/middleware/auth.js reads from the Authorization header first,
-   then falls back to the ci_auth cookie for future use.
-   ────────────────────────────────────────────────────────────────── */
-const { signToken, createSession } = require('./src/middleware/auth');
-const bcrypt = require('bcrypt');
-
-app.post('/api/auth/login/cookie', async (req, res) => {
-  /* Identical to POST /api/auth/login but also sets a cookie */
-  const { username, password } = req.body || {};
-  if (!username || !password) return res.status(400).json({ error: 'Username and password required.' });
-
-  try {
-    const { rows } = await db().query(
-      `SELECT id, username, email, password_hash, role, first_login,
-              is_active, failed_login_count, locked_until
-       FROM users WHERE LOWER(username) = LOWER($1)`,
-      [String(username).trim()]
-    );
-
-    const dummyHash = '$2b$12$invalidhashthatisneverusedforcomparison0000000000000';
-    if (!rows.length) { await bcrypt.compare(password, dummyHash).catch(()=>{}); return res.status(401).json({ error: 'Invalid username or password.' }); }
-
-    const user = rows[0];
-    if (!user.is_active) return res.status(403).json({ error: 'Account has been deactivated.' });
-    if (user.locked_until && new Date(user.locked_until) > new Date()) return res.status(423).json({ error: 'Account temporarily locked.', lockedUntil: user.locked_until });
-
-    const match = await bcrypt.compare(String(password), user.password_hash);
-    if (!match) {
-      const newCount = user.failed_login_count + 1;
-      const lock = newCount >= 5 ? new Date(Date.now() + 15 * 60 * 1000).toISOString() : null;
-      await db().query('UPDATE users SET failed_login_count = $1, locked_until = $2 WHERE id = $3', [newCount, lock, user.id]);
-      return res.status(401).json({ error: 'Invalid username or password.' });
-    }
-
-    await db().query('UPDATE users SET failed_login_count = 0, locked_until = NULL, last_login_at = NOW() WHERE id = $1', [user.id]);
-
-    const { token, expiresAt } = signToken(user);
-    await createSession(user.id, token, expiresAt, req);
-
-    /* Set httpOnly cookie — immune to XSS */
-    res.cookie('ci_auth', token, {
-      httpOnly: true,
-      secure:   PROD,               // HTTPS only in production
-      sameSite: 'strict',
-      expires:  expiresAt,
-      path:     '/'
-    });
-
-    res.json({
-      token,                         // also returned for sessionStorage
-      expiresAt,
-      user: { id: user.id, username: user.username, email: user.email, role: user.role, firstLogin: user.first_login }
-    });
-
-  } catch(err) {
-    console.error('Cookie login error:', err.message);
-    res.status(500).json({ error: 'Login failed. Please try again.' });
-  }
-});
-
-/* Logout — clear cookie in addition to deleting session */
-app.post('/api/auth/logout/cookie', requireAuth, async (req, res) => {
-  res.clearCookie('ci_auth', { path: '/', secure: PROD, sameSite: 'strict' });
-  res.status(204).send();
-});
+/* Authentication is handled by src/routes/auth.js. */
 
 /* ── Discovery sessions ─────────────────────────────────────────── */
 
