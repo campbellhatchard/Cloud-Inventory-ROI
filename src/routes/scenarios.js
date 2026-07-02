@@ -1,0 +1,407 @@
+/* ═══════════════════════════════════════════════════════════════════
+   src/routes/scenarios.js  —  Scenario persistence API
+
+   GET    /api/scenarios               — list user's scenarios (current versions)
+   POST   /api/scenarios               — save (new or new version)
+   GET    /api/scenarios/:id           — single scenario
+   GET    /api/scenarios/:id/versions  — all versions for a base_id
+   PATCH  /api/scenarios/:id/share     — share with other users
+   DELETE /api/scenarios/:id           — soft-delete one version
+   DELETE /api/scenarios/group/:baseId — soft-delete all versions of a group
+
+   Admin: GET /api/scenarios?all=true returns all users' scenarios.
+   ═══════════════════════════════════════════════════════════════════ */
+
+const express   = require('express');
+const { query, transaction } = require('../db');
+const { log, ACTIONS } = require('../audit');
+const { requireAuth } = require('../middleware/auth');
+
+const router = express.Router();
+router.use(requireAuth);
+
+/* ── Shared columns (never return full JSONB on list to keep payload small) ── */
+const LIST_COLS = `
+  s.id, s.base_id, s.version, s.is_current, s.name, s.company,
+  s.owner_id, s.shared_with, s.industry, s.deal_stage, s.exec_audience,
+  s.version_note, s.created_at, s.updated_at,
+  (s.data->>'annualBenefit')::numeric AS annual_benefit,
+  (s.data->>'roi')::numeric           AS roi,
+  (s.data->>'npv3')::numeric          AS npv3,
+  (s.data->>'npv5')::numeric          AS npv5,
+  (s.data->>'payback')::numeric       AS payback,
+  u.username AS owner_username
+`;
+
+/* ═══════════════════════════════════════
+   GET /api/scenarios
+   ═══════════════════════════════════════ */
+router.get('/', async (req, res) => {
+  try {
+    const isAdmin  = req.user.role === 'admin';
+    const showAll  = isAdmin && req.query.all === 'true';
+    const baseId   = req.query.base_id;
+
+    let sql, params;
+
+    if (baseId) {
+      /* All versions for one base_id */
+      sql = `
+        SELECT ${LIST_COLS}
+        FROM scenarios s
+        JOIN users u ON u.id = s.owner_id
+        WHERE s.base_id = $1
+          AND s.deleted_at IS NULL
+          AND (s.owner_id = $2 OR $2 = ANY(s.shared_with) OR $3)
+        ORDER BY s.version DESC`;
+      params = [baseId, req.user.id, isAdmin];
+
+    } else if (showAll) {
+      /* Admin: all current scenarios across all users */
+      sql = `
+        SELECT ${LIST_COLS}
+        FROM scenarios s
+        JOIN users u ON u.id = s.owner_id
+        WHERE s.is_current = TRUE AND s.deleted_at IS NULL
+        ORDER BY s.updated_at DESC`;
+      params = [];
+
+    } else {
+      /* Normal: user's own + shared — current versions only */
+      sql = `
+        SELECT ${LIST_COLS}
+        FROM scenarios s
+        JOIN users u ON u.id = s.owner_id
+        WHERE s.is_current = TRUE
+          AND s.deleted_at IS NULL
+          AND (s.owner_id = $1 OR $1 = ANY(s.shared_with))
+        ORDER BY s.updated_at DESC`;
+      params = [req.user.id];
+    }
+
+    const { rows } = await query(sql, params);
+    res.json(rows);
+
+  } catch (err) {
+    console.error('List scenarios error:', err.message);
+    res.status(500).json({ error: 'Failed to load scenarios.' });
+  }
+});
+
+/* ═══════════════════════════════════════
+   GET /api/scenarios/:id
+   ═══════════════════════════════════════ */
+router.get('/:id', async (req, res) => {
+  try {
+    const { rows } = await query(
+      `SELECT s.*, u.username AS owner_username
+       FROM scenarios s JOIN users u ON u.id = s.owner_id
+       WHERE s.id = $1 AND s.deleted_at IS NULL
+         AND (s.owner_id = $2 OR $2 = ANY(s.shared_with) OR $3)`,
+      [req.params.id, req.user.id, req.user.role === 'admin']
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Scenario not found.' });
+
+    await log({
+      userId: req.user.id, action: ACTIONS.SCENARIO_LOADED,
+      entityType: 'scenario', entityId: req.params.id,
+      detail: { name: rows[0].name, company: rows[0].company }, ipAddress: req.ip
+    });
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Get scenario error:', err.message);
+    res.status(500).json({ error: 'Failed to load scenario.' });
+  }
+});
+
+/* ═══════════════════════════════════════
+   GET /api/scenarios/:id/versions
+   All versions of the same base_id
+   ═══════════════════════════════════════ */
+router.get('/:id/versions', async (req, res) => {
+  try {
+    /* First get the base_id */
+    const { rows: base } = await query(
+      'SELECT base_id, owner_id FROM scenarios WHERE id = $1 AND deleted_at IS NULL',
+      [req.params.id]
+    );
+    if (!base.length) return res.status(404).json({ error: 'Scenario not found.' });
+
+    const isOwnerOrAdmin = base[0].owner_id === req.user.id || req.user.role === 'admin';
+    if (!isOwnerOrAdmin) return res.status(403).json({ error: 'Access denied.' });
+
+    const { rows } = await query(
+      `SELECT ${LIST_COLS}
+       FROM scenarios s JOIN users u ON u.id = s.owner_id
+       WHERE s.base_id = $1 AND s.deleted_at IS NULL
+       ORDER BY s.version DESC`,
+      [base[0].base_id]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('Get versions error:', err.message);
+    res.status(500).json({ error: 'Failed to load versions.' });
+  }
+});
+
+/* ═══════════════════════════════════════
+   POST /api/scenarios
+   Save a scenario — creates a new version if base_id exists,
+   otherwise creates a new scenario group.
+   Body: { name, company, data, industry?, dealStage?, execAudience?,
+           versionNote?, baseId? }
+   ═══════════════════════════════════════ */
+router.post('/', async (req, res) => {
+  const { name, company, data, industry, dealStage, execAudience, versionNote, baseId } = req.body || {};
+
+  /* Server-side required field validation (mirrors client-side) */
+  if (!name || !name.trim() || name.trim() === 'Unnamed scenario') {
+    return res.status(400).json({ error: 'Scenario name is required.' });
+  }
+  if (!company || !company.trim() || company.trim() === 'Prospect') {
+    return res.status(400).json({ error: 'Company name is required.' });
+  }
+  if (!data || typeof data !== 'object') {
+    return res.status(400).json({ error: 'Scenario data is required.' });
+  }
+
+  try {
+    const result = await transaction(async (client) => {
+      let resolvedBaseId = baseId;
+      let nextVersion    = 1;
+
+      if (resolvedBaseId) {
+        /* Versioning an existing scenario — verify ownership */
+        const { rows: existing } = await client.query(
+          `SELECT id, version, owner_id FROM scenarios
+           WHERE base_id = $1 AND deleted_at IS NULL
+           ORDER BY version DESC LIMIT 1`,
+          [resolvedBaseId]
+        );
+
+        if (existing.length) {
+          if (existing[0].owner_id !== req.user.id && req.user.role !== 'admin') {
+            throw Object.assign(new Error('Access denied.'), { status: 403 });
+          }
+          nextVersion = (existing[0].version || 1) + 1;
+        } else {
+          /* baseId provided but no existing rows found — treat as new */
+          resolvedBaseId = null;
+        }
+      }
+
+      if (!resolvedBaseId) {
+        /* New scenario — check if same name+company already exists for this user */
+        const { rows: dupe } = await client.query(
+          `SELECT base_id FROM scenarios
+           WHERE owner_id = $1 AND LOWER(name) = LOWER($2) AND LOWER(company) = LOWER($3)
+             AND is_current = TRUE AND deleted_at IS NULL
+           LIMIT 1`,
+          [req.user.id, name.trim(), company.trim()]
+        );
+        if (dupe.length) {
+          /* Auto-version against existing group */
+          resolvedBaseId = dupe[0].base_id;
+          const { rows: maxVer } = await client.query(
+            'SELECT MAX(version) AS mv FROM scenarios WHERE base_id = $1',
+            [resolvedBaseId]
+          );
+          nextVersion = (maxVer[0].mv || 1) + 1;
+        } else {
+          /* Brand new scenario */
+          const { v4: uuidv4 } = require('uuid');
+          resolvedBaseId = uuidv4();
+          nextVersion = 1;
+        }
+      }
+
+      /* Mark all previous versions as not-current */
+      await client.query(
+        'UPDATE scenarios SET is_current = FALSE WHERE base_id = $1',
+        [resolvedBaseId]
+      );
+
+      /* Extract key metrics from data for fast list queries */
+      const metrics = {
+        annualBenefit: data.annualBenefit || 0,
+        roi:           data.roi           || 0,
+        npv3:          data.npv3          || 0,
+        npv5:          data.npv5          || 0,
+        payback:       data.paybackFromSigning || data.payback || null
+      };
+
+      /* Merge metrics into data JSONB so they're always in sync */
+      const dataWithMetrics = { ...data, ...metrics };
+
+      const { rows } = await client.query(
+        `INSERT INTO scenarios
+           (base_id, version, is_current, name, company, owner_id,
+            industry, deal_stage, exec_audience, data, version_note)
+         VALUES ($1, $2, TRUE, $3, $4, $5, $6, $7, $8, $9, $10)
+         RETURNING id, base_id, version, name, company, is_current,
+                   industry, deal_stage, exec_audience, version_note,
+                   created_at, updated_at`,
+        [
+          resolvedBaseId, nextVersion, name.trim(), company.trim(), req.user.id,
+          industry || null, dealStage || null, execAudience || 'mixed',
+          JSON.stringify(dataWithMetrics), versionNote || null
+        ]
+      );
+
+      return rows[0];
+    });
+
+    await log({
+      userId: req.user.id, action: ACTIONS.SCENARIO_SAVED,
+      entityType: 'scenario', entityId: result.id,
+      detail: { name: result.name, company: result.company, version: result.version },
+      ipAddress: req.ip
+    });
+
+    res.status(201).json(result);
+
+  } catch (err) {
+    if (err.status === 403) return res.status(403).json({ error: err.message });
+    console.error('Save scenario error:', err.message);
+    res.status(500).json({ error: 'Failed to save scenario.' });
+  }
+});
+
+/* ═══════════════════════════════════════
+   PATCH /api/scenarios/:id/share
+   Body: { shareWith: [userId, ...] }
+   ═══════════════════════════════════════ */
+router.patch('/:id/share', async (req, res) => {
+  const { shareWith } = req.body || {};
+  if (!Array.isArray(shareWith)) {
+    return res.status(400).json({ error: 'shareWith must be an array of user IDs.' });
+  }
+
+  try {
+    /* Only owner or admin can share */
+    const { rows: sc } = await query(
+      'SELECT id, base_id, owner_id, name FROM scenarios WHERE id = $1 AND deleted_at IS NULL',
+      [req.params.id]
+    );
+    if (!sc.length) return res.status(404).json({ error: 'Scenario not found.' });
+    if (sc[0].owner_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Only the owner can share this scenario.' });
+    }
+
+    /* Validate all shareWith IDs exist */
+    if (shareWith.length > 0) {
+      const { rows: validUsers } = await query(
+        'SELECT id FROM users WHERE id = ANY($1) AND is_active = TRUE',
+        [shareWith]
+      );
+      if (validUsers.length !== shareWith.length) {
+        return res.status(400).json({ error: 'One or more user IDs are invalid or inactive.' });
+      }
+    }
+
+    /* Update shared_with on ALL versions of this base_id */
+    await query(
+      'UPDATE scenarios SET shared_with = $1 WHERE base_id = $2',
+      [shareWith, sc[0].base_id]
+    );
+
+    await log({
+      userId: req.user.id, action: ACTIONS.SCENARIO_SHARED,
+      entityType: 'scenario', entityId: req.params.id,
+      detail: { name: sc[0].name, sharedWith: shareWith }, ipAddress: req.ip
+    });
+
+    res.json({ ok: true, sharedWith: shareWith });
+
+  } catch (err) {
+    console.error('Share scenario error:', err.message);
+    res.status(500).json({ error: 'Failed to update sharing.' });
+  }
+});
+
+/* ═══════════════════════════════════════
+   DELETE /api/scenarios/:id
+   Soft-delete a single version
+   ═══════════════════════════════════════ */
+router.delete('/:id', async (req, res) => {
+  try {
+    const { rows } = await query(
+      `SELECT id, base_id, owner_id, version, is_current, name
+       FROM scenarios WHERE id = $1 AND deleted_at IS NULL`,
+      [req.params.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Scenario not found.' });
+
+    const sc = rows[0];
+    if (sc.owner_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Only the owner can delete this scenario.' });
+    }
+
+    await query(
+      'UPDATE scenarios SET deleted_at = NOW() WHERE id = $1',
+      [req.params.id]
+    );
+
+    /* If this was the current version, promote the previous one */
+    if (sc.is_current) {
+      await query(
+        `UPDATE scenarios SET is_current = TRUE
+         WHERE base_id = $1 AND deleted_at IS NULL
+           AND id != $2
+         ORDER BY version DESC LIMIT 1`,
+        [sc.base_id, req.params.id]
+      );
+    }
+
+    await log({
+      userId: req.user.id, action: ACTIONS.SCENARIO_DELETED,
+      entityType: 'scenario', entityId: req.params.id,
+      detail: { name: sc.name, version: sc.version }, ipAddress: req.ip
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Delete scenario error:', err.message);
+    res.status(500).json({ error: 'Failed to delete scenario.' });
+  }
+});
+
+/* ═══════════════════════════════════════
+   DELETE /api/scenarios/group/:baseId
+   Soft-delete ALL versions of a scenario group
+   ═══════════════════════════════════════ */
+router.delete('/group/:baseId', async (req, res) => {
+  try {
+    /* Verify ownership of at least one version */
+    const { rows } = await query(
+      `SELECT owner_id, COUNT(*) AS cnt FROM scenarios
+       WHERE base_id = $1 AND deleted_at IS NULL GROUP BY owner_id`,
+      [req.params.baseId]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Scenario group not found.' });
+
+    const ownerIds = rows.map(r => r.owner_id);
+    if (!ownerIds.includes(req.user.id) && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Only the owner can delete this scenario.' });
+    }
+
+    const { rowCount } = await query(
+      'UPDATE scenarios SET deleted_at = NOW() WHERE base_id = $1 AND deleted_at IS NULL',
+      [req.params.baseId]
+    );
+
+    await log({
+      userId: req.user.id, action: ACTIONS.SCENARIO_DELETED,
+      entityType: 'scenario', entityId: null,
+      detail: { baseId: req.params.baseId, versionsDeleted: rowCount }, ipAddress: req.ip
+    });
+
+    res.json({ ok: true, deletedVersions: rowCount });
+  } catch (err) {
+    console.error('Delete scenario group error:', err.message);
+    res.status(500).json({ error: 'Failed to delete scenario group.' });
+  }
+});
+
+module.exports = router;

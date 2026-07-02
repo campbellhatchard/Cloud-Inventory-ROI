@@ -1,0 +1,57 @@
+databases:
+  - name: cloud-inventory-roi-db
+    plan: free
+    databaseName: ciroi
+    user: ciroi_user
+    ipAllowList: []
+
+services:
+  - type: web
+    name: cloud-inventory-roi
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+
+    envVars:
+      # Database connection is injected automatically from the database above.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cloud-inventory-roi-db
+          property: connectionString
+
+      # Pin Node to a tested LTS major. Render's current default is newer.
+      - key: NODE_VERSION
+        value: 22.22.0
+
+      # Authentication and password hashing.
+      - key: JWT_SECRET
+        generateValue: true
+      - key: BCRYPT_ROUNDS
+        value: "12"
+
+      # Initial administrator account. The app forces a password change on first login.
+      # WARNING: These values are visible to anyone who can read the repository.
+      - key: BOOTSTRAP_ADMIN_USERNAME
+        value: admin
+      - key: BOOTSTRAP_ADMIN_PASSWORD
+        value: "CloudInventory2026!"
+      - key: BOOTSTRAP_ADMIN_EMAIL
+        value: admin@cloudinventory.com
+
+      - key: NODE_ENV
+        value: production
+
+      # Optional: enables AI Enhance. Enter the secret during Blueprint creation.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ANTHROPIC_MODEL
+        value: claude-sonnet-4-6
+
+      # Optional: enables password-reset and user-welcome emails.
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: FROM_EMAIL
+        sync: false

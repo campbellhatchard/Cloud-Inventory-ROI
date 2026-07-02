@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Cloud Inventory — Discovery Questionnaire</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --navy:#042C53;--cyan:#00AEEF;--cyan-dark:#0090C5;--cyan-pale:#E0F5FD;
+  --green:#2E7D32;--green-pale:#E8F5E9;--red:#C62828;
+  --gray-50:#F8FAFC;--gray-100:#F1F5F9;--gray-200:#E2E8F0;
+  --gray-400:#94A3B8;--gray-500:#64748B;--gray-600:#475569;
+  --gray-700:#334155;--gray-800:#1E293B;--white:#FFFFFF;
+  --font:'Inter',system-ui,sans-serif;
+  --radius:10px;--radius-sm:6px;
+  --shadow:0 4px 16px rgba(0,0,0,.08);
+}
+html{font-size:15px;scroll-behavior:smooth;}
+body{font-family:var(--font);background:#F0F4F8;color:var(--gray-800);min-height:100vh;}
+
+/* Header */
+.header{background:var(--navy);padding:0;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.25);}
+.header-inner{max-width:760px;margin:0 auto;padding:.85rem 1.5rem;display:flex;align-items:center;gap:14px;}
+.header-logo{height:32px;object-fit:contain;}
+.header-divider{width:1px;height:20px;background:rgba(255,255,255,.2);}
+.header-title{color:rgba(255,255,255,.7);font-size:13px;font-weight:500;}
+.header-accent{height:3px;background:linear-gradient(90deg,var(--cyan) 0%,rgba(0,174,239,.2) 100%);}
+
+/* Progress bar */
+.progress-wrap{background:var(--navy);padding:.5rem 1.5rem .75rem;}
+.progress-inner{max-width:760px;margin:0 auto;}
+.progress-label{color:rgba(255,255,255,.5);font-size:11px;margin-bottom:5px;}
+.progress-bar{height:4px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden;}
+.progress-fill{height:100%;background:var(--cyan);border-radius:2px;transition:width .4s;}
+
+/* Main */
+.main{max-width:760px;margin:0 auto;padding:2rem 1.5rem 4rem;}
+
+/* Welcome card */
+.welcome-card{background:var(--white);border-radius:var(--radius);padding:2rem;margin-bottom:2rem;box-shadow:var(--shadow);}
+.welcome-co{font-size:22px;font-weight:700;color:var(--navy);margin-bottom:6px;}
+.welcome-sub{font-size:14px;color:var(--gray-500);line-height:1.6;margin-bottom:1rem;}
+.welcome-privacy{display:flex;align-items:flex-start;gap:10px;background:var(--green-pale);border:1px solid #A5D6A7;border-radius:var(--radius-sm);padding:.85rem 1rem;font-size:13px;color:var(--green);}
+.welcome-privacy-icon{font-size:18px;flex-shrink:0;}
+
+/* Section card */
+.section-card{background:var(--white);border-radius:var(--radius);margin-bottom:1.25rem;box-shadow:var(--shadow);overflow:hidden;}
+.section-header{background:var(--navy);padding:.9rem 1.25rem;display:flex;align-items:center;gap:10px;}
+.section-icon{font-size:18px;}
+.section-title-text{font-size:14px;font-weight:700;color:#fff;}
+.section-count{margin-left:auto;font-size:11px;color:rgba(255,255,255,.4);background:rgba(255,255,255,.1);padding:2px 8px;border-radius:10px;}
+.section-body{padding:0;}
+
+/* Question */
+.question{padding:1.1rem 1.25rem;border-bottom:1px solid var(--gray-100);}
+.question:last-child{border-bottom:none;}
+.question.answered{background:#FAFFFE;}
+.q-text{font-size:14px;font-weight:500;color:var(--gray-800);margin-bottom:5px;line-height:1.45;}
+.q-placeholder-hint{font-size:12px;color:var(--gray-400);margin-bottom:10px;}
+.q-input{width:100%;padding:10px 14px;font-size:14px;font-family:var(--font);border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);background:var(--white);color:var(--gray-800);transition:border-color .15s,box-shadow .15s;outline:none;}
+.q-input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,174,239,.12);}
+.q-input.has-answer{border-color:#A5D6A7;background:var(--green-pale);}
+.q-input::placeholder{color:var(--gray-300);}
+.q-answered-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--green);margin-top:6px;}
+
+/* Optional label */
+.q-optional{font-size:11px;color:var(--gray-400);margin-left:6px;font-weight:400;}
+
+/* Save bar */
+.save-bar{position:fixed;bottom:0;left:0;right:0;background:var(--white);border-top:1px solid var(--gray-200);padding:.85rem 1.5rem;display:flex;align-items:center;gap:12px;z-index:50;box-shadow:0 -4px 16px rgba(0,0,0,.08);}
+.save-bar-inner{max-width:760px;margin:0 auto;width:100%;display:flex;align-items:center;gap:12px;}
+.save-status{flex:1;font-size:13px;color:var(--gray-500);}
+.save-status.saved{color:var(--green);}
+.save-btn{padding:10px 24px;font-size:14px;font-weight:700;border-radius:var(--radius-sm);cursor:pointer;border:none;font-family:var(--font);background:var(--cyan);color:#fff;transition:background .15s;}
+.save-btn:hover{background:var(--cyan-dark);}
+.save-btn:disabled{background:var(--gray-300);cursor:not-allowed;}
+
+/* Complete state */
+.complete-card{background:var(--white);border-radius:var(--radius);padding:2.5rem;text-align:center;box-shadow:var(--shadow);margin-top:1rem;}
+.complete-icon{font-size:48px;margin-bottom:1rem;}
+.complete-title{font-size:22px;font-weight:700;color:var(--navy);margin-bottom:8px;}
+.complete-sub{font-size:14px;color:var(--gray-500);line-height:1.6;max-width:480px;margin:0 auto;}
+
+/* Error state */
+.error-card{background:var(--white);border-radius:var(--radius);padding:2.5rem;text-align:center;box-shadow:var(--shadow);}
+.error-icon{font-size:40px;margin-bottom:1rem;}
+.error-title{font-size:20px;font-weight:700;color:var(--red);margin-bottom:8px;}
+.error-sub{font-size:14px;color:var(--gray-500);line-height:1.6;}
+
+/* Toast */
+.toast{position:fixed;top:80px;right:20px;background:var(--navy);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.2);opacity:0;transform:translateY(-10px);transition:opacity .25s,transform .25s;z-index:999;pointer-events:none;border-left:4px solid var(--cyan);}
+.toast.show{opacity:1;transform:translateY(0);}
+
+/* Mobile */
+@media(max-width:580px){
+  .main{padding:1.25rem 1rem 5rem;}
+  .section-header{padding:.75rem 1rem;}
+  .question{padding:.9rem 1rem;}
+  .welcome-card{padding:1.5rem 1rem;}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <img class="header-logo" src="ci-logo-negative.png" alt="Cloud Inventory" onerror="this.style.display='none'"/>
+    <div class="header-divider"></div>
+    <span class="header-title" id="headerTitle">Discovery Questionnaire</span>
+  </div>
+  <div class="header-accent"></div>
+</div>
+
+<div class="progress-wrap">
+  <div class="progress-inner">
+    <div class="progress-label" id="progressLabel">Loading…</div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  </div>
+</div>
+
+<div class="main" id="mainContent">
+  <div class="error-card">
+    <div class="error-icon">⏳</div>
+    <div class="error-title">Loading your questionnaire…</div>
+    <div class="error-sub">Please wait a moment.</div>
+  </div>
+</div>
+
+<div class="save-bar">
+  <div class="save-bar-inner">
+    <span class="save-status" id="saveStatus">Enter your answers below.</span>
+    <button class="save-btn" id="saveBtn" onclick="submitAnswers()" disabled>Submit answers</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="discovery.js"></script>
+<script>
+/* ════════════════════════════════════════
+   PROSPECT VIEW — discovery.js questions
+   NO financial data, NO ROI results
+   ════════════════════════════════════════ */
+
+// Strip discovery.js of any imports it expects that aren't on this page
+// (it's designed to work standalone for the prospect view)
+
+let sessionData = null;
+let prospectAnswers = {};
+let totalQuestions = 0;
+let answeredCount = 0;
+let autoSaveTimer = null;
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+async function init() {
+  const hash = window.location.hash;
+  if (!hash.startsWith('#token=')) {
+    showError('Invalid link', 'This link is missing a valid session token. Please ask your Cloud Inventory contact for a new link.');
+    return;
+  }
+
+  const token = hash.replace('#token=', '').split('&')[0].trim();
+  if (!token || token.length < 8) {
+    showError('Invalid link', 'This link does not appear to be valid. Please request a new one.');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/discovery/sessions/' + encodeURIComponent(token));
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      if (res.status === 410) {
+        showError('Link no longer active', err.error || 'This prospect link has been revoked or expired. Please ask your Cloud Inventory contact for a new link.');
+      } else {
+        showError('Link not found', 'This prospect link could not be found. Please ask your Cloud Inventory contact for a new link.');
+      }
+      return;
+    }
+    const data = await res.json();
+    sessionData = { token, industry: data.industry || 'default', company: data.company || '' };
+
+    /* Restore any answers the prospect (or rep) already entered */
+    prospectAnswers = {};
+    (data.answers || []).forEach(a => {
+      if (a.questionId) {
+        prospectAnswers[a.questionId]          = a.answer    || '';
+        prospectAnswers[a.questionId + '_by']  = a.enteredBy || 'prospect';
+      }
+    });
+
+    renderQuestionnaire();
+  } catch(e) {
+    console.error('init error:', e.message);
+    showError('Connection error', 'Could not load your questionnaire. Check your internet connection and try refreshing the page.');
+  }
+}
+
+function getQueryParam(name) {
+  const url = new URL(window.location.href.replace('#', '?'));
+  return url.searchParams.get(name) || '';
+}
+
+function showError(title, msg) {
+  document.getElementById('mainContent').innerHTML = `
+    <div class="error-card">
+      <div class="error-icon">🔗</div>
+      <div class="error-title">${title}</div>
+      <div class="error-sub">${msg}</div>
+    </div>`;
+  document.getElementById('progressLabel').textContent = 'Link error';
+}
+
+function renderQuestionnaire() {
+  const industry = sessionData.industry || 'default';
+  const company  = sessionData.company || 'your organisation';
+
+  // Get questions for this industry
+  const sections = DISC_QUESTIONS[industry] || DISC_QUESTIONS.default;
+
+  // Count total
+  totalQuestions = sections.reduce((s, sec) => s + sec.questions.length, 0);
+  answeredCount  = Object.keys(prospectAnswers).filter(k => !k.endsWith('_by') && prospectAnswers[k]).length;
+
+  // Update header
+  document.getElementById('headerTitle').textContent = `Discovery Questionnaire${company ? ' — ' + company : ''}`;
+  updateProgress();
+
+  const industryLabel = getIndustryLabel(industry);
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="welcome-card">
+      <div class="welcome-co">Welcome${company ? ', ' + company : ''}</div>
+      <div class="welcome-sub">
+        Thank you for taking the time to complete this questionnaire. Your answers will help Cloud Inventory build an accurate and relevant business case tailored to your ${industryLabel} operations.
+        <br/><br/>
+        Please answer as many questions as you can. You can save your progress at any time using the button below and return later. Your answers are automatically saved as you type.
+      </div>
+      <div class="welcome-privacy">
+        <span class="welcome-privacy-icon">🔒</span>
+        <span><strong>Your data stays with you.</strong> This form collects operational data only to help size a potential solution. No financial analysis or ROI calculations are shared with you at this stage. Your responses are shared only with your Cloud Inventory contact.</span>
+      </div>
+    </div>
+
+    ${sections.map((section, si) => {
+      const answeredInSection = section.questions.filter(q => prospectAnswers[q.id]).length;
+      return `
+      <div class="section-card" id="section-${si}">
+        <div class="section-header">
+          <span class="section-icon">${getSectionIcon(section.section)}</span>
+          <span class="section-title-text">${section.section}</span>
+          <span class="section-count">${answeredInSection}/${section.questions.length}</span>
+        </div>
+        <div class="section-body">
+          ${section.questions.map(q => renderProspectQuestion(q)).join('')}
+        </div>
+      </div>`;
+    }).join('')}
+
+    <div style="height:80px;"></div>`;
+
+  updateSaveButton();
+}
+
+function renderProspectQuestion(q) {
+  const answer = prospectAnswers[q.id] || '';
+  const isAnswered = answer.trim().length > 0;
+  return `
+    <div class="question ${isAnswered?'answered':''}" id="wrap-${q.id}">
+      <div class="q-text">${q.text}</div>
+      <div class="q-placeholder-hint">e.g. ${q.placeholder}</div>
+      <input
+        type="text"
+        class="q-input ${isAnswered?'has-answer':''}"
+        id="pq-${q.id}"
+        value="${escapeHtml(answer)}"
+        placeholder="Your answer…"
+        oninput="handleAnswer('${q.id}', this.value)"
+        onfocus="this.parentElement.style.background='#FAFFFE'"
+        onblur="this.parentElement.style.background=''"
+      />
+      ${isAnswered ? `<div class="q-answered-badge">✓ Answered</div>` : ''}
+    </div>`;
+}
+
+function handleAnswer(id, value) {
+  prospectAnswers[id] = value;
+  prospectAnswers[id + '_by'] = value ? 'prospect' : '';
+
+  const input = document.getElementById('pq-' + id);
+  const wrap  = document.getElementById('wrap-' + id);
+  if (input) input.classList.toggle('has-answer', value.trim().length > 0);
+  if (wrap) {
+    wrap.classList.toggle('answered', value.trim().length > 0);
+    // Update answered badge
+    const badge = wrap.querySelector('.q-answered-badge');
+    if (value.trim() && !badge) {
+      const b = document.createElement('div');
+      b.className = 'q-answered-badge';
+      b.textContent = '✓ Answered';
+      wrap.appendChild(b);
+    } else if (!value.trim() && badge) {
+      badge.remove();
+    }
+  }
+
+  // Update section count
+  updateSectionCounts();
+  updateProgress();
+  updateSaveButton();
+
+  /* Push this specific answer to DB immediately (debounced 800ms) */
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => pushAnswer(id, value, 'prospect'), 800);
+}
+
+function updateSectionCounts() {
+  const sections = DISC_QUESTIONS[sessionData?.industry || 'default'] || DISC_QUESTIONS.default;
+  sections.forEach((section, si) => {
+    const el = document.querySelector(`#section-${si} .section-count`);
+    if (el) {
+      const answered = section.questions.filter(q => prospectAnswers[q.id]?.trim()).length;
+      el.textContent = `${answered}/${section.questions.length}`;
+    }
+  });
+}
+
+function updateProgress() {
+  const sections = DISC_QUESTIONS[sessionData?.industry || 'default'] || DISC_QUESTIONS.default;
+  const total = sections.reduce((s, sec) => s + sec.questions.length, 0);
+  const answered = Object.keys(prospectAnswers).filter(k => !k.endsWith('_by') && prospectAnswers[k]?.trim()).length;
+  const pct = total > 0 ? Math.round((answered / total) * 100) : 0;
+  const fill = document.getElementById('progressFill');
+  const label = document.getElementById('progressLabel');
+  if (fill) fill.style.width = pct + '%';
+  if (label) label.textContent = `${answered} of ${total} questions answered (${pct}%)`;
+}
+
+function updateSaveButton() {
+  const answered = Object.keys(prospectAnswers).filter(k => !k.endsWith('_by') && prospectAnswers[k]?.trim()).length;
+  const btn = document.getElementById('saveBtn');
+  const status = document.getElementById('saveStatus');
+  if (btn) btn.disabled = answered === 0;
+  if (status) {
+    if (answered === 0) status.textContent = 'Answer at least one question to submit.';
+    else if (answered < 5) status.textContent = `${answered} answered — you can submit now or continue adding more.`;
+    else status.textContent = `${answered} questions answered. Ready to submit when you\'re done.`;
+    status.className = 'save-status';
+  }
+}
+
+/* Push a single answer to the DB immediately (called per-answer with debounce) */
+async function pushAnswer(questionId, answer, enteredBy) {
+  if (!sessionData?.token) return;
+  try {
+    await fetch(
+      '/api/discovery/sessions/' + encodeURIComponent(sessionData.token) + '/answers',
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionId, answer, enteredBy: enteredBy || 'prospect' })
+      }
+    );
+  } catch(e) {
+    console.error('pushAnswer error:', e.message);
+  }
+}
+
+async function autoSave() {
+  /* Answers are written individually via pushAnswer() on every keystroke.
+     autoSave() just updates the UI status indicator.                      */
+  const status = document.getElementById('saveStatus');
+  if (status) {
+    status.textContent = '✓ Progress saved to server';
+    status.className = 'save-status saved';
+    setTimeout(() => { updateSaveButton(); }, 2000);
+  }
+}
+
+async function submitAnswers() {
+  /* All answers are already in the DB via per-keystroke pushAnswer() calls.
+     This just shows the success state.                                      */
+  const answered = Object.keys(prospectAnswers).filter(k => !k.endsWith('_by') && prospectAnswers[k]?.trim()).length;
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="complete-card">
+      <div class="complete-icon">🎉</div>
+      <div class="complete-title">Thank you — answers submitted!</div>
+      <div class="complete-sub">
+        Your ${answered} responses have been saved and are ready for your Cloud Inventory contact to review.
+        <br/><br/>
+        They will use your answers to build a tailored business case and reach out to discuss next steps.
+        <br/><br/>
+        You can safely close this window.
+      </div>
+    </div>`;
+
+  document.getElementById('progressLabel').textContent = `${answered} answers submitted ✓`;
+  document.getElementById('progressFill').style.width = '100%';
+  document.getElementById('saveBtn').disabled = true;
+  document.getElementById('saveBtn').textContent = 'Submitted ✓';
+}
+
+function getSectionIcon(title) {
+  const map = {
+    'Labor': '👷', 'Field': '🔧', 'Production': '🏭', 'Site': '🏗',
+    'Maintenance': '⚙️', 'Warehouse': '📦', 'Store': '🏪',
+    'Inventory': '📋', 'Parts': '🔩', 'Material': '🧱', 'Spares': '🔩',
+    'Order': '📬', 'Customer': '🤝', 'Network': '📡', 'Regulatory': '📜',
+    'Compliance': '✅', 'Supply': '🚛', 'Expiry': '📅',
+    'Revenue': '💰', 'Financial': '💰', 'Systems': '💻', 'Technology': '💻',
+    'Production': '🏭', 'Project': '📐'
+  };
+  const word = Object.keys(map).find(k => title.includes(k));
+  return map[word] || '❓';
+}
+
+function getIndustryLabel(industry) {
+  const labels = {
+    telecom:'Telecommunications', mfg:'Manufacturing', construction:'Engineering & Construction',
+    oil:'Oil & Gas', mining:'Minerals & Mining', distribution:'Distribution & 3PL',
+    food:'Food & Beverage', retail:'Retail', default:'operations'
+  };
+  return labels[industry] || 'operations';
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
