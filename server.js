@@ -44,7 +44,12 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc:     ["'self'"],
-      scriptSrc:      ["'self'", "'unsafe-inline'"], // inline scripts in index.html
+      scriptSrc:      ["'self'", "'unsafe-inline'"], // inline <script> blocks used by the current UI
+      /* Helmet's default CSP sets script-src-attr 'none'. The current UI uses
+         inline HTML event handlers (onsubmit/onclick) throughout, so that
+         default silently disables login and most buttons. Allow those legacy
+         handlers until the UI is refactored to addEventListener(). */
+      scriptSrcAttr:  ["'unsafe-inline'"],
       styleSrc:       ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc:        ["'self'", 'https://fonts.gstatic.com'],
       imgSrc:         ["'self'", 'data:'],           // data: for logo fallbacks
