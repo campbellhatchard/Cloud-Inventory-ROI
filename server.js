@@ -22,6 +22,7 @@ const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const PROD = process.env.NODE_ENV === 'production';
 const APP_URL = (process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || '').replace(/\/$/, '');
+const APP_VERSION = require('./package.json').version;
 
 const ANTHROPIC_MODEL    = process.env.ANTHROPIC_MODEL    || 'claude-sonnet-4-6';
 const ANTHROPIC_BASE_URL = process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com';
@@ -101,7 +102,15 @@ app.use(express.static(PUBLIC_DIR, {
   /* Don't expose directory listings */
   index: false,
   /* No dotfiles (.env, .git etc.) */
-  dotfiles: 'deny'
+  dotfiles: 'deny',
+  /* Authentication pages must never be served from a stale browser cache. */
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  }
 }));
 
 /* ── Helper: lazy-load db module ── */
@@ -246,7 +255,7 @@ app.get('/health', async (req, res) => {
     }
     res.json({
       status: 'ok',
-      version: '2.0.1',
+      version: APP_VERSION,
       database: process.env.DATABASE_URL ? 'connected' : 'not-configured',
       phase: 'production'
     });
@@ -448,7 +457,7 @@ async function start() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`\n🚀 Cloud Inventory ROI Builder v2.0 — port ${PORT}`);
+    console.log(`\n🚀 Cloud Inventory ROI Builder v${APP_VERSION} — port ${PORT}`);
     console.log(`   Phase    : 10 / 10 — Production hardened ✅`);
     console.log(`   Database : ${process.env.DATABASE_URL ? '✅ connected' : '⚠️  not configured'}`);
     console.log(`   Helmet   : ✅ security headers active`);
