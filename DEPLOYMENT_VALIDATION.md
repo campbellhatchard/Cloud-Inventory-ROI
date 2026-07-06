@@ -1,37 +1,36 @@
-# Deployment Validation Report
+# Deployment Validation — v2.2.0
 
 ## Result
 
-The original package was **not valid for Render Blueprint deployment** because `headers` was configured on a dynamic Node web service. Render accepts Blueprint `headers` only for static sites.
+The package is structured correctly for a Render Blueprint deployment when its contents are placed directly at the GitHub repository root.
 
-## Corrections applied
+## Corrections included in the clean release
 
-1. Removed the unsupported `headers` block from `render.yaml`.
-2. Retained security headers in the Express application through Helmet.
-3. Added `healthCheckPath: /health` and upgraded the endpoint to verify PostgreSQL connectivity.
-4. Added explicit binding to `0.0.0.0`.
-5. Pinned Node to `22.22.0` and added an upper-bound engine constraint.
-6. Replaced the manual `APP_URL` requirement with Render's `RENDER_EXTERNAL_URL` fallback.
-7. Added hardcoded bootstrap administrator configuration:
-   - Username: `admin`
-   - Initial password: `CloudInventory2026!`
-8. Forced a password change on first login.
-9. Added safe migration behavior that does not reset an administrator's changed password.
-10. Moved browser assets into `public/` so deployment files, SQL, and server source are not publicly served.
-11. Restricted PostgreSQL to private-network access with `ipAllowList: []`.
-12. Updated deployment documentation for Render Blueprint rather than manual Web Service creation.
+- Added `package-lock.json` and changed the Blueprint build command to `npm ci`.
+- Updated `node-cron` and `uuid` to dependency versions with no known npm audit findings at validation time.
+- Kept the Render runtime pinned to Node `22.22.0` through `NODE_VERSION` and `.node-version`.
+- Retained `healthCheckPath: /health` with a PostgreSQL connectivity check.
+- Retained automatic database connection through `fromDatabase.connectionString`.
+- Retained private-only PostgreSQL access with `ipAllowList: []`.
+- Retained the configured initial administrator account.
+- Made administrator bootstrap behavior and documentation consistent.
+- Updated visible authentication-page version labels to `2.2.0`.
+- Removed obsolete troubleshooting and patch-history documents from the deployment package.
 
-## Validation performed
+## Validation completed
 
-- Parsed `render.yaml` as valid YAML.
-- Checked all JavaScript files with `node --check`.
-- Confirmed all Blueprint service/database references resolve by name.
-- Confirmed the server uses Render's `PORT` and binds publicly.
-- Confirmed migrations execute before the listener starts.
-- Confirmed the initial administrator is created after schema migrations.
+- YAML parsed successfully.
+- Render service and database references resolved consistently.
+- All JavaScript files passed `node --check`.
+- All PostgreSQL migration files parsed successfully.
+- All relative CommonJS imports resolved.
+- Browser-local asset references resolved.
+- `npm ci` completed from a clean directory.
+- `npm audit --omit=dev` reported zero vulnerabilities.
+- The server started locally without a database and returned HTTP 200 from `/health`, `/login.html`, and the negative logo asset.
 
-## Remaining deployment-time checks
+## Environment-dependent checks still required after deployment
 
-A full dependency installation and live PostgreSQL migration could not be executed in the isolated validation environment because outbound package downloads are unavailable. Render will perform the actual `npm install` during its build.
-
-- `bcrypt` is upgraded to `^6.0.0`, which supports current Node LTS releases without the legacy `node-pre-gyp` path.
+- PostgreSQL migration execution against the actual Render database.
+- Login using the deployed administrator record.
+- Optional Anthropic and SendGrid integrations, if their secrets are configured.

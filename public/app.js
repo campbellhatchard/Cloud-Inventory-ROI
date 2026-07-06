@@ -105,7 +105,7 @@ function persistSaved(arr)   { savedScenarios = arr; updateSavedBadge(); }
 /* ════════════════════════════════════════
    Navigation
    ════════════════════════════════════════ */
-const ALL_TABS = ['calc','disc','comp','exec','saved','compare','sensitivity','analytics','admin','help','profile'];
+const ALL_TABS = ['calc','disc','comp','exec','saved','compare','sensitivity','analytics','map','stake','admin','help','profile'];
 
 function switchTab(name) {
   ALL_TABS.forEach(n => {

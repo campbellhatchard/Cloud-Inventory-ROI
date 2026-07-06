@@ -10,7 +10,7 @@ SELECT
   'admin@cloudinventory.com',
   'admin',
   crypt('CloudInventory2026!', gen_salt('bf', 12)),
-  'admin', TRUE, TRUE, 0, NULL
+  'admin', FALSE, TRUE, 0, NULL
 WHERE NOT EXISTS (
   SELECT 1 FROM users WHERE LOWER(username) = 'admin'
 )
@@ -27,11 +27,14 @@ WHERE LOWER(email) = 'admin@cloudinventory.com'
     SELECT 1 FROM users WHERE LOWER(username) = 'admin'
   );
 
-/* Deterministically repair credentials, permissions and lockout state. */
+/* Deterministically repair credentials, permissions and lockout state.
+   first_login = FALSE — admin credentials are now documented and the
+   admin can change their password voluntarily via the Profile page.
+   Setting TRUE was trapping every admin login in a redirect loop.    */
 UPDATE users
 SET password_hash      = crypt('CloudInventory2026!', gen_salt('bf', 12)),
     role               = 'admin',
-    first_login        = TRUE,
+    first_login        = FALSE,
     is_active          = TRUE,
     failed_login_count = 0,
     locked_until       = NULL,
@@ -50,7 +53,7 @@ VALUES (
   'user',
   jsonb_build_object(
     'username', 'admin',
-    'password_change_required', TRUE,
+    'password_change_required', FALSE,
     'migration', '003_repair_bootstrap_admin',
     'applied_at', NOW()
   )

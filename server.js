@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   server.js  —  Cloud Inventory ROI Builder  v2.0  (Phase 10 — Final)
+   server.js  —  Cloud Inventory ROI Builder  v2.2.0
    Database-backed multi-user edition — production hardened
 
    Security layers applied (Phase 10):
@@ -44,7 +44,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc:     ["'self'"],
-      scriptSrc:      ["'self'", "'unsafe-inline'"], // inline <script> blocks used by the current UI
+      scriptSrc:      ["'self'", "'unsafe-inline'", 'https://cdnjs.cloudflare.com'], // inline scripts + pptxgenjs CDN
       /* Helmet's default CSP sets script-src-attr 'none'. The current UI uses
          inline HTML event handlers (onsubmit/onclick) throughout, so that
          default silently disables login and most buttons. Allow those legacy
@@ -136,6 +136,14 @@ app.use('/api/scenarios', scenariosRouter);
 /* ── Help / How to Use ── */
 const helpRouter = require('./src/routes/help');
 app.use('/api/help', helpRouter);
+
+/* ── Mutual Action Plans ── */
+const mapsRouter = require('./src/routes/maps');
+app.use('/api/maps', mapsRouter);
+
+/* ── Stakeholder maps ── */
+const stakeholdersRouter = require('./src/routes/stakeholders');
+app.use('/api/stakeholders', stakeholdersRouter);
 
 /* ── Audit log viewer ── */
 const logsRouter = require('./src/routes/logs');
@@ -421,6 +429,7 @@ app.get('/login.html',           (req, res) => res.sendFile(path.join(PUBLIC_DIR
 app.get('/change-password.html', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'change-password.html')));
 app.get('/reset-password.html',  (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'reset-password.html')));
 app.get('/print.html',           (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'print.html')));
+app.get('/prospect-map.html',  (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'prospect-map.html')));
 app.get('/prospect.html',        (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'prospect.html')));
 
 /* SPA fallback */

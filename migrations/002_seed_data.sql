@@ -168,7 +168,7 @@ INSERT INTO help_pages (slug, title, content, sort_order) VALUES
 
 <h3>Default Admin account</h3>
 <p>Username: <code>admin</code> | Initial password: <code>CloudInventory2026!</code></p>
-<p>You will be required to change the initial Admin password on first login.</p>
+<p>Log in directly — no forced password change on first login. Change it at your convenience via the Profile page (top-right avatar → My profile → Change password).</p>
 ', 6)
 
 ON CONFLICT (slug) DO NOTHING;

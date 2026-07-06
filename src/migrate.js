@@ -48,11 +48,11 @@ async function ensureBootstrapAdmin(client) {
     const passwordHash = await bcrypt.hash(password, rounds);
     await client.query(
       `INSERT INTO users (email, username, password_hash, role, first_login, is_active)
-       VALUES ($1, $2, $3, 'admin', TRUE, TRUE)`,
+       VALUES ($1, $2, $3, 'admin', FALSE, TRUE)`,
       [email, username, passwordHash]
     );
     console.log(
-      `✅ Bootstrap Admin created: ${username} (password change required on first login)`
+      `✅ Bootstrap Admin created: ${username}`
     );
     return;
   }
@@ -63,9 +63,9 @@ async function ensureBootstrapAdmin(client) {
     .catch(() => false);
 
   if (existing.first_login) {
-    /* Before the first successful password change, render.yaml is the source
-       of truth for the bootstrap credential. This also clears an accidental
-       lockout caused during initial deployment testing. */
+    /* A bootstrap account still marked first_login is treated as an incomplete
+       setup. Synchronize it to the configured recovery credential, clear any
+       lockout, and allow direct access. */
     const passwordHash = configuredPasswordAlreadySet
       ? existing.password_hash
       : await bcrypt.hash(password, rounds);
@@ -74,7 +74,7 @@ async function ensureBootstrapAdmin(client) {
       `UPDATE users
        SET password_hash = $1,
            role = 'admin',
-           first_login = TRUE,
+           first_login = FALSE,
            is_active = TRUE,
            failed_login_count = 0,
            locked_until = NULL,
@@ -87,8 +87,8 @@ async function ensureBootstrapAdmin(client) {
     return;
   }
 
-  /* Never overwrite a password after the administrator has completed the
-     mandatory first-login password change. */
+  /* Never overwrite a password after the administrator has established a
+     user-managed credential. */
   console.log(
     `✅ Bootstrap Admin present with a user-managed password: ${existing.username}`
   );

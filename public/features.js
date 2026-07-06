@@ -549,7 +549,53 @@ Industry: ${IND[v.industry] ? IND[v.industry].label : '—'} | Users: ${Math.rou
    ───────────────────────────────────────── */
 const DEAL_STAGES = ['Discovery', 'Demo', 'Proposal', 'Negotiation', 'Closed Won', 'Closed Lost'];
 let stageFilter     = '';
-let ownershipFilter = 'all'; // 'all' | 'mine' | 'shared'
+let ownershipFilter = 'mine'; // 'all' | 'mine' | 'shared' — defaults to user's own scenarios
+let industryFilter  = '';     // '' = all industries, otherwise an IND key
+let adminViewAll    = false;  // admin-only: include all users' scenarios
+
+function setIndustryFilter(key) {
+  industryFilter = key || '';
+  if (typeof renderListVersioned === 'function') renderListVersioned();
+  else if (typeof renderList === 'function') renderList();
+}
+
+/* Populate the industry dropdown from IND — call once after auth */
+function populateIndustryFilter() {
+  const sel = document.getElementById('industryFilterSelect');
+  if (!sel || typeof IND === 'undefined') return;
+  sel.innerHTML = '<option value="">All industries</option>' +
+    Object.entries(IND).map(([k, d]) => `<option value="${k}">${d.label}</option>`).join('');
+}
+
+/* Admin: toggle between own+shared view and every user's scenarios */
+async function toggleAdminViewAll() {
+  adminViewAll = !adminViewAll;
+  const btn = document.getElementById('adminViewAllBtn');
+  if (btn) {
+    btn.classList.toggle('active', adminViewAll);
+    btn.textContent = adminViewAll ? '👥 Viewing all (team)' : '👥 View all (team)';
+  }
+  try {
+    const url = adminViewAll ? '/api/scenarios?all=true' : '/api/scenarios';
+    const resp = await apiFetch(url);
+    if (resp && resp.ok) {
+      const rows = await resp.json();
+      savedScenarios = rows.map(normaliseRow);
+      updateSavedBadge();
+      if (typeof renderListVersioned === 'function') renderListVersioned();
+      else if (typeof renderList === 'function') renderList();
+    }
+  } catch(e) {
+    if (typeof showToast === 'function') showToast('Could not load team scenarios.');
+  }
+}
+
+/* Show the admin view-all button only for admins — call after auth */
+function initAdminScenarioControls() {
+  const me = window.ciAuth ? window.ciAuth.getUser() : {};
+  const btn = document.getElementById('adminViewAllBtn');
+  if (btn && me.role === 'admin') btn.style.display = 'inline-flex';
+}
 
 function setOwnershipFilter(filter) {
   ownershipFilter = filter;

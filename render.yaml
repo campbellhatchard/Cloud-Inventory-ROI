@@ -10,7 +10,7 @@ services:
     name: cloud-inventory-roi
     runtime: node
     plan: free
-    buildCommand: npm install
+    buildCommand: npm ci
     startCommand: npm start
     healthCheckPath: /health
     autoDeployTrigger: commit
@@ -32,7 +32,7 @@ services:
       - key: BCRYPT_ROUNDS
         value: "12"
 
-      # Initial administrator account. The app forces a password change on first login.
+      # Initial administrator account. Change this password after first login.
       # WARNING: These values are visible to anyone who can read the repository.
       - key: BOOTSTRAP_ADMIN_USERNAME
         value: admin

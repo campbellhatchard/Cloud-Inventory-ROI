@@ -750,3 +750,45 @@ body{font-family:var(--font);background:var(--gray-100);color:var(--gray-800);li
 /* Ownership filter buttons */
 .ownership-filter{transition:all .15s;}
 .ownership-filter.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+
+/* ══ Industry filter (Feature 3) ══ */
+.industry-filter-select{padding:6px 10px;font-size:12px;font-family:var(--font);border:1px solid var(--gray-200);border-radius:var(--radius-sm);background:var(--white);color:var(--gray-700);cursor:pointer;outline:none;max-width:180px;}
+.industry-filter-select:focus{border-color:var(--cyan);}
+#adminViewAllBtn.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+
+/* ══ Mutual Action Plan (v2.2) ══ */
+.map-progress{height:6px;background:var(--gray-100);border-radius:4px;overflow:hidden;margin-top:6px;max-width:340px;}
+.map-progress-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--green));border-radius:4px;}
+.map-phase-label{font-size:11px;font-weight:700;color:var(--cyan-dark);text-transform:uppercase;letter-spacing:.06em;margin:1rem 0 .4rem;padding-bottom:3px;border-bottom:2px solid var(--gray-100);}
+.map-ms-row{display:grid;grid-template-columns:130px 1fr 130px 135px 34px;gap:8px;align-items:center;margin-bottom:6px;}
+.map-ms-row select,.map-ms-row input{padding:7px 9px;font-size:12px;font-family:var(--font);border:1.5px solid var(--gray-200);border-radius:6px;outline:none;width:100%;}
+.map-ms-row select:focus,.map-ms-row input:focus{border-color:var(--cyan);}
+.map-ms-done .map-ms-title{text-decoration:line-through;color:var(--gray-400);}
+.map-ms-overdue{border-color:var(--red)!important;color:var(--red);}
+.map-share-box{background:var(--gray-50);border:1.5px solid var(--cyan);border-radius:var(--radius-sm);padding:10px 14px;flex:1;min-width:280px;}
+.map-share-url{font-family:'Courier New',monospace;font-size:11px;color:var(--navy);word-break:break-all;margin-top:4px;}
+@media(max-width:760px){.map-ms-row{grid-template-columns:1fr;gap:4px;}}
+
+/* ══ Stakeholder map (v2.2) ══ */
+.stake-quad-outer{position:relative;padding:0 0 26px 26px;}
+.stake-quad-grid{position:relative;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;height:330px;border:1.5px solid var(--gray-200);border-radius:8px;overflow:hidden;}
+.stake-quad-cell{border:.5px solid var(--gray-100);display:flex;align-items:flex-start;justify-content:flex-end;padding:8px 10px;}
+.stake-quad-cell span{font-size:10px;font-weight:700;color:var(--gray-400);text-align:right;line-height:1.4;}
+.stake-quad-cell small{font-weight:500;font-size:9px;}
+.stake-dot{position:absolute;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25);border:2px solid #fff;transition:transform .12s;z-index:2;}
+.stake-dot:hover{transform:scale(1.18);z-index:3;}
+.stake-axis-x{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:700;color:var(--gray-400);}
+.stake-axis-y{position:absolute;left:2px;top:50%;transform:rotate(-90deg) translateX(50%);transform-origin:left center;font-size:10px;font-weight:700;color:var(--gray-400);white-space:nowrap;}
+.stake-cov{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--gray-700);padding:5px 0;border-bottom:1px solid var(--gray-100);}
+.stake-cov:last-child{border-bottom:none;}
+.stake-cov strong{margin-left:auto;}
+.stake-cov-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.stake-cov-missing{color:var(--red);font-weight:600;}
+.stake-cov-flag{font-size:10px;font-weight:700;color:var(--red);}
+.stake-bar{width:80px;height:8px;background:var(--gray-100);border-radius:4px;overflow:hidden;}
+.stake-bar div{height:100%;border-radius:4px;}
+.stake-ai-risk{font-size:13px;font-weight:600;color:var(--navy);background:var(--amber-pale,#FFF3E0);border-radius:7px;padding:9px 12px;margin-bottom:.6rem;line-height:1.5;}
+.stake-ai-head{font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;margin:.7rem 0 .3rem;}
+.stake-ai-list{list-style:none;padding:0;}
+.stake-ai-list li{font-size:12px;color:var(--gray-700);padding:4px 0 4px 16px;position:relative;line-height:1.5;}
+.stake-ai-list li::before{content:'→';position:absolute;left:0;color:var(--cyan);font-weight:700;}

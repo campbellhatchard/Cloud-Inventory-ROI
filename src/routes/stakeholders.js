@@ -1,0 +1,104 @@
+/* ═══════════════════════════════════════════════════════════════════
+   src/routes/stakeholders.js — Stakeholder map CRUD (auth required)
+   ═══════════════════════════════════════════════════════════════════ */
+const express   = require('express');
+const { query } = require('../db');
+const { log }   = require('../audit');
+const { requireAuth } = require('../middleware/auth');
+
+const router = express.Router();
+router.use(requireAuth);
+
+const ROLES = ['champion','economic_buyer','technical_buyer','influencer','blocker','end_user'];
+
+/* List — optionally filtered by company */
+router.get('/', async (req, res) => {
+  try {
+    const { company } = req.query;
+    const { rows } = await query(
+      `SELECT id, company, name, title, role, influence, support, engaged, notes, updated_at
+       FROM stakeholders WHERE owner_id = $1 ${company ? 'AND LOWER(company) = LOWER($2)' : ''}
+       ORDER BY influence DESC, name ASC LIMIT 200`,
+      company ? [req.user.id, company] : [req.user.id]
+    );
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: 'Failed to load stakeholders.' }); }
+});
+
+/* Distinct companies for the picker */
+router.get('/companies', async (req, res) => {
+  try {
+    const { rows } = await query(
+      `SELECT DISTINCT company FROM stakeholders WHERE owner_id = $1 AND company != '' ORDER BY company`,
+      [req.user.id]
+    );
+    res.json(rows.map(r => r.company));
+  } catch (e) { res.status(500).json({ error: 'Failed to load companies.' }); }
+});
+
+/* Create */
+router.post('/', async (req, res) => {
+  try {
+    const { company, name, title, role, influence, support, engaged, notes } = req.body || {};
+    if (!name || !name.trim()) return res.status(400).json({ error: 'Name is required.' });
+    if (role && !ROLES.includes(role)) return res.status(400).json({ error: 'Invalid role.' });
+    const inf = Math.min(5, Math.max(1, parseInt(influence) || 3));
+    const sup = Math.min(5, Math.max(1, parseInt(support)   || 3));
+    const { rows } = await query(
+      `INSERT INTO stakeholders (owner_id, company, name, title, role, influence, support, engaged, notes)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+       RETURNING id, company, name, title, role, influence, support, engaged, notes, updated_at`,
+      [req.user.id, (company||'').trim(), name.trim(), (title||'').trim(),
+       role || 'influencer', inf, sup, !!engaged, (notes||'').trim()]
+    );
+    await log({ userId: req.user.id, action: 'stakeholder.created', entityType: 'stakeholder',
+                entityId: rows[0].id, detail: { name: name.trim(), company }, ipAddress: req.ip });
+    res.status(201).json(rows[0]);
+  } catch (e) { console.error('Stakeholder create:', e.message); res.status(500).json({ error: 'Failed to create stakeholder.' }); }
+});
+
+/* Update */
+router.patch('/:id', async (req, res) => {
+  try {
+    const { company, name, title, role, influence, support, engaged, notes } = req.body || {};
+    if (role && !ROLES.includes(role)) return res.status(400).json({ error: 'Invalid role.' });
+    const { rows } = await query(
+      `UPDATE stakeholders SET
+         company   = COALESCE($1, company),
+         name      = COALESCE($2, name),
+         title     = COALESCE($3, title),
+         role      = COALESCE($4, role),
+         influence = COALESCE($5, influence),
+         support   = COALESCE($6, support),
+         engaged   = COALESCE($7, engaged),
+         notes     = COALESCE($8, notes)
+       WHERE id = $9 AND owner_id = $10
+       RETURNING id, company, name, title, role, influence, support, engaged, notes, updated_at`,
+      [company !== undefined ? company.trim() : null,
+       name    !== undefined ? name.trim()    : null,
+       title   !== undefined ? title.trim()   : null,
+       role || null,
+       influence !== undefined ? Math.min(5, Math.max(1, parseInt(influence)||3)) : null,
+       support   !== undefined ? Math.min(5, Math.max(1, parseInt(support)||3))   : null,
+       engaged   !== undefined ? !!engaged : null,
+       notes     !== undefined ? notes : null,
+       req.params.id, req.user.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Stakeholder not found.' });
+    res.json(rows[0]);
+  } catch (e) { res.status(500).json({ error: 'Failed to update stakeholder.' }); }
+});
+
+/* Delete */
+router.delete('/:id', async (req, res) => {
+  try {
+    const { rows } = await query(
+      'DELETE FROM stakeholders WHERE id = $1 AND owner_id = $2 RETURNING id, name',
+      [req.params.id, req.user.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Stakeholder not found.' });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: 'Failed to delete stakeholder.' }); }
+});
+
+module.exports = router;

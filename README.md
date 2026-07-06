@@ -1,111 +1,92 @@
 # Cloud Inventory ROI Business Case Builder
 
-Database-backed Node.js/Express application for creating and managing Cloud Inventory ROI business cases. The package includes a Render Blueprint that creates both the web service and its PostgreSQL database.
+Database-backed Node.js/Express application for creating and managing Cloud Inventory ROI business cases. This release is prepared for deployment through a Render Blueprint and includes the web service, PostgreSQL database definition, database migrations, and browser assets.
 
-## GitHub repository structure
+## Repository structure
 
-Upload the **contents of this folder** to the root of a GitHub repository. `render.yaml`, `server.js`, and `package.json` must all be at the repository root.
+Place the **contents of this folder** at the root of the GitHub repository. These files must be directly at the repository root:
 
-## Deploy with a Render Blueprint
+- `render.yaml`
+- `package.json`
+- `package-lock.json`
+- `server.js`
+- `src/`
+- `public/`
+- `migrations/`
 
-1. Push the package contents to GitHub.
-2. In Render, open **Blueprints** and select **New Blueprint Instance**.
-3. Connect the GitHub repository containing this package.
-4. Render reads `render.yaml` and creates:
+Do not place the project inside an additional nested folder.
+
+## Render Blueprint deployment
+
+1. Push the repository to GitHub.
+2. In Render, create or sync the Blueprint connected to the repository.
+3. Render reads `render.yaml` and provisions or updates:
    - the `cloud-inventory-roi` Node web service;
    - the `cloud-inventory-roi-db` PostgreSQL database;
-   - the `DATABASE_URL` connection automatically;
+   - the private `DATABASE_URL` connection;
    - a generated `JWT_SECRET`.
-5. During initial Blueprint creation, provide optional values when prompted:
-   - `ANTHROPIC_API_KEY` for AI Enhance;
-   - `SENDGRID_API_KEY` and `FROM_EMAIL` for password-reset and welcome emails.
-6. Apply the Blueprint and monitor the deploy logs.
-7. Confirm the service health endpoint returns JSON at `/health`.
-8. Open `/login.html` and sign in with the initial administrator account below.
+4. Enter optional secret values in Render when required:
+   - `ANTHROPIC_API_KEY` enables AI Enhance;
+   - `SENDGRID_API_KEY` and `FROM_EMAIL` enable application email.
+5. Confirm the deployment logs show successful migrations and server startup.
+6. Confirm `/health` returns `status: ok`, version `2.2.0`, and `database: connected`.
 
-## Initial administrator account
+## Initial administrator
 
 - **Username:** `admin`
 - **Initial password:** `CloudInventory2026!`
+- **Email:** `admin@cloudinventory.com`
 - **Role:** Administrator
-- **First-login behavior:** the application requires the password to be changed immediately.
 
-These values are intentionally hardcoded in `render.yaml` under `BOOTSTRAP_ADMIN_*`. Anyone who can read the repository can see them. Use a private repository and change the password at first login.
+The initial values are intentionally present in `render.yaml` and the historical bootstrap migration. Use a private GitHub repository. Change the password after successful login.
 
-The bootstrap routine is idempotent:
+The startup bootstrap creates or repairs an incomplete initial administrator account, clears an initial lockout, and preserves a user-managed password after the account is established. A normal redeployment does not overwrite a changed administrator password.
 
-- it creates the administrator only when the account does not exist;
-- it upgrades the legacy package password `CI2026` to the configured password;
-- it does not overwrite a password that an administrator has already changed.
+## Build and runtime
 
-## Application URL
+- Render runtime: Node.js
+- Pinned Render Node version: `22.22.0`
+- Build command: `npm ci`
+- Start command: `npm start`
+- Health check: `/health`
+- Automatic service deployment: Git commit
 
-No manual `APP_URL` setting is required for a standard Render deployment. The application uses Render's automatically provided `RENDER_EXTERNAL_URL`.
-
-Set `APP_URL` manually only when you want generated email and prospect links to use a custom domain instead of the `onrender.com` address.
-
-## Blueprint configuration
-
-The corrected `render.yaml` includes:
-
-- `runtime: node` for the Express application;
-- `plan: free` for both the web service and PostgreSQL database;
-- `healthCheckPath: /health`;
-- `autoDeployTrigger: commit` for GitHub pushes;
-- Node `22.22.0`, avoiding unexpected upgrades to a newer Render default runtime;
-- automatic private-network database connection through `fromDatabase`;
-- `ipAllowList: []` so PostgreSQL is not exposed to the public internet;
-- a generated JWT secret;
-- hardcoded bootstrap administrator settings.
-
-Custom `headers` are not defined in the Blueprint because Render supports that field only for static sites. Security headers are applied by Helmet in `server.js`.
-
-## Important Free-plan limitation
-
-Render's Free PostgreSQL databases expire 30 days after creation. The Free web service can also spin down when idle. Use the Free plans for validation or demonstration, not durable production use. Change the database and web-service plans in `render.yaml` before production deployment.
+`package-lock.json` is included so Render installs the tested dependency graph reproducibly.
 
 ## Environment variables
 
 | Variable | Required | Purpose |
 |---|---:|---|
-| `DATABASE_URL` | Yes | Injected automatically by Render from PostgreSQL |
-| `JWT_SECRET` | Yes | Generated automatically by Render |
-| `NODE_VERSION` | Yes | Pinned to `22.22.0` |
+| `DATABASE_URL` | Yes | Injected from Render PostgreSQL |
+| `JWT_SECRET` | Yes | Generated by Render |
+| `NODE_VERSION` | Yes | Pins Node to `22.22.0` |
 | `BOOTSTRAP_ADMIN_USERNAME` | Yes | Initial administrator username |
 | `BOOTSTRAP_ADMIN_PASSWORD` | Yes | Initial administrator password |
 | `BOOTSTRAP_ADMIN_EMAIL` | Yes | Initial administrator email |
+| `NODE_ENV` | Yes | Set to `production` |
 | `ANTHROPIC_API_KEY` | No | Enables AI Enhance |
-| `ANTHROPIC_MODEL` | No | Defaults to the configured Claude model |
-| `SENDGRID_API_KEY` | No | Enables application emails |
-| `FROM_EMAIL` | No | Verified SendGrid sender address |
-| `APP_URL` | No | Optional custom-domain override |
-
-## Local development
-
-```bash
-npm install
-
-export DATABASE_URL='postgresql://...'
-export JWT_SECRET='replace-with-a-long-random-secret'
-export BOOTSTRAP_ADMIN_USERNAME='admin'
-export BOOTSTRAP_ADMIN_PASSWORD='CloudInventory2026!'
-export BOOTSTRAP_ADMIN_EMAIL='admin@cloudinventory.com'
-
-npm start
-```
-
-The server listens on `PORT` when supplied and otherwise uses port `3000` locally.
+| `ANTHROPIC_MODEL` | No | Claude model identifier |
+| `SENDGRID_API_KEY` | No | Enables email delivery |
+| `FROM_EMAIL` | No | Verified SendGrid sender |
+| `APP_URL` | No | Optional custom-domain override; otherwise Render's external URL is used |
 
 ## Database migrations
 
-Migrations run automatically before the web server starts. Applied migration filenames are recorded in `schema_migrations`, so redeployment is safe and does not rerun completed migrations.
+Migrations run before the web server starts. Applied filenames are recorded in `schema_migrations`, so already-applied migrations are not rerun on subsequent deployments.
 
-## Main components
+Do not rename or delete historical migration files when updating an existing Render database.
 
-- `render.yaml` — Render Blueprint
-- `server.js` — Express application and API routes
-- `src/migrate.js` — migrations and administrator bootstrap
-- `migrations/` — PostgreSQL schema and seed data
-- `src/routes/` — authentication, users, scenarios, help, and logs
-- `src/middleware/auth.js` — JWT/session authorization
-- `public/` — browser-delivered HTML, JavaScript, CSS, and images
+## Local validation
+
+```powershell
+npm ci
+node --check server.js
+Get-ChildItem .\src -Recurse -Filter *.js | ForEach-Object { node --check $_.FullName }
+npm audit --omit=dev
+```
+
+A local database is required to test authentication and data operations end to end.
+
+## Render free-plan limitation
+
+The Blueprint currently uses the Free plan for the web service and PostgreSQL. Free PostgreSQL is suitable only for testing or demonstration because it expires after Render's free-database retention period. Select a paid database plan before using the application as a durable production system.

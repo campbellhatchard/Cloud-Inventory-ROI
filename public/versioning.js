@@ -245,6 +245,11 @@ function renderListVersioned() {
   if (ownershipFilter === 'mine')   pool = display.filter(s => !s.ownerUsername || s.ownerUsername === me.username);
   if (ownershipFilter === 'shared') pool = display.filter(s => s.ownerUsername && s.ownerUsername !== me.username);
 
+  /* Industry filter — applied on top of ownership filter */
+  if (typeof industryFilter !== 'undefined' && industryFilter) {
+    pool = pool.filter(s => s.industry === industryFilter);
+  }
+
   const filtered = stageFilter ? pool.filter(s => s.dealStage === stageFilter) : pool;
 
   if (!display.length) {
