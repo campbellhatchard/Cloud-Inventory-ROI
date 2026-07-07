@@ -14,7 +14,8 @@
 const sgMail = require('@sendgrid/mail');
 
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@cloudinventory.com';
-const APP_URL    = (process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || '').replace(/\/$/, '');
+const { getAppUrl } = require('./config');
+const APP_URL = getAppUrl();
 
 /* Configure SendGrid — silently skip if key not set (dev mode) */
 if (process.env.SENDGRID_API_KEY) {

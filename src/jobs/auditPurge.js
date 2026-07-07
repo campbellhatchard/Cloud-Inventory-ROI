@@ -22,7 +22,8 @@ const { sendPurgeConfirmation } = require('../email');
 
 const TWO_YEARS_MS       = 2 * 365.25 * 24 * 60 * 60 * 1000;
 const CONFIRM_EXPIRY_HRS = 48;
-const APP_URL            = (process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || '').replace(/\/$/, '');
+const { getAppUrl } = require('../config');
+const APP_URL = getAppUrl();
 
 /* ── Called once on startup to register the monthly cron job ── */
 function startPurgeJob() {
@@ -33,13 +34,14 @@ function startPurgeJob() {
   }
 
   /* '0 2 1 * *' = 02:00 on the 1st of every month */
-  cron.schedule('0 2 1 * *', () => {
+  const task = cron.schedule('0 2 1 * *', () => {
     runPurgeCheck().catch(err =>
       console.error('[auditPurge] Purge check failed:', err.message)
     );
   });
 
   console.log('[auditPurge] Monthly purge check scheduled (02:00 on 1st of month).');
+  return task;
 }
 
 /* ── Main purge check logic ── */

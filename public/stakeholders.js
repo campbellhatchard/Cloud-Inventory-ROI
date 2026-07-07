@@ -17,23 +17,35 @@ const STAKE_ROLES = {
 
 async function initStakeTab() {
   if (window._authReady) await window._authReady;
-  await loadStakeCompanies();
+  await loadCompanies();
+  populateStakeCompanySelect();
   await loadStakeholders();
 }
 
+function populateStakeCompanySelect() {
+  const sel = document.getElementById('stakeCompanySel');
+  if (!sel) return;
+  const list = getCompanies();
+  const opts = ['<option value="">— Select a company —</option>'];
+  list.forEach(c => {
+    opts.push(`<option value="${escapeHtml(c.name)}" ${c.name === _stakeCompany ? 'selected' : ''}>${escapeHtml(c.name)}${c.stakeholders ? '  (' + c.stakeholders + ')' : ''}</option>`);
+  });
+  opts.push('<option value="__new__">+ New company…</option>');
+  sel.innerHTML = opts.join('');
+  updateStakeGate();
+}
+
+function updateStakeGate() {
+  const has = !!(_stakeCompany && _stakeCompany.trim());
+  const addBtn = document.getElementById('stakeAddBtn');
+  const gate   = document.getElementById('stakeCompanyGate');
+  if (addBtn) addBtn.disabled = !has;
+  if (gate)   gate.style.display = has ? 'none' : 'block';
+}
+
 async function loadStakeCompanies() {
-  try {
-    const resp = await apiFetch('/api/stakeholders/companies');
-    if (!resp || !resp.ok) return;
-    const companies = await resp.json();
-    const sel = document.getElementById('stakeCompanySel');
-    if (!sel) return;
-    const v = typeof getVals === 'function' ? getVals() : {};
-    const current = v.company && v.company !== 'Prospect' ? v.company : '';
-    if (current && !companies.includes(current)) companies.unshift(current);
-    sel.innerHTML = '<option value="">All companies</option>' +
-      companies.map(c => `<option value="${escapeHtml(c)}" ${c === _stakeCompany ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('');
-  } catch (e) {}
+  await loadCompanies();
+  populateStakeCompanySelect();
 }
 
 async function loadStakeholders() {
@@ -46,7 +58,28 @@ async function loadStakeholders() {
   } catch (e) { console.error('loadStakeholders:', e.message); }
 }
 
-function setStakeCompany(c) { _stakeCompany = c; loadStakeholders(); }
+function setStakeCompany(c) {
+  if (c === '__new__') {
+    const typed = prompt('New company name:');
+    if (!typed || !typed.trim()) { populateStakeCompanySelect(); return; }
+    checkCompanyOnEntry(typed, (finalName) => {
+      if (!finalName) { populateStakeCompanySelect(); return; }
+      _stakeCompany = finalName;
+      if (!getCompanies().some(x => x.name.toLowerCase() === finalName.toLowerCase())) {
+        getCompanies().push({ name: finalName, scenarios: 0, plans: 0, stakeholders: 0 });
+      }
+      populateStakeCompanySelect();
+      updateStakeGate();
+      loadStakeholders();
+      promptScenarioForCompany(finalName, () => {});
+    });
+    return;
+  }
+  _stakeCompany = c;
+  updateStakeGate();
+  loadStakeholders();
+  if (c) promptScenarioForCompany(c, () => {});
+}
 
 /* ── RENDER ── */
 function renderStakeTab() {
@@ -130,7 +163,7 @@ function renderStakeList() {
 /* ── ADD / EDIT MODAL ── */
 function stakeholderModal(s) {
   const isEdit = !!s;
-  s = s || { name: '', title: '', role: 'influencer', influence: 3, support: 3, engaged: false, notes: '', company: _stakeCompany || ((typeof getVals === 'function' && getVals().company !== 'Prospect') ? getVals().company : '') };
+  s = s || { name: '', title: '', role: 'influencer', influence: 3, support: 3, engaged: false, notes: '', company: _stakeCompany || '' };
   const modal = document.createElement('div');
   modal.className = 'modal-overlay open';
   modal.id = 'stakeModal';
@@ -160,7 +193,14 @@ function stakeholderModal(s) {
   document.getElementById('skName').focus();
 }
 
-function addStakeholder() { stakeholderModal(null); }
+function addStakeholder() {
+  if (!_stakeCompany || !_stakeCompany.trim()) {
+    showToast('Select a company first.');
+    updateStakeGate();
+    return;
+  }
+  stakeholderModal(null);
+}
 function editStakeholder(id) { const s = _stakeholders.find(x => x.id === id); if (s) stakeholderModal(s); }
 
 async function saveStakeholder(id) {
@@ -181,7 +221,8 @@ async function saveStakeholder(id) {
   if (!resp || !resp.ok) { const d = resp ? await resp.json() : {}; err.textContent = d.error || 'Save failed.'; err.style.display = 'block'; return; }
   document.getElementById('stakeModal').remove();
   showToast(id ? 'Stakeholder updated.' : 'Stakeholder added.');
-  await loadStakeCompanies();
+  await loadCompanies();
+  populateStakeCompanySelect();
   await loadStakeholders();
 }
 

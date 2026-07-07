@@ -792,3 +792,17 @@ body{font-family:var(--font);background:var(--gray-100);color:var(--gray-800);li
 .stake-ai-list{list-style:none;padding:0;}
 .stake-ai-list li{font-size:12px;color:var(--gray-700);padding:4px 0 4px 16px;position:relative;line-height:1.5;}
 .stake-ai-list li::before{content:'→';position:absolute;left:0;color:var(--cyan);font-weight:700;}
+
+/* ══ Company-centric selection (v2.3) ══ */
+.scenario-pick-list{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;margin:.25rem 0;}
+.scenario-pick-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--gray-200);border-radius:8px;cursor:pointer;transition:all .12s;}
+.scenario-pick-row:hover{background:var(--gray-50);border-color:var(--cyan);}
+.scenario-pick-row input[type=radio]{width:16px;height:16px;flex-shrink:0;cursor:pointer;}
+.scenario-pick-name{font-size:13px;font-weight:600;color:var(--gray-800);}
+.scenario-pick-meta{font-size:11px;color:var(--gray-400);margin-top:2px;}
+#mapCompanySel,#stakeCompanySel{padding:7px 10px;font-size:13px;font-family:var(--font);border:1.5px solid var(--gray-200);border-radius:7px;background:var(--white);color:var(--gray-800);cursor:pointer;outline:none;width:100%;}
+#mapCompanySel:focus,#stakeCompanySel:focus{border-color:var(--cyan);}
+button:disabled{opacity:.5;cursor:not-allowed;}
+
+/* ══ Deal export buttons (v2.4) ══ */
+.export-divider{display:inline-block;width:1px;height:22px;background:var(--gray-200);margin:0 4px;vertical-align:middle;}

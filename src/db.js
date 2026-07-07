@@ -25,22 +25,6 @@ pool.on('error', (err) => {
   console.error('PostgreSQL pool error:', err.message);
 });
 
-/* ── Verify connectivity on startup ── */
-pool.connect((err, client, release) => {
-  if (err) {
-    console.error('❌ PostgreSQL connection failed:', err.message);
-    console.error('   Check DATABASE_URL in your Render environment variables.');
-  } else {
-    client.query('SELECT NOW() AS db_time', (qErr, result) => {
-      release();
-      if (qErr) {
-        console.error('❌ PostgreSQL test query failed:', qErr.message);
-      } else {
-        console.log('✅ PostgreSQL connected — server time:', result.rows[0].db_time);
-      }
-    });
-  }
-});
 
 /**
  * Parameterised query helper.
@@ -92,12 +76,5 @@ async function transaction(fn) {
     client.release();
   }
 }
-
-/* ── Graceful shutdown — drain pool on SIGTERM (Render sends this) ── */
-process.on('SIGTERM', async () => {
-  console.log('SIGTERM received — draining database pool...');
-  await pool.end();
-  console.log('Database pool closed.');
-});
 
 module.exports = { query, transaction, pool };

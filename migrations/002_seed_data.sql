@@ -21,7 +21,7 @@ INSERT INTO help_pages (slug, title, content, sort_order) VALUES
 <h2>Getting started with the ROI Builder</h2>
 <p>Welcome to the Cloud Inventory ROI Business Case Builder. Follow these steps to build your first business case:</p>
 <ol>
-  <li><strong>Log in</strong> — Use the credentials provided by your Administrator. You will be prompted to set a new password on first login.</li>
+  <li><strong>Log in</strong> — Use the credentials provided by your Administrator. Change the temporary password from My profile after signing in.</li>
   <li><strong>Create a scenario</strong> — Go to the Calculator tab. Enter a <strong>Company name</strong> and <strong>Scenario name</strong> — these are required before you can save.</li>
   <li><strong>Select an industry</strong> — The Industry dropdown auto-populates benchmark assumptions and loads industry-specific discovery questions. Always select an industry first.</li>
   <li><strong>Run discovery</strong> — Switch to the Discovery tab and work through the questions with your prospect. Generate a Prospect Link so the prospect can fill in their own answers securely.</li>

@@ -40,6 +40,7 @@ router.get('/companies', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { company, name, title, role, influence, support, engaged, notes } = req.body || {};
+    if (!company || !company.trim()) return res.status(400).json({ error: 'A company must be selected before adding a stakeholder.' });
     if (!name || !name.trim()) return res.status(400).json({ error: 'Name is required.' });
     if (role && !ROLES.includes(role)) return res.status(400).json({ error: 'Invalid role.' });
     const inf = Math.min(5, Math.max(1, parseInt(influence) || 3));
@@ -62,6 +63,7 @@ router.patch('/:id', async (req, res) => {
   try {
     const { company, name, title, role, influence, support, engaged, notes } = req.body || {};
     if (role && !ROLES.includes(role)) return res.status(400).json({ error: 'Invalid role.' });
+    if (company !== undefined && !String(company).trim()) return res.status(400).json({ error: 'Company cannot be blank.' });
     const { rows } = await query(
       `UPDATE stakeholders SET
          company   = COALESCE($1, company),

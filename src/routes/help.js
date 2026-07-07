@@ -21,7 +21,7 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const { rows } = await query(
-      `SELECT id, slug, title, sort_order, updated_at,
+      `SELECT h.id, h.slug, h.title, h.sort_order, h.updated_at,
               u.username AS updated_by_username
        FROM help_pages h
        LEFT JOIN users u ON u.id = h.updated_by

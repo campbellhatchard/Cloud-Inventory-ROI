@@ -15,6 +15,7 @@ const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcrypt');
 const { Pool } = require('pg');
+const { envInt } = require('./config');
 
 async function ensureBootstrapAdmin(client) {
   const username = String(process.env.BOOTSTRAP_ADMIN_USERNAME || 'admin').trim();
@@ -103,10 +104,26 @@ async function runMigrations() {
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-    max: 1
+    max: 1,
+    connectionTimeoutMillis: 10000
   });
 
-  const client = await pool.connect();
+  let client;
+  const maxAttempts = envInt('DB_STARTUP_MAX_ATTEMPTS', 60, { min: 1, max: 200 });
+  const retryDelayMs = envInt('DB_STARTUP_RETRY_MS', 3000, { min: 250, max: 30000 });
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      client = await pool.connect();
+      break;
+    } catch (err) {
+      if (attempt === maxAttempts) {
+        await pool.end().catch(() => {});
+        throw new Error(`Unable to connect to PostgreSQL after ${maxAttempts} attempts: ${err.message}`);
+      }
+      console.warn(`PostgreSQL not ready (attempt ${attempt}/${maxAttempts}); retrying in ${retryDelayMs}ms...`);
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+    }
+  }
 
   try {
     await client.query(`

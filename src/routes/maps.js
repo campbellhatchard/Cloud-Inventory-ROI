@@ -7,6 +7,7 @@ const crypto    = require('crypto');
 const { query } = require('../db');
 const { log }   = require('../audit');
 const { requireAuth } = require('../middleware/auth');
+const { getAppUrl } = require('../config');
 
 const router = express.Router();
 
@@ -76,6 +77,9 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { company, title, targetCloseDate, milestones, scenarioId } = req.body || {};
+    if (!company || !company.trim()) {
+      return res.status(400).json({ error: 'A company must be selected before saving an action plan.' });
+    }
     const { rows } = await query(
       `INSERT INTO mutual_action_plans (owner_id, scenario_id, company, title, target_close_date, milestones)
        VALUES ($1,$2,$3,$4,$5,$6)
@@ -93,6 +97,9 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { company, title, targetCloseDate, milestones } = req.body || {};
+    if (company !== undefined && !String(company).trim()) {
+      return res.status(400).json({ error: 'Company cannot be blank.' });
+    }
     const { rows } = await query(
       `UPDATE mutual_action_plans
        SET company = COALESCE($1, company), title = COALESCE($2, title),
@@ -123,7 +130,7 @@ router.post('/:id/share', async (req, res) => {
     await log({ userId: req.user.id, action: 'map.shared', entityType: 'mutual_action_plan',
                 entityId: req.params.id, ipAddress: req.ip });
     res.json({ ok: true, token,
-      url: `${process.env.APP_URL || ''}/prospect-map.html#token=${token}` });
+      url: `${getAppUrl()}/prospect-map.html#token=${token}` });
   } catch (e) { res.status(500).json({ error: 'Failed to share plan.' }); }
 });
 

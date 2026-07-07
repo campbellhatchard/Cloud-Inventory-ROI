@@ -118,17 +118,23 @@ function renderMapEditor() {
       <button class="btn btn-ghost btn-sm" onclick="renderMapList()">← All plans</button>
     </div>
     <div class="card" style="margin-bottom:1.25rem;">
-      <div style="display:grid;grid-template-columns:2fr 1.4fr 1fr;gap:10px;align-items:end;">
+      <div style="display:grid;grid-template-columns:1.4fr 2fr 1fr;gap:10px;align-items:end;">
+        <div class="field" style="margin:0;"><label>Company *</label>
+          <select id="mapCompanySel" onchange="mapCompanyChanged(this.value)"></select></div>
         <div class="field" style="margin:0;"><label>Plan title</label>
           <input type="text" id="mapTitle" value="${escapeHtml(m.title)}"/></div>
-        <div class="field" style="margin:0;"><label>Company</label>
-          <input type="text" id="mapCompany" value="${escapeHtml(m.company || '')}" placeholder="Prospect company"/></div>
         <div class="field" style="margin:0;"><label>Target close date</label>
           <input type="date" id="mapCloseDate" value="${m.target_close_date ? String(m.target_close_date).split('T')[0] : ''}"/></div>
       </div>
+      <div id="mapCompanyGate" class="field-hint" style="color:var(--amber);display:${m.company ? 'none' : 'block'};margin-top:6px;">Select or create a company before saving this plan.</div>
       <div class="btn-row" style="margin-top:.85rem;align-items:center;flex-wrap:wrap;">
-        <button class="btn btn-cta" onclick="saveMap()">Save plan</button>
+        <button class="btn btn-cta" id="mapSaveBtn" onclick="saveMap()">Save plan</button>
         <button class="btn btn-primary" onclick="aiGenerateMap()" id="mapAiBtn">✨ Generate milestones with AI</button>
+        <span class="export-divider"></span>
+        <button class="btn btn-ghost btn-sm" onclick="printActionPlan('internal')" title="Print / save internal PDF">🖨 PDF (internal)</button>
+        <button class="btn btn-ghost btn-sm" onclick="printActionPlan('customer')" title="Print / save customer PDF">🖨 PDF (customer)</button>
+        <button class="btn btn-ghost btn-sm" id="mapPptIntBtn" onclick="pptActionPlan('internal')" title="Export internal PowerPoint">📊 PPT (internal)</button>
+        <button class="btn btn-ghost btn-sm" id="mapPptCustBtn" onclick="pptActionPlan('customer')" title="Export customer PowerPoint">📊 PPT (customer)</button>
         ${shareBlock}
       </div>
     </div>
@@ -138,6 +144,42 @@ function renderMapEditor() {
       </div>
       <div id="mapMilestones">${renderMilestones()}</div>
     </div>`;
+
+  /* Populate the company selector and enforce the gate */
+  fillCompanySelect(document.getElementById('mapCompanySel'), m.company);
+  mapUpdateGate();
+}
+
+/* Company selector change — handle "+ New company…", check-existing, scenario prompt */
+function mapCompanyChanged(val) {
+  if (val === '__new__') {
+    const typed = prompt('New company name:');
+    if (!typed || !typed.trim()) { fillCompanySelect(document.getElementById('mapCompanySel'), _mapCurrent.company); return; }
+    checkCompanyOnEntry(typed, (finalName) => {
+      if (!finalName) { fillCompanySelect(document.getElementById('mapCompanySel'), _mapCurrent.company); return; }
+      _mapCurrent.company = finalName;
+      if (!_companies.some(c => c.name.toLowerCase() === finalName.toLowerCase())) {
+        _companies.push({ name: finalName, scenarios: 0, plans: 0, stakeholders: 0 });
+      }
+      fillCompanySelect(document.getElementById('mapCompanySel'), finalName);
+      mapUpdateGate();
+      promptScenarioForCompany(finalName, () => {});
+    });
+    return;
+  }
+  _mapCurrent.company = val;
+  mapUpdateGate();
+  if (val) promptScenarioForCompany(val, () => {});
+}
+
+function mapUpdateGate() {
+  const has = !!(_mapCurrent.company && _mapCurrent.company.trim());
+  const gate = document.getElementById('mapCompanyGate');
+  const save = document.getElementById('mapSaveBtn');
+  const ai   = document.getElementById('mapAiBtn');
+  if (gate) gate.style.display = has ? 'none' : 'block';
+  if (save) save.disabled = !has;
+  if (ai)   ai.disabled = !has;
 }
 
 function renderMilestones() {
@@ -178,9 +220,14 @@ function removeMilestone(id) {
 
 /* ── Persistence ── */
 async function saveMap() {
+  if (!_mapCurrent.company || !_mapCurrent.company.trim()) {
+    showToast('Select a company before saving.');
+    mapUpdateGate();
+    return;
+  }
   const body = {
     title:           document.getElementById('mapTitle').value.trim() || 'Mutual Action Plan',
-    company:         document.getElementById('mapCompany').value.trim(),
+    company:         _mapCurrent.company.trim(),
     targetCloseDate: document.getElementById('mapCloseDate').value || null,
     milestones:      _mapCurrent.milestones || []
   };
@@ -240,7 +287,7 @@ async function aiGenerateMap() {
   btn.disabled = true; btn.textContent = '✨ Drafting…';
   try {
     const v = typeof getVals === 'function' ? getVals() : {};
-    const company   = document.getElementById('mapCompany').value.trim() || v.company || 'the prospect';
+    const company   = (_mapCurrent.company || '').trim() || v.company || 'the prospect';
     const closeDate = document.getElementById('mapCloseDate').value || '';
     const industry  = (typeof IND !== 'undefined' && IND[v.industry]) ? IND[v.industry].label : 'general';
     const stage     = v.dealStage || 'Discovery';

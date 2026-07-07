@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   server.js  —  Cloud Inventory ROI Builder  v2.2.0
+   server.js  —  Cloud Inventory ROI Builder  v2.4.0  (Phase 10 — Final)
    Database-backed multi-user edition — production hardened
 
    Security layers applied (Phase 10):
@@ -19,9 +19,14 @@ const rateLimit  = require('express-rate-limit');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
+let httpServer = null;
+let cleanupTimer = null;
+let purgeTask = null;
+let shuttingDown = false;
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const PROD = process.env.NODE_ENV === 'production';
-const APP_URL = (process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || '').replace(/\/$/, '');
+const { getAppUrl } = require('./src/config');
+const APP_URL = getAppUrl();
 const APP_VERSION = require('./package.json').version;
 
 const ANTHROPIC_MODEL    = process.env.ANTHROPIC_MODEL    || 'claude-sonnet-4-6';
@@ -44,7 +49,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc:     ["'self'"],
-      scriptSrc:      ["'self'", "'unsafe-inline'", 'https://cdnjs.cloudflare.com'], // inline scripts + pptxgenjs CDN
+      scriptSrc:      ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'], // inline scripts + pptxgenjs CDN (jsDelivr)
       /* Helmet's default CSP sets script-src-attr 'none'. The current UI uses
          inline HTML event handlers (onsubmit/onclick) throughout, so that
          default silently disables login and most buttons. Allow those legacy
@@ -82,7 +87,6 @@ const apiLimiter = rateLimit({
   max:             100,
   standardHeaders: true,
   legacyHeaders:   false,
-  keyGenerator:    (req) => req.ip || 'unknown',
   message:         { error: 'Too many requests. Please slow down and try again in a minute.' },
   skip:            (req) => req.path === '/health'  // health check is exempt
 });
@@ -144,6 +148,55 @@ app.use('/api/maps', mapsRouter);
 /* ── Stakeholder maps ── */
 const stakeholdersRouter = require('./src/routes/stakeholders');
 app.use('/api/stakeholders', stakeholdersRouter);
+
+/* ── Unified company list (v2.3) ──
+   De-duplicated company names across scenarios, action plans and
+   stakeholders for the current user, each with usage counts.
+   Case-insensitive grouping; canonical spelling = most recent use.  */
+const { requireAuth: _reqAuthCompanies } = require('./src/middleware/auth');
+app.get('/api/companies', _reqAuthCompanies, async (req, res) => {
+  try {
+    const { rows } = await db().query(
+      `WITH all_companies AS (
+         SELECT company, updated_at, 'scenario'    AS src FROM scenarios
+           WHERE owner_id = $1 AND deleted_at IS NULL AND company <> ''
+         UNION ALL
+         SELECT company, updated_at, 'plan'        AS src FROM mutual_action_plans
+           WHERE owner_id = $1 AND company <> ''
+         UNION ALL
+         SELECT company, updated_at, 'stakeholder' AS src FROM stakeholders
+           WHERE owner_id = $1 AND company <> ''
+       ),
+       canonical AS (
+         SELECT DISTINCT ON (LOWER(company)) LOWER(company) AS key, company AS name
+         FROM all_companies
+         ORDER BY LOWER(company), updated_at DESC
+       ),
+       counts AS (
+         SELECT LOWER(company) AS key,
+                COUNT(*) FILTER (WHERE src = 'scenario')    AS scenarios,
+                COUNT(*) FILTER (WHERE src = 'plan')        AS plans,
+                COUNT(*) FILTER (WHERE src = 'stakeholder') AS stakeholders
+         FROM all_companies
+         GROUP BY LOWER(company)
+       )
+       SELECT c.name, ct.scenarios, ct.plans, ct.stakeholders
+       FROM canonical c
+       JOIN counts ct ON ct.key = c.key
+       ORDER BY c.name ASC`,
+      [req.user.id]
+    );
+    res.json(rows.map(r => ({
+      name: r.name,
+      scenarios: Number(r.scenarios),
+      plans: Number(r.plans),
+      stakeholders: Number(r.stakeholders)
+    })));
+  } catch (err) {
+    console.error('List companies error:', err.message);
+    res.status(500).json({ error: 'Failed to load companies.' });
+  }
+});
 
 /* ── Audit log viewer ── */
 const logsRouter = require('./src/routes/logs');
@@ -443,6 +496,12 @@ app.use((err, req, res, next) => {
 
 /* ═══════ STARTUP ═══════ */
 async function start() {
+  const databaseRequired = process.env.REQUIRE_DATABASE !== 'false';
+
+  if (!process.env.DATABASE_URL && databaseRequired) {
+    throw new Error('DATABASE_URL is required but is not configured.');
+  }
+
   if (process.env.DATABASE_URL) {
     try {
       const { runMigrations } = require('./src/migrate');
@@ -453,7 +512,7 @@ async function start() {
     }
 
     /* Hourly cleanup of expired sessions and reset tokens */
-    setInterval(async () => {
+    cleanupTimer = setInterval(async () => {
       try {
         const { query } = require('./src/db');
         const s = await query('DELETE FROM sessions WHERE expires_at < NOW()');
@@ -465,12 +524,13 @@ async function start() {
         console.error('[cleanup] Error:', err.message);
       }
     }, 60 * 60 * 1000);
+    cleanupTimer.unref();
 
   } else {
-    console.warn('⚠️  DATABASE_URL not set — running without database.');
+    console.warn('⚠️  DATABASE_URL not set — database features are disabled for this local smoke test.');
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  httpServer = app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 Cloud Inventory ROI Builder v${APP_VERSION} — port ${PORT}`);
     console.log(`   Phase    : 10 / 10 — Production hardened ✅`);
     console.log(`   Database : ${process.env.DATABASE_URL ? '✅ connected' : '⚠️  not configured'}`);
@@ -483,9 +543,50 @@ async function start() {
 
     if (process.env.DATABASE_URL) {
       const { startPurgeJob } = require('./src/jobs/auditPurge');
-      startPurgeJob();
+      purgeTask = startPurgeJob();
     }
   });
 }
 
-start();
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`${signal} received — shutting down cleanly...`);
+
+  if (cleanupTimer) clearInterval(cleanupTimer);
+  if (purgeTask && typeof purgeTask.stop === 'function') purgeTask.stop();
+
+  const forceExit = setTimeout(() => {
+    console.error('Graceful shutdown timed out; forcing exit.');
+    process.exit(1);
+  }, 10000);
+  forceExit.unref();
+
+  try {
+    if (httpServer) {
+      const closePromise = new Promise((resolve) => httpServer.close(resolve));
+      if (typeof httpServer.closeIdleConnections === 'function') {
+        httpServer.closeIdleConnections();
+      }
+      await closePromise;
+    }
+    if (process.env.DATABASE_URL) {
+      const { pool } = require('./src/db');
+      await pool.end();
+    }
+    clearTimeout(forceExit);
+    console.log('Shutdown complete.');
+    process.exit(0);
+  } catch (err) {
+    console.error('Shutdown error:', err.message);
+    process.exit(1);
+  }
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT',  () => shutdown('SIGINT'));
+
+start().catch((err) => {
+  console.error('Fatal startup error:', err.message);
+  process.exit(1);
+});
