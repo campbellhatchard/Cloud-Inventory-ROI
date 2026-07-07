@@ -1,65 +1,60 @@
-# Deployment validation — v2.4.1
+# Deployment Validation Report — v2.4.2
 
 ## Result
 
-The package is structurally ready for a Render Blueprint deployment.
+The uploaded developer archive was intact, but it was **not deployment-ready as submitted**. The corrected v2.4.2 package preserves the developer's application changes, including the new discovery-question fallback, and restores the deployment hardening required for Render.
 
-The exact cause of the previous Render failure cannot be proven without the failed deployment log. Revalidation identified and corrected several material deployment risks.
+## Issues found in the uploaded build
 
-## Corrections
+1. `package-lock.json` was absent and the Blueprint used `npm install`, making builds non-deterministic.
+2. The service used `npm start` rather than running Node directly.
+3. The application had no complete HTTP-server shutdown handler. `src/db.js` independently handled `SIGTERM` by closing only PostgreSQL, which could leave the HTTP process alive during Render replacement.
+4. `maxShutdownDelaySeconds` was absent from the Blueprint.
+5. Database connection at startup had no bounded retry loop, despite the database and service being created together by the Blueprint.
+6. Production could start without `DATABASE_URL`, and `/health` could return HTTP 200 with `database: not-configured`.
+7. Optional `sync: false` variables could interrupt initial Blueprint provisioning even though the integrations are optional.
+8. URL generation was inconsistent. One sharing route required `APP_URL`, while other files used Render-specific fallbacks directly.
+9. Bootstrap-admin behavior was contradictory across migrations, help content, README text, and runtime synchronization.
+10. A custom rate-limit key function bypassed the library's IPv6-safe default behavior.
+11. The package contained obsolete troubleshooting and patch-history documents.
+12. Login and password-change footers still displayed v2.0.3.
 
-1. **Direct Node start command**
-   - Changed `startCommand` from `npm start` to `node server.js`.
-   - This makes Node the service process so Render's `SIGTERM` reaches the application's graceful-shutdown handler directly.
+## Corrections applied
 
-2. **Database readiness window**
-   - Increased and parameterized PostgreSQL connection retries.
-   - Default: 60 attempts with a 3-second interval and a 10-second connection timeout.
-   - This reduces first-deploy failures while a Blueprint-created database is still becoming available.
+- Added a public-registry `package-lock.json` and `.npmrc`.
+- Changed the build command to `npm ci --omit=dev --no-audit --no-fund`.
+- Changed the start command to `node server.js`.
+- Added `maxShutdownDelaySeconds: 15`.
+- Added complete graceful shutdown for timers, cron tasks, HTTP connections, and PostgreSQL.
+- Added a 10-second forced-exit safeguard.
+- Added bounded PostgreSQL startup retries.
+- Made database connectivity mandatory in production.
+- Kept `/health` database-aware.
+- Added centralized public-URL resolution through `src/config.js` using `APP_URL` or `RENDER_EXTERNAL_HOSTNAME`.
+- Removed optional secret prompts from the core Blueprint.
+- Aligned the bootstrap administrator to direct login without a forced first-password-change loop.
+- Added migration `006_help_first_login_consistency.sql`.
+- Restored the IPv6-safe rate-limit default key generator.
+- Updated `node-cron` to 4.6.0 and `uuid` to 11.1.1.
+- Removed stale patch documents and updated displayed version markers.
 
-3. **No false healthy deployment without PostgreSQL**
-   - Production startup now fails when `DATABASE_URL` is missing.
-   - The `/health` endpoint therefore cannot mark a database-less production instance as ready.
+## Validation completed
 
-4. **Optional Blueprint prompts removed**
-   - Removed optional `sync: false` entries for Anthropic and SendGrid.
-   - Existing Render values are preserved when omitted from a Blueprint.
-   - Optional secrets can be added manually after the core service is live.
+- ZIP integrity check on the uploaded archive.
+- YAML parsing and Blueprint structural assertions.
+- Exact dependency installation from the lockfile.
+- `npm ls --omit=dev --depth=0` dependency-tree validation.
+- `npm audit --omit=dev`: zero known vulnerabilities at validation time.
+- JavaScript syntax checks for all server and browser JavaScript files.
+- Syntax checks for inline JavaScript in HTML files.
+- Runtime module loading for all declared top-level dependencies.
+- Verification that all 122 package tarball references use `https://registry.npmjs.org/`.
+- Local `/health` and `/login.html` smoke tests.
+- Production failure test when `DATABASE_URL` is absent.
+- Clean `SIGTERM` test with process exit code 0.
+- Local static-asset reference checks. The optional local `pptxgen.bundle.js` intentionally falls back to jsDelivr.
+- Six ordered SQL migration files present.
 
-5. **Supported Render hostname variable**
-   - Replaced the undocumented `RENDER_EXTERNAL_URL` dependency with `RENDER_EXTERNAL_HOSTNAME` and an `https://` prefix.
+## Environment limitation
 
-6. **Bounded graceful shutdown**
-   - `maxShutdownDelaySeconds` is set to 15.
-   - The application closes idle HTTP connections, the HTTP server, scheduled tasks, and the PostgreSQL pool, with a 10-second internal force-exit guard.
-
-7. **Reproducible dependency build**
-   - Public npm registry pinned in `.npmrc`.
-   - `package-lock.json` contains no private build-environment registry references.
-   - Render build uses `npm ci --omit=dev --no-audit --no-fund`.
-
-8. **PowerShell deployment safety**
-   - The new toolkit validates in a temporary directory outside OneDrive.
-   - It does not delete or reinstall the repository's local `node_modules` directory, avoiding the Windows file-lock failure seen previously.
-
-## Validation performed
-
-- Package root and required paths checked.
-- `render.yaml` parsed and asserted against required Blueprint fields.
-- `npm ci --omit=dev` completed using the public npm registry.
-- `npm audit --omit=dev --audit-level=high`: zero known vulnerabilities at validation time.
-- All server and browser JavaScript files passed `node --check`.
-- Inline scripts in HTML files passed syntax checks.
-- Local HTTP smoke test passed with `REQUIRE_DATABASE=false`.
-- `/health` returned version `2.4.1`.
-- Login page returned HTTP 200 with no-cache headers.
-- `SIGTERM` test exited cleanly.
-- Production startup correctly failed when `DATABASE_URL` was absent.
-- Database retry path was exercised against an unavailable endpoint.
-
-## Not validated in this environment
-
-- A live Render Blueprint sync in the user's workspace.
-- Execution of migrations against the user's existing Render PostgreSQL database.
-- Authentication against the user's existing database contents.
-- The exact prior Render failure, because the failed deploy log was not supplied.
+A live migration against the user's existing Render PostgreSQL database and a live Blueprint sync cannot be executed from the validation environment. Confirm migration output and `/health` after deployment.

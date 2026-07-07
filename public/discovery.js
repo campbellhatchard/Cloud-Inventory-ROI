@@ -255,6 +255,17 @@ const DISC_QUESTIONS = {
 };
 
 /* ─────────────────────────────────────────
+   getDiscoveryQuestions(industry)
+   Returns the section/question array for the given industry key,
+   falling back to the generic 'default' set when the industry is
+   unknown, blank, or has no bespoke questions defined.
+   ───────────────────────────────────────── */
+function getDiscoveryQuestions(industry) {
+  if (industry && DISC_QUESTIONS[industry]) return DISC_QUESTIONS[industry];
+  return DISC_QUESTIONS.default || [];
+}
+
+/* ─────────────────────────────────────────
    DISCOVERY STATE MANAGEMENT
    Stores discovery answers keyed by question ID
    Shared between rep and prospect via server session

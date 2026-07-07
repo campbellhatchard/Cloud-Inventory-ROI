@@ -1,25 +1,36 @@
-# Cloud Inventory ROI Builder v2.4.1
+# Cloud Inventory ROI Builder v2.4.2
 
 Render-ready Node.js/Express application with PostgreSQL persistence.
 
-## Render deployment
+## Repository root
 
-The repository root must contain:
+Deploy the **contents** of this package at the root of the GitHub repository. The root must contain:
 
 - `render.yaml`
 - `package.json`
 - `package-lock.json`
 - `server.js`
+- `.node-version`
+- `.npmrc`
 - `migrations/`
 - `public/`
 - `src/`
 
-Deploy by creating or synchronizing a Render Blueprint from the repository. The Blueprint creates or updates:
+## Render Blueprint
+
+The Blueprint creates or updates:
 
 - Web service: `cloud-inventory-roi`
 - PostgreSQL database: `cloud-inventory-roi-db`
 
-The web service runs `node server.js` directly so Render shutdown signals reach the Node process.
+Deployment commands:
+
+- Build: `npm ci --omit=dev --no-audit --no-fund`
+- Start: `node server.js`
+- Health check: `/health`
+- Auto deploy: every commit to the linked branch
+
+Node is pinned to `22.22.0`.
 
 ## Initial administrator
 
@@ -27,43 +38,50 @@ The web service runs `node server.js` directly so Render shutdown signals reach 
 - Password: `CloudInventory2026!`
 - Email: `admin@cloudinventory.com`
 
-Keep the GitHub repository private because the initial password is intentionally present in `render.yaml`.
+The bootstrap administrator is not forced through the first-login password-change screen. Change the password from the profile after signing in. Once changed, later deploys preserve the user-managed password.
 
-On an existing database, the bootstrap process does not overwrite a user-managed administrator password after initial setup.
+Keep the GitHub repository private because the bootstrap credential is deliberately present in `render.yaml` and migration history.
 
-## Optional environment variables
+## Optional integrations
 
-Add these manually in the Render service Environment page only when required:
+The core Blueprint does not require optional secrets. Add these manually in the Render service Environment page when needed:
 
 - `ANTHROPIC_API_KEY`
 - `SENDGRID_API_KEY`
 - `FROM_EMAIL`
-- `APP_URL` — only for a custom domain override
+- `APP_URL` only for a custom-domain override
 
-When `APP_URL` is absent, the application derives its public URL from Render's supported `RENDER_EXTERNAL_HOSTNAME` variable.
+Without `APP_URL`, generated links use Render's `RENDER_EXTERNAL_HOSTNAME`.
 
-## Health endpoint
+## Health response
 
-`GET /health`
-
-A healthy production response includes:
+A healthy production deployment returns HTTP 200 from `/health` with:
 
 ```json
 {
   "status": "ok",
-  "version": "2.4.1",
+  "version": "2.4.2",
   "database": "connected",
   "phase": "production"
 }
 ```
 
+## Deployment behavior
+
+- PostgreSQL is mandatory in Render production.
+- Startup retries database connectivity while a Blueprint-created database becomes ready.
+- Migrations run before the HTTP listener starts.
+- The application handles `SIGTERM`, stops timers and cron jobs, closes the HTTP server, and drains the PostgreSQL pool.
+- Render waits up to 15 seconds for graceful shutdown; the application enforces a 10-second internal limit.
+
 ## Local smoke test without PostgreSQL
 
 ```powershell
 $env:REQUIRE_DATABASE = "false"
+$env:NODE_ENV = "development"
 $env:PORT = "3000"
 npm ci
 node server.js
 ```
 
-Do not set `REQUIRE_DATABASE=false` in Render. The Blueprint explicitly requires PostgreSQL.
+Do not set `REQUIRE_DATABASE=false` in Render.
