@@ -30,7 +30,7 @@ function deDate(d, opts) {
   return new Date(d).toLocaleDateString('en-US', opts || { month: 'short', day: 'numeric', year: 'numeric' });
 }
 /* Open a clean print window with branded HTML and trigger print */
-function dePrintWindow(title, innerHtml) {
+function dePrintWindow(title, innerHtml, extraCss) {
   const w = window.open('', '_blank');
   if (!w) { showToast('Pop-up blocked — allow pop-ups to print.'); return; }
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>${deEsc(title)}</title>
@@ -60,6 +60,7 @@ function dePrintWindow(title, innerHtml) {
       .quad-dot { position: absolute; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; }
       .quad-lbl { position: absolute; font-size: 9px; color: #94A3B8; font-weight: 700; }
       @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display: none; } }
+      ${extraCss || ''}
     </style></head><body>${innerHtml}
     <div class="foot">Generated ${deDate(new Date(), { month:'long', day:'numeric', year:'numeric' })} · Cloud Inventory ROI Business Case Builder</div>
     <script>window.onload=function(){setTimeout(function(){window.print();},350);};<\/script>
@@ -107,6 +108,7 @@ function printActionPlan(variant) {
     </div>
     <h1>${deEsc(m.title)}</h1>
     <div class="sub">${deEsc(m.company || '')}${m.target_close_date ? ' · Target close: ' + deDate(m.target_close_date, {month:'long',day:'numeric',year:'numeric'}) : ''}</div>
+    ${variant === 'customer' ? '<div class="meta-line" style="font-style:italic;color:#5A6570;">A jointly-owned plan built on a data-driven business case grounded in your operational metrics.</div>' : ''}
     <div class="meta-line"><strong>Progress:</strong> ${done} of ${ms.length} complete (${pct}%)</div>
     <div class="prog-wrap"><div class="prog-fill" style="width:${pct}%;"></div></div>
     ${rowsHtml || '<p style="font-size:13px;color:#94A3B8;">No milestones yet.</p>'}`;
@@ -333,4 +335,315 @@ async function pptStakeholderMap() {
   } finally {
     if (btn) { btn.disabled = false; btn.innerHTML = orig; }
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ROI METHODOLOGY & CALCULATION DETAIL
+   Personalized, on-request appendix proving how the ROI was calculated.
+   Driven by the SAME getVals()+calcROI() as the screen, so figures can
+   never disagree with the Executive View. PDF + PowerPoint variants.
+   Zero-value levers render as "Not Provided" (upside not yet captured).
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Build the personalized lever + roll-up data model once, shared by both formats. */
+function buildRoiMethodology() {
+  const v = getVals(), r = calcROI(v);
+  const M = n => (n===null||n===undefined||isNaN(n)) ? '—' : '$' + Math.round(n).toLocaleString();
+  const PC = n => (n===null||n===undefined||isNaN(n)) ? '—' : Math.round(n*100) + '%';
+  const N  = n => (n===null||n===undefined||isNaN(n)) ? '—' : Number(n).toLocaleString();
+
+  /* effective shrink base + carry base recomputed for display transparency */
+  const shrinkBase = v.effectiveShrinkBase || 0;
+  const carryBase  = r.annualCarryCost || 0;
+  const downtimeAnnual = (v.downtimeEventsYr||0)*(v.downtimeHrsPerEvent||0)*(v.downtimeCostPerHr||0);
+  const countAnnual = (v.countDaysYr||0)*(v.countPeople||0)*((v.labor||0)/260);
+
+  /* Each lever: provided? (has the inputs), formula string, plugged-in string, value */
+  const levers = [
+    { name:'Labor productivity',
+      desc:'Recovered staff time from eliminating manual inventory work.',
+      provided: v.users>0,
+      formula: (v.modelVersion>=25 && v.laborWastePct>0) ? 'users × labor rate × productivity waste % × recovery %' : 'users × labor rate × recovery %',
+      plugged: (v.modelVersion>=25 && v.laborWastePct>0)
+        ? `${N(v.users)} × ${M(v.labor)} × ${PC(v.laborWastePct)} × ${PC(v.mLabor)}`
+        : `${N(v.users)} × ${M(v.labor)} × ${PC(v.mLabor)}`,
+      value: r.laborSav },
+    { name:'Write-off / shrink reduction',
+      desc:'Reduction in inventory written off to loss, damage, or shrinkage.',
+      provided: shrinkBase>0,
+      formula:'annual write-off base × recovery %',
+      plugged:`${M(shrinkBase)} × ${PC(v.mShrinkage)}`,
+      value: r.shrinkSav },
+    { name:'Carrying-cost reduction',
+      desc:'Lower cost of holding inventory (capital, storage, insurance, obsolescence).',
+      provided: carryBase>0,
+      formula:'carrying cost × recovery % − 15% overlap deduction',
+      plugged:`${M(carryBase)} × ${PC(v.mCarrying)} − 15%`,
+      value: r.carrySav },
+    { name:'Working capital (inventory turns)',
+      desc:'Capital freed by improving inventory turns toward the benchmark.',
+      provided: (v.inventory>0 && v.invTurnsCurrent>0),
+      formula:'freed capital × carry rate',
+      plugged:`${M(r.capitalFreed)} × ${PC(v.carryRate)}`,
+      value: r.turnsSav },
+    { name:'Service revenue (OTIF)',
+      desc:'Revenue protected by closing the on-time-in-full gap.',
+      provided: (v.revenue>0 && (v.otifTarget>v.otifBaseline || v.otifRisk>0)),
+      formula:'revenue × OTIF gap × recovery %',
+      plugged:`${M(v.revenue)} × ${v.otifTarget>v.otifBaseline?PC((v.otifTarget-v.otifBaseline)/100):PC(v.otifRisk)} × ${PC(v.mOtif)}`,
+      value: r.otifSav },
+    { name:'IT displacement',
+      desc:'Legacy inventory/ERP/WMS system and support costs displaced.',
+      provided: v.itCost>0,
+      formula:'IT cost × recovery %',
+      plugged:`${M(v.itCost)} × ${PC(v.mIt)}`,
+      value: r.itSav },
+    { name:'Production downtime',
+      desc:'Recovered production from fewer stockout-driven stoppages.',
+      provided: downtimeAnnual>0,
+      formula:'events/yr × hrs/event × $/hr × recovery %',
+      plugged:`${N(v.downtimeEventsYr)} × ${N(v.downtimeHrsPerEvent)} × ${M(v.downtimeCostPerHr)} × ${PC(v.mDowntime)}`,
+      value: r.downtimeSav, isNew:true },
+    { name:'Expedite / emergency procurement',
+      desc:'Reduced premium freight and rush orders caused by stockouts.',
+      provided: (v.expediteSpendYr||0)>0,
+      formula:'annual expedite spend × recovery %',
+      plugged:`${M(v.expediteSpendYr)} × ${PC(v.mExpedite)}`,
+      value: r.expediteSav, isNew:true },
+    { name:'Physical / cycle-count labor',
+      desc:'Labor recovered from reduced manual counting.',
+      provided: countAnnual>0,
+      formula:'count days × people × daily labor × recovery %',
+      plugged:`${N(v.countDaysYr)} × ${N(v.countPeople)} × ${M((v.labor||0)/260)} × ${PC(v.mCount)}`,
+      value: r.countSav, isNew:true },
+    { name:'Warehouse throughput / pick-rate',
+      desc:'Ship more with the same team from faster mobile-first workflows.',
+      provided: (v.ordersPerYr>0 && v.costPerOrder>0 && v.pickRateGainPct>0),
+      formula:'orders/yr × cost/order × pick-rate gain % × recovery %',
+      plugged:`${N(v.ordersPerYr)} × ${M(v.costPerOrder)} × ${PC(v.pickRateGainPct)} × ${PC(v.mThroughput)}`,
+      value: r.throughputSav, isNew:true },
+    { name:'Order accuracy → returns & chargebacks',
+      desc:'Reduced mis-ship cost: returns, re-ship freight, customer chargebacks.',
+      provided: (v.ordersPerYr>0 && v.orderErrorPct>0 && v.costPerError>0),
+      formula:'orders/yr × error rate % × cost/error × recovery %',
+      plugged:`${N(v.ordersPerYr)} × ${PC(v.orderErrorPct)} × ${M(v.costPerError)} × ${PC(v.mAccuracy)}`,
+      value: r.accuracySav, isNew:true },
+    { name:'First-time-fix / truck-roll avoidance',
+      desc:'Fewer repeat field visits from having the right part on the truck.',
+      provided: (v.repeatVisitsYr>0 && v.costPerTruckRoll>0),
+      formula:'repeat visits/yr × cost per truck roll × recovery %',
+      plugged:`${N(v.repeatVisitsYr)} × ${M(v.costPerTruckRoll)} × ${PC(v.mFirstFix)}`,
+      value: r.truckRollSav, isNew:true },
+    { name:'Field parts leakage',
+      desc:'Reduced loss of van-stock and field parts (lost, walked-off, expired).',
+      provided: (v.fieldInventoryValue>0 && v.fieldLeakagePct>0),
+      formula:'field inventory value × leakage rate % × recovery %',
+      plugged:`${M(v.fieldInventoryValue)} × ${PC(v.fieldLeakagePct)} × ${PC(v.mLeakage)}`,
+      value: r.fieldLeakageSav, isNew:true },
+  ];
+
+  /* Revenue-growth lever shown SEPARATELY from cost savings (per design). */
+  const revenueLever = {
+    name:'Revenue per technician (revenue growth)',
+    desc:'Additional billable revenue from higher technician utilization. Shown separately from cost savings.',
+    provided: (v.fieldTechs>0 && v.addedJobsPerDay>0 && v.revenuePerJob>0 && v.workingDaysYr>0),
+    formula:'techs × added jobs/day × revenue/job × working days × realization %',
+    plugged:`${N(v.fieldTechs)} × ${N(v.addedJobsPerDay)} × ${M(v.revenuePerJob)} × ${N(v.workingDaysYr)} × ${PC(v.mUtilization)}`,
+    value: r.techRevenueSav
+  };
+
+  /* Inputs table (what the prospect provided) */
+  const inputs = [
+    ['Inventory users', N(v.users)],
+    ['Fully-loaded labor rate', M(v.labor)],
+    ['Productivity waste %', v.laborWastePct>0?PC(v.laborWastePct):'Not Provided'],
+    ['Current inventory accuracy', v.currentAccuracy>0?v.currentAccuracy+'%':'Not Provided'],
+    ['Annual write-off value', shrinkBase>0?M(shrinkBase):'Not Provided'],
+    ['Inventory value on hand', v.inventory>0?M(v.inventory):'Not Provided'],
+    ['Current inventory turns', v.invTurnsCurrent>0?N(v.invTurnsCurrent):'Not Provided'],
+    ['OTIF baseline / target', (v.otifBaseline>0)?`${v.otifBaseline}% → ${v.otifTarget}%`:'Not Provided'],
+    ['Annual revenue', v.revenue>0?M(v.revenue):'Not Provided'],
+    ['Current IT / systems cost', v.itCost>0?M(v.itCost):'Not Provided'],
+    ['Downtime (events × hrs × $/hr)', downtimeAnnual>0?`${N(v.downtimeEventsYr)} × ${N(v.downtimeHrsPerEvent)} × ${M(v.downtimeCostPerHr)}`:'Not Provided'],
+    ['Annual expedite spend', (v.expediteSpendYr||0)>0?M(v.expediteSpendYr):'Not Provided'],
+    ['Counting (days × people)', countAnnual>0?`${N(v.countDaysYr)} × ${N(v.countPeople)}`:'Not Provided'],
+    ['Orders / lines per year', v.ordersPerYr>0?N(v.ordersPerYr):'Not Provided'],
+    ['Cost per order', v.costPerOrder>0?M(v.costPerOrder):'Not Provided'],
+    ['Pick-rate gain %', v.pickRateGainPct>0?PC(v.pickRateGainPct):'Not Provided'],
+    ['Order error rate', v.orderErrorPct>0?PC(v.orderErrorPct):'Not Provided'],
+    ['Cost per error', v.costPerError>0?M(v.costPerError):'Not Provided'],
+    ['Repeat visits / yr', v.repeatVisitsYr>0?N(v.repeatVisitsYr):'Not Provided'],
+    ['Cost per truck roll', v.costPerTruckRoll>0?M(v.costPerTruckRoll):'Not Provided'],
+    ['Field technicians', v.fieldTechs>0?N(v.fieldTechs):'Not Provided'],
+    ['Added jobs/day · rev/job', (v.addedJobsPerDay>0&&v.revenuePerJob>0)?`${N(v.addedJobsPerDay)} × ${M(v.revenuePerJob)}`:'Not Provided'],
+    ['Field inventory value', v.fieldInventoryValue>0?M(v.fieldInventoryValue):'Not Provided'],
+    ['Field leakage rate', v.fieldLeakagePct>0?PC(v.fieldLeakagePct):'Not Provided'],
+    ['Discount rate (NPV)', PC(v.discRate)],
+  ];
+
+  return { v, r, M, PC, N, levers, revenueLever, inputs };
+}
+
+/* ── PDF variant ── */
+function roiMethodologyPDF() {
+  const m = buildRoiMethodology();
+  const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const v = m.v, r = m.r, M = m.M;
+  const company = (v.company && v.company !== 'Prospect') ? v.company : 'Your Company';
+
+  const leverRows = m.levers.map(L => {
+    if (!L.provided || !L.value) {
+      return `<tr class="np"><td><strong>${esc(L.name)}</strong>${L.isNew?' <span class="new">new</span>':''}<div class="ld">${esc(L.desc)}</div></td>
+        <td colspan="2"><em>Not Provided</em> — data not captured; represents unquantified upside.</td>
+        <td class="r">—</td></tr>`;
+    }
+    return `<tr><td><strong>${esc(L.name)}</strong>${L.isNew?' <span class="new">new</span>':''}<div class="ld">${esc(L.desc)}</div></td>
+      <td class="f">${esc(L.formula)}</td><td class="f">${esc(L.plugged)}</td><td class="r"><strong>${M(L.value)}</strong>/yr</td></tr>`;
+  }).join('');
+
+  const inputRows = m.inputs.map(([k,val]) =>
+    `<tr><td>${esc(k)}</td><td class="${val==='Not Provided'?'np-cell':''}">${esc(val)}</td></tr>`).join('');
+
+  const rampNote = `Year-1 benefit is ramp-adjusted (${Math.round((v.ramp1||0.4)*100)}% / ${Math.round((v.ramp2||0.75)*100)}% / ${Math.round((v.ramp3||1)*100)}% over the first three periods), so it is lower than the full annual benefit.`;
+
+  const html = `
+    <div class="doc-head"><img src="${window.location.origin}/ci-logo.png" onerror="this.style.display='none'"/><div class="ht">ROI Methodology &amp; Calculation Detail</div></div>
+    <h1>ROI Methodology &amp; Calculation Detail</h1>
+    <div class="sub">${esc(company)}${v.rep?' · Prepared by '+esc(v.rep):''}${v.name?' · '+esc(v.name):''} · ${new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</div>
+    <p class="intro">This appendix documents how the return on investment in the business case was calculated, following a structured, data-driven methodology built to withstand independent financial review. The approach captures <strong>your operational data</strong> through guided discovery, decomposes the benefit into independently-quantified value drivers each tied to a metric you provided, and models every driver conservatively — applying ramp-up, benchmark grounding, and overlap adjustments. Cost savings and revenue growth are reported separately. Every result below traces to an input in the first table. Items marked <em>Not Provided</em> were not captured and represent potential upside not included in the totals.</p>
+
+    <h2>1. Inputs used</h2>
+    <table class="kv"><tbody>${inputRows}</tbody></table>
+
+    <h2>2. Benefit breakdown</h2>
+    <table><thead><tr><th style="width:34%">Value driver</th><th>Formula</th><th>Your figures</th><th class="r">Annual value</th></tr></thead>
+    <tbody>${leverRows}</tbody>
+    <tfoot><tr><td colspan="3"><strong>Total annual benefit</strong> (steady-state)</td><td class="r"><strong>${M(r.annualBenefit)}</strong>/yr</td></tr></tfoot></table>
+
+    ${m.revenueLever.provided ? `<h2>2a. Revenue growth (shown separately)</h2>
+    <p class="intro">The following reflects <strong>additional revenue</strong> from higher technician utilization, not a cost saving. It is presented separately so cost-based ROI and revenue upside remain transparent and independently verifiable.</p>
+    <table><thead><tr><th style="width:34%">Revenue driver</th><th>Formula</th><th>Your figures</th><th class="r">Annual value</th></tr></thead>
+    <tbody><tr><td><strong>${esc(m.revenueLever.name)}</strong><div class="ld">${esc(m.revenueLever.desc)}</div></td>
+      <td class="f">${esc(m.revenueLever.formula)}</td><td class="f">${esc(m.revenueLever.plugged)}</td>
+      <td class="r"><strong>${M(m.revenueLever.value)}</strong>/yr</td></tr></tbody></table>` : ''}
+
+    <h2>3. Assumptions &amp; conservatism</h2>
+    <ul class="notes">
+      <li><strong>Accuracy benchmark 99.5%.</strong> Recovery percentages are grounded in the gap between your current accuracy and this benchmark.</li>
+      <li><strong>15% carrying-cost overlap deduction.</strong> Applied to avoid double-counting between carrying-cost, write-off, and turns benefits (${M(r.overlapAdj)} removed).</li>
+      <li><strong>Ramp-up applied.</strong> ${esc(rampNote)}</li>
+      <li><strong>Prospect-provided figures</strong> are used wherever supplied; industry benchmarks fill only what was not provided.</li>
+    </ul>
+
+    <h2>4. Return calculation</h2>
+    <table class="kv"><tbody>
+      <tr><td>Total annual benefit (steady-state)</td><td>${M(r.annualBenefit)}</td></tr>
+      <tr><td>Year-1 benefit (ramp-adjusted)</td><td>${M(r.year1Benefit)}</td></tr>
+      <tr><td>Total investment (Year 1)</td><td>${M(r.totalInvestY1 || (v.invest+v.otc))}</td></tr>
+      <tr><td><strong>Year-1 ROI</strong></td><td><strong>${m.PC(r.roi/100)}</strong></td></tr>
+      <tr><td>Payback period</td><td>${r.payback? r.payback.toFixed(1)+' months':'—'}</td></tr>
+      <tr><td>NPV (3-year @ ${m.PC(v.discRate)})</td><td>${M(r.npv3)}</td></tr>
+      <tr><td>NPV (5-year @ ${m.PC(v.discRate)})</td><td>${M(r.npv5)}</td></tr>
+    </tbody></table>
+
+    <p class="disc">Figures are based on data provided by ${esc(company)} and modeled conservatively with ramp-up and overlap adjustments. This analysis is an estimate for evaluation purposes and is not a guarantee of results.</p>`;
+
+  const extraCss = `
+    .intro{font-size:12px;color:#5A6570;line-height:1.6;margin-bottom:16px;}
+    table.kv td:first-child{color:#5A6570;width:55%;}
+    table.kv td:last-child{font-weight:600;text-align:right;}
+    .f{font-family:'Courier New',monospace;font-size:10px;color:#5A6570;}
+    .r{text-align:right;}
+    .ld{font-size:10px;color:#94A3B8;font-weight:400;margin-top:2px;}
+    .new{background:#F79424;color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:8px;}
+    tr.np td{color:#94A3B8;}
+    .np-cell{color:#C77700;font-weight:600;}
+    tfoot td{border-top:2px solid #243646;font-size:13px;padding-top:8px;}
+    .notes{margin:4px 0 16px;padding-left:18px;} .notes li{font-size:11px;color:#5A6570;margin-bottom:5px;line-height:1.5;}
+    .disc{font-size:10px;color:#94A3B8;font-style:italic;margin-top:14px;line-height:1.5;}`;
+  dePrintWindow('ROI Methodology — ' + company, html, extraCss);
+}
+
+/* ── PowerPoint variant ── */
+async function roiMethodologyPPT() {
+  if (!deChk()) return;
+  const btn = document.getElementById('roiMethodPptBtn');
+  const orig = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Building…'; }
+  try {
+    const m = buildRoiMethodology();
+    const v = m.v, r = m.r, M = m.M;
+    const company = (v.company && v.company !== 'Prospect') ? v.company : 'Your Company';
+
+    const pptx = new PptxGenJS();
+    pptx.defineLayout({ name:'CI', width:PPT.W, height:PPT.H }); pptx.layout='CI';
+    pptx.title = 'ROI Methodology — ' + company;
+
+    /* Title slide */
+    const s0 = pptx.addSlide(); s0.background = { color: PPT.GRAY_BG };
+    s0.addShape('rect',{x:0,y:2.3,w:PPT.W,h:1.0,fill:{color:PPT.NAVY}});
+    s0.addImage({path:PPT.LOGO,x:0.4,y:0.4,w:1.15,h:1.15*349/1000});
+    s0.addText('ROI Methodology & Calculation Detail',{x:0.5,y:2.42,w:9,h:0.55,fontSize:26,bold:true,color:PPT.WHITE,fontFace:PPT.FONT});
+    s0.addText(`${company}${v.rep?'  ·  Prepared by '+v.rep:''}`,{x:0.5,y:3.5,w:9,h:0.35,fontSize:14,bold:true,color:PPT.NAVY,fontFace:PPT.FONT});
+    s0.addText('How the business-case ROI was calculated, using your figures.',{x:0.5,y:3.9,w:9,h:0.3,fontSize:12,color:PPT.GRAY_TXT,fontFace:PPT.FONT});
+
+    /* Benefit breakdown slide */
+    const s1 = pptx.addSlide(); pptChrome(s1,2); pptTitle(s1,'Benefit Breakdown');
+    const rows = [[
+      {text:'Value driver',options:{bold:true,color:PPT.WHITE,fill:{color:PPT.NAVY},fontSize:10}},
+      {text:'Your figures',options:{bold:true,color:PPT.WHITE,fill:{color:PPT.NAVY},fontSize:10}},
+      {text:'Annual value',options:{bold:true,color:PPT.WHITE,fill:{color:PPT.NAVY},fontSize:10}}
+    ]];
+    m.levers.forEach(L => {
+      const provided = L.provided && L.value;
+      rows.push([
+        {text:L.name+(L.isNew?'  (new)':''),options:{fontSize:9,color:PPT.DARK_TXT}},
+        {text: provided ? L.plugged : 'Not Provided',options:{fontSize:9,color: provided?PPT.GRAY_TXT:'C77700', italic:!provided}},
+        {text: provided ? M(L.value)+'/yr' : '—',options:{fontSize:9,bold:provided,color: provided?PPT.NAVY:'C77700'}}
+      ]);
+    });
+    rows.push([
+      {text:'Total annual benefit',options:{fontSize:10,bold:true,color:PPT.WHITE,fill:{color:PPT.CYAN}}},
+      {text:'',options:{fill:{color:PPT.CYAN}}},
+      {text:M(r.annualBenefit)+'/yr',options:{fontSize:10,bold:true,color:PPT.WHITE,fill:{color:PPT.CYAN}}}
+    ]);
+    s1.addTable(rows,{x:0.45,y:1.55,w:9.1,colW:[3.5,3.6,2.0],border:{pt:0.5,color:'E0E4E8'},autoPage:true});
+    s1.addText('Items marked "Not Provided" were not captured and are excluded from the total — potential upside.',
+      {x:0.45,y:5.05,w:9.1,h:0.3,fontSize:9,italic:true,color:PPT.GRAY_TXT,fontFace:PPT.FONT});
+    if (m.revenueLever.provided) {
+      s1.addText([
+        {text:'+ Revenue growth (separate): ',options:{bold:true,color:PPT.ORANGE}},
+        {text:`${m.revenueLever.name} = ${M(m.revenueLever.value)}/yr — additional revenue from technician utilization, shown separately from cost savings.`,options:{color:PPT.GRAY_TXT}}
+      ],{x:0.45,y:5.3,w:9.1,h:0.4,fontSize:9,fontFace:PPT.FONT});
+    }
+
+    /* Return + assumptions slide */
+    const s2 = pptx.addSlide(); pptChrome(s2,3); pptTitle(s2,'Return & Assumptions');
+    const kv = [
+      ['Total annual benefit', M(r.annualBenefit)],
+      ['Year-1 benefit (ramp-adjusted)', M(r.year1Benefit)],
+      ['Total investment (Year 1)', M(r.totalInvestY1 || (v.invest+v.otc))],
+      ['Year-1 ROI', m.PC(r.roi/100)],
+      ['Payback', r.payback? r.payback.toFixed(1)+' months':'—'],
+      ['NPV (3-year)', M(r.npv3)],
+      ['NPV (5-year)', M(r.npv5)],
+    ];
+    kv.forEach((row,i)=>{
+      const y=1.6+i*0.42;
+      s2.addText(row[0],{x:0.5,y,w:4.5,h:0.35,fontSize:12,color:PPT.GRAY_TXT,fontFace:PPT.FONT});
+      s2.addText(row[1],{x:5.0,y,w:2.0,h:0.35,fontSize:12,bold:true,color:PPT.NAVY,align:'right',fontFace:PPT.FONT});
+    });
+    s2.addText('Conservative adjustments applied',{x:7.4,y:1.6,w:2.6,h:0.3,fontSize:12,bold:true,color:PPT.CYAN,fontFace:PPT.FONT});
+    s2.addText([
+      {text:'99.5% accuracy benchmark',options:{bullet:{indent:8},breakLine:true}},
+      {text:`15% carrying-cost overlap deduction (${M(r.overlapAdj)})`,options:{bullet:{indent:8},breakLine:true}},
+      {text:'Ramp-up applied to Year 1',options:{bullet:{indent:8},breakLine:true}},
+      {text:'Prospect figures used where provided',options:{bullet:{indent:8}}}
+    ],{x:7.4,y:2.0,w:2.6,h:2.5,fontSize:9.5,color:PPT.GRAY_TXT,fontFace:PPT.FONT,paraSpaceAfter:6,valign:'top'});
+
+    const safe = company.replace(/[^a-zA-Z0-9 \-_]/g,'').trim().replace(/\s+/g,'-')||'Prospect';
+    await pptx.writeFile({ fileName:`ROI-Methodology-${safe}-${new Date().toISOString().split('T')[0]}.pptx` });
+    showToast('ROI methodology PowerPoint downloaded!');
+  } catch(e){ console.error('roiMethodologyPPT:',e); showToast('Export failed: '+(e.message||'error')); }
+  finally { if(btn){ btn.disabled=false; btn.innerHTML=orig; } }
 }

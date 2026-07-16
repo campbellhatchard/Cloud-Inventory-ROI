@@ -86,6 +86,10 @@
     <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.4"/><path d="M6 6.5C6 5.4 6.9 4.5 8 4.5s2 .9 2 2c0 .83-.5 1.55-1.22 1.88C8.3 8.65 8 9.1 8 9.5v.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="11.5" r=".75" fill="currentColor"/></svg>
     How to Use
   </button>
+  <button class="nav-item" onclick="switchTab('impact')" id="nav-impact">
+    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M2 8h12M2 13h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="13" cy="13" r="2" stroke="currentColor" stroke-width="1.4"/></svg>
+    Impact Map
+  </button>
   <div class="sidebar-footer">
     <button class="sidebar-signout" onclick="window.ciAuth.logout()">
       <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3M11 11l3-3-3-3M14 8H6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -102,10 +106,50 @@
   <div class="page-header">
     <div><div class="page-title">ROI Calculator</div><div class="page-subtitle">Enter prospect details — industry defaults apply automatically.</div></div>
     <div class="btn-row" style="margin-top:0;">
+      <button class="btn btn-ghost btn-sm" id="calcSwitchCustomerBtn" onclick="showCustomerGate()" title="Switch customer" style="display:none;">⌂ Switch customer</button>
       <button class="btn btn-ghost btn-sm" onclick="generateShareURL()" title="Copy shareable link">🔗 Share</button>
       <button class="btn btn-ghost btn-sm" onclick="generateEmail()">✉️ Email</button>
     </div>
   </div>
+
+  <!-- CUSTOMER SELECTION GATE (soft — can be skipped) -->
+  <div id="customerGate" class="customer-gate">
+    <div class="cg-inner">
+      <div class="cg-headline">Who are you building a business case for?</div>
+      <div class="cg-sub">Start a new customer or pick up an existing one. You can also skip straight to the calculator.</div>
+
+      <div class="cg-cards">
+        <div class="cg-card">
+          <div class="cg-card-icon" style="background:#185FA5;">＋</div>
+          <div class="cg-card-title">New customer</div>
+          <div class="cg-card-desc">Begin a fresh business case for a company you haven't modeled yet.</div>
+          <div class="cg-new-row">
+            <input type="text" id="cgNewCompany" placeholder="Company name…" onkeydown="if(event.key==='Enter')cgCreateNew()"/>
+            <button class="btn btn-cta btn-sm" onclick="cgCreateNew()">Create</button>
+          </div>
+        </div>
+
+        <div class="cg-card">
+          <div class="cg-card-icon" style="background:#0F6E56;">☰</div>
+          <div class="cg-card-title">Existing customer</div>
+          <div class="cg-card-desc">Continue a business case you've already started.</div>
+          <div class="cg-search-wrap">
+            <input type="text" id="cgSearch" placeholder="Search customers…" oninput="cgRenderList(this.value)" autocomplete="off"/>
+          </div>
+          <div id="cgList" class="cg-list"><div class="cg-empty">Loading…</div></div>
+        </div>
+      </div>
+
+      <div id="cgRecent" class="cg-recent"></div>
+
+      <button class="cg-skip" onclick="skipCustomerGate()">Skip — just explore the calculator →</button>
+    </div>
+  </div>
+
+  <!-- CALCULATOR BODY (hidden until a customer is chosen or gate skipped) -->
+  <div id="calcBody" style="display:none;">
+  <div id="calcBreadcrumb" class="calc-breadcrumb"></div>
+  <div id="caseCompleteness" class="case-completeness"></div>
 
   <!-- Workflow steps -->
   <div class="workflow-steps">
@@ -168,6 +212,14 @@
                 <option value="distribution">Distribution &amp; 3PL</option>
                 <option value="food">Food &amp; Beverage</option>
                 <option value="retail">Retail</option>
+              </select>
+            </div>
+            <div class="field"><label>Cloud Inventory solution</label>
+              <select id="solution" onchange="applySolutionEmphasis()">
+                <option value="all">All / Platform</option>
+                <option value="wms">Warehouse Operations (WMS)</option>
+                <option value="mep">Field Inventory (MEP)</option>
+                <option value="mfgmat">Manufacturing Materials</option>
               </select>
             </div>
             <div class="field"><label>Current competing solution</label>
@@ -369,6 +421,119 @@
         </div>
       </div>
 
+      <!-- OPERATIONAL COST DRIVERS (v2.5 new levers) -->
+      <div class="accordion" id="driversSection">
+        <button class="acc-head open" onclick="toggleAcc(this)">
+          <div class="acc-left"><span class="acc-dot" style="background:var(--orange)"></span><div><div class="acc-title">Operational cost drivers</div><div class="acc-sub">Downtime, expediting &amp; counting — leave blank to skip a driver</div></div></div>
+          <svg class="acc-chevron" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="acc-body">
+          <div class="acc-inner">
+
+            <div class="field-group-label">Productivity &amp; accuracy (from discovery)</div>
+            <div class="field-row-2">
+              <div class="field"><label title="Measured % of staff time lost to manual inventory tasks. Drives labor savings when provided.">Productivity waste (% of time)</label>
+                <input type="number" id="laborWastePct" placeholder="e.g. 25" oninput="recalc()" min="0" max="100" step="1"/></div>
+              <div class="field"><label title="Prospect's current inventory accuracy rate. Suggests a shrink/carrying recovery %.">Current inventory accuracy (%)</label>
+                <input type="number" id="currentAccuracy" placeholder="e.g. 92" oninput="recalc()" min="0" max="100" step="0.1"/></div>
+            </div>
+            <div id="accuracySuggestion" class="accuracy-suggestion" style="display:none;"></div>
+
+            <div class="field-group-label">Field service value drivers <span class="mep-tag">MEP</span></div>
+            <div class="field-row-3">
+              <div class="field"><label title="Repeat/return visits per year caused by wrong or missing parts">Repeat visits / yr (#)</label>
+                <input type="number" id="repeatVisitsYr" placeholder="e.g. 1,200" oninput="recalc()" min="0" step="10"/></div>
+              <div class="field"><label title="Fully-loaded cost of one truck roll: labor + vehicle + fuel">Cost per truck roll ($)</label>
+                <input type="number" id="costPerTruckRoll" placeholder="e.g. 300" oninput="recalc()" min="0" step="10"/></div>
+              <div class="field"><label title="% of repeat visits eliminated by right-part-on-truck (blank = industry avg)">First-fix recovery % <span class="metric-bench" id="b_firstfix"></span></label>
+                <input type="number" id="m_firstfix" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
+            </div>
+            <div class="field-note-inline">Revenue growth (shown separately from cost savings):</div>
+            <div class="field-row-4">
+              <div class="field"><label title="Number of field technicians">Field techs (#)</label>
+                <input type="number" id="fieldTechs" placeholder="e.g. 40" oninput="recalc()" min="0" step="1"/></div>
+              <div class="field"><label title="Additional billable jobs per tech per day from time saved">Added jobs / day (#)</label>
+                <input type="number" id="addedJobsPerDay" placeholder="e.g. 0.5" oninput="recalc()" min="0" step="0.1"/></div>
+              <div class="field"><label title="Average revenue per billable job">Revenue / job ($)</label>
+                <input type="number" id="revenuePerJob" placeholder="e.g. 250" oninput="recalc()" min="0" step="10"/></div>
+              <div class="field"><label title="Working days per year">Working days / yr (#)</label>
+                <input type="number" id="workingDaysYr" placeholder="e.g. 240" oninput="recalc()" min="0" max="365" step="1"/></div>
+            </div>
+            <div class="field-row-2">
+              <div class="field"><label title="% of the theoretical utilization gain actually realized (blank = industry avg)">Utilization realization % <span class="metric-bench" id="b_utilization"></span></label>
+                <input type="number" id="m_utilization" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
+              <div class="field"></div>
+            </div>
+            <div class="field-row-3">
+              <div class="field"><label title="Value of inventory held in the field / on trucks">Field inventory value ($)</label>
+                <input type="number" id="fieldInventoryValue" placeholder="e.g. 2,000,000" oninput="recalc()" min="0" step="10000"/></div>
+              <div class="field"><label title="Current field/van-stock leakage rate %">Field leakage rate (%)</label>
+                <input type="number" id="fieldLeakagePct" placeholder="e.g. 4" oninput="recalc()" min="0" max="100" step="0.1"/></div>
+              <div class="field"><label title="% of leakage recovered by field tracking (blank = industry avg)">Leakage recovery % <span class="metric-bench" id="b_leakage"></span></label>
+                <input type="number" id="m_leakage" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
+            </div>
+
+            <div class="field-group-label">Warehouse throughput &amp; order accuracy <span class="wms-tag">WMS</span></div>
+            <div class="field-row-3">
+              <div class="field"><label title="Total orders or order-lines shipped per year">Orders / lines per yr (#)</label>
+                <input type="number" id="ordersPerYr" placeholder="e.g. 250,000" oninput="recalc()" min="0" step="1000"/></div>
+              <div class="field"><label title="Fully-loaded labor cost to process one order/line today">Cost per order ($)</label>
+                <input type="number" id="costPerOrder" placeholder="e.g. 3.50" oninput="recalc()" min="0" step="0.10"/></div>
+              <div class="field"><label title="Expected pick-rate / throughput improvement %">Pick-rate gain (%)</label>
+                <input type="number" id="pickRateGainPct" placeholder="e.g. 20" oninput="recalc()" min="0" max="100" step="1"/></div>
+            </div>
+            <div class="field-row-3">
+              <div class="field"><label title="Current order error / mis-ship rate %">Order error rate (%)</label>
+                <input type="number" id="orderErrorPct" placeholder="e.g. 2" oninput="recalc()" min="0" max="100" step="0.1"/></div>
+              <div class="field"><label title="Fully-loaded cost of one error: return processing + re-ship freight + chargeback">Cost per error ($)</label>
+                <input type="number" id="costPerError" placeholder="e.g. 120" oninput="recalc()" min="0" step="5"/></div>
+              <div class="field"><label title="% of error cost recovered by better accuracy (blank = industry avg)">Recovery % <span class="metric-bench" id="b_accuracy"></span></label>
+                <input type="number" id="m_accuracy" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
+            </div>
+            <div class="field-row-2">
+              <div class="field"><label title="% of throughput gain realized as savings (blank = industry avg)">Throughput recovery % <span class="metric-bench" id="b_throughput"></span></label>
+                <input type="number" id="m_throughput" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
+              <div class="field"></div>
+            </div>
+
+            <div class="field-group-label">Production downtime from stockouts</div>
+            <div class="field-row-3">
+              <div class="field"><label title="Number of stockout-driven production stop/slow events per year">Downtime events / yr (#)</label>
+                <input type="number" id="downtimeEventsYr" placeholder="e.g. 120" oninput="recalc()" min="0" step="1"/></div>
+              <div class="field"><label title="Average hours of lost/slowed production per event">Avg hours / event (#)</label>
+                <input type="number" id="downtimeHrsPerEvent" placeholder="e.g. 0.75" oninput="recalc()" min="0" step="0.25"/></div>
+              <div class="field"><label title="Fully-loaded cost of one hour of lost production (labor + margin + overhead)">Cost / downtime hour ($)</label>
+                <input type="number" id="downtimeCostPerHr" placeholder="e.g. 5,000" oninput="recalc()" min="0" step="100"/></div>
+            </div>
+
+            <div class="field-group-label">Expedite / emergency procurement</div>
+            <div class="field-row-2">
+              <div class="field"><label title="Total annual spend on expedited/emergency inbound orders caused by stockouts">Annual expedite spend ($)</label>
+                <input type="number" id="expediteSpendYr" placeholder="e.g. 400,000" oninput="recalc()" min="0" step="1000"/></div>
+              <div class="field"><label title="Percentage of that spend recoverable through better accuracy (blank = industry avg)">Recovery % <span class="metric-bench" id="b_expedite"></span></label>
+                <input type="number" id="m_expedite" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
+            </div>
+
+            <div class="field-group-label">Physical / cycle counting labor</div>
+            <div class="field-row-3">
+              <div class="field"><label title="Total person-days per year spent on physical or cycle counts">Count days / yr (#)</label>
+                <input type="number" id="countDaysYr" placeholder="e.g. 24" oninput="recalc()" min="0" step="1"/></div>
+              <div class="field"><label title="Number of people involved in counting">People counting (#)</label>
+                <input type="number" id="countPeople" placeholder="e.g. 6" oninput="recalc()" min="0" step="1"/></div>
+              <div class="field"><label title="Percentage of counting labor eliminated by real-time accuracy (blank = industry avg)">Recovery % <span class="metric-bench" id="b_count"></span></label>
+                <input type="number" id="m_count" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
+            </div>
+
+            <div class="field-row-2">
+              <div class="field"><label title="Percentage of downtime cost recovered by accuracy improvement (blank = industry avg)">Downtime recovery % <span class="metric-bench" id="b_downtime"></span></label>
+                <input type="number" id="m_downtime" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
+              <div class="field"></div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
       <!-- IMPROVEMENT ASSUMPTIONS -->
       <div class="accordion" id="assumptionsSection">
         <button class="acc-head open" onclick="toggleAcc(this)">
@@ -416,6 +581,7 @@
     <button class="btn btn-ghost" onclick="generateShareURL()">🔗 Share link</button>
     <button class="btn btn-ghost" onclick="clearForm()">New scenario</button>
   </div>
+  </div><!-- /calcBody -->
 </div>
 
 <!-- ═══ DISCOVERY ═══ -->
@@ -464,6 +630,9 @@
         <svg viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 6h3a1.5 1.5 0 010 3H5V6zM5 9v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Export to PowerPoint
       </button>
+      <span class="export-divider"></span>
+      <button class="btn btn-ghost" onclick="roiMethodologyPDF()" title="Personalized proof of how this ROI was calculated">📄 ROI methodology (PDF)</button>
+      <button class="btn btn-ghost" id="roiMethodPptBtn" onclick="roiMethodologyPPT()" title="ROI methodology as PowerPoint">📊 ROI methodology (PPT)</button>
       <button class="btn btn-ghost" onclick="window.print()">
         <svg viewBox="0 0 16 16" fill="none"><rect x="3" y="1" width="10" height="5" rx="1" stroke="currentColor" stroke-width="1.5"/><path d="M3 6H1v7h14V6h-2" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><rect x="3" y="9" width="10" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/></svg>
         Print
@@ -860,6 +1029,39 @@
   </div>
 </div>
 
+<!-- ═══ IMPACT MAP ═══ -->
+<div id="tab-impact" class="pane">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Discovery → Calculator Impact Map</div>
+      <div class="page-subtitle">How every discovery question feeds the ROI model. Reference for all roles.</div>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="downloadImpactMap()">📄 Download PDF</button>
+  </div>
+
+  <div class="impact-toolbar" id="impactToolbar">
+    <div class="impact-search-wrap">
+      <svg viewBox="0 0 16 16" fill="none" class="impact-search-icon"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <input type="text" id="impactSearch" placeholder="Search questions, fields, or ROI impact…" oninput="filterImpactMap(this.value)" autocomplete="off"/>
+      <button class="impact-search-clear" id="impactSearchClear" onclick="clearImpactSearch()" style="display:none;">✕</button>
+    </div>
+    <div class="impact-jump" id="impactJump"></div>
+    <div class="impact-count" id="impactCount"></div>
+  </div>
+
+  <div id="impactContent"><div class="empty-state"><p>Loading…</p></div></div>
+
+  <!-- Floating navigation controls -->
+  <div class="impact-fab-group">
+    <button class="impact-fab" id="impactFabSearch" onclick="focusImpactSearch()" title="Jump to search">
+      <svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
+    <button class="impact-fab" id="impactFabTop" onclick="impactScrollTop()" title="Back to top">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M8 13V4M4 7l4-3 4 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+</div>
+
 </main>
 </div>
 
@@ -924,16 +1126,19 @@
   <span id="toastMsg"></span>
 </div>
 
+<script src="/roi-engine.js"></script>
 <script src="app.js"></script>
 <script src="features.js"></script>
 <script src="narrative.js"></script>
 <script src="discovery.js"></script>
+<script src="impact-map.js"></script>
 <script src="versioning.js"></script>
 <!-- PptxGenJS: load local copy if present, else fall back to jsDelivr CDN.
      onerror on the local tag triggers the CDN tag.  -->
 <script src="pptxgen.bundle.js" onerror="this.onerror=null;var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';document.head.appendChild(s);"></script>
 <script src="pptx-export.js"></script>
 <script src="companies.js"></script>
+<script src="customer-gate.js"></script>
 <script src="map.js"></script>
 <script src="stakeholders.js"></script>
 <script src="deal-export.js"></script>
@@ -1029,15 +1234,32 @@ function applyDefaultsAndShowProof() {
   if (typeof renderCalcIndustryQuestions === 'function') renderCalcIndustryQuestions();
 }
 document.getElementById('industry')?.addEventListener('change', applyDefaultsAndShowProof);
+/* Keep breadcrumb + case-strength meter live as identity fields change */
+['companyName','scenarioName'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', () => {
+    if (typeof updateBreadcrumb === 'function') updateBreadcrumb();
+  });
+});
 
 const _origSwitchTab = switchTab;
 window.switchTab = function(name) {
+  /* Unsaved-changes guard: if leaving the calculator with unsaved edits,
+     confirm before navigating away. */
+  if (typeof _calcDirty !== 'undefined' && _calcDirty && name !== 'calc') {
+    const calcVisible = document.getElementById('calcBody');
+    if (calcVisible && calcVisible.style.display !== 'none') {
+      if (!confirmDiscardChanges()) return;
+      clearCalcDirty();
+    }
+  }
   _origSwitchTab(name);
+  if (name === 'calc' && typeof initCalcTab === 'function') initCalcTab();
   if (name === 'exec') { if (typeof loadThreeWhysDefaults === 'function') loadThreeWhysDefaults(); renderExec(); }
   if (name === 'disc' && typeof renderDiscoveryTab === 'function') renderDiscoveryTab();
   if (name === 'saved') { if (typeof renderListVersioned === 'function') renderListVersioned(); else if (typeof renderList === 'function') renderList(); }
   if (name === 'admin') initAdminTab();
   if (name === 'help')  initHelpTab();
+  if (name === 'impact') initImpactTab();
   if (name === 'map')   initMapTab();
   if (name === 'stake') initStakeTab();
   if (name === 'profile') initProfileTab();
@@ -1886,6 +2108,7 @@ function calcCompanyCheck(input) {
 if (typeof populateIndustryFilter === 'function') populateIndustryFilter();
 /* Preload the unified company registry (v2.3) */
 (async () => { if (window._authReady) await window._authReady; if (typeof loadCompanies === 'function') await loadCompanies(); })();
+(async () => { if (window._authReady) await window._authReady; if (typeof initCalcTab === 'function') initCalcTab(); })();
 (async () => { if (window._authReady) await window._authReady; if (typeof initAdminScenarioControls === 'function') initAdminScenarioControls(); })();
 recalc();
 const _fabEl = document.getElementById('fabRow'); if (_fabEl) _fabEl.style.display = 'flex';

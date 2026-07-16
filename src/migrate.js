@@ -15,7 +15,6 @@ const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcrypt');
 const { Pool } = require('pg');
-const { envInt } = require('./config');
 
 async function ensureBootstrapAdmin(client) {
   const username = String(process.env.BOOTSTRAP_ADMIN_USERNAME || 'admin').trim();
@@ -49,11 +48,11 @@ async function ensureBootstrapAdmin(client) {
     const passwordHash = await bcrypt.hash(password, rounds);
     await client.query(
       `INSERT INTO users (email, username, password_hash, role, first_login, is_active)
-       VALUES ($1, $2, $3, 'admin', FALSE, TRUE)`,
+       VALUES ($1, $2, $3, 'admin', TRUE, TRUE)`,
       [email, username, passwordHash]
     );
     console.log(
-      `✅ Bootstrap Admin created: ${username}`
+      `✅ Bootstrap Admin created: ${username} (password change required on first login)`
     );
     return;
   }
@@ -64,9 +63,9 @@ async function ensureBootstrapAdmin(client) {
     .catch(() => false);
 
   if (existing.first_login) {
-    /* A bootstrap account still marked first_login is treated as an incomplete
-       setup. Synchronize it to the configured recovery credential, clear any
-       lockout, and allow direct access. */
+    /* Before the first successful password change, render.yaml is the source
+       of truth for the bootstrap credential. This also clears an accidental
+       lockout caused during initial deployment testing. */
     const passwordHash = configuredPasswordAlreadySet
       ? existing.password_hash
       : await bcrypt.hash(password, rounds);
@@ -75,7 +74,7 @@ async function ensureBootstrapAdmin(client) {
       `UPDATE users
        SET password_hash = $1,
            role = 'admin',
-           first_login = FALSE,
+           first_login = TRUE,
            is_active = TRUE,
            failed_login_count = 0,
            locked_until = NULL,
@@ -88,8 +87,8 @@ async function ensureBootstrapAdmin(client) {
     return;
   }
 
-  /* Never overwrite a password after the administrator has established a
-     user-managed credential. */
+  /* Never overwrite a password after the administrator has completed the
+     mandatory first-login password change. */
   console.log(
     `✅ Bootstrap Admin present with a user-managed password: ${existing.username}`
   );
@@ -104,26 +103,10 @@ async function runMigrations() {
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-    max: 1,
-    connectionTimeoutMillis: 10000
+    max: 1
   });
 
-  let client;
-  const maxAttempts = envInt('DB_STARTUP_MAX_ATTEMPTS', 60, { min: 1, max: 200 });
-  const retryDelayMs = envInt('DB_STARTUP_RETRY_MS', 3000, { min: 250, max: 30000 });
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    try {
-      client = await pool.connect();
-      break;
-    } catch (err) {
-      if (attempt === maxAttempts) {
-        await pool.end().catch(() => {});
-        throw new Error(`Unable to connect to PostgreSQL after ${maxAttempts} attempts: ${err.message}`);
-      }
-      console.warn(`PostgreSQL not ready (attempt ${attempt}/${maxAttempts}); retrying in ${retryDelayMs}ms...`);
-      await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
-    }
-  }
+  const client = await pool.connect();
 
   try {
     await client.query(`

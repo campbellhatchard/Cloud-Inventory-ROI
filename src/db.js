@@ -25,7 +25,6 @@ pool.on('error', (err) => {
   console.error('PostgreSQL pool error:', err.message);
 });
 
-
 /**
  * Parameterised query helper.
  * ALWAYS use this — never string-interpolate user input into SQL.
@@ -77,4 +76,10 @@ async function transaction(fn) {
   }
 }
 
-module.exports = { query, transaction, pool };
+
+async function testConnection() {
+  const result = await pool.query('SELECT NOW() AS db_time');
+  return result.rows[0]?.db_time;
+}
+
+module.exports = { query, transaction, pool, testConnection };

@@ -806,3 +806,141 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 
 /* ══ Deal export buttons (v2.4) ══ */
 .export-divider{display:inline-block;width:1px;height:22px;background:var(--gray-200);margin:0 4px;vertical-align:middle;}
+
+/* ══ v2.5 operational cost driver fields ══ */
+.field-group-label{font-size:12px;font-weight:700;color:var(--navy);margin:14px 0 6px;text-transform:uppercase;letter-spacing:.04em;}
+.field-group-label:first-child{margin-top:0;}
+.field-row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.field-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+@media(max-width:640px){.field-row-2,.field-row-3{grid-template-columns:1fr;}}
+
+/* ══ v2.5.1 accuracy suggestion + impact map ══ */
+.accuracy-suggestion{background:#E3F3F8;border:1px solid var(--cyan);border-radius:7px;padding:8px 12px;margin:8px 0;font-size:12px;color:var(--navy);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.accuracy-suggestion button{white-space:nowrap;}
+
+/* ══ Impact Map tab (v2.5.1) ══ */
+.impact-intro{background:var(--gray-50);border:1px solid var(--gray-200);border-radius:10px;padding:16px 18px;margin-bottom:16px;}
+.impact-intro p{font-size:13px;color:var(--gray-700);line-height:1.6;margin:0 0 12px;}
+.impact-levers{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;}
+.impact-lever-card{font-size:12px;color:var(--navy);font-weight:600;padding-top:2px;}
+.impact-lever-list{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:4px 18px;flex:1;}
+.impact-lever-list li{font-size:11px;color:var(--gray-600);font-family:var(--font-mono,monospace);}
+.impact-new{display:inline-block;background:var(--orange);color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:8px;text-transform:uppercase;vertical-align:middle;}
+
+/* Sticky search + jump toolbar */
+.impact-toolbar{position:sticky;top:0;z-index:20;background:var(--white);border:1px solid var(--gray-200);border-radius:10px;padding:12px 14px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+.impact-search-wrap{position:relative;display:flex;align-items:center;}
+.impact-search-icon{position:absolute;left:12px;width:16px;height:16px;color:var(--gray-400);pointer-events:none;}
+#impactSearch{width:100%;padding:10px 36px 10px 36px;font-size:14px;font-family:var(--font);border:1.5px solid var(--gray-200);border-radius:8px;outline:none;}
+#impactSearch:focus{border-color:var(--cyan);}
+.impact-search-clear{position:absolute;right:10px;background:none;border:none;color:var(--gray-400);cursor:pointer;font-size:14px;padding:4px;}
+.impact-search-clear:hover{color:var(--red);}
+.impact-jump{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+.impact-chip{font-size:11px;padding:4px 10px;border:1px solid var(--gray-200);border-radius:14px;background:var(--white);color:var(--gray-600);cursor:pointer;white-space:nowrap;transition:all .12s;}
+.impact-chip:hover{border-color:var(--cyan);color:var(--cyan);background:var(--gray-50);}
+.impact-count{font-size:12px;color:var(--cyan);font-weight:600;margin-top:8px;min-height:16px;}
+
+/* Sections & tables */
+.impact-section{margin-bottom:24px;scroll-margin-top:150px;}
+.impact-h{font-size:15px;color:var(--navy);font-weight:700;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid var(--cyan);display:flex;align-items:center;gap:10px;}
+.impact-h-count{font-size:11px;font-weight:500;color:var(--gray-400);}
+.impact-table{width:100%;border-collapse:collapse;}
+.impact-table th{background:var(--navy);color:#fff;font-size:11px;text-align:left;padding:8px 10px;position:sticky;}
+.impact-table td{font-size:12px;padding:8px 10px;border-bottom:1px solid var(--gray-100);vertical-align:top;color:var(--gray-700);}
+.impact-table tr:nth-child(even) td{background:var(--gray-50);}
+.impact-table code{font-size:11px;background:#EEF2F5;padding:1px 5px;border-radius:4px;color:var(--navy);}
+.impact-field-desc{font-size:11px;color:var(--gray-500);margin-top:4px;line-height:1.5;}
+.impact-conv{font-size:10px;color:var(--orange);}
+.impact-badge{display:inline-block;font-size:11px;font-weight:600;color:var(--navy);}
+.impact-type{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;text-transform:uppercase;}
+.impact-type-number{background:#E3F0FB;color:#0C447C;}
+.impact-type-percent{background:#E9F7EF;color:#1E7E45;}
+.impact-type-text{background:var(--gray-100);color:var(--gray-500);}
+.impact-row[data-kind="note"] td,.impact-row[data-kind="diag"] td{color:var(--gray-400);}
+
+/* Floating action buttons */
+.impact-fab-group{position:fixed;right:28px;bottom:28px;display:flex;flex-direction:column;gap:10px;z-index:40;}
+.impact-fab{width:46px;height:46px;border-radius:50%;border:none;background:var(--navy);color:#fff;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.impact-fab svg{width:20px;height:20px;}
+.impact-fab:hover{background:var(--cyan);transform:translateY(-2px);}
+.impact-fab-hidden{opacity:0;pointer-events:none;transform:translateY(10px);}
+/* only show the FAB group when the impact tab is active */
+.impact-fab-group{display:none;}
+body.impact-active .impact-fab-group{display:flex;}
+
+/* ══ v2.6 WMS levers + solution selector ══ */
+.wms-tag{display:inline-block;background:var(--cyan);color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:8px;text-transform:uppercase;vertical-align:middle;margin-left:4px;}
+.driver-emphasis{background:linear-gradient(90deg,rgba(0,167,207,.10),transparent);border-left:3px solid var(--cyan);padding-left:8px;border-radius:3px;}
+
+/* v2.6 impact map placeholder flag */
+.impact-flag{background:#FFF4E5;border:1px solid var(--orange);border-radius:8px;padding:10px 14px;margin-top:12px;font-size:12px;color:#8A4B00;line-height:1.5;}
+
+/* ══ v2.7 Field Inventory levers ══ */
+.mep-tag{display:inline-block;background:var(--orange);color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:8px;text-transform:uppercase;vertical-align:middle;margin-left:4px;}
+.field-row-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+@media(max-width:640px){.field-row-4{grid-template-columns:1fr 1fr;}}
+.field-note-inline{font-size:11px;color:var(--gray-500);font-style:italic;margin:8px 0 6px;}
+
+/* ══ v2.8 data-driven business case framing (Executive View) ══ */
+.e-approach{background:linear-gradient(135deg,#F7F9FA,#EEF3F6);border:1px solid var(--gray-200);border-radius:12px;padding:22px 24px;margin-bottom:1.25rem;}
+.e-approach-title{font-size:18px;font-weight:800;color:var(--navy);letter-spacing:-.01em;margin-bottom:6px;}
+.e-approach-lede{font-size:13px;color:var(--gray-700);line-height:1.6;max-width:760px;}
+.e-approach-pillars{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:18px;}
+.e-approach-pillar{background:var(--white);border:1px solid var(--gray-200);border-radius:9px;padding:12px 13px;}
+.e-approach-icon{width:26px;height:26px;border-radius:6px;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;margin-bottom:8px;}
+.e-approach-pt{font-size:12px;font-weight:700;color:var(--navy);margin-bottom:4px;line-height:1.3;}
+.e-approach-pd{font-size:11px;color:var(--gray-500);line-height:1.5;}
+.e-driver-lede{font-size:12px;color:var(--gray-500);font-style:italic;margin-bottom:12px;line-height:1.5;}
+@media(max-width:720px){.e-approach-pillars{grid-template-columns:1fr 1fr;}}
+@media print{.e-approach{background:#F7F9FA !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;break-inside:avoid;}.e-approach-pillars{break-inside:avoid;}}
+
+/* ══ v2.8 customer-selection gate + ease-of-use ══ */
+.customer-gate{padding:8px 0 24px;}
+.cg-inner{max-width:860px;margin:0 auto;}
+.cg-headline{font-size:22px;font-weight:800;color:var(--navy);text-align:center;margin-bottom:6px;letter-spacing:-.01em;}
+.cg-sub{font-size:13px;color:var(--gray-500);text-align:center;margin-bottom:24px;}
+.cg-cards{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.cg-card{background:var(--white);border:1px solid var(--gray-200);border-radius:12px;padding:22px;box-shadow:0 2px 10px rgba(0,0,0,.04);}
+.cg-card-icon{width:38px;height:38px;border-radius:9px;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:12px;}
+.cg-card-title{font-size:16px;font-weight:700;color:var(--navy);margin-bottom:4px;}
+.cg-card-desc{font-size:12px;color:var(--gray-500);line-height:1.5;margin-bottom:14px;}
+.cg-new-row{display:flex;gap:8px;}
+.cg-new-row input{flex:1;padding:9px 12px;font-size:14px;font-family:var(--font);border:1.5px solid var(--gray-200);border-radius:8px;outline:none;}
+.cg-new-row input:focus{border-color:var(--cyan);}
+.cg-search-wrap input{width:100%;padding:9px 12px;font-size:13px;font-family:var(--font);border:1.5px solid var(--gray-200);border-radius:8px;outline:none;margin-bottom:8px;}
+.cg-search-wrap input:focus{border-color:var(--cyan);}
+.cg-list{max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;}
+.cg-list-item{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:9px 12px;border:1px solid var(--gray-200);border-radius:8px;background:var(--white);cursor:pointer;transition:all .12s;}
+.cg-list-item:hover{border-color:var(--cyan);background:var(--gray-50);}
+.cg-li-name{font-size:13px;font-weight:600;color:var(--gray-800);}
+.cg-li-meta{font-size:11px;color:var(--gray-400);}
+.cg-empty{font-size:12px;color:var(--gray-400);padding:12px;text-align:center;}
+.cg-recent{margin-top:20px;}
+.cg-recent-label{font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;}
+.cg-recent-chips{display:flex;flex-wrap:wrap;gap:8px;}
+.cg-recent-chip{font-size:12px;padding:6px 14px;border:1px solid var(--cyan);border-radius:16px;background:var(--white);color:var(--cyan-dark,var(--navy));cursor:pointer;transition:all .12s;}
+.cg-recent-chip:hover{background:var(--cyan);color:#fff;}
+.cg-skip{display:block;margin:24px auto 0;background:none;border:none;color:var(--gray-400);font-size:12px;cursor:pointer;text-decoration:underline;}
+.cg-skip:hover{color:var(--cyan);}
+@media(max-width:680px){.cg-cards{grid-template-columns:1fr;}}
+
+/* Breadcrumb */
+.calc-breadcrumb{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--gray-500);margin-bottom:12px;flex-wrap:wrap;}
+.calc-breadcrumb:empty{display:none;}
+.bc-home{cursor:pointer;color:var(--cyan);font-size:15px;}
+.bc-home:hover{color:var(--navy);}
+.bc-sep{color:var(--gray-300);}
+.bc-company{font-weight:700;color:var(--navy);}
+.bc-scenario{color:var(--gray-600);}
+
+/* Case completeness meter */
+.case-completeness{background:var(--gray-50);border:1px solid var(--gray-200);border-radius:10px;padding:12px 16px;margin-bottom:16px;}
+.case-completeness:empty{display:none;}
+.cc-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.cc-label{font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.04em;}
+.cc-pct{font-size:12px;font-weight:700;}
+.cc-pct.cc-strong{color:#2E7D32;} .cc-pct.cc-ok{color:#854F0B;} .cc-pct.cc-weak{color:#C62828;}
+.cc-track{height:7px;background:var(--gray-200);border-radius:4px;overflow:hidden;}
+.cc-fill{height:100%;border-radius:4px;transition:width .3s;}
+.cc-fill.cc-strong{background:#2E7D32;} .cc-fill.cc-ok{background:#F79424;} .cc-fill.cc-weak{background:#C62828;}
+.cc-hint{font-size:11px;color:var(--gray-500);margin-top:6px;}

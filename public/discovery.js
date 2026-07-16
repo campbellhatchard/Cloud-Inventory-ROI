@@ -14,242 +14,430 @@
    - placeholder: example answer
    ───────────────────────────────────────── */
 const DISC_QUESTIONS = {
-
-  /* ── DEFAULT / GENERIC ── */
   default: [
     { section: 'Labor & Productivity', questions: [
-      { id:'dq1', text:'How many people directly touch inventory as part of their daily role — warehouse staff, field technicians, and office-based inventory controllers?', why:'Drives user count and total labor savings baseline.', sync:'userCount', type:'number', placeholder:'e.g. 45' },
-      { id:'dq2', text:'What percentage of a typical worker\'s day is consumed by manual counts, paper processes, spreadsheet updates, or reconciliation rework?', why:'Identifies productivity gain potential. Benchmark: 20–35%.', type:'percent', placeholder:'e.g. 25%' },
-      { id:'dq3', text:'How many hours per week does the team spend investigating and resolving inventory discrepancies?', why:'Quantifies hidden labor cost of inaccuracy.', type:'number', placeholder:'e.g. 20 hours/week' },
+      { id:'dq1', text:'How many people directly touch inventory as part of their daily role - warehouse staff, field technicians, and office-based inventory controllers?', why:'Drives user count and total labor savings baseline.', sync:'userCount', type:'number', placeholder:'e.g. 45' },
+      { id:'dq2', text:'What percentage of a typical worker day is consumed by manual counts, paper processes, spreadsheet updates, or reconciliation rework?', why:'Identifies productivity gain potential. Benchmark: 20-35%.', sync:'laborWastePct', type:'percent', placeholder:'e.g. 25' },
+      { id:'dq3', text:'How many hours per week does the team spend investigating and resolving inventory discrepancies?', why:'Quantifies hidden labor cost of inaccuracy.', sync:'laborWastePct', syncConv:'hoursPerWeek', type:'number', placeholder:'e.g. 20' },
     ]},
     { section: 'Inventory Accuracy & Write-offs', questions: [
-      { id:'dq4', text:'What is your current inventory accuracy rate, and how do you measure it today?', why:'CI benchmark: 99.5% accuracy. The gap drives shrinkage opportunity.', type:'percent', placeholder:'e.g. 92%' },
-      { id:'dq5', text:'What is the total dollar value of inventory you write off annually due to loss, damage, expiry, or unaccounted shrinkage?', why:'Direct input for write-off savings calculation.', sync:'annualWriteOff', type:'number', placeholder:'e.g. $250,000' },
-      { id:'dq6', text:'How often do you conduct full physical inventory counts, and how many days do they take to complete?', why:'Cycle count improvement = direct labor and downtime savings.', type:'text', placeholder:'e.g. Twice a year, 3 days each' },
+      { id:'dq4', text:'What is your current inventory accuracy rate (%)?', why:'CI benchmark: 99.5% accuracy. The gap drives shrinkage opportunity.', sync:'currentAccuracy', type:'percent', placeholder:'e.g. 92' },
+      { id:'dq5', text:'What is the total dollar value of inventory you write off annually due to loss, damage, expiry, or unaccounted shrinkage?', why:'Direct input for write-off savings calculation.', sync:'annualWriteOff', type:'number', placeholder:'e.g. 250000' },
+      { id:'dq6a', text:'How many physical count days per year does your team perform (people-days total)?', why:'Count-labor lever: total person-days spent counting per year.', sync:'countDaysYr', type:'number', placeholder:'e.g. 12' },
+      { id:'dq6b', text:'How many people are involved in those counts?', why:'Count-labor lever: people counting.', sync:'countPeople', type:'number', placeholder:'e.g. 6' },
     ]},
     { section: 'Inventory Value & Carrying Costs', questions: [
-      { id:'dq7', text:'What is the total value of inventory on hand at any given point in time?', why:'Primary input for carrying cost and turns calculation.', sync:'inventoryValue', type:'number', placeholder:'e.g. $8,000,000' },
-      { id:'dq8', text:'Do you carry excess safety stock to compensate for inaccurate counts or unreliable data? If so, what percentage is buffer vs. operational need?', why:'Excess buffer = avoidable carrying cost.', type:'text', placeholder:'e.g. ~20% buffer above operational need' },
+      { id:'dq7', text:'What is the total value of inventory on hand at any given point in time?', why:'Primary input for carrying cost and turns calculation.', sync:'inventoryValue', type:'number', placeholder:'e.g. 8000000' },
+      { id:'dq8', text:'How many inventory turns do you achieve per year?', why:'Turns gap vs benchmark = working capital opportunity.', sync:'invTurnsCurrent', type:'number', placeholder:'e.g. 5' },
     ]},
     { section: 'Order Accuracy & OTIF', questions: [
-      { id:'dq9', text:'What is your current on-time, in-full (OTIF) or order accuracy rate?', why:'Baseline for improvement. Industry avg improves 8–15% with CI.', sync:'otifBaseline', type:'percent', placeholder:'e.g. 93%' },
-      { id:'dq10', text:'Do customers impose financial penalties or chargebacks for late or incomplete deliveries? What was the total last year?', why:'Hard-dollar OTIF cost — adds directly to the ROI model.', sync:'annualWriteOff', type:'number', placeholder:'e.g. $120,000' },
-      { id:'dq11', text:'What percentage of orders require re-picking, re-packing, or expedited shipping due to inventory errors?', why:'Quantifies true cost of fulfillment inaccuracy.', type:'percent', placeholder:'e.g. 8%' },
+      { id:'dq9', text:'What is your current on-time, in-full (OTIF) or order accuracy rate (%)?', why:'Baseline for improvement. Industry avg improves 8-15% with CI.', sync:'otifBaseline', type:'percent', placeholder:'e.g. 93' },
+      { id:'dq10', text:'What is your target OTIF rate (%)?', why:'OTIF gap (target - baseline) drives revenue-at-risk recovery.', sync:'otifTarget', type:'percent', placeholder:'e.g. 98' },
+      { id:'dq11', text:'What percentage of orders require re-picking, re-packing, or expedited shipping due to inventory errors?', why:'Quantifies true cost of fulfillment inaccuracy.', type:'percent', placeholder:'e.g. 8' },
     ]},
-    { section: 'Systems & Technology', questions: [
-      { id:'dq12', text:'What systems do you currently use to manage inventory — ERP module, WMS, spreadsheets, or paper?', why:'Identifies displacement opportunity and integration complexity.', type:'text', placeholder:'e.g. SAP ERP native module + Excel for field' },
-      { id:'dq13', text:'What do you pay annually for inventory system licenses, maintenance, and IT support?', why:'Direct IT cost displacement input.', sync:'itCost', type:'number', placeholder:'e.g. $180,000/year' },
-      { id:'dq14', text:'What mobile devices or scanners does your team currently use for inventory? What is the replacement cycle?', why:'Helps size hardware investment for the business case.', type:'text', placeholder:'e.g. 20 RF guns, 5+ years old' },
-    ]},
-    { section: 'Revenue & Financial Baseline', questions: [
-      { id:'dq16', text:'What is the organisation\'s annual revenue?', why:'Used for OTIF value-at-risk calculation.', sync:'revenue', type:'number', placeholder:'e.g. $45,000,000' },
-      { id:'dq17', text:'What hurdle rate or cost of capital does your finance team use when evaluating capital investments?', why:'NPV discount rate. Typically 8–15%.', sync:'discRate', type:'percent', placeholder:'e.g. 12%' },
-    ]},
-  ],
-
-  /* ── TELECOMMUNICATIONS ── */
-  telecom: [
-    { section: 'Field Operations & Labor', questions: [
-      { id:'dq1', text:'How many field technicians, warehouse staff, and network operations personnel handle inventory or spare parts as part of their role?', why:'Drives user count and labor savings baseline.', sync:'userCount', type:'number', placeholder:'e.g. 85' },
-      { id:'dq2', text:'What percentage of a field technician\'s time is spent on non-productive activities — driving back for wrong parts, manual parts ordering, or paperwork?', why:'High in telecom — benchmark 25–40% non-productive time.', type:'percent', placeholder:'e.g. 30%' },
-      { id:'dq3', text:'How many truck rolls are attributed to incorrect parts dispatched or unavailable spares at the point of service?', why:'Each unnecessary truck roll = $200–$500 fully loaded cost.', type:'number', placeholder:'e.g. 15 per week' },
-    ]},
-    { section: 'Parts Inventory & Write-offs', questions: [
-      { id:'dq4', text:'What is your current parts inventory accuracy rate across warehouse and field vehicle stock?', why:'CI benchmark: 99.5%. Gap drives shrinkage and truck roll exposure.', type:'percent', placeholder:'e.g. 88%' },
-      { id:'dq5', text:'What is the annual dollar value of parts written off due to loss, theft, or unreconciled field consumption?', why:'Direct write-off input — typically 2–4% of telecom parts inventory.', sync:'annualWriteOff', type:'number', placeholder:'e.g. $400,000' },
-      { id:'dq6', text:'Do technicians carry vehicle stock? How often is that stock physically audited, and how long does it take?', why:'Vehicle stock is the hardest to control — largest write-off source.', type:'text', placeholder:'e.g. 45 vehicles, audited quarterly, 2 days each' },
-    ]},
-    { section: 'Network & SLA Performance', questions: [
-      { id:'dq9', text:'What is your mean time to repair (MTTR) for network incidents, and how often are parts availability the cause of delay?', why:'Parts stockouts directly extend MTTR and drive SLA penalties.', type:'text', placeholder:'e.g. 4hr MTTR target, parts cause ~25% of delays' },
-      { id:'dq10', text:'What SLA penalties or customer credit costs did you incur last year due to delayed restoration caused by parts issues?', why:'Direct financial impact — maps to OTIF/SLA savings.', sync:'annualWriteOff', type:'number', placeholder:'e.g. $650,000' },
-      { id:'dq11', text:'What is your current on-time delivery rate for customer premises equipment (CPE) installations?', why:'CPE accuracy drives NPS and churn metrics.', sync:'otifBaseline', type:'percent', placeholder:'e.g. 87%' },
-    ]},
-    { section: 'Systems & Infrastructure', questions: [
-      { id:'dq12', text:'What platforms currently manage your field parts inventory — OSS/BSS system, ERP, or manual vehicle logs?', why:'Identifies integration scope and displacement cost.', type:'text', placeholder:'e.g. Oracle OSS + manual spreadsheets for vehicle stock' },
-      { id:'dq13', text:'What is the annual cost of your current inventory and field service management systems, including licenses and support?', why:'IT displacement input.', sync:'itCost', type:'number', placeholder:'e.g. $320,000' },
-      { id:'dq7', text:'What is the total value of spare parts inventory held across central warehouse, regional depots, and field vehicles?', why:'Full inventory base for carrying cost calculation.', sync:'inventoryValue', type:'number', placeholder:'e.g. $12,000,000' },
-    ]},
-    { section: 'Financial Baseline', questions: [
-      { id:'dq16', text:'What is the organisation\'s annual service revenue?', why:'Revenue base for SLA/OTIF value-at-risk.', sync:'revenue', type:'number', placeholder:'e.g. $380,000,000' },
-      { id:'dq17', text:'What hurdle rate does your finance team apply to infrastructure and operational investments?', why:'NPV discount rate for the business case.', sync:'discRate', type:'percent', placeholder:'e.g. 10%' },
-    ]},
-  ],
-
-  /* ── MANUFACTURING ── */
-  mfg: [
-    { section: 'Production & Labor', questions: [
-      { id:'dq1', text:'How many personnel are involved in inventory-related activities — receiving, warehouse, production stores, and shipping?', why:'Drives user count and labor savings.', sync:'userCount', type:'number', placeholder:'e.g. 60' },
-      { id:'dq2', text:'How frequently does production stop or slow due to parts or material stockouts caused by inaccurate inventory records?', why:'Production downtime cost is the highest-impact metric in manufacturing.', type:'text', placeholder:'e.g. 2–3 times per week, avg 45 min per event' },
-      { id:'dq3', text:'What percentage of production staff time is spent on inventory-related activities not directly linked to production — counting, searching, reconciling?', why:'Benchmark: 15–30% of time in manual inventory activities.', type:'percent', placeholder:'e.g. 20%' },
-    ]},
-    { section: 'Inventory Accuracy & Write-offs', questions: [
-      { id:'dq4', text:'What is your current raw material and WIP inventory accuracy rate? How do you measure it?', why:'Accuracy below 98% significantly impacts production planning reliability.', type:'percent', placeholder:'e.g. 94%' },
-      { id:'dq5', text:'What is the annual value of inventory written off — raw material scrap, component losses, obsolescence, or unreconciled variances?', why:'Direct write-off savings input.', sync:'annualWriteOff', type:'number', placeholder:'e.g. $320,000' },
-      { id:'dq6', text:'How often is a full physical count required by audit, and how many production days are lost to complete it?', why:'Lost production days during counts = direct cost opportunity.', type:'text', placeholder:'e.g. Annual count, 2 production days lost' },
-    ]},
-    { section: 'Supply Chain & OTIF', questions: [
-      { id:'dq9', text:'What is your current customer OTIF or on-time delivery rate? What is your target?', why:'OTIF gap is a primary value driver in manufacturing.', sync:'otifBaseline', type:'percent', placeholder:'e.g. 91% actual, 97% target' },
-      { id:'dq10', text:'What financial penalties, chargebacks, or expediting costs did you incur last year due to late or incomplete shipments?', why:'Hard-dollar OTIF cost.', type:'number', placeholder:'e.g. $280,000' },
-      { id:'dq11', text:'How many times per month do you expedite inbound materials due to stockouts caused by inventory record errors?', why:'Expediting premium typically 20–40% above standard purchase price.', type:'number', placeholder:'e.g. 8 times/month' },
-    ]},
-    { section: 'Inventory & Working Capital', questions: [
-      { id:'dq7', text:'What is the total value of raw materials, WIP, and finished goods inventory on hand?', why:'Full inventory base for carrying cost and turns analysis.', sync:'inventoryValue', type:'number', placeholder:'e.g. $14,000,000' },
-      { id:'dq8', text:'How many inventory turns does your business achieve annually? What is your industry target?', why:'Turns gap is a direct working capital opportunity.', sync:'invTurnsCurrent', type:'number', placeholder:'e.g. 4 turns/year' },
+    { section: 'Downtime & Expediting', questions: [
+      { id:'dq18', text:'How many times per year does work stop or slow due to stockouts caused by inaccurate records?', why:'Downtime lever: events per year.', sync:'downtimeEventsYr', type:'number', placeholder:'e.g. 100' },
+      { id:'dq19', text:'On average, how many hours are lost per event?', why:'Downtime lever: hours per event.', sync:'downtimeHrsPerEvent', type:'number', placeholder:'e.g. 1.5' },
+      { id:'dq20', text:'What is the fully-loaded cost of one hour of that lost/slowed work ($)?', why:'Downtime lever: cost per hour.', sync:'downtimeCostPerHr', type:'number', placeholder:'e.g. 3000' },
+      { id:'dq21', text:'What is your total annual spend on expedited or emergency orders caused by stockouts ($)?', why:'Expedite lever: annual expedite spend.', sync:'expediteSpendYr', type:'number', placeholder:'e.g. 200000' },
     ]},
     { section: 'Systems & Financial Baseline', questions: [
-      { id:'dq13', text:'What is the annual cost of your ERP inventory module and any WMS or warehouse systems?', why:'IT displacement input.', sync:'itCost', type:'number', placeholder:'e.g. $240,000' },
-      { id:'dq16', text:'What is the organisation\'s annual revenue?', why:'Revenue base for OTIF value-at-risk.', sync:'revenue', type:'number', placeholder:'e.g. $75,000,000' },
-      { id:'dq17', text:'What discount rate or hurdle rate does your finance team use?', why:'NPV calculation input.', sync:'discRate', type:'percent', placeholder:'e.g. 12%' },
+      { id:'dq13', text:'What do you pay annually for inventory system licenses, maintenance, and IT support?', why:'Direct IT cost displacement input.', sync:'itCost', type:'number', placeholder:'e.g. 180000' },
+      { id:'dq12', text:'What systems do you currently use to manage inventory - ERP module, WMS, spreadsheets, or paper?', why:'Context: identifies displacement opportunity and integration complexity.', type:'text', note:true, placeholder:'e.g. SAP ERP native module + Excel' },
+      { id:'dq16', text:'What is the organisations annual revenue?', why:'Used for OTIF value-at-risk calculation.', sync:'revenue', type:'number', placeholder:'e.g. 45000000' },
+      { id:'dq17', text:'What hurdle rate or cost of capital does your finance team use (%)?', why:'NPV discount rate. Typically 8-15%.', sync:'discRate', type:'percent', placeholder:'e.g. 12' },
+    ]},
+    { section: 'Warehouse throughput & order accuracy', questions: [
+      { id:'dqw1', text:'How many orders or order-lines do you ship per year?', why:'Throughput & accuracy levers: annual volume (entered once).', sync:'ordersPerYr', type:'number', placeholder:'e.g. 250000' },
+      { id:'dqw2', text:'What is the fully-loaded labor cost to process one order/line today?', why:'Throughput lever: current cost per order.', sync:'costPerOrder', type:'number', placeholder:'e.g. 3.50' },
+      { id:'dqw3', text:'What pick-rate or throughput improvement do you expect from mobile-first workflows?', why:'Throughput lever: pick-rate gain %.', sync:'pickRateGainPct', type:'percent', placeholder:'e.g. 20' },
+      { id:'dqw4', text:'What is your current order error or mis-ship rate?', why:'Accuracy lever: error rate %.', sync:'orderErrorPct', type:'percent', placeholder:'e.g. 2' },
+      { id:'dqw5', text:'What is the fully-loaded cost of one order error (return + re-ship + chargeback)?', why:'Accuracy lever: cost per error.', sync:'costPerError', type:'number', placeholder:'e.g. 120' },
+    ]},
+    { section: 'Field service value drivers', questions: [
+      { id:'dqf1', text:'How many repeat or return visits per year are caused by technicians not having the right part?', why:'First-fix lever: repeat visits avoided per year.', sync:'repeatVisitsYr', type:'number', placeholder:'e.g. 1200' },
+      { id:'dqf2', text:'What is the fully-loaded cost of one truck roll (labor, vehicle, fuel)?', why:'First-fix lever: cost per truck roll.', sync:'costPerTruckRoll', type:'number', placeholder:'e.g. 300' },
+      { id:'dqf3', text:'How many field technicians do you have?', why:'Revenue-per-tech lever: technician count.', sync:'fieldTechs', type:'number', placeholder:'e.g. 40' },
+      { id:'dqf4', text:'How many additional billable jobs per day could each technician complete with time saved?', why:'Revenue-per-tech lever: added jobs/day.', sync:'addedJobsPerDay', type:'number', placeholder:'e.g. 0.5' },
+      { id:'dqf5', text:'What is your average revenue per billable job?', why:'Revenue-per-tech lever: revenue per job.', sync:'revenuePerJob', type:'number', placeholder:'e.g. 250' },
+      { id:'dqf6', text:'What is the value of inventory held in the field / on trucks?', why:'Field leakage lever: field inventory value.', sync:'fieldInventoryValue', type:'number', placeholder:'e.g. 2000000' },
+      { id:'dqf7', text:'What is your current field/van-stock leakage rate (lost, walked-off, or expired parts)?', why:'Field leakage lever: leakage rate %.', sync:'fieldLeakagePct', type:'percent', placeholder:'e.g. 4' },
     ]},
   ],
-
-  /* ── ENGINEERING & CONSTRUCTION ── */
-  construction: [
-    { section: 'Site & Labor Management', questions: [
-      { id:'dq1', text:'How many people across your sites, yard, and office directly manage or transact inventory — materials, tools, equipment, and consumables?', why:'User count drives labor savings baseline.', sync:'userCount', type:'number', placeholder:'e.g. 70' },
-      { id:'dq2', text:'How much time per week do site supervisors or foremen spend searching for materials, investigating shortages, or processing manual inventory paperwork?', why:'Benchmark: 5–10 hours/week per supervisor in construction.', type:'text', placeholder:'e.g. ~6 hours per site supervisor per week' },
-      { id:'dq3', text:'How many active job sites or locations are you managing inventory across simultaneously?', why:'Multi-site complexity multiplies the value of real-time visibility.', type:'number', placeholder:'e.g. 12 active sites' },
-    ]},
-    { section: 'Material Loss & Write-offs', questions: [
-      { id:'dq4', text:'What percentage of materials ordered for a project are typically unaccounted for at project closeout — loss, theft, or waste beyond plan?', why:'Construction shrinkage benchmark: 2–5% of material value.', type:'percent', placeholder:'e.g. 3%' },
-      { id:'dq5', text:'What is the annual dollar value of tools, equipment, and materials written off due to loss, theft, or unaccounted consumption?', why:'Direct write-off savings input — typically 3% of inventory value.', sync:'annualWriteOff', type:'number', placeholder:'e.g. $450,000' },
-      { id:'dq6', text:'How frequently are emergency material purchases made to compensate for items that should have been on-site but were lost or not tracked?', why:'Emergency purchases carry 15–35% premium over planned purchases.', type:'text', placeholder:'e.g. 2–3 times per week across all sites' },
-    ]},
-    { section: 'Project Delivery & Compliance', questions: [
-      { id:'dq9', text:'What percentage of your projects deliver all contracted materials on time and complete to the client?', why:'Material shortfall is a primary cause of project delay claims.', sync:'otifBaseline', type:'percent', placeholder:'e.g. 82%' },
-      { id:'dq10', text:'What delay claims, liquidated damages, or project overruns were attributed to material or equipment availability issues last year?', why:'Hard-dollar project delivery cost.', type:'number', placeholder:'e.g. $1,200,000' },
-      { id:'dq11', text:'Do any of your projects require material traceability for compliance (AS/NZS, ISO, client audits)? What is the current documentation burden?', why:'Compliance traceability is a growing mandate in construction.', type:'text', placeholder:'e.g. Yes — monthly audit reports take 3 days each' },
-    ]},
-    { section: 'Inventory & Assets', questions: [
-      { id:'dq7', text:'What is the total value of materials, tools, and equipment held across your yard and active sites?', why:'Base for carrying cost and turns analysis.', sync:'inventoryValue', type:'number', placeholder:'e.g. $22,000,000' },
-      { id:'dq13', text:'What do you currently spend on inventory and asset management systems — ERP, spreadsheets, or tracking software?', why:'IT displacement input.', sync:'itCost', type:'number', placeholder:'e.g. $90,000' },
-      { id:'dq16', text:'What is the organisation\'s annual revenue or contract value?', why:'Revenue base for OTIF value-at-risk.', sync:'revenue', type:'number', placeholder:'e.g. $120,000,000' },
-      { id:'dq17', text:'What cost of capital or hurdle rate does your finance team use?', why:'NPV discount rate.', sync:'discRate', type:'percent', placeholder:'e.g. 12%' },
-    ]},
-  ],
-
-  /* ── OIL & GAS ── */
-  oil: [
-    { section: 'Field Operations & Maintenance Labor', questions: [
-      { id:'dq1', text:'How many personnel are involved in maintenance, materials management, and inventory operations across your sites — onshore or offshore?', why:'User count drives labor savings baseline.', sync:'userCount', type:'number', placeholder:'e.g. 120' },
-      { id:'dq2', text:'What percentage of maintenance technician time is spent on non-wrench activities — parts searching, requisitioning, and manual inventory reconciliation?', why:'Industry benchmark: 20–35% non-productive maintenance time.', type:'percent', placeholder:'e.g. 25%' },
-      { id:'dq3', text:'How many unplanned maintenance events per month are extended or worsened by parts unavailability or inventory inaccuracy?', why:'Each deferred maintenance event in O&G can cost $50K–$500K.', type:'number', placeholder:'e.g. 4 per month' },
+  telecom: [
+    { section: 'Field Operations & Labor', questions: [
+      { id:'dq1', text:'How many field technicians, warehouse staff, and network operations personnel handle inventory or spare parts?', why:'Drives user count and labor savings baseline.', sync:'userCount', type:'number', placeholder:'e.g. 85' },
+      { id:'dq2', text:'What percentage of a field technician time is non-productive - driving back for wrong parts, manual ordering, paperwork?', why:'High in telecom - benchmark 25-40% non-productive.', sync:'laborWastePct', type:'percent', placeholder:'e.g. 30' },
+      { id:'dq3', text:'How many truck rolls per year are caused by incorrect or unavailable parts?', why:'Each unnecessary truck roll = $200-$500 fully loaded.', type:'number', placeholder:'e.g. 780' },
     ]},
     { section: 'Parts Inventory & Write-offs', questions: [
-      { id:'dq4', text:'What is the current inventory accuracy rate for critical spares and maintenance materials?', why:'CI benchmark: 99.5%. Below 95% = significant unplanned downtime risk.', type:'percent', placeholder:'e.g. 91%' },
-      { id:'dq5', text:'What is the annual value of parts and materials written off — dead stock, unreconciled consumption, or obsolete inventory?', why:'Direct write-off savings — typically 2–4% of spares inventory value.', sync:'annualWriteOff', type:'number', placeholder:'e.g. $800,000' },
-      { id:'dq6', text:'How much excess buffer stock is carried to compensate for unreliable inventory data? What is the estimated dollar value of that buffer?', why:'Excess buffer = trapped working capital with direct carrying cost.', type:'number', placeholder:'e.g. $3,500,000 in excess stock' },
+      { id:'dq4', text:'What is your current parts inventory accuracy rate (%) across warehouse and vehicle stock?', why:'CI benchmark: 99.5%. Gap drives shrinkage and truck-roll exposure.', sync:'currentAccuracy', type:'percent', placeholder:'e.g. 88' },
+      { id:'dq5', text:'What is the annual dollar value of parts written off due to loss, theft, or unreconciled field consumption?', why:'Direct write-off input - typically 2-4% of telecom parts inventory.', sync:'annualWriteOff', type:'number', placeholder:'e.g. 400000' },
+      { id:'dq6a', text:'How many physical/cycle count days per year (people-days total)?', why:'Count-labor lever: person-days counting per year.', sync:'countDaysYr', type:'number', placeholder:'e.g. 12' },
+      { id:'dq6b', text:'How many people are involved in those counts?', why:'Count-labor lever: people counting.', sync:'countPeople', type:'number', placeholder:'e.g. 6' },
     ]},
-    { section: 'Regulatory Compliance & Traceability', questions: [
-      { id:'dq9', text:'Do your operations require material traceability to specific well, asset, or regulatory certificate? What is the current compliance documentation burden?', why:'Traceability compliance failure = licence risk and audit cost.', type:'text', placeholder:'e.g. Yes — NOPSEMA compliance, ~8 days/quarter on documentation' },
-      { id:'dq10', text:'What was the cost of compliance audit preparation or traceability-related rework last year?', why:'Direct compliance cost that CI can reduce significantly.', type:'number', placeholder:'e.g. $240,000' },
-      { id:'dq11', text:'What percentage of purchase orders are emergency or unplanned due to parts stockouts discovered at time of need?', why:'Emergency procurement premium = 20–50% above planned cost.', type:'percent', placeholder:'e.g. 18%' },
+    { section: 'Network & SLA Performance', questions: [
+      { id:'dq9', text:'What is your current on-time delivery rate for CPE installations (%)?', why:'CPE accuracy drives NPS and churn.', sync:'otifBaseline', type:'percent', placeholder:'e.g. 87' },
+      { id:'dq9b', text:'What is your target on-time delivery rate (%)?', why:'OTIF gap drives revenue-at-risk recovery.', sync:'otifTarget', type:'percent', placeholder:'e.g. 95' },
+      { id:'dq10', text:'What annual SLA penalties or customer credits did parts delays cause ($)?', why:'Direct financial impact - contributes to expedite/penalty recovery.', sync:'expediteSpendYr', type:'number', placeholder:'e.g. 650000' },
     ]},
-    { section: 'Inventory Value & Systems', questions: [
-      { id:'dq7', text:'What is the total value of spares, maintenance materials, and consumables held across all locations?', why:'Full inventory base for carrying cost and turns analysis.', sync:'inventoryValue', type:'number', placeholder:'e.g. $35,000,000' },
-      { id:'dq13', text:'What is the annual cost of your EAM/CMMS, ERP inventory module, and associated IT support?', why:'IT displacement input.', sync:'itCost', type:'number', placeholder:'e.g. $520,000' },
-      { id:'dq16', text:'What is the organisation\'s annual operating revenue?', why:'Revenue base for value-at-risk calculation.', sync:'revenue', type:'number', placeholder:'e.g. $850,000,000' },
-      { id:'dq17', text:'What hurdle rate does your finance team use for operational investment approvals?', why:'NPV discount rate.', sync:'discRate', type:'percent', placeholder:'e.g. 15%' },
+    { section: 'Downtime & Expediting', questions: [
+      { id:'dq18', text:'How many network incidents per year have restoration extended by parts unavailability?', why:'Downtime lever: events per year.', sync:'downtimeEventsYr', type:'number', placeholder:'e.g. 200' },
+      { id:'dq19', text:'Average hours added to MTTR per such incident?', why:'Downtime lever: hours per event.', sync:'downtimeHrsPerEvent', type:'number', placeholder:'e.g. 3' },
+      { id:'dq20', text:'Cost per hour of extended outage/SLA exposure ($)?', why:'Downtime lever: cost per hour.', sync:'downtimeCostPerHr', type:'number', placeholder:'e.g. 4000' },
+      { id:'dq21', text:'Annual emergency/expedited parts procurement spend ($)?', why:'Expedite lever: annual expedite spend.', sync:'expediteSpendYr', type:'number', placeholder:'e.g. 500000' },
+    ]},
+    { section: 'Inventory & Financial Baseline', questions: [
+      { id:'dq7', text:'Total value of spare parts across warehouse, depots, and vehicles?', why:'Full inventory base for carrying cost.', sync:'inventoryValue', type:'number', placeholder:'e.g. 12000000' },
+      { id:'dq8', text:'How many inventory turns per year on spare parts?', why:'Turns gap = working capital opportunity.', sync:'invTurnsCurrent', type:'number', placeholder:'e.g. 4' },
+      { id:'dq13', text:'Annual cost of inventory and field service management systems?', why:'IT displacement input.', sync:'itCost', type:'number', placeholder:'e.g. 320000' },
+      { id:'dq16', text:'Annual service revenue?', why:'Revenue base for SLA/OTIF value-at-risk.', sync:'revenue', type:'number', placeholder:'e.g. 380000000' },
+      { id:'dq17', text:'Hurdle rate for infrastructure investments (%)?', why:'NPV discount rate.', sync:'discRate', type:'percent', placeholder:'e.g. 10' },
+    ]},
+    { section: 'Warehouse throughput & order accuracy', questions: [
+      { id:'dqw1', text:'How many orders or order-lines do you ship per year?', why:'Throughput & accuracy levers: annual volume (entered once).', sync:'ordersPerYr', type:'number', placeholder:'e.g. 250000' },
+      { id:'dqw2', text:'What is the fully-loaded labor cost to process one order/line today?', why:'Throughput lever: current cost per order.', sync:'costPerOrder', type:'number', placeholder:'e.g. 3.50' },
+      { id:'dqw3', text:'What pick-rate or throughput improvement do you expect from mobile-first workflows?', why:'Throughput lever: pick-rate gain %.', sync:'pickRateGainPct', type:'percent', placeholder:'e.g. 20' },
+      { id:'dqw4', text:'What is your current order error or mis-ship rate?', why:'Accuracy lever: error rate %.', sync:'orderErrorPct', type:'percent', placeholder:'e.g. 2' },
+      { id:'dqw5', text:'What is the fully-loaded cost of one order error (return + re-ship + chargeback)?', why:'Accuracy lever: cost per error.', sync:'costPerError', type:'number', placeholder:'e.g. 120' },
+    ]},
+    { section: 'Field service value drivers', questions: [
+      { id:'dqf1', text:'How many repeat or return visits per year are caused by technicians not having the right part?', why:'First-fix lever: repeat visits avoided per year.', sync:'repeatVisitsYr', type:'number', placeholder:'e.g. 1200' },
+      { id:'dqf2', text:'What is the fully-loaded cost of one truck roll (labor, vehicle, fuel)?', why:'First-fix lever: cost per truck roll.', sync:'costPerTruckRoll', type:'number', placeholder:'e.g. 300' },
+      { id:'dqf3', text:'How many field technicians do you have?', why:'Revenue-per-tech lever: technician count.', sync:'fieldTechs', type:'number', placeholder:'e.g. 40' },
+      { id:'dqf4', text:'How many additional billable jobs per day could each technician complete with time saved?', why:'Revenue-per-tech lever: added jobs/day.', sync:'addedJobsPerDay', type:'number', placeholder:'e.g. 0.5' },
+      { id:'dqf5', text:'What is your average revenue per billable job?', why:'Revenue-per-tech lever: revenue per job.', sync:'revenuePerJob', type:'number', placeholder:'e.g. 250' },
+      { id:'dqf6', text:'What is the value of inventory held in the field / on trucks?', why:'Field leakage lever: field inventory value.', sync:'fieldInventoryValue', type:'number', placeholder:'e.g. 2000000' },
+      { id:'dqf7', text:'What is your current field/van-stock leakage rate (lost, walked-off, or expired parts)?', why:'Field leakage lever: leakage rate %.', sync:'fieldLeakagePct', type:'percent', placeholder:'e.g. 4' },
     ]},
   ],
-
-  /* ── DISTRIBUTION & 3PL ── */
+  mfg: [
+    { section: 'Production & Labor', questions: [
+      { id:'dq1', text:'How many personnel are involved in inventory activities - receiving, warehouse, production stores, shipping?', why:'Drives user count and labor savings.', sync:'userCount', type:'number', placeholder:'e.g. 60' },
+      { id:'dq3', text:'What percentage of production staff time is spent on inventory activities not tied to production - counting, searching, reconciling?', why:'Benchmark: 15-30% of time in manual inventory.', sync:'laborWastePct', type:'percent', placeholder:'e.g. 20' },
+    ]},
+    { section: 'Downtime & Expediting', questions: [
+      { id:'dq18', text:'How many times per year does production stop/slow due to stockouts from inaccurate records?', why:'Downtime lever: events per year.', sync:'downtimeEventsYr', type:'number', placeholder:'e.g. 120' },
+      { id:'dq19', text:'Average hours of lost production per event?', why:'Downtime lever: hours per event.', sync:'downtimeHrsPerEvent', type:'number', placeholder:'e.g. 0.75' },
+      { id:'dq20', text:'Fully-loaded cost per hour of lost production ($)?', why:'Downtime lever: cost per hour.', sync:'downtimeCostPerHr', type:'number', placeholder:'e.g. 5000' },
+      { id:'dq21', text:'Annual spend on expedited inbound materials due to stockouts ($)?', why:'Expedite lever: annual expedite spend.', sync:'expediteSpendYr', type:'number', placeholder:'e.g. 400000' },
+    ]},
+    { section: 'Inventory Accuracy & Write-offs', questions: [
+      { id:'dq4', text:'Current raw material and WIP inventory accuracy rate (%)?', why:'Accuracy below 98% impacts production planning.', sync:'currentAccuracy', type:'percent', placeholder:'e.g. 94' },
+      { id:'dq5', text:'Annual value of inventory written off - scrap, component losses, obsolescence, variances?', why:'Direct write-off savings input.', sync:'annualWriteOff', type:'number', placeholder:'e.g. 320000' },
+      { id:'dq6a', text:'How many physical/cycle count days per year (people-days total)?', why:'Count-labor lever: person-days counting per year.', sync:'countDaysYr', type:'number', placeholder:'e.g. 12' },
+      { id:'dq6b', text:'How many people are involved in those counts?', why:'Count-labor lever: people counting.', sync:'countPeople', type:'number', placeholder:'e.g. 6' },
+    ]},
+    { section: 'Supply Chain & OTIF', questions: [
+      { id:'dq9', text:'Current customer OTIF / on-time delivery rate (%)?', why:'OTIF gap is a primary value driver in manufacturing.', sync:'otifBaseline', type:'percent', placeholder:'e.g. 91' },
+      { id:'dq9b', text:'Target OTIF rate (%)?', why:'Gap drives revenue-at-risk recovery.', sync:'otifTarget', type:'percent', placeholder:'e.g. 97' },
+      { id:'dq10', text:'Annual financial penalties, chargebacks, or expediting costs from late/incomplete shipments ($)?', why:'Hard-dollar OTIF cost.', sync:'expediteSpendYr', type:'number', placeholder:'e.g. 280000' },
+    ]},
+    { section: 'Inventory & Working Capital', questions: [
+      { id:'dq7', text:'Total value of raw materials, WIP, and finished goods on hand?', why:'Full inventory base for carrying cost and turns.', sync:'inventoryValue', type:'number', placeholder:'e.g. 14000000' },
+      { id:'dq8', text:'Inventory turns achieved annually?', why:'Turns gap = working capital opportunity.', sync:'invTurnsCurrent', type:'number', placeholder:'e.g. 4' },
+    ]},
+    { section: 'Systems & Financial Baseline', questions: [
+      { id:'dq13', text:'Annual cost of ERP inventory module and any WMS/warehouse systems?', why:'IT displacement input.', sync:'itCost', type:'number', placeholder:'e.g. 240000' },
+      { id:'dq16', text:'Annual revenue?', why:'Revenue base for OTIF value-at-risk.', sync:'revenue', type:'number', placeholder:'e.g. 75000000' },
+      { id:'dq17', text:'Discount/hurdle rate (%)?', why:'NPV calculation input.', sync:'discRate', type:'percent', placeholder:'e.g. 12' },
+    ]},
+    { section: 'Warehouse throughput & order accuracy', questions: [
+      { id:'dqw1', text:'How many orders or order-lines do you ship per year?', why:'Throughput & accuracy levers: annual volume (entered once).', sync:'ordersPerYr', type:'number', placeholder:'e.g. 250000' },
+      { id:'dqw2', text:'What is the fully-loaded labor cost to process one order/line today?', why:'Throughput lever: current cost per order.', sync:'costPerOrder', type:'number', placeholder:'e.g. 3.50' },
+      { id:'dqw3', text:'What pick-rate or throughput improvement do you expect from mobile-first workflows?', why:'Throughput lever: pick-rate gain %.', sync:'pickRateGainPct', type:'percent', placeholder:'e.g. 20' },
+      { id:'dqw4', text:'What is your current order error or mis-ship rate?', why:'Accuracy lever: error rate %.', sync:'orderErrorPct', type:'percent', placeholder:'e.g. 2' },
+      { id:'dqw5', text:'What is the fully-loaded cost of one order error (return + re-ship + chargeback)?', why:'Accuracy lever: cost per error.', sync:'costPerError', type:'number', placeholder:'e.g. 120' },
+    ]},
+    { section: 'Field service value drivers', questions: [
+      { id:'dqf1', text:'How many repeat or return visits per year are caused by technicians not having the right part?', why:'First-fix lever: repeat visits avoided per year.', sync:'repeatVisitsYr', type:'number', placeholder:'e.g. 1200' },
+      { id:'dqf2', text:'What is the fully-loaded cost of one truck roll (labor, vehicle, fuel)?', why:'First-fix lever: cost per truck roll.', sync:'costPerTruckRoll', type:'number', placeholder:'e.g. 300' },
+      { id:'dqf3', text:'How many field technicians do you have?', why:'Revenue-per-tech lever: technician count.', sync:'fieldTechs', type:'number', placeholder:'e.g. 40' },
+      { id:'dqf4', text:'How many additional billable jobs per day could each technician complete with time saved?', why:'Revenue-per-tech lever: added jobs/day.', sync:'addedJobsPerDay', type:'number', placeholder:'e.g. 0.5' },
+      { id:'dqf5', text:'What is your average revenue per billable job?', why:'Revenue-per-tech lever: revenue per job.', sync:'revenuePerJob', type:'number', placeholder:'e.g. 250' },
+      { id:'dqf6', text:'What is the value of inventory held in the field / on trucks?', why:'Field leakage lever: field inventory value.', sync:'fieldInventoryValue', type:'number', placeholder:'e.g. 2000000' },
+      { id:'dqf7', text:'What is your current field/van-stock leakage rate (lost, walked-off, or expired parts)?', why:'Field leakage lever: leakage rate %.', sync:'fieldLeakagePct', type:'percent', placeholder:'e.g. 4' },
+    ]},
+  ],
+  construction: [
+    { section: 'Site & Labor Management', questions: [
+      { id:'dq1', text:'How many people across sites, yard, and office manage or transact inventory - materials, tools, equipment, consumables?', why:'User count drives labor savings baseline.', sync:'userCount', type:'number', placeholder:'e.g. 70' },
+      { id:'dq2', text:'Hours per week site supervisors spend searching for materials, investigating shortages, or on manual paperwork?', why:'Benchmark: 5-10 hrs/week per supervisor.', sync:'laborWastePct', syncConv:'hoursPerWeek', type:'number', placeholder:'e.g. 6' },
+      { id:'dq3', text:'How many active job sites are you managing inventory across simultaneously?', why:'Multi-site complexity multiplies visibility value.', type:'number', placeholder:'e.g. 12' },
+    ]},
+    { section: 'Material Loss & Write-offs', questions: [
+      { id:'dq4', text:'What percentage of materials ordered are unaccounted for at closeout - loss, theft, waste beyond plan?', why:'Construction shrinkage benchmark: 2-5%.', type:'percent', placeholder:'e.g. 3' },
+      { id:'dq5', text:'Annual dollar value of tools, equipment, materials written off due to loss, theft, or unaccounted consumption?', why:'Direct write-off savings input.', sync:'annualWriteOff', type:'number', placeholder:'e.g. 450000' },
+      { id:'dq6a', text:'How many physical/cycle count days per year (people-days total)?', why:'Count-labor lever: person-days counting per year.', sync:'countDaysYr', type:'number', placeholder:'e.g. 12' },
+      { id:'dq6b', text:'How many people are involved in those counts?', why:'Count-labor lever: people counting.', sync:'countPeople', type:'number', placeholder:'e.g. 6' },
+    ]},
+    { section: 'Downtime & Expediting', questions: [
+      { id:'dq18', text:'How many times per year does site work stop/slow due to missing materials from poor tracking?', why:'Downtime lever: events per year.', sync:'downtimeEventsYr', type:'number', placeholder:'e.g. 150' },
+      { id:'dq19', text:'Average hours of crew idle time per event?', why:'Downtime lever: hours per event.', sync:'downtimeHrsPerEvent', type:'number', placeholder:'e.g. 2' },
+      { id:'dq20', text:'Fully-loaded cost per hour of idle crew ($)?', why:'Downtime lever: cost per hour.', sync:'downtimeCostPerHr', type:'number', placeholder:'e.g. 2500' },
+      { id:'dq21', text:'Annual emergency material purchase spend to cover shortfalls ($)?', why:'Expedite lever: annual expedite spend.', sync:'expediteSpendYr', type:'number', placeholder:'e.g. 600000' },
+    ]},
+    { section: 'Project Delivery & Compliance', questions: [
+      { id:'dq9', text:'What percentage of projects deliver all contracted materials on time and complete (%)?', why:'Material shortfall causes project delay claims.', sync:'otifBaseline', type:'percent', placeholder:'e.g. 82' },
+      { id:'dq9b', text:'Target on-time-complete delivery rate (%)?', why:'Gap drives value-at-risk recovery.', sync:'otifTarget', type:'percent', placeholder:'e.g. 95' },
+      { id:'dq11', text:'Do projects require material traceability for compliance (AS/NZS, ISO, client audits)?', why:'Context: compliance documentation burden.', type:'text', note:true, placeholder:'e.g. Yes - monthly audit reports, 3 days each' },
+    ]},
+    { section: 'Inventory & Financial Baseline', questions: [
+      { id:'dq7', text:'Total value of materials, tools, equipment across yard and sites?', why:'Base for carrying cost and turns.', sync:'inventoryValue', type:'number', placeholder:'e.g. 22000000' },
+      { id:'dq8', text:'Inventory turns per year?', why:'Turns gap = working capital opportunity.', sync:'invTurnsCurrent', type:'number', placeholder:'e.g. 3' },
+      { id:'dq13', text:'Annual spend on inventory and asset management systems?', why:'IT displacement input.', sync:'itCost', type:'number', placeholder:'e.g. 90000' },
+      { id:'dq16', text:'Annual revenue or contract value?', why:'Revenue base for OTIF value-at-risk.', sync:'revenue', type:'number', placeholder:'e.g. 120000000' },
+      { id:'dq17', text:'Cost of capital / hurdle rate (%)?', why:'NPV discount rate.', sync:'discRate', type:'percent', placeholder:'e.g. 12' },
+    ]},
+    { section: 'Warehouse throughput & order accuracy', questions: [
+      { id:'dqw1', text:'How many orders or order-lines do you ship per year?', why:'Throughput & accuracy levers: annual volume (entered once).', sync:'ordersPerYr', type:'number', placeholder:'e.g. 250000' },
+      { id:'dqw2', text:'What is the fully-loaded labor cost to process one order/line today?', why:'Throughput lever: current cost per order.', sync:'costPerOrder', type:'number', placeholder:'e.g. 3.50' },
+      { id:'dqw3', text:'What pick-rate or throughput improvement do you expect from mobile-first workflows?', why:'Throughput lever: pick-rate gain %.', sync:'pickRateGainPct', type:'percent', placeholder:'e.g. 20' },
+      { id:'dqw4', text:'What is your current order error or mis-ship rate?', why:'Accuracy lever: error rate %.', sync:'orderErrorPct', type:'percent', placeholder:'e.g. 2' },
+      { id:'dqw5', text:'What is the fully-loaded cost of one order error (return + re-ship + chargeback)?', why:'Accuracy lever: cost per error.', sync:'costPerError', type:'number', placeholder:'e.g. 120' },
+    ]},
+    { section: 'Field service value drivers', questions: [
+      { id:'dqf1', text:'How many repeat or return visits per year are caused by technicians not having the right part?', why:'First-fix lever: repeat visits avoided per year.', sync:'repeatVisitsYr', type:'number', placeholder:'e.g. 1200' },
+      { id:'dqf2', text:'What is the fully-loaded cost of one truck roll (labor, vehicle, fuel)?', why:'First-fix lever: cost per truck roll.', sync:'costPerTruckRoll', type:'number', placeholder:'e.g. 300' },
+      { id:'dqf3', text:'How many field technicians do you have?', why:'Revenue-per-tech lever: technician count.', sync:'fieldTechs', type:'number', placeholder:'e.g. 40' },
+      { id:'dqf4', text:'How many additional billable jobs per day could each technician complete with time saved?', why:'Revenue-per-tech lever: added jobs/day.', sync:'addedJobsPerDay', type:'number', placeholder:'e.g. 0.5' },
+      { id:'dqf5', text:'What is your average revenue per billable job?', why:'Revenue-per-tech lever: revenue per job.', sync:'revenuePerJob', type:'number', placeholder:'e.g. 250' },
+      { id:'dqf6', text:'What is the value of inventory held in the field / on trucks?', why:'Field leakage lever: field inventory value.', sync:'fieldInventoryValue', type:'number', placeholder:'e.g. 2000000' },
+      { id:'dqf7', text:'What is your current field/van-stock leakage rate (lost, walked-off, or expired parts)?', why:'Field leakage lever: leakage rate %.', sync:'fieldLeakagePct', type:'percent', placeholder:'e.g. 4' },
+    ]},
+  ],
+  oil: [
+    { section: 'Field Operations & Maintenance Labor', questions: [
+      { id:'dq1', text:'How many personnel are in maintenance, materials management, and inventory ops across sites?', why:'User count drives labor savings baseline.', sync:'userCount', type:'number', placeholder:'e.g. 120' },
+      { id:'dq2', text:'Percentage of maintenance technician time on non-wrench activities - parts searching, requisitioning, reconciliation?', why:'Benchmark: 20-35% non-productive.', sync:'laborWastePct', type:'percent', placeholder:'e.g. 25' },
+    ]},
+    { section: 'Downtime & Expediting', questions: [
+      { id:'dq18', text:'How many unplanned maintenance events per year are extended/worsened by parts unavailability?', why:'Downtime lever: events per year.', sync:'downtimeEventsYr', type:'number', placeholder:'e.g. 48' },
+      { id:'dq19', text:'Average hours of production impact per event?', why:'Downtime lever: hours per event.', sync:'downtimeHrsPerEvent', type:'number', placeholder:'e.g. 6' },
+      { id:'dq20', text:'Cost per hour of that downtime ($)?', why:'Downtime lever: cost per hour.', sync:'downtimeCostPerHr', type:'number', placeholder:'e.g. 20000' },
+      { id:'dq21', text:'Annual emergency/unplanned procurement spend from stockouts ($)?', why:'Expedite lever: annual expedite spend.', sync:'expediteSpendYr', type:'number', placeholder:'e.g. 900000' },
+    ]},
+    { section: 'Parts Inventory & Write-offs', questions: [
+      { id:'dq4', text:'Current inventory accuracy rate for critical spares and maintenance materials (%)?', why:'CI benchmark: 99.5%. Below 95% = downtime risk.', sync:'currentAccuracy', type:'percent', placeholder:'e.g. 91' },
+      { id:'dq5', text:'Annual value of parts/materials written off - dead stock, unreconciled consumption, obsolescence?', why:'Direct write-off savings.', sync:'annualWriteOff', type:'number', placeholder:'e.g. 800000' },
+      { id:'dq6a', text:'How many physical/cycle count days per year (people-days total)?', why:'Count-labor lever: person-days counting per year.', sync:'countDaysYr', type:'number', placeholder:'e.g. 12' },
+      { id:'dq6b', text:'How many people are involved in those counts?', why:'Count-labor lever: people counting.', sync:'countPeople', type:'number', placeholder:'e.g. 6' },
+    ]},
+    { section: 'Compliance & OTIF', questions: [
+      { id:'dq9', text:'Current on-time delivery / materials availability rate (%)?', why:'Baseline for OTIF improvement.', sync:'otifBaseline', type:'percent', placeholder:'e.g. 89' },
+      { id:'dq9b', text:'Target availability rate (%)?', why:'Gap drives value-at-risk recovery.', sync:'otifTarget', type:'percent', placeholder:'e.g. 96' },
+      { id:'dq9c', text:'Do operations require material traceability to well/asset/regulatory certificate?', why:'Context: compliance documentation burden.', type:'text', note:true, placeholder:'e.g. Yes - NOPSEMA, ~8 days/quarter' },
+    ]},
+    { section: 'Inventory & Financial Baseline', questions: [
+      { id:'dq7', text:'Total value of spares, maintenance materials, consumables across locations?', why:'Full inventory base for carrying cost and turns.', sync:'inventoryValue', type:'number', placeholder:'e.g. 35000000' },
+      { id:'dq8', text:'Inventory turns per year on spares?', why:'Turns gap = working capital opportunity.', sync:'invTurnsCurrent', type:'number', placeholder:'e.g. 4' },
+      { id:'dq13', text:'Annual cost of EAM/CMMS, ERP inventory module, and IT support?', why:'IT displacement input.', sync:'itCost', type:'number', placeholder:'e.g. 520000' },
+      { id:'dq16', text:'Annual operating revenue?', why:'Revenue base for value-at-risk.', sync:'revenue', type:'number', placeholder:'e.g. 850000000' },
+      { id:'dq17', text:'Hurdle rate for operational investments (%)?', why:'NPV discount rate.', sync:'discRate', type:'percent', placeholder:'e.g. 15' },
+    ]},
+    { section: 'Warehouse throughput & order accuracy', questions: [
+      { id:'dqw1', text:'How many orders or order-lines do you ship per year?', why:'Throughput & accuracy levers: annual volume (entered once).', sync:'ordersPerYr', type:'number', placeholder:'e.g. 250000' },
+      { id:'dqw2', text:'What is the fully-loaded labor cost to process one order/line today?', why:'Throughput lever: current cost per order.', sync:'costPerOrder', type:'number', placeholder:'e.g. 3.50' },
+      { id:'dqw3', text:'What pick-rate or throughput improvement do you expect from mobile-first workflows?', why:'Throughput lever: pick-rate gain %.', sync:'pickRateGainPct', type:'percent', placeholder:'e.g. 20' },
+      { id:'dqw4', text:'What is your current order error or mis-ship rate?', why:'Accuracy lever: error rate %.', sync:'orderErrorPct', type:'percent', placeholder:'e.g. 2' },
+      { id:'dqw5', text:'What is the fully-loaded cost of one order error (return + re-ship + chargeback)?', why:'Accuracy lever: cost per error.', sync:'costPerError', type:'number', placeholder:'e.g. 120' },
+    ]},
+    { section: 'Field service value drivers', questions: [
+      { id:'dqf1', text:'How many repeat or return visits per year are caused by technicians not having the right part?', why:'First-fix lever: repeat visits avoided per year.', sync:'repeatVisitsYr', type:'number', placeholder:'e.g. 1200' },
+      { id:'dqf2', text:'What is the fully-loaded cost of one truck roll (labor, vehicle, fuel)?', why:'First-fix lever: cost per truck roll.', sync:'costPerTruckRoll', type:'number', placeholder:'e.g. 300' },
+      { id:'dqf3', text:'How many field technicians do you have?', why:'Revenue-per-tech lever: technician count.', sync:'fieldTechs', type:'number', placeholder:'e.g. 40' },
+      { id:'dqf4', text:'How many additional billable jobs per day could each technician complete with time saved?', why:'Revenue-per-tech lever: added jobs/day.', sync:'addedJobsPerDay', type:'number', placeholder:'e.g. 0.5' },
+      { id:'dqf5', text:'What is your average revenue per billable job?', why:'Revenue-per-tech lever: revenue per job.', sync:'revenuePerJob', type:'number', placeholder:'e.g. 250' },
+      { id:'dqf6', text:'What is the value of inventory held in the field / on trucks?', why:'Field leakage lever: field inventory value.', sync:'fieldInventoryValue', type:'number', placeholder:'e.g. 2000000' },
+      { id:'dqf7', text:'What is your current field/van-stock leakage rate (lost, walked-off, or expired parts)?', why:'Field leakage lever: leakage rate %.', sync:'fieldLeakagePct', type:'percent', placeholder:'e.g. 4' },
+    ]},
+  ],
   distribution: [
     { section: 'Warehouse Operations & Labor', questions: [
-      { id:'dq1', text:'How many warehouse associates, operators, and supervisors are involved in daily inventory transactions — receiving, put-away, picking, and shipping?', why:'User count drives labor savings baseline.', sync:'userCount', type:'number', placeholder:'e.g. 95' },
-      { id:'dq2', text:'What is your current pick accuracy rate, and how many hours per week are spent re-picking, re-packing, or investigating order discrepancies?', why:'Re-work labor is a direct, measurable cost CI eliminates.', type:'text', placeholder:'e.g. 97.5% pick accuracy, 30 hrs/week rework' },
-      { id:'dq3', text:'How many order lines do you ship per day, and what is your error rate per 1,000 lines?', why:'Throughput and accuracy baseline for CI value calculation.', type:'text', placeholder:'e.g. 8,000 lines/day, 4 errors per 1,000' },
+      { id:'dq1', text:'How many warehouse associates, operators, supervisors handle daily inventory transactions?', why:'User count drives labor savings baseline.', sync:'userCount', type:'number', placeholder:'e.g. 95' },
+      { id:'dq2', text:'Hours per week spent re-picking, re-packing, or investigating order discrepancies?', why:'Re-work labor is a direct measurable cost.', sync:'laborWastePct', syncConv:'hoursPerWeek', type:'number', placeholder:'e.g. 30' },
+      { id:'dq3', text:'Current pick accuracy rate (%)?', why:'Accuracy baseline for rework reduction.', type:'percent', placeholder:'e.g. 97.5' },
     ]},
     { section: 'Inventory Accuracy & Shrinkage', questions: [
-      { id:'dq4', text:'What is your perpetual inventory accuracy rate — the % of locations with the correct quantity and SKU?', why:'CI benchmark: 99.8% location accuracy. Gap drives customer chargebacks.', type:'percent', placeholder:'e.g. 96%' },
-      { id:'dq5', text:'What is the annual dollar value of inventory written off due to shrinkage, damage, or unreconciled variances?', why:'Direct write-off savings input.', sync:'annualWriteOff', type:'number', placeholder:'e.g. $180,000' },
-      { id:'dq6', text:'How often is a full wall-to-wall count required, and how many operational hours does it consume?', why:'CI replaces annual counts with continuous cycle counting.', type:'text', placeholder:'e.g. Twice yearly, 16 hours each (facility closed)' },
+      { id:'dq4', text:'Perpetual inventory (location) accuracy rate (%)?', why:'CI benchmark: 99.8%. Gap drives chargebacks.', sync:'currentAccuracy', type:'percent', placeholder:'e.g. 96' },
+      { id:'dq5', text:'Annual dollar value written off due to shrinkage, damage, or variances?', why:'Direct write-off savings input.', sync:'annualWriteOff', type:'number', placeholder:'e.g. 180000' },
+      { id:'dq6a', text:'How many physical/cycle count days per year (people-days total)?', why:'Count-labor lever: person-days counting per year.', sync:'countDaysYr', type:'number', placeholder:'e.g. 12' },
+      { id:'dq6b', text:'How many people are involved in those counts?', why:'Count-labor lever: people counting.', sync:'countPeople', type:'number', placeholder:'e.g. 6' },
     ]},
     { section: 'Customer OTIF & Chargebacks', questions: [
-      { id:'dq9', text:'What is your current OTIF rate across your top customers? What is your contractual target?', why:'OTIF gap directly sizes the value-at-risk for the model.', sync:'otifBaseline', type:'percent', placeholder:'e.g. 95.2% actual, 98.5% contractual' },
-      { id:'dq10', text:'What was the total value of customer chargebacks, deductions, or compliance fines related to OTIF failures last year?', why:'Hard-dollar OTIF cost — key CFO metric.', type:'number', placeholder:'e.g. $420,000' },
-      { id:'dq11', text:'Which customers or contracts have the highest chargeback exposure, and what is the primary failure mode — late, incomplete, or incorrect?', why:'Identifies where CI delivers the fastest chargeback reduction.', type:'text', placeholder:'e.g. 3 major retail clients, primarily incomplete orders' },
+      { id:'dq9', text:'Current OTIF rate across top customers (%)?', why:'OTIF gap sizes value-at-risk.', sync:'otifBaseline', type:'percent', placeholder:'e.g. 95.2' },
+      { id:'dq9b', text:'Contractual target OTIF rate (%)?', why:'Gap drives chargeback recovery.', sync:'otifTarget', type:'percent', placeholder:'e.g. 98.5' },
+      { id:'dq10', text:'Total annual customer chargebacks/deductions/fines from OTIF failures ($)?', why:'Hard-dollar OTIF cost - key CFO metric.', sync:'expediteSpendYr', type:'number', placeholder:'e.g. 420000' },
     ]},
-    { section: 'Inventory & Systems', questions: [
-      { id:'dq7', text:'What is the average total inventory value held in your facility at any time?', why:'Base for carrying cost and working capital analysis.', sync:'inventoryValue', type:'number', placeholder:'e.g. $28,000,000' },
-      { id:'dq13', text:'What do you pay annually for your WMS, TMS, and associated system licenses and support?', why:'IT displacement and consolidation opportunity.', sync:'itCost', type:'number', placeholder:'e.g. $380,000' },
-      { id:'dq16', text:'What is the organisation\'s annual revenue from 3PL and distribution operations?', why:'Revenue base for OTIF value-at-risk.', sync:'revenue', type:'number', placeholder:'e.g. $65,000,000' },
-      { id:'dq17', text:'What discount rate does your finance team use?', why:'NPV calculation input.', sync:'discRate', type:'percent', placeholder:'e.g. 10%' },
+    { section: 'Downtime & Expediting', questions: [
+      { id:'dq18', text:'How many times per year does fulfillment halt/slow due to inaccurate inventory?', why:'Downtime lever: events per year.', sync:'downtimeEventsYr', type:'number', placeholder:'e.g. 90' },
+      { id:'dq19', text:'Average hours lost per event?', why:'Downtime lever: hours per event.', sync:'downtimeHrsPerEvent', type:'number', placeholder:'e.g. 1' },
+      { id:'dq20', text:'Cost per hour of halted fulfillment ($)?', why:'Downtime lever: cost per hour.', sync:'downtimeCostPerHr', type:'number', placeholder:'e.g. 2000' },
+      { id:'dq21', text:'Annual expedited freight spend caused by inventory errors ($)?', why:'Expedite lever: annual expedite spend.', sync:'expediteSpendYr', type:'number', placeholder:'e.g. 300000' },
+    ]},
+    { section: 'Inventory & Financial Baseline', questions: [
+      { id:'dq7', text:'Average total inventory value held in the facility?', why:'Base for carrying cost and working capital.', sync:'inventoryValue', type:'number', placeholder:'e.g. 28000000' },
+      { id:'dq8', text:'Inventory turns per year?', why:'Turns gap = working capital opportunity.', sync:'invTurnsCurrent', type:'number', placeholder:'e.g. 12' },
+      { id:'dq13', text:'Annual WMS/TMS license and support cost?', why:'IT displacement and consolidation.', sync:'itCost', type:'number', placeholder:'e.g. 380000' },
+      { id:'dq16', text:'Annual revenue from 3PL/distribution operations?', why:'Revenue base for OTIF value-at-risk.', sync:'revenue', type:'number', placeholder:'e.g. 65000000' },
+      { id:'dq17', text:'Discount rate (%)?', why:'NPV calculation input.', sync:'discRate', type:'percent', placeholder:'e.g. 10' },
+    ]},
+    { section: 'Warehouse throughput & order accuracy', questions: [
+      { id:'dqw1', text:'How many orders or order-lines do you ship per year?', why:'Throughput & accuracy levers: annual volume (entered once).', sync:'ordersPerYr', type:'number', placeholder:'e.g. 250000' },
+      { id:'dqw2', text:'What is the fully-loaded labor cost to process one order/line today?', why:'Throughput lever: current cost per order.', sync:'costPerOrder', type:'number', placeholder:'e.g. 3.50' },
+      { id:'dqw3', text:'What pick-rate or throughput improvement do you expect from mobile-first workflows?', why:'Throughput lever: pick-rate gain %.', sync:'pickRateGainPct', type:'percent', placeholder:'e.g. 20' },
+      { id:'dqw4', text:'What is your current order error or mis-ship rate?', why:'Accuracy lever: error rate %.', sync:'orderErrorPct', type:'percent', placeholder:'e.g. 2' },
+      { id:'dqw5', text:'What is the fully-loaded cost of one order error (return + re-ship + chargeback)?', why:'Accuracy lever: cost per error.', sync:'costPerError', type:'number', placeholder:'e.g. 120' },
+    ]},
+    { section: 'Field service value drivers', questions: [
+      { id:'dqf1', text:'How many repeat or return visits per year are caused by technicians not having the right part?', why:'First-fix lever: repeat visits avoided per year.', sync:'repeatVisitsYr', type:'number', placeholder:'e.g. 1200' },
+      { id:'dqf2', text:'What is the fully-loaded cost of one truck roll (labor, vehicle, fuel)?', why:'First-fix lever: cost per truck roll.', sync:'costPerTruckRoll', type:'number', placeholder:'e.g. 300' },
+      { id:'dqf3', text:'How many field technicians do you have?', why:'Revenue-per-tech lever: technician count.', sync:'fieldTechs', type:'number', placeholder:'e.g. 40' },
+      { id:'dqf4', text:'How many additional billable jobs per day could each technician complete with time saved?', why:'Revenue-per-tech lever: added jobs/day.', sync:'addedJobsPerDay', type:'number', placeholder:'e.g. 0.5' },
+      { id:'dqf5', text:'What is your average revenue per billable job?', why:'Revenue-per-tech lever: revenue per job.', sync:'revenuePerJob', type:'number', placeholder:'e.g. 250' },
+      { id:'dqf6', text:'What is the value of inventory held in the field / on trucks?', why:'Field leakage lever: field inventory value.', sync:'fieldInventoryValue', type:'number', placeholder:'e.g. 2000000' },
+      { id:'dqf7', text:'What is your current field/van-stock leakage rate (lost, walked-off, or expired parts)?', why:'Field leakage lever: leakage rate %.', sync:'fieldLeakagePct', type:'percent', placeholder:'e.g. 4' },
     ]},
   ],
-
-  /* ── FOOD & BEVERAGE ── */
   food: [
     { section: 'Production & Warehouse Labor', questions: [
-      { id:'dq1', text:'How many staff are involved in inventory operations across receiving, production stores, cold storage, and dispatch?', why:'User count drives labor savings baseline.', sync:'userCount', type:'number', placeholder:'e.g. 55' },
-      { id:'dq2', text:'What percentage of your team\'s time is spent on manual lot tracking, FEFO verification, or expiry date monitoring?', why:'Automated FEFO enforcement is a primary CI value driver in food.', type:'percent', placeholder:'e.g. 20%' },
-      { id:'dq3', text:'How many hours per week are spent on compliance documentation — traceability reports, temperature logs, lot reconciliations?', why:'Compliance documentation labor is a direct, reducible cost.', type:'number', placeholder:'e.g. 25 hours/week' },
+      { id:'dq1', text:'How many staff are in inventory operations across receiving, production stores, cold storage, dispatch?', why:'User count drives labor savings baseline.', sync:'userCount', type:'number', placeholder:'e.g. 55' },
+      { id:'dq2', text:'Percentage of team time on manual lot tracking, FEFO verification, or expiry monitoring?', why:'Automated FEFO is a primary CI value driver.', sync:'laborWastePct', type:'percent', placeholder:'e.g. 20' },
+      { id:'dq3', text:'Hours per week on compliance documentation - traceability reports, temp logs, lot reconciliations?', why:'Compliance documentation labor is directly reducible.', sync:'laborWastePct', syncConv:'hoursPerWeek', type:'number', placeholder:'e.g. 25' },
     ]},
-    { section: 'Expiry, Waste & Traceability', questions: [
-      { id:'dq4', text:'What is your current inventory accuracy rate for lot-tracked and date-coded products?', why:'Low accuracy = expiry failures, compliance risk, and write-offs.', type:'percent', placeholder:'e.g. 94%' },
-      { id:'dq5', text:'What is the annual dollar value of product written off due to expiry, FEFO failures, temperature excursions, or unreconciled losses?', why:'Direct write-off savings — typically 2–4% in food operations.', sync:'annualWriteOff', type:'number', placeholder:'e.g. $520,000' },
-      { id:'dq6', text:'How long does it take your team to complete a mock recall or traceability exercise — tracing a lot code from receipt to all shipment points?', why:'FSMA Rule 204 requires 24-hour traceability. CI delivers 2-minute trace.', type:'text', placeholder:'e.g. 4–6 hours across multiple systems' },
+    { section: 'Expiry, Waste & Write-offs', questions: [
+      { id:'dq4', text:'Current inventory accuracy for lot-tracked and date-coded products (%)?', why:'Low accuracy = expiry failures and write-offs.', sync:'currentAccuracy', type:'percent', placeholder:'e.g. 94' },
+      { id:'dq5', text:'Annual value of product written off - expiry, FEFO failures, temp excursions, losses?', why:'Direct write-off savings - typically 2-4% in food.', sync:'annualWriteOff', type:'number', placeholder:'e.g. 520000' },
+      { id:'dq6a', text:'How many physical/cycle count days per year (people-days total)?', why:'Count-labor lever: person-days counting per year.', sync:'countDaysYr', type:'number', placeholder:'e.g. 12' },
+      { id:'dq6b', text:'How many people are involved in those counts?', why:'Count-labor lever: people counting.', sync:'countPeople', type:'number', placeholder:'e.g. 6' },
     ]},
     { section: 'Customer Service & OTIF', questions: [
-      { id:'dq9', text:'What is your current OTIF or order fill rate to retail, food service, or export customers?', why:'Baseline for OTIF improvement value.', sync:'otifBaseline', type:'percent', placeholder:'e.g. 93%' },
-      { id:'dq10', text:'What penalties, deductions, or returns did you absorb last year due to incorrect product, wrong lot, or late delivery?', why:'Customer chargeback input for the model.', type:'number', placeholder:'e.g. $350,000' },
-      { id:'dq11', text:'Are you subject to any regulatory compliance requirements — FDA FSMA, HACCP, retailer food safety audits? What is your current compliance cost?', why:'Compliance cost reduction is a major CI value driver in food.', type:'text', placeholder:'e.g. FDA FSMA — 2 audits/year, $80K annual compliance cost' },
+      { id:'dq9', text:'Current OTIF / order fill rate to retail, food service, or export (%)?', why:'Baseline for OTIF improvement value.', sync:'otifBaseline', type:'percent', placeholder:'e.g. 93' },
+      { id:'dq9b', text:'Target OTIF / fill rate (%)?', why:'Gap drives revenue-at-risk recovery.', sync:'otifTarget', type:'percent', placeholder:'e.g. 98' },
+      { id:'dq10', text:'Annual penalties, deductions, or returns from incorrect product, wrong lot, or late delivery ($)?', why:'Customer chargeback input.', sync:'expediteSpendYr', type:'number', placeholder:'e.g. 350000' },
+    ]},
+    { section: 'Downtime & Expediting', questions: [
+      { id:'dq18', text:'How many times per year does production stop/slow due to material stockouts or inaccurate records?', why:'Downtime lever: events per year.', sync:'downtimeEventsYr', type:'number', placeholder:'e.g. 80' },
+      { id:'dq19', text:'Average hours lost per event?', why:'Downtime lever: hours per event.', sync:'downtimeHrsPerEvent', type:'number', placeholder:'e.g. 1.5' },
+      { id:'dq20', text:'Cost per hour of lost production ($)?', why:'Downtime lever: cost per hour.', sync:'downtimeCostPerHr', type:'number', placeholder:'e.g. 4000' },
+      { id:'dq21', text:'Annual expedited ingredient/packaging purchases from stockouts ($)?', why:'Expedite lever: annual expedite spend.', sync:'expediteSpendYr', type:'number', placeholder:'e.g. 250000' },
     ]},
     { section: 'Inventory & Financial Baseline', questions: [
-      { id:'dq7', text:'What is the total value of raw materials, packaging, and finished goods inventory on hand?', why:'Full inventory base for carrying cost and turns analysis.', sync:'inventoryValue', type:'number', placeholder:'e.g. $9,500,000' },
-      { id:'dq13', text:'What do you spend on your production ERP, WMS, and compliance management systems annually?', why:'IT displacement and simplification opportunity.', sync:'itCost', type:'number', placeholder:'e.g. $195,000' },
-      { id:'dq16', text:'What is the organisation\'s annual revenue?', why:'Revenue base for value-at-risk.', sync:'revenue', type:'number', placeholder:'e.g. $55,000,000' },
-      { id:'dq17', text:'What cost of capital or hurdle rate does your CFO apply?', why:'NPV discount rate.', sync:'discRate', type:'percent', placeholder:'e.g. 10%' },
+      { id:'dq7', text:'Total value of raw materials, packaging, and finished goods on hand?', why:'Full inventory base for carrying cost and turns.', sync:'inventoryValue', type:'number', placeholder:'e.g. 9500000' },
+      { id:'dq8', text:'Inventory turns per year?', why:'Turns gap = working capital opportunity.', sync:'invTurnsCurrent', type:'number', placeholder:'e.g. 15' },
+      { id:'dq11', text:'Regulatory compliance requirements - FDA FSMA, HACCP, retailer audits?', why:'Context: compliance cost is a major CI value driver.', type:'text', note:true, placeholder:'e.g. FDA FSMA - 2 audits/yr, $80K/yr' },
+      { id:'dq13', text:'Annual spend on production ERP, WMS, and compliance systems?', why:'IT displacement and simplification.', sync:'itCost', type:'number', placeholder:'e.g. 195000' },
+      { id:'dq16', text:'Annual revenue?', why:'Revenue base for value-at-risk.', sync:'revenue', type:'number', placeholder:'e.g. 55000000' },
+      { id:'dq17', text:'Cost of capital / hurdle rate (%)?', why:'NPV discount rate.', sync:'discRate', type:'percent', placeholder:'e.g. 10' },
+    ]},
+    { section: 'Warehouse throughput & order accuracy', questions: [
+      { id:'dqw1', text:'How many orders or order-lines do you ship per year?', why:'Throughput & accuracy levers: annual volume (entered once).', sync:'ordersPerYr', type:'number', placeholder:'e.g. 250000' },
+      { id:'dqw2', text:'What is the fully-loaded labor cost to process one order/line today?', why:'Throughput lever: current cost per order.', sync:'costPerOrder', type:'number', placeholder:'e.g. 3.50' },
+      { id:'dqw3', text:'What pick-rate or throughput improvement do you expect from mobile-first workflows?', why:'Throughput lever: pick-rate gain %.', sync:'pickRateGainPct', type:'percent', placeholder:'e.g. 20' },
+      { id:'dqw4', text:'What is your current order error or mis-ship rate?', why:'Accuracy lever: error rate %.', sync:'orderErrorPct', type:'percent', placeholder:'e.g. 2' },
+      { id:'dqw5', text:'What is the fully-loaded cost of one order error (return + re-ship + chargeback)?', why:'Accuracy lever: cost per error.', sync:'costPerError', type:'number', placeholder:'e.g. 120' },
+    ]},
+    { section: 'Field service value drivers', questions: [
+      { id:'dqf1', text:'How many repeat or return visits per year are caused by technicians not having the right part?', why:'First-fix lever: repeat visits avoided per year.', sync:'repeatVisitsYr', type:'number', placeholder:'e.g. 1200' },
+      { id:'dqf2', text:'What is the fully-loaded cost of one truck roll (labor, vehicle, fuel)?', why:'First-fix lever: cost per truck roll.', sync:'costPerTruckRoll', type:'number', placeholder:'e.g. 300' },
+      { id:'dqf3', text:'How many field technicians do you have?', why:'Revenue-per-tech lever: technician count.', sync:'fieldTechs', type:'number', placeholder:'e.g. 40' },
+      { id:'dqf4', text:'How many additional billable jobs per day could each technician complete with time saved?', why:'Revenue-per-tech lever: added jobs/day.', sync:'addedJobsPerDay', type:'number', placeholder:'e.g. 0.5' },
+      { id:'dqf5', text:'What is your average revenue per billable job?', why:'Revenue-per-tech lever: revenue per job.', sync:'revenuePerJob', type:'number', placeholder:'e.g. 250' },
+      { id:'dqf6', text:'What is the value of inventory held in the field / on trucks?', why:'Field leakage lever: field inventory value.', sync:'fieldInventoryValue', type:'number', placeholder:'e.g. 2000000' },
+      { id:'dqf7', text:'What is your current field/van-stock leakage rate (lost, walked-off, or expired parts)?', why:'Field leakage lever: leakage rate %.', sync:'fieldLeakagePct', type:'percent', placeholder:'e.g. 4' },
     ]},
   ],
-
-  /* ── RETAIL ── */
   retail: [
     { section: 'Store Operations & Labor', questions: [
-      { id:'dq1', text:'How many store associates, warehouse staff, and inventory controllers are involved in inventory management across your network?', why:'User count drives labor savings baseline.', sync:'userCount', type:'number', placeholder:'e.g. 180' },
-      { id:'dq2', text:'How many hours per week are store associates spending on manual stock counts, discrepancy investigations, or stockroom organisation?', why:'Benchmark: 4–8 hours/week per store in manual inventory activities.', type:'text', placeholder:'e.g. ~6 hours/week per store across 25 stores' },
-      { id:'dq3', text:'What is your current rate of phantom inventory — items the system shows as in-stock but are actually not on the shelf?', why:'Phantom inventory = lost sales + customer disappointment.', type:'percent', placeholder:'e.g. ~8% of SKUs are phantom inventory' },
+      { id:'dq1', text:'How many store associates, warehouse staff, inventory controllers manage inventory across the network?', why:'User count drives labor savings baseline.', sync:'userCount', type:'number', placeholder:'e.g. 180' },
+      { id:'dq2', text:'Hours per week associates spend on manual stock counts, discrepancy investigation, or stockroom organisation?', why:'Benchmark: 4-8 hrs/week per store.', sync:'laborWastePct', syncConv:'hoursPerWeek', type:'number', placeholder:'e.g. 150' },
+      { id:'dq3', text:'Current phantom inventory rate - % of SKUs shown in-stock but not on shelf?', why:'Phantom inventory = lost sales.', type:'percent', placeholder:'e.g. 8' },
     ]},
     { section: 'Shrink & Write-offs', questions: [
-      { id:'dq4', text:'What is your current inventory accuracy rate at the store/SKU level?', why:'CI delivers 99.3%+ accuracy. Gap drives shrink and lost sales.', type:'percent', placeholder:'e.g. 92%' },
-      { id:'dq5', text:'What is your total annual shrink — known and unknown — as a dollar value or percentage of sales?', why:'Retail shrink benchmark: 1.5–2% of sales. Direct write-off savings.', sync:'annualWriteOff', type:'number', placeholder:'e.g. $1,800,000 or 1.8% of sales' },
-      { id:'dq6', text:'How often do you conduct full store counts, and how do you manage cycle counting between full counts?', why:'CI replaces labour-intensive full counts with continuous cycle counting.', type:'text', placeholder:'e.g. Full count 4x/year, 2 days per store, store closed' },
+      { id:'dq4', text:'Current inventory accuracy rate at store/SKU level (%)?', why:'CI delivers 99.3%+. Gap drives shrink and lost sales.', sync:'currentAccuracy', type:'percent', placeholder:'e.g. 92' },
+      { id:'dq5', text:'Total annual shrink - known and unknown - as a dollar value?', why:'Retail shrink benchmark: 1.5-2% of sales.', sync:'annualWriteOff', type:'number', placeholder:'e.g. 1800000' },
+      { id:'dq6a', text:'How many physical/cycle count days per year (people-days total)?', why:'Count-labor lever: person-days counting per year.', sync:'countDaysYr', type:'number', placeholder:'e.g. 12' },
+      { id:'dq6b', text:'How many people are involved in those counts?', why:'Count-labor lever: people counting.', sync:'countPeople', type:'number', placeholder:'e.g. 6' },
     ]},
     { section: 'In-stock Rate & Customer Impact', questions: [
-      { id:'dq9', text:'What is your current in-stock rate or on-shelf availability? What is your omnichannel fulfilment accuracy?', why:'In-stock rate directly drives revenue recovery and NPS.', sync:'otifBaseline', type:'percent', placeholder:'e.g. 93% in-stock rate' },
-      { id:'dq10', text:'What is the estimated annual lost sales value due to phantom inventory, out-of-stocks, or omnichannel fulfilment errors?', why:'Recovered lost sales is the primary revenue value driver in retail.', type:'number', placeholder:'e.g. $2,200,000' },
-      { id:'dq11', text:'Do you fulfil orders from store (click & collect, ship from store)? What is your current accuracy rate for these fulfilments?', why:'Store fulfilment accuracy is a growing competitive differentiator.', type:'percent', placeholder:'e.g. Ship from store accuracy: 94%' },
+      { id:'dq9', text:'Current in-stock rate / on-shelf availability (%)?', why:'In-stock rate drives revenue recovery and NPS.', sync:'otifBaseline', type:'percent', placeholder:'e.g. 93' },
+      { id:'dq9b', text:'Target in-stock rate (%)?', why:'Gap drives revenue-at-risk recovery.', sync:'otifTarget', type:'percent', placeholder:'e.g. 98' },
+      { id:'dq10', text:'Estimated annual lost sales from phantom inventory, out-of-stocks, or omnichannel errors ($)?', why:'Recovered lost sales is the primary revenue driver in retail.', sync:'expediteSpendYr', type:'number', placeholder:'e.g. 2200000' },
+    ]},
+    { section: 'Downtime & Expediting', questions: [
+      { id:'dq18', text:'How many times per year do out-of-stocks halt sales/fulfillment due to inaccurate records?', why:'Downtime lever: events per year.', sync:'downtimeEventsYr', type:'number', placeholder:'e.g. 200' },
+      { id:'dq19', text:'Average hours of lost selling per event?', why:'Downtime lever: hours per event.', sync:'downtimeHrsPerEvent', type:'number', placeholder:'e.g. 2' },
+      { id:'dq20', text:'Estimated lost margin per hour ($)?', why:'Downtime lever: cost per hour.', sync:'downtimeCostPerHr', type:'number', placeholder:'e.g. 1500' },
+      { id:'dq21', text:'Annual expedited replenishment/transfer spend from stockouts ($)?', why:'Expedite lever: annual expedite spend.', sync:'expediteSpendYr', type:'number', placeholder:'e.g. 300000' },
     ]},
     { section: 'Inventory & Financial Baseline', questions: [
-      { id:'dq7', text:'What is the total retail value of inventory held across your store network and distribution centres?', why:'Base for carrying cost and turns calculation.', sync:'inventoryValue', type:'number', placeholder:'e.g. $18,000,000' },
-      { id:'dq13', text:'What do you pay annually for your retail inventory management, POS, and fulfilment systems?', why:'IT displacement opportunity.', sync:'itCost', type:'number', placeholder:'e.g. $420,000' },
-      { id:'dq16', text:'What is the organisation\'s total annual revenue across all channels?', why:'Revenue base for in-stock and fulfilment value-at-risk.', sync:'revenue', type:'number', placeholder:'e.g. $95,000,000' },
-      { id:'dq17', text:'What hurdle rate does your finance team use for retail investment decisions?', why:'NPV discount rate.', sync:'discRate', type:'percent', placeholder:'e.g. 12%' },
+      { id:'dq7', text:'Total retail value of inventory across stores and DCs?', why:'Base for carrying cost and turns.', sync:'inventoryValue', type:'number', placeholder:'e.g. 18000000' },
+      { id:'dq8', text:'Inventory turns per year?', why:'Turns gap = working capital opportunity.', sync:'invTurnsCurrent', type:'number', placeholder:'e.g. 8' },
+      { id:'dq13', text:'Annual spend on retail inventory, POS, and fulfilment systems?', why:'IT displacement opportunity.', sync:'itCost', type:'number', placeholder:'e.g. 420000' },
+      { id:'dq16', text:'Total annual revenue across all channels?', why:'Revenue base for in-stock value-at-risk.', sync:'revenue', type:'number', placeholder:'e.g. 95000000' },
+      { id:'dq17', text:'Hurdle rate for retail investment (%)?', why:'NPV discount rate.', sync:'discRate', type:'percent', placeholder:'e.g. 12' },
+    ]},
+    { section: 'Warehouse throughput & order accuracy', questions: [
+      { id:'dqw1', text:'How many orders or order-lines do you ship per year?', why:'Throughput & accuracy levers: annual volume (entered once).', sync:'ordersPerYr', type:'number', placeholder:'e.g. 250000' },
+      { id:'dqw2', text:'What is the fully-loaded labor cost to process one order/line today?', why:'Throughput lever: current cost per order.', sync:'costPerOrder', type:'number', placeholder:'e.g. 3.50' },
+      { id:'dqw3', text:'What pick-rate or throughput improvement do you expect from mobile-first workflows?', why:'Throughput lever: pick-rate gain %.', sync:'pickRateGainPct', type:'percent', placeholder:'e.g. 20' },
+      { id:'dqw4', text:'What is your current order error or mis-ship rate?', why:'Accuracy lever: error rate %.', sync:'orderErrorPct', type:'percent', placeholder:'e.g. 2' },
+      { id:'dqw5', text:'What is the fully-loaded cost of one order error (return + re-ship + chargeback)?', why:'Accuracy lever: cost per error.', sync:'costPerError', type:'number', placeholder:'e.g. 120' },
+    ]},
+    { section: 'Field service value drivers', questions: [
+      { id:'dqf1', text:'How many repeat or return visits per year are caused by technicians not having the right part?', why:'First-fix lever: repeat visits avoided per year.', sync:'repeatVisitsYr', type:'number', placeholder:'e.g. 1200' },
+      { id:'dqf2', text:'What is the fully-loaded cost of one truck roll (labor, vehicle, fuel)?', why:'First-fix lever: cost per truck roll.', sync:'costPerTruckRoll', type:'number', placeholder:'e.g. 300' },
+      { id:'dqf3', text:'How many field technicians do you have?', why:'Revenue-per-tech lever: technician count.', sync:'fieldTechs', type:'number', placeholder:'e.g. 40' },
+      { id:'dqf4', text:'How many additional billable jobs per day could each technician complete with time saved?', why:'Revenue-per-tech lever: added jobs/day.', sync:'addedJobsPerDay', type:'number', placeholder:'e.g. 0.5' },
+      { id:'dqf5', text:'What is your average revenue per billable job?', why:'Revenue-per-tech lever: revenue per job.', sync:'revenuePerJob', type:'number', placeholder:'e.g. 250' },
+      { id:'dqf6', text:'What is the value of inventory held in the field / on trucks?', why:'Field leakage lever: field inventory value.', sync:'fieldInventoryValue', type:'number', placeholder:'e.g. 2000000' },
+      { id:'dqf7', text:'What is your current field/van-stock leakage rate (lost, walked-off, or expired parts)?', why:'Field leakage lever: leakage rate %.', sync:'fieldLeakagePct', type:'percent', placeholder:'e.g. 4' },
     ]},
   ],
-
-  /* ── MINERALS & MINING ── */
   mining: [
     { section: 'Maintenance & Operations Labor', questions: [
-      { id:'dq1', text:'How many maintenance technicians, storekeepers, and procurement staff are involved in spare parts and materials management?', why:'User count drives labor savings baseline.', sync:'userCount', type:'number', placeholder:'e.g. 95' },
-      { id:'dq2', text:'What percentage of maintenance staff time is spent on non-productive activities — parts searches, manual requisitions, and reconciliation?', why:'Benchmark: 20–30% non-productive maintenance time in mining.', type:'percent', placeholder:'e.g. 22%' },
-      { id:'dq3', text:'How many times per month does planned maintenance get deferred due to parts unavailability discovered at time of work order execution?', why:'Deferred maintenance = unplanned downtime risk and safety exposure.', type:'number', placeholder:'e.g. 8 per month' },
+      { id:'dq1', text:'How many maintenance technicians, storekeepers, procurement staff manage spare parts and materials?', why:'User count drives labor savings baseline.', sync:'userCount', type:'number', placeholder:'e.g. 95' },
+      { id:'dq2', text:'Percentage of maintenance staff time on non-productive activities - parts searches, requisitions, reconciliation?', why:'Benchmark: 20-30% non-productive in mining.', sync:'laborWastePct', type:'percent', placeholder:'e.g. 22' },
+    ]},
+    { section: 'Downtime & Expediting', questions: [
+      { id:'dq18', text:'How many times per year is planned maintenance deferred due to parts unavailability at work-order execution?', why:'Downtime lever: events per year.', sync:'downtimeEventsYr', type:'number', placeholder:'e.g. 96' },
+      { id:'dq19', text:'Average hours of resulting unplanned downtime per event?', why:'Downtime lever: hours per event.', sync:'downtimeHrsPerEvent', type:'number', placeholder:'e.g. 8' },
+      { id:'dq20', text:'Cost per hour of lost production ($)?', why:'Downtime lever: cost per hour.', sync:'downtimeCostPerHr', type:'number', placeholder:'e.g. 40000' },
+      { id:'dq21', text:'Annual emergency procurement spend from stockouts ($)?', why:'Expedite lever: annual expedite spend.', sync:'expediteSpendYr', type:'number', placeholder:'e.g. 1500000' },
     ]},
     { section: 'Spares Inventory & Write-offs', questions: [
-      { id:'dq4', text:'What is your current critical spares inventory accuracy rate? How is it measured?', why:'CI benchmark: 99.5%. Below 95% = significant downtime risk.', type:'percent', placeholder:'e.g. 89%' },
-      { id:'dq5', text:'What is the annual dollar value of spares and materials written off due to obsolescence, loss, or unreconciled consumption?', why:'Direct write-off savings — typically 2–3% of spares value.', sync:'annualWriteOff', type:'number', placeholder:'e.g. $1,100,000' },
-      { id:'dq6', text:'What is the estimated value of "insurance spares" or excess buffer held to compensate for unreliable inventory data?', why:'Excess buffer = trapped capital with carrying cost.', type:'number', placeholder:'e.g. $4,500,000 in excess/buffer stock' },
+      { id:'dq4', text:'Current critical spares inventory accuracy rate (%)?', why:'CI benchmark: 99.5%. Below 95% = downtime risk.', sync:'currentAccuracy', type:'percent', placeholder:'e.g. 89' },
+      { id:'dq5', text:'Annual value of spares/materials written off - obsolescence, loss, unreconciled consumption?', why:'Direct write-off savings - typically 2-3% of spares.', sync:'annualWriteOff', type:'number', placeholder:'e.g. 1100000' },
+      { id:'dq6a', text:'How many physical/cycle count days per year (people-days total)?', why:'Count-labor lever: person-days counting per year.', sync:'countDaysYr', type:'number', placeholder:'e.g. 12' },
+      { id:'dq6b', text:'How many people are involved in those counts?', why:'Count-labor lever: people counting.', sync:'countPeople', type:'number', placeholder:'e.g. 6' },
     ]},
-    { section: 'Production Continuity & Compliance', questions: [
-      { id:'dq9', text:'What is your current plant or mine availability rate? What percentage of unplanned downtime events are linked to parts or materials issues?', why:'1% improvement in availability = millions in recovered production.', type:'text', placeholder:'e.g. 87% availability, ~30% of downtime linked to parts' },
-      { id:'dq10', text:'What did unplanned production stoppages linked to parts or materials issues cost last year — in lost production and emergency labour?', why:'Production stoppage cost is the primary value driver in mining.', type:'number', placeholder:'e.g. $3,200,000' },
-      { id:'dq11', text:'Are you required to meet OEM warranty conditions that require specific part lot tracking or maintenance documentation?', why:'OEM compliance documentation burden is a reducible CI opportunity.', type:'text', placeholder:'e.g. Yes — major OEM equipment with monthly compliance reports' },
+    { section: 'Production Continuity & OTIF', questions: [
+      { id:'dq9', text:'Current plant/mine materials availability rate (%)?', why:'Availability improvement = recovered production.', sync:'otifBaseline', type:'percent', placeholder:'e.g. 87' },
+      { id:'dq9b', text:'Target availability rate (%)?', why:'Gap drives value-at-risk recovery.', sync:'otifTarget', type:'percent', placeholder:'e.g. 95' },
+      { id:'dq11', text:'OEM warranty conditions requiring specific lot tracking or maintenance documentation?', why:'Context: OEM compliance documentation burden.', type:'text', note:true, placeholder:'e.g. Yes - major OEM equipment, monthly reports' },
     ]},
     { section: 'Inventory & Financial Baseline', questions: [
-      { id:'dq7', text:'What is the total value of spare parts and maintenance materials held across your stores and underground/remote locations?', why:'Full inventory base for carrying cost and turns analysis.', sync:'inventoryValue', type:'number', placeholder:'e.g. $42,000,000' },
-      { id:'dq13', text:'What is the annual cost of your EAM, CMMS, and ERP inventory management systems?', why:'IT displacement input.', sync:'itCost', type:'number', placeholder:'e.g. $680,000' },
-      { id:'dq16', text:'What is the operation\'s annual production revenue?', why:'Revenue base for value-at-risk.', sync:'revenue', type:'number', placeholder:'e.g. $420,000,000' },
-      { id:'dq17', text:'What hurdle rate does your finance team apply to capital and operational investments?', why:'NPV discount rate.', sync:'discRate', type:'percent', placeholder:'e.g. 15%' },
+      { id:'dq7', text:'Total value of spare parts and maintenance materials across stores and remote locations?', why:'Full inventory base for carrying cost and turns.', sync:'inventoryValue', type:'number', placeholder:'e.g. 42000000' },
+      { id:'dq8', text:'Inventory turns per year on spares?', why:'Turns gap = working capital opportunity.', sync:'invTurnsCurrent', type:'number', placeholder:'e.g. 3' },
+      { id:'dq13', text:'Annual cost of EAM, CMMS, and ERP inventory systems?', why:'IT displacement input.', sync:'itCost', type:'number', placeholder:'e.g. 680000' },
+      { id:'dq16', text:'Annual production revenue?', why:'Revenue base for value-at-risk.', sync:'revenue', type:'number', placeholder:'e.g. 420000000' },
+      { id:'dq17', text:'Hurdle rate for capital/operational investments (%)?', why:'NPV discount rate.', sync:'discRate', type:'percent', placeholder:'e.g. 15' },
+    ]},
+    { section: 'Warehouse throughput & order accuracy', questions: [
+      { id:'dqw1', text:'How many orders or order-lines do you ship per year?', why:'Throughput & accuracy levers: annual volume (entered once).', sync:'ordersPerYr', type:'number', placeholder:'e.g. 250000' },
+      { id:'dqw2', text:'What is the fully-loaded labor cost to process one order/line today?', why:'Throughput lever: current cost per order.', sync:'costPerOrder', type:'number', placeholder:'e.g. 3.50' },
+      { id:'dqw3', text:'What pick-rate or throughput improvement do you expect from mobile-first workflows?', why:'Throughput lever: pick-rate gain %.', sync:'pickRateGainPct', type:'percent', placeholder:'e.g. 20' },
+      { id:'dqw4', text:'What is your current order error or mis-ship rate?', why:'Accuracy lever: error rate %.', sync:'orderErrorPct', type:'percent', placeholder:'e.g. 2' },
+      { id:'dqw5', text:'What is the fully-loaded cost of one order error (return + re-ship + chargeback)?', why:'Accuracy lever: cost per error.', sync:'costPerError', type:'number', placeholder:'e.g. 120' },
+    ]},
+    { section: 'Field service value drivers', questions: [
+      { id:'dqf1', text:'How many repeat or return visits per year are caused by technicians not having the right part?', why:'First-fix lever: repeat visits avoided per year.', sync:'repeatVisitsYr', type:'number', placeholder:'e.g. 1200' },
+      { id:'dqf2', text:'What is the fully-loaded cost of one truck roll (labor, vehicle, fuel)?', why:'First-fix lever: cost per truck roll.', sync:'costPerTruckRoll', type:'number', placeholder:'e.g. 300' },
+      { id:'dqf3', text:'How many field technicians do you have?', why:'Revenue-per-tech lever: technician count.', sync:'fieldTechs', type:'number', placeholder:'e.g. 40' },
+      { id:'dqf4', text:'How many additional billable jobs per day could each technician complete with time saved?', why:'Revenue-per-tech lever: added jobs/day.', sync:'addedJobsPerDay', type:'number', placeholder:'e.g. 0.5' },
+      { id:'dqf5', text:'What is your average revenue per billable job?', why:'Revenue-per-tech lever: revenue per job.', sync:'revenuePerJob', type:'number', placeholder:'e.g. 250' },
+      { id:'dqf6', text:'What is the value of inventory held in the field / on trucks?', why:'Field leakage lever: field inventory value.', sync:'fieldInventoryValue', type:'number', placeholder:'e.g. 2000000' },
+      { id:'dqf7', text:'What is your current field/van-stock leakage rate (lost, walked-off, or expired parts)?', why:'Field leakage lever: leakage rate %.', sync:'fieldLeakagePct', type:'percent', placeholder:'e.g. 4' },
     ]},
   ],
 };
@@ -280,6 +468,36 @@ function getDiscoveryQuestions(industry) {
 let discoveryAnswers      = {};   // { dqN: value, dqN_by: 'rep'|'prospect' }
 let discoverySessionToken = null; // current active token (from DB)
 let discoveryDbSessionId  = null; // DB row id (UUID) for the session
+let discoveryScenarioId   = null; // scenario this discovery session belongs to
+
+/* Called when a scenario is loaded or a new one is started.
+   Clears any in-memory discovery state from the PREVIOUS scenario so a
+   prospect link can never leak across customers, then re-attaches to
+   this scenario's own discovery session if one already exists.        */
+async function resetDiscoveryForScenario(scenarioId) {
+  /* Always clear first — prevents stale token/answers from bleeding over */
+  discoverySessionToken = null;
+  discoveryDbSessionId  = null;
+  discoveryScenarioId   = scenarioId || null;
+  discoveryAnswers      = {};
+
+  /* Re-attach to this scenario's existing active session, if any */
+  if (scenarioId) {
+    try {
+      const resp = await apiFetch('/api/discovery/sessions?scenarioId=' + encodeURIComponent(scenarioId));
+      if (resp && resp.ok) {
+        const sessions = await resp.json();
+        if (sessions.length) {
+          const s = sessions[0]; // most recent active session for this scenario
+          discoverySessionToken = s.token;
+          discoveryDbSessionId  = s.id;
+          (s.answers || []).forEach(a => { discoveryAnswers[a.questionId] = a.answer; });
+        }
+      }
+    } catch (e) { /* leave cleared — a fresh link can be generated */ }
+  }
+  if (typeof renderDiscoveryTab === 'function') renderDiscoveryTab();
+}
 let _answerSaveTimer      = null; // debounce timer for answer writes
 
 /* Convert the flat { dqN, dqN_by } object to and from the DB row format */
@@ -350,7 +568,7 @@ async function generateProspectLink() {
   try {
     const resp = await apiFetch('/api/discovery/sessions', {
       method: 'POST',
-      body: JSON.stringify({ industry, company })
+      body: JSON.stringify({ industry, company, scenarioId: discoveryScenarioId || undefined })
     });
     if (!resp || !resp.ok) {
       const err = resp ? await resp.json() : {};
@@ -561,6 +779,7 @@ function renderDiscoveryTab() {
     </div>
     <div class="btn-row">
       <button class="btn btn-cta" onclick="applyDiscoveryToCalc()">Apply all answers to calculator →</button>
+      <button class="btn btn-ghost" onclick="downloadImpactMap()">📄 Download impact map (PDF)</button>
       <button class="btn btn-ghost" onclick="clearDiscoveryAnswers()">Clear all answers</button>
     </div>`;
 
@@ -604,8 +823,10 @@ function applyDiscoveryToCalc() {
   qs.flatMap(s => s.questions).forEach(q => {
     const answer = discoveryAnswers[q.id];
     if (answer && q.sync) {
-      const num = parseFloat(String(answer).replace(/[^0-9.]/g, ''));
+      let num = parseFloat(String(answer).replace(/[^0-9.]/g, ''));
       if (!isNaN(num) && num > 0) {
+        /* Convert hours/week to % of a 40-hour week for labor-waste sync */
+        if (q.syncConv === 'hoursPerWeek') num = Math.min(100, Math.round((num / 40) * 100));
         const el = document.getElementById(q.sync);
         if (el) { el.value = num; applied++; }
       }
@@ -630,4 +851,93 @@ if (typeof escapeHtml !== 'function') {
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   downloadImpactMap() — generates a CI-branded PDF of the
+   Discovery → Calculator impact map (all industries), built live from
+   DISC_QUESTIONS so it always matches the app. Uses a print window →
+   the browser's "Save as PDF".
+   ═══════════════════════════════════════════════════════════════════ */
+const IMPACT_LABELS = {
+  userCount:          ['Labor savings', 'users × labor rate × recovery% → laborSav'],
+  laborWastePct:      ['Labor savings', 'scales laborSav by measured productivity waste %'],
+  currentAccuracy:    ['Shrink & carrying (suggested)', 'accuracy gap suggests shrink/carrying recovery %'],
+  annualWriteOff:     ['Write-off / shrink savings', 'write-off $ × shrink-recovery% → shrinkSav'],
+  inventoryValue:     ['Carrying cost + turns', 'inventory × carrying% and turns gap → carrySav + turnsSav'],
+  invTurnsCurrent:    ['Working capital (turns)', 'inventory × (1 − current/benchmark) × carry rate → turnsSav'],
+  otifBaseline:       ['OTIF revenue-at-risk', 'revenue × (target − baseline) × OTIF-recovery% → otifSav'],
+  otifTarget:         ['OTIF revenue-at-risk', 'sets the OTIF gap ceiling → otifSav'],
+  itCost:             ['IT displacement', 'IT cost × IT-recovery% → itSav'],
+  revenue:            ['Revenue base', 'multiplier for OTIF value-at-risk'],
+  discRate:           ['NPV', 'discount rate for NPV 3/5-year'],
+  downtimeEventsYr:   ['Production downtime (NEW)', 'events × hrs × $/hr × recovery% → downtimeSav'],
+  downtimeHrsPerEvent:['Production downtime (NEW)', 'component of downtimeSav'],
+  downtimeCostPerHr:  ['Production downtime (NEW)', 'component of downtimeSav'],
+  expediteSpendYr:    ['Expedite premium (NEW)', 'expedite spend × recovery% → expediteSav'],
+  countDaysYr:        ['Count labor (NEW)', 'days × people × daily labor × recovery% → countSav'],
+  countPeople:        ['Count labor (NEW)', 'component of countSav']
+};
+const IMPACT_IND_LABELS = {
+  default:'Default / Generic', telecom:'Telecommunications', mfg:'Manufacturing',
+  construction:'Engineering & Construction', oil:'Oil & Gas', distribution:'Distribution & 3PL',
+  food:'Food & Beverage', retail:'Retail', mining:'Minerals & Mining'
+};
+
+function downloadImpactMap() {
+  const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  let sections = '';
+  Object.keys(IMPACT_IND_LABELS).forEach(ind => {
+    const qs = (typeof DISC_QUESTIONS !== 'undefined' && DISC_QUESTIONS[ind]) ? DISC_QUESTIONS[ind] : null;
+    if (!qs) return;
+    let rows = '';
+    qs.flatMap(s => s.questions).forEach(q => {
+      let field, impact;
+      if (q.note) { field = '— (qualitative note)'; impact = 'Context only — not calculated'; }
+      else if (q.sync) {
+        field = q.sync + (q.syncConv === 'hoursPerWeek' ? ' (hrs/wk → %)' : '');
+        const m = IMPACT_LABELS[q.sync] || ['—','—'];
+        impact = '<strong>' + m[0] + ':</strong> ' + m[1];
+      } else { field = '—'; impact = 'Diagnostic — informs the conversation'; }
+      rows += `<tr><td>${esc(q.text)}</td><td>${esc(q.type)}</td><td><code>${esc(field)}</code></td><td>${impact}</td></tr>`;
+    });
+    sections += `<h2>${esc(IMPACT_IND_LABELS[ind])}</h2>
+      <table><thead><tr><th style="width:42%">Question</th><th>Type</th><th>Calculator field</th><th>ROI impact</th></tr></thead>
+      <tbody>${rows}</tbody></table>`;
+  });
+
+  const leverRef = `<h2>ROI levers reference</h2>
+    <p><strong>Original 6 levers:</strong> laborSav, shrinkSav, carrySav, turnsSav, otifSav, itSav.
+    <strong>New in v2.5:</strong> downtimeSav (events × hrs × $/hr × recovery%),
+    expediteSav (spend × recovery%), countSav (days × people × daily labor × recovery%).</p>
+    <p style="color:#5A6570;font-size:11px;">Scenarios saved before v2.5 compute an unchanged annual benefit — new levers contribute $0 until the new fields are entered.</p>`;
+
+  const w = window.open('', '_blank');
+  if (!w) { if (typeof showToast==='function') showToast('Pop-up blocked — allow pop-ups to download.'); return; }
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Discovery → Calculator Impact Map</title>
+    <style>
+      @page { margin: 0.5in; }
+      * { box-sizing:border-box; margin:0; padding:0; }
+      body { font-family:'Helvetica Neue',Arial,sans-serif; color:#243646; padding:0; }
+      .head { display:flex; align-items:center; gap:14px; border-bottom:3px solid #00A7CF; padding-bottom:12px; margin-bottom:16px; }
+      .head img { height:40px; } .head .t { font-size:12px; color:#5A6570; }
+      h1 { font-size:22px; margin-bottom:4px; }
+      .intro { font-size:12px; color:#5A6570; margin-bottom:16px; }
+      h2 { font-size:14px; color:#00A7CF; margin:20px 0 6px; padding-bottom:3px; border-bottom:1.5px solid #E2E8F0; }
+      table { width:100%; border-collapse:collapse; margin-bottom:12px; }
+      th { background:#243646; color:#fff; font-size:10px; text-align:left; padding:6px 8px; }
+      td { font-size:11px; padding:5px 8px; border-bottom:1px solid #E8ECEF; vertical-align:top; }
+      tr:nth-child(even) td { background:#F7F9FA; }
+      code { font-size:10px; background:#EEF2F5; padding:1px 4px; border-radius:3px; }
+      .foot { margin-top:20px; padding-top:10px; border-top:1px solid #E2E8F0; font-size:10px; color:#94A3B8; text-align:center; }
+      @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+    </style></head><body>
+    <div class="head"><img src="${window.location.origin}/ci-logo.png" onerror="this.style.display='none'"/><div class="t">Discovery → Calculator Impact Map</div></div>
+    <h1>Discovery Guide → Calculator Impact Map</h1>
+    <div class="intro">Every quantifiable discovery question and the ROI line it drives. Version 2.5.</div>
+    ${sections}${leverRef}
+    <div class="foot">Generated ${new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})} · Cloud Inventory ROI Business Case Builder</div>
+    <script>window.onload=function(){setTimeout(function(){window.print();},400);};<\/script>
+    </body></html>`);
+  w.document.close();
 }

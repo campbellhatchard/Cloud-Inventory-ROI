@@ -88,7 +88,12 @@ function loadFromObject(i) {
   if (i.execAudience) { const el = document.getElementById('execAudience'); if (el) el.value = i.execAudience; }
   // Restore new fields
   ['annualWriteOff','otifBaseline','otifTarget','invTurnsCurrent','invTurnsBenchmark',
-   'implMonths','ramp1','ramp2','ramp3'].forEach(id => {
+   'implMonths','ramp1','ramp2','ramp3',
+   'laborWastePct','currentAccuracy',
+   'ordersPerYr','costPerOrder','pickRateGainPct','m_throughput','orderErrorPct','costPerError','m_accuracy',
+   'repeatVisitsYr','costPerTruckRoll','m_firstfix','fieldTechs','addedJobsPerDay','revenuePerJob','workingDaysYr','m_utilization','fieldInventoryValue','fieldLeakagePct','m_leakage',
+   'downtimeEventsYr','downtimeHrsPerEvent','downtimeCostPerHr','m_downtime',
+   'expediteSpendYr','m_expedite','countDaysYr','countPeople','m_count'].forEach(id => {
     const el = document.getElementById(id);
     if (el && i[id] !== undefined) el.value = i[id] || '';
   });
@@ -659,51 +664,59 @@ function updateBenchmark(industryKey, field, value) {
   const num = parseFloat(value);
   if (!isNaN(num)) {
     IND[industryKey][field] = num;
-    // persist to localStorage
-    try { localStorage.setItem('ci_custom_benchmarks', JSON.stringify(IND)); } catch(e) {}
-    showToast(`Updated ${industryKey} → ${field} = ${num}`);
-    applyDefaults(); // refresh if same industry is selected
+    /* Persist server-side (admin-gated); reaches all users. */
+    apiFetch('/api/benchmarks', {
+      method: 'PUT',
+      body: JSON.stringify({ benchmarks: { [industryKey]: { [field]: num } } })
+    }).then(r => {
+      if (r && r.ok) showToast(`Updated ${industryKey} → ${field} = ${num}`);
+      else if (r && r.status === 403) showToast('Only admins can change benchmarks.');
+    }).catch(() => {});
+    applyDefaults();
   }
 }
 
-function loadCustomBenchmarks() {
+async function loadCustomBenchmarks() {
   try {
-    const raw = localStorage.getItem('ci_custom_benchmarks');
-    if (raw) {
-      const custom = JSON.parse(raw);
+    const resp = await apiFetch('/api/benchmarks');
+    if (resp && resp.ok) {
+      const custom = await resp.json();
       Object.keys(custom).forEach(k => { if (IND[k]) Object.assign(IND[k], custom[k]); });
+      if (typeof applyDefaults === 'function') applyDefaults();
     }
   } catch (e) {}
 }
 
 function resetBenchmarks() {
-  if (!confirm('Reset all benchmarks to factory defaults?')) return;
-  localStorage.removeItem('ci_custom_benchmarks');
-  location.reload();
+  showToast('To reset a benchmark, set it back to its factory value in the field above.');
 }
 
 /* ─────────────────────────────────────────
    11. ANALYTICS DASHBOARD
-   Tracks events in localStorage; renders
+   Tracks usage events server-side; renders
    a simple usage/insights dashboard
    ───────────────────────────────────────── */
-const ANALYTICS_KEY = 'ci_analytics';
-
 function trackEvent(event, data = {}) {
+  /* Fire-and-forget to the server; never blocks or breaks the UI. */
   try {
-    const log = JSON.parse(localStorage.getItem(ANALYTICS_KEY) || '[]');
-    log.push({ event, data, ts: Date.now() });
-    // keep last 500 events
-    if (log.length > 500) log.splice(0, log.length - 500);
-    localStorage.setItem(ANALYTICS_KEY, JSON.stringify(log));
+    apiFetch('/api/analytics', {
+      method: 'POST',
+      body: JSON.stringify({ event, data })
+    }).catch(() => {});
   } catch (e) {}
 }
 
-function renderAnalytics() {
+async function renderAnalytics() {
   const el = document.getElementById('analyticsPanel');
   if (!el) return;
-  let log = [];
-  try { log = JSON.parse(localStorage.getItem(ANALYTICS_KEY) || '[]'); } catch(e) {}
+  /* Team-wide events from the server (admin-gated). Falls back to empty
+     if the current user isn't an admin or the call fails. */
+  let serverSummary = null;
+  try {
+    const resp = await apiFetch('/api/analytics/summary');
+    if (resp && resp.ok) serverSummary = await resp.json();
+  } catch (e) {}
+  const recent = serverSummary ? serverSummary.recent : [];
 
   const total = savedScenarios.length;
   const avgBenefit = total ? savedScenarios.reduce((s,sc) => s + sc.annualBenefit, 0) / total : 0;
@@ -723,9 +736,6 @@ function renderAnalytics() {
     const st = s.dealStage || 'No stage';
     byStage[st] = (byStage[st] || 0) + 1;
   });
-
-  // recent events
-  const recent = log.slice(-10).reverse();
 
   el.innerHTML = `
     <div class="analytics-grid">
@@ -772,16 +782,15 @@ function renderAnalytics() {
       </div>
     </div>
 
-    ${log.length > 0 ? `
+    ${(recent && recent.length > 0) ? `
     <div class="card" style="margin-top:1rem;">
-      <div class="card-title">Recent activity</div>
+      <div class="card-title">Recent activity (team-wide)</div>
       ${recent.map(e => `
         <div class="activity-row">
-          <span class="activity-event">${e.event.replace(/_/g,' ')}</span>
-          <span class="activity-detail">${e.data.company || e.data.crm || ''}</span>
-          <span class="activity-time">${new Date(e.ts).toLocaleTimeString()}</span>
+          <span class="activity-event">${(e.event||'').replace(/_/g,' ')}</span>
+          <span class="activity-time">${new Date(e.created_at).toLocaleString()}</span>
         </div>`).join('')}
-    </div>` : ''}`;
+    </div>` : (serverSummary ? '' : '<p style="color:#94A3B8;font-size:13px;margin-top:1rem;">Team-wide activity is visible to admins.</p>')}`;
 }
 
 /* ─────────────────────────────────────────

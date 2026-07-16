@@ -23,7 +23,7 @@ const { sendPurgeConfirmation } = require('../email');
 const TWO_YEARS_MS       = 2 * 365.25 * 24 * 60 * 60 * 1000;
 const CONFIRM_EXPIRY_HRS = 48;
 const { getAppUrl } = require('../config');
-const APP_URL = getAppUrl();
+const APP_URL            = getAppUrl();
 
 /* ── Called once on startup to register the monthly cron job ── */
 function startPurgeJob() {

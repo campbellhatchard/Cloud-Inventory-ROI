@@ -5,14 +5,14 @@
 
 /* ── Industry benchmark data ── */
 const IND = {
-  telecom:      { labor:30,shrinkage:45,carrying:20,otif:12,it:65,shrinkRate:2.5,carryRate:28,otifRisk:2.5,otifBaseline:92,otifTarget:97,invTurns:4,  label:'Telecommunications' },
-  mfg:          { labor:25,shrinkage:40,carrying:18,otif:10,it:60,shrinkRate:2.0,carryRate:25,otifRisk:2.0,otifBaseline:91,otifTarget:97,invTurns:6,  label:'Manufacturing' },
-  construction: { labor:20,shrinkage:35,carrying:15,otif:8, it:55,shrinkRate:3.0,carryRate:22,otifRisk:1.5,otifBaseline:88,otifTarget:95,invTurns:3,  label:'Engineering & Construction' },
-  oil:          { labor:22,shrinkage:38,carrying:17,otif:9, it:58,shrinkRate:2.8,carryRate:24,otifRisk:2.0,otifBaseline:89,otifTarget:96,invTurns:4,  label:'Oil & Gas' },
-  mining:       { labor:20,shrinkage:35,carrying:15,otif:8, it:55,shrinkRate:2.5,carryRate:23,otifRisk:1.5,otifBaseline:88,otifTarget:95,invTurns:3,  label:'Minerals & Mining' },
-  distribution: { labor:35,shrinkage:50,carrying:22,otif:15,it:70,shrinkRate:1.5,carryRate:30,otifRisk:3.0,otifBaseline:94,otifTarget:99,invTurns:12, label:'Distribution & 3PL' },
-  food:         { labor:28,shrinkage:42,carrying:18,otif:12,it:60,shrinkRate:2.2,carryRate:27,otifRisk:2.5,otifBaseline:92,otifTarget:98,invTurns:15, label:'Food & Beverage' },
-  retail:       { labor:30,shrinkage:45,carrying:20,otif:13,it:62,shrinkRate:1.8,carryRate:28,otifRisk:2.8,otifBaseline:93,otifTarget:98,invTurns:8,  label:'Retail' }
+  telecom:      { labor:30,shrinkage:45,carrying:20,otif:12,it:65,shrinkRate:2.5,carryRate:28,otifRisk:2.5,otifBaseline:92,otifTarget:97,invTurns:4,  downtime:30,expedite:25,count:40,throughput:30,accuracy:35,firstFix:35,utilization:20,leakage:30,label:'Telecommunications' },
+  mfg:          { labor:25,shrinkage:40,carrying:18,otif:10,it:60,shrinkRate:2.0,carryRate:25,otifRisk:2.0,otifBaseline:91,otifTarget:97,invTurns:6,  downtime:35,expedite:30,count:45,throughput:30,accuracy:35,firstFix:20,utilization:10,leakage:20,label:'Manufacturing' },
+  construction: { labor:20,shrinkage:35,carrying:15,otif:8, it:55,shrinkRate:3.0,carryRate:22,otifRisk:1.5,otifBaseline:88,otifTarget:95,invTurns:3,  downtime:25,expedite:25,count:35,throughput:25,accuracy:30,firstFix:35,utilization:20,leakage:30,label:'Engineering & Construction' },
+  oil:          { labor:22,shrinkage:38,carrying:17,otif:9, it:58,shrinkRate:2.8,carryRate:24,otifRisk:2.0,otifBaseline:89,otifTarget:96,invTurns:4,  downtime:30,expedite:28,count:40,throughput:30,accuracy:35,firstFix:35,utilization:18,leakage:30,label:'Oil & Gas' },
+  mining:       { labor:20,shrinkage:35,carrying:15,otif:8, it:55,shrinkRate:2.5,carryRate:23,otifRisk:1.5,otifBaseline:88,otifTarget:95,invTurns:3,  downtime:35,expedite:25,count:35,throughput:30,accuracy:35,firstFix:30,utilization:15,leakage:28,label:'Minerals & Mining' },
+  distribution: { labor:35,shrinkage:50,carrying:22,otif:15,it:70,shrinkRate:1.5,carryRate:30,otifRisk:3.0,otifBaseline:94,otifTarget:99,invTurns:12, downtime:20,expedite:35,count:50,throughput:35,accuracy:40,firstFix:20,utilization:10,leakage:20,label:'Distribution & 3PL' },
+  food:         { labor:28,shrinkage:42,carrying:18,otif:12,it:60,shrinkRate:2.2,carryRate:27,otifRisk:2.5,otifBaseline:92,otifTarget:98,invTurns:15, downtime:25,expedite:30,count:45,throughput:30,accuracy:35,firstFix:20,utilization:10,leakage:22,label:'Food & Beverage' },
+  retail:       { labor:30,shrinkage:45,carrying:20,otif:13,it:62,shrinkRate:1.8,carryRate:28,otifRisk:2.8,otifBaseline:93,otifTarget:98,invTurns:8,  downtime:20,expedite:30,count:45,throughput:35,accuracy:40,firstFix:20,utilization:10,leakage:20,label:'Retail' }
 };
 
 /* ── Competitive data ── */
@@ -40,7 +40,7 @@ const COMP = {
 /* ════════════════════════════════════════
    Storage
    ════════════════════════════════════════ */
-const OVERLAP_DEDUCTION = 0.15; // 15% carrying cost overlap deduction — disclosed in footnotes
+/* OVERLAP_DEDUCTION + calcROI now provided by shared roi-engine.js */
 
 /* ── Scenario in-memory cache ──────────────────────────────────────
    savedScenarios is populated from /api/scenarios on page load and
@@ -82,6 +82,7 @@ function normaliseRow(r) {
     industry:      r.industry,
     dealStage:     r.deal_stage,
     execAudience:  r.exec_audience || 'mixed',
+    solution:      r.solution || 'all',
     ownerUsername: r.owner_username,
     sharedWith:    r.shared_with   || [],
     date:          r.updated_at
@@ -105,7 +106,7 @@ function persistSaved(arr)   { savedScenarios = arr; updateSavedBadge(); }
 /* ════════════════════════════════════════
    Navigation
    ════════════════════════════════════════ */
-const ALL_TABS = ['calc','disc','comp','exec','saved','compare','sensitivity','analytics','map','stake','admin','help','profile'];
+const ALL_TABS = ['calc','disc','comp','exec','saved','compare','sensitivity','analytics','map','stake','admin','help','impact','profile'];
 
 function switchTab(name) {
   ALL_TABS.forEach(n => {
@@ -114,6 +115,7 @@ function switchTab(name) {
     if (tab) tab.classList.toggle('active', n === name);
     if (nav) nav.classList.toggle('active', n === name);
   });
+  document.body.classList.toggle('impact-active', name === 'impact');
   if (name === 'comp')        { syncCompDropdowns(); renderComp(); }
   if (name === 'exec')        renderExec();
   if (name === 'saved')       { renderList(); renderStageFilters(); }
@@ -189,7 +191,10 @@ function applyDefaults() {
     b_labor:d.labor+'%', b_shrinkage:d.shrinkage+'%', b_carrying:d.carrying+'%',
     b_otif:d.otif+'%', b_it:d.it+'%', b_shrinkRate:d.shrinkRate+'%',
     b_carryRate:d.carryRate+'%', b_otifRisk:d.otifRisk+'%',
-    b_otifBaseline:d.otifBaseline+'%', b_invTurns:d.invTurns+'x'
+    b_otifBaseline:d.otifBaseline+'%', b_invTurns:d.invTurns+'x',
+    b_downtime:(d.downtime||0)+'%', b_expedite:(d.expedite||0)+'%', b_count:(d.count||0)+'%',
+    b_throughput:(d.throughput||0)+'%', b_accuracy:(d.accuracy||0)+'%',
+    b_firstfix:(d.firstFix||0)+'%', b_utilization:(d.utilization||0)+'%', b_leakage:(d.leakage||0)+'%'
   };
   Object.entries(bmap).forEach(([id,v]) => { const el=document.getElementById(id); if(el) el.textContent='Avg: '+v; });
   const badge = document.getElementById('benchBadge');
@@ -259,6 +264,7 @@ function getVals() {
     competitor: gs('competitor') || gs('compSelect'),
     dealStage: gs('dealStage'),
     execAudience: gs('execAudience') || 'mixed',
+    solution: gs('solution') || 'all',
     revenue: g('revenue'), users: g('userCount'), labor: g('laborCost'),
     inventory: inventoryVal, itCost: g('itCost'), invest: g('invest'),
     psvc, hw, train, otc: psvc+hw+train,
@@ -269,6 +275,39 @@ function getVals() {
     annualWriteOff: writeOffDollars, effectiveShrinkBase,
     otifBaseline, otifTarget,
     invTurnsCurrent, invTurnsBenchmark,
+    /* ── v2.5 new calculation levers ── */
+    modelVersion: 27,
+    laborWastePct:       g('laborWastePct') / 100,  // measured productivity waste (Option B)
+    currentAccuracy:     g('currentAccuracy'),        // measured inventory accuracy % (Option A)
+    /* ── v2.7 Field Inventory levers ── */
+    repeatVisitsYr:      g('repeatVisitsYr'),
+    costPerTruckRoll:    g('costPerTruckRoll'),
+    mFirstFix:           metricPct('m_firstfix', 'firstFix'),
+    fieldTechs:          g('fieldTechs'),
+    addedJobsPerDay:     g('addedJobsPerDay'),
+    revenuePerJob:       g('revenuePerJob'),
+    workingDaysYr:       g('workingDaysYr') || 0,
+    mUtilization:        metricPct('m_utilization', 'utilization'),
+    fieldInventoryValue: g('fieldInventoryValue'),
+    fieldLeakagePct:     g('fieldLeakagePct') / 100,
+    mLeakage:            metricPct('m_leakage', 'leakage'),
+    /* ── v2.6 WMS levers ── */
+    ordersPerYr:         g('ordersPerYr'),
+    costPerOrder:        g('costPerOrder'),
+    pickRateGainPct:     g('pickRateGainPct') / 100,
+    mThroughput:         metricPct('m_throughput', 'throughput'),
+    orderErrorPct:       g('orderErrorPct') / 100,
+    costPerError:        g('costPerError'),
+    mAccuracy:           metricPct('m_accuracy', 'accuracy'),
+    downtimeEventsYr:    g('downtimeEventsYr'),
+    downtimeHrsPerEvent: g('downtimeHrsPerEvent'),
+    downtimeCostPerHr:   g('downtimeCostPerHr'),
+    mDowntime:           metricPct('m_downtime', 'downtime'),
+    expediteSpendYr:     g('expediteSpendYr'),
+    mExpedite:           metricPct('m_expedite', 'expedite'),
+    countDaysYr:         g('countDaysYr'),
+    countPeople:         g('countPeople'),
+    mCount:              metricPct('m_count', 'count'),
     implMonths, ramp1, ramp2, ramp3,
     prospectLogoDataUrl: prospectLogoDataUrl,
     confidence: [...confirmedFields]
@@ -278,150 +317,7 @@ function getVals() {
 /* ════════════════════════════════════════
    ROI + NPV Engine
    ════════════════════════════════════════ */
-function calcROI(v) {
-  /* ── 1. Labor savings ── */
-  const laborSav = v.users * v.labor * v.mLabor;
-
-  /* ── 2. Write-off / shrinkage savings ──
-     Use prospect's actual $ write-off if supplied, else inventory × shrinkRate.
-     This is a DIRECT saving — reduction in actual loss dollars.              */
-  const shrinkSav = v.effectiveShrinkBase * v.mShrinkage;
-
-  /* ── 3. Carrying cost savings — Option 1 overlap disclosure ──
-     Calculate gross carrying cost savings, then apply a fixed 15%
-     overlap deduction to account for partial double-counting with
-     write-off reduction and inventory turns. The deduction is disclosed
-     transparently in the executive document footnote.                  */
-  const annualCarryCost   = v.inventory * v.carryRate;
-  const carrySavGross     = annualCarryCost * v.mCarrying;
-  const carrySavCorrected = carrySavGross * (1 - OVERLAP_DEDUCTION);
-  const overlapAdj        = carrySavGross - carrySavCorrected;   // for footnote
-
-  /* ── 4. Inventory turns: capital freed carrying cost ──
-     Calculated independently — the 15% deduction above already
-     accounts for partial overlap between turns and carry savings.     */
-  let capitalFreed = 0, turnsSav = 0;
-  if (v.invTurnsCurrent > 0 && v.invTurnsBenchmark > 0 && v.invTurnsCurrent < v.invTurnsBenchmark) {
-    capitalFreed = v.inventory * (1 - v.invTurnsCurrent / v.invTurnsBenchmark);
-    turnsSav     = capitalFreed * v.carryRate;
-  }
-  /* ── 5. OTIF savings ── */
-  let otifSav = 0;
-  if (v.otifBaseline > 0 && v.otifTarget > 0 && v.otifTarget > v.otifBaseline) {
-    const otifGapPp = (v.otifTarget - v.otifBaseline) / 100;
-    otifSav = v.revenue * otifGapPp * v.mOtif;
-  } else {
-    otifSav = v.revenue * v.otifRisk * v.mOtif;
-  }
-
-  /* ── 6. IT displacement ── */
-  const itSav = v.itCost * v.mIt;
-
-
-  /* ── Full annualised benefit (at steady-state, post-ramp) ── */
-  const annualBenefit = laborSav + shrinkSav + carrySavCorrected + turnsSav + otifSav + itSav;
-
-  /* ── Ramp-up & implementation timeline ──
-     implMonths: months from contract signing to go-live (0 benefit)
-     Post go-live, efficiency ramps: ramp1 (month 1), ramp2 (month 2), ramp3+ (full)
-     Year 1 benefit is the sum of partial-month benefits within months 1–12.  */
-  const impl = Math.round(v.implMonths || 0);
-  const ramp1 = v.ramp1 !== undefined ? v.ramp1 : 0.40;
-  const ramp2 = v.ramp2 !== undefined ? v.ramp2 : 0.75;
-  const ramp3 = v.ramp3 !== undefined ? v.ramp3 : 1.00;
-  const monthlyBenefit = annualBenefit / 12;
-
-  // Build month-by-month benefit for year 1
-  let year1Benefit = 0;
-  const monthlyProfile = [];
-  for (let m = 1; m <= 12; m++) {
-    const postGoLive = m - impl;  // months after go-live (negative = still in impl)
-    let eff = 0;
-    if (postGoLive === 1)      eff = ramp1;
-    else if (postGoLive === 2) eff = ramp2;
-    else if (postGoLive >= 3)  eff = ramp3;
-    const mBenefit = monthlyBenefit * eff;
-    year1Benefit += mBenefit;
-    monthlyProfile.push({ month: m, postGoLive, eff, benefit: mBenefit });
-  }
-
-  // Effective year 1 benefit fraction (for display)
-  const year1Factor = annualBenefit > 0 ? year1Benefit / annualBenefit : 0;
-
-  const totalInvestY1 = v.otc + v.invest;
-  const netY1   = year1Benefit - totalInvestY1;
-
-  // ROI based on year 1 actual benefit
-  const roi = totalInvestY1 > 0 ? (netY1 / totalInvestY1) * 100 : 0;
-
-  // Payback from CONTRACT SIGNING (includes impl months + ramp)
-  // Accumulate monthly benefit until cumulative exceeds total investment
-  let cumBenefit = 0, paybackFromSigning = null;
-  // Year 1 month by month
-  for (let m = 1; m <= 12; m++) {
-    cumBenefit += monthlyProfile[m-1].benefit;
-    if (cumBenefit >= totalInvestY1 && paybackFromSigning === null) {
-      paybackFromSigning = m;
-    }
-  }
-  // Year 2+ at full rate if not yet broken even
-  if (paybackFromSigning === null) {
-    for (let m = 13; m <= 60; m++) {
-      cumBenefit += monthlyBenefit * ramp3;
-      if (cumBenefit >= totalInvestY1 && paybackFromSigning === null) {
-        paybackFromSigning = m;
-      }
-    }
-  }
-
-  // Payback from GO-LIVE (impl months excluded)
-  const paybackFromGoLive = paybackFromSigning !== null
-    ? Math.max(0, paybackFromSigning - impl)
-    : null;
-
-  // NPV — use ramp-adjusted cash flows
-  const dr = Math.max(v.discRate, 0.001);
-  let npv3 = -v.otc, npv5 = -v.otc;
-  const cashflows = [];
-  for (let yr = 1; yr <= 5; yr++) {
-    // Year 1 uses ramp-adjusted benefit; years 2–5 use full annual benefit
-    const yBenefit = yr === 1 ? year1Benefit : annualBenefit;
-    const netCF = yBenefit - v.invest;
-    const pv    = netCF / Math.pow(1 + dr, yr);
-    if (yr <= 3) npv3 += pv;
-    npv5 += pv;
-    cashflows.push({
-      yr,
-      benefit: yBenefit,
-      invest: v.invest + (yr === 1 ? v.otc : 0),
-      net: netCF - (yr === 1 ? v.otc : 0),
-      pv, cumPV: 0,
-      isRamped: yr === 1 && year1Factor < 0.99
-    });
-  }
-  let cum = -v.otc;
-  cashflows.forEach(c => { cum += c.pv; c.cumPV = cum; });
-
-  return {
-    laborSav, shrinkSav,
-    carrySav: carrySavCorrected, turnsSav, capitalFreed, otifSav, itSav,
-    overlapAdj, annualCarryCost,
-    annualBenefit, year1Benefit, year1Factor,
-    totalInvestY1, netY1, roi,
-    paybackFromSigning, paybackFromGoLive,
-    payback: paybackFromSigning,  // kept for backward compat
-    npv3, npv5,
-    totalCost3: v.otc + v.invest*3,
-    totalCost5: v.otc + v.invest*5,
-    // Ramp-aware undiscounted benefit totals — Year 1 uses year1Benefit,
-    // Years 2+ use full annualBenefit. Prevents overstating totals when
-    // implementation/ramp reduces Year 1 below steady-state.
-    totalBenefit3: year1Benefit + annualBenefit * 2,
-    totalBenefit5: year1Benefit + annualBenefit * 4,
-    cashflows,
-    monthlyProfile, implMonths: impl, ramp1, ramp2, ramp3
-  };
-}
+/* calcROI is defined in src/shared/roi-engine.js (loaded before app.js) */
 
 /* ════════════════════════════════════════
    Formatters
@@ -447,6 +343,9 @@ function lbClass(n) { return n>=0?'pos':'neg'; }
 function recalc() {
   const v=getVals(), r=calcROI(v);
   const el=id=>document.getElementById(id);
+
+  if (typeof updateCompletenessMeter === 'function') updateCompletenessMeter();
+  if (typeof renderAccuracySuggestion === 'function') renderAccuracySuggestion(v);
 
   el('totalOTC').textContent = fmtFull(v.otc);
 
@@ -806,12 +705,42 @@ function renderExec() {
       <div class="e-kpi"><div class="e-kv">${paySignStr}</div><div class="e-kl">Payback from signing (${payLiveStr} from go-live)</div></div>
     </div>
     <div class="e-body">
+      <div class="e-section e-approach">
+        <div class="e-approach-head">
+          <div class="e-approach-title">A data-driven business case</div>
+          <div class="e-approach-lede">Every figure in this assessment was built from <strong>${v.company||'your'} operational data</strong> — not vendor assumptions — using a structured, transparent method engineered to withstand financial scrutiny.</div>
+        </div>
+        <div class="e-approach-pillars">
+          <div class="e-approach-pillar">
+            <div class="e-approach-icon" style="background:#185FA5;">◆</div>
+            <div class="e-approach-pt">Your data, not assumptions</div>
+            <div class="e-approach-pd">Inputs captured through structured discovery of your actual metrics.</div>
+          </div>
+          <div class="e-approach-pillar">
+            <div class="e-approach-icon" style="background:#0F6E56;">◆</div>
+            <div class="e-approach-pt">Decomposed value drivers</div>
+            <div class="e-approach-pd">Benefit broken into independently-quantified drivers, each traceable to a metric.</div>
+          </div>
+          <div class="e-approach-pillar">
+            <div class="e-approach-icon" style="background:#854F0B;">◆</div>
+            <div class="e-approach-pt">Conservatively modeled</div>
+            <div class="e-approach-pd">Ramp-up, benchmark grounding, and overlap adjustments applied throughout.</div>
+          </div>
+          <div class="e-approach-pillar">
+            <div class="e-approach-icon" style="background:#2E7D32;">◆</div>
+            <div class="e-approach-pt">Independently verifiable</div>
+            <div class="e-approach-pd">Full calculation methodology available on request for finance review.</div>
+          </div>
+        </div>
+      </div>
       ${narrative.headlineSection}
       ${narrative.whysSection}
       ${implProvisoSection}
       ${narrative.roiSection}
       ${scenarioCompTable}
-      <div class="e-section"><div class="e-h2">Annual value by category</div>${bars}
+      <div class="e-section"><div class="e-h2">Annual value by category</div>
+        <div class="e-driver-lede">Your value is decomposed into independently-quantified drivers, each traceable to a metric you provided and modeled conservatively.</div>
+        ${bars}
         <div class="e-bar-total"><span style="flex:1">Total annual value</span><span>${fmtFull(r.annualBenefit)}</span></div>
       </div>
       <div class="e-section">
@@ -933,6 +862,7 @@ async function _doSave(v, dataBlob, baseId, note) {
         industry:     v.industry     || null,
         dealStage:    v.dealStage    || null,
         execAudience: v.execAudience || 'mixed',
+        solution:     v.solution     || 'all',
         versionNote:  note           || null,
         baseId:       baseId         || null
       })
@@ -965,6 +895,9 @@ async function loadScenario(id) {
     }
     if (!inputs) { showToast('Scenario data not found.'); return; }
     if (typeof loadFromObject === 'function') loadFromObject(inputs);
+    /* Reset + reattach discovery session to THIS scenario — prevents a
+       prospect link from a previously-loaded customer being reused.    */
+    if (typeof resetDiscoveryForScenario === 'function') await resetDiscoveryForScenario(id);
     showToast('Loaded — "' + (scenario?.name || inputs.name || 'scenario') + '"');
     switchTab('calc');
     trackEvent('scenario_loaded', { company: inputs.company || '' });
@@ -1055,6 +988,65 @@ async function generateShareURLFromScenario(id) {
 /* ════════════════════════════════════════
    Clear form
    ════════════════════════════════════════ */
+/* ── Option A: accuracy-gap → suggested recovery % ──
+   Benchmark accuracy is 99.5%. The gap (benchmark − current) is mapped to
+   a suggested shrink/carrying recovery %. This SUGGESTS only — the rep must
+   click Apply; nothing is silently overwritten.                          */
+const ACCURACY_BENCHMARK = 99.5;
+function computeAccuracyRecovery(currentAccuracy) {
+  if (!currentAccuracy || currentAccuracy <= 0 || currentAccuracy >= ACCURACY_BENCHMARK) return null;
+  const gap = ACCURACY_BENCHMARK - currentAccuracy;           // percentage points
+  /* Map gap → recovery %: each point of gap ≈ 5% recoverable, capped at 60%.
+     e.g. 92% accuracy → 7.5pt gap → ~38% suggested recovery.             */
+  const suggested = Math.min(60, Math.round(gap * 5));
+  return suggested > 0 ? suggested : null;
+}
+function renderAccuracySuggestion(v) {
+  const box = document.getElementById('accuracySuggestion');
+  if (!box) return;
+  const rec = computeAccuracyRecovery(v.currentAccuracy);
+  if (rec === null) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  box.innerHTML =
+    `<span>Prospect accuracy <strong>${v.currentAccuracy}%</strong> → suggested recovery ` +
+    `<strong>${rec}%</strong> for shrink &amp; carrying.</span> ` +
+    `<button type="button" class="btn btn-ghost btn-sm" onclick="applyAccuracySuggestion(${rec})">Apply</button>`;
+}
+function applyAccuracySuggestion(rec) {
+  ['m_shrinkage','m_carrying'].forEach(id => { const el = document.getElementById(id); if (el) el.value = rec; });
+  if (typeof recalc === 'function') recalc();
+  if (typeof showToast === 'function') showToast(`Applied ${rec}% recovery to shrink & carrying assumptions.`);
+}
+
+/* ── Product/Solution emphasis (v2.6) ──
+   Highlights the driver groups most relevant to the selected Cloud
+   Inventory solution. Does NOT change the math — every lever still
+   calculates identically; this only guides the rep's attention and
+   labels the outputs.                                                   */
+const SOLUTION_EMPHASIS = {
+  wms:    { label: 'Warehouse Operations (WMS)', highlight: ['wms','count'] },
+  mep:    { label: 'Field Inventory (MEP)',      highlight: ['mep','downtime'] },
+  mfgmat: { label: 'Manufacturing Materials',    highlight: ['downtime','count'] },
+  all:    { label: 'All / Platform',             highlight: [] }
+};
+function applySolutionEmphasis() {
+  const sel = document.getElementById('solution');
+  const sol = sel ? sel.value : 'all';
+  const cfg = SOLUTION_EMPHASIS[sol] || SOLUTION_EMPHASIS.all;
+  document.querySelectorAll('.field-group-label').forEach(el => el.classList.remove('driver-emphasis'));
+  if (cfg.highlight.includes('wms')) {
+    document.querySelectorAll('.wms-tag').forEach(t => {
+      const lbl = t.closest('.field-group-label'); if (lbl) lbl.classList.add('driver-emphasis');
+    });
+  }
+  if (cfg.highlight.includes('mep')) {
+    document.querySelectorAll('.mep-tag').forEach(t => {
+      const lbl = t.closest('.field-group-label'); if (lbl) lbl.classList.add('driver-emphasis');
+    });
+  }
+  if (typeof recalc === 'function') recalc();
+}
+
 function clearForm() {
   ['scenarioName','companyName','repName','revenue','userCount','inventoryValue','itCost',
    'psvcCost','hwCost','trainCost','annualWriteOff','otifBaseline','otifTarget',
@@ -1071,7 +1063,12 @@ function clearForm() {
   // consistently via metricPct(). Only non-assumption financial/timeline
   // fields get a sensible starting default here.
   ['m_labor','m_shrinkage','m_carrying','m_otif','m_it',
-   'm_shrinkRate','m_carryRate','m_otifRisk'].forEach(id => {
+   'm_shrinkRate','m_carryRate','m_otifRisk',
+   'downtimeEventsYr','downtimeHrsPerEvent','downtimeCostPerHr','m_downtime',
+   'expediteSpendYr','m_expedite','countDaysYr','countPeople','m_count',
+   'laborWastePct','currentAccuracy',
+   'ordersPerYr','costPerOrder','pickRateGainPct','m_throughput','orderErrorPct','costPerError','m_accuracy',
+   'repeatVisitsYr','costPerTruckRoll','m_firstfix','fieldTechs','addedJobsPerDay','revenuePerJob','workingDaysYr','m_utilization','fieldInventoryValue','fieldLeakagePct','m_leakage'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   const defaults={laborCost:55000,invest:80000,discRate:10,
@@ -1081,6 +1078,8 @@ function clearForm() {
   prospectLogoDataUrl=null;
   confirmedFields=new Set();
   fieldStates={};
+  /* New blank scenario — clear any discovery session from a prior load */
+  if (typeof resetDiscoveryForScenario === 'function') resetDiscoveryForScenario(null);
   if (typeof updateLogoPreview === 'function') updateLogoPreview();
   if (typeof renderConfidence  === 'function') renderConfidence();
   recalc();

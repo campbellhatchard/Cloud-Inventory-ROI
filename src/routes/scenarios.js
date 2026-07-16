@@ -16,6 +16,7 @@ const express   = require('express');
 const { query, transaction } = require('../db');
 const { log, ACTIONS } = require('../audit');
 const { requireAuth } = require('../middleware/auth');
+const { calcROI } = require('../shared/roi-engine');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -23,7 +24,7 @@ router.use(requireAuth);
 /* ── Shared columns (never return full JSONB on list to keep payload small) ── */
 const LIST_COLS = `
   s.id, s.base_id, s.version, s.is_current, s.name, s.company,
-  s.owner_id, s.shared_with, s.industry, s.deal_stage, s.exec_audience,
+  s.owner_id, s.shared_with, s.industry, s.deal_stage, s.exec_audience, s.solution,
   s.version_note, s.created_at, s.updated_at,
   (s.data->>'annualBenefit')::numeric AS annual_benefit,
   (s.data->>'roi')::numeric           AS roi,
@@ -153,7 +154,7 @@ router.get('/:id/versions', async (req, res) => {
            versionNote?, baseId? }
    ═══════════════════════════════════════ */
 router.post('/', async (req, res) => {
-  const { name, company, data, industry, dealStage, execAudience, versionNote, baseId } = req.body || {};
+  const { name, company, data, industry, dealStage, execAudience, solution, versionNote, baseId } = req.body || {};
 
   /* Server-side required field validation (mirrors client-side) */
   if (!name || !name.trim() || name.trim() === 'Unnamed scenario') {
@@ -222,44 +223,83 @@ router.post('/', async (req, res) => {
         [resolvedBaseId]
       );
 
-      /* Extract key metrics from data for fast list queries */
-      const metrics = {
-        annualBenefit: data.annualBenefit || 0,
-        roi:           data.roi           || 0,
-        npv3:          data.npv3          || 0,
-        npv5:          data.npv5          || 0,
-        payback:       data.paybackFromSigning || data.payback || null
-      };
+      /* ── Server-authoritative ROI recompute ──
+         Recompute metrics from the submitted inputs using the SAME shared
+         engine the browser uses. The stored figures are the server's, never
+         the client's. If the client's numbers differ (stale tab, client bug,
+         tampering), we still store ours and log the discrepancy for visibility. */
+      let metrics;
+      let recomputeDiscrepancy = null;
+      try {
+        const r = calcROI(data);
+        metrics = {
+          annualBenefit: r.annualBenefit || 0,
+          roi:           r.roi           || 0,
+          npv3:          r.npv3          || 0,
+          npv5:          r.npv5          || 0,
+          payback:       r.paybackFromSigning != null ? r.paybackFromSigning : null
+        };
+        /* Detect drift vs. what the client sent (>$1 or >0.5% considered drift) */
+        const clientBenefit = Number(data.annualBenefit) || 0;
+        if (clientBenefit > 0 && Math.abs(clientBenefit - metrics.annualBenefit) > Math.max(1, clientBenefit * 0.005)) {
+          recomputeDiscrepancy = {
+            clientAnnualBenefit: Math.round(clientBenefit),
+            serverAnnualBenefit: Math.round(metrics.annualBenefit)
+          };
+        }
+      } catch (e) {
+        /* If recompute fails for any reason, fall back to client values so a
+           save is never lost — but flag it. */
+        metrics = {
+          annualBenefit: Number(data.annualBenefit) || 0,
+          roi:           Number(data.roi)           || 0,
+          npv3:          Number(data.npv3)          || 0,
+          npv5:          Number(data.npv5)          || 0,
+          payback:       data.paybackFromSigning || data.payback || null
+        };
+        recomputeDiscrepancy = { recomputeError: e.message };
+      }
 
-      /* Merge metrics into data JSONB so they're always in sync */
+      /* Merge server metrics into data JSONB so they're always in sync */
       const dataWithMetrics = { ...data, ...metrics };
 
       const { rows } = await client.query(
         `INSERT INTO scenarios
            (base_id, version, is_current, name, company, owner_id,
-            industry, deal_stage, exec_audience, data, version_note)
-         VALUES ($1, $2, TRUE, $3, $4, $5, $6, $7, $8, $9, $10)
+            industry, deal_stage, exec_audience, solution, data, version_note)
+         VALUES ($1, $2, TRUE, $3, $4, $5, $6, $7, $8, $9, $10, $11)
          RETURNING id, base_id, version, name, company, is_current,
-                   industry, deal_stage, exec_audience, version_note,
+                   industry, deal_stage, exec_audience, solution, version_note,
                    created_at, updated_at`,
         [
           resolvedBaseId, nextVersion, name.trim(), company.trim(), req.user.id,
           industry || null, dealStage || null, execAudience || 'mixed',
-          JSON.stringify(dataWithMetrics), versionNote || null
+          solution || null, JSON.stringify(dataWithMetrics), versionNote || null
         ]
       );
 
-      return rows[0];
+      return { row: rows[0], recomputeDiscrepancy };
     });
+    const savedRow = result.row;
 
     await log({
       userId: req.user.id, action: ACTIONS.SCENARIO_SAVED,
-      entityType: 'scenario', entityId: result.id,
-      detail: { name: result.name, company: result.company, version: result.version },
+      entityType: 'scenario', entityId: savedRow.id,
+      detail: { name: savedRow.name, company: savedRow.company, version: savedRow.version },
       ipAddress: req.ip
     });
 
-    res.status(201).json(result);
+    /* Visibility into client/server ROI drift (Fix 1, option b) */
+    if (result.recomputeDiscrepancy) {
+      await log({
+        userId: req.user.id, action: ACTIONS.SCENARIO_SAVED,
+        entityType: 'scenario', entityId: savedRow.id,
+        detail: { roiRecomputeDiscrepancy: result.recomputeDiscrepancy },
+        ipAddress: req.ip
+      });
+    }
+
+    res.status(201).json(savedRow);
 
   } catch (err) {
     if (err.status === 403) return res.status(403).json({ error: err.message });

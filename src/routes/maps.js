@@ -7,7 +7,6 @@ const crypto    = require('crypto');
 const { query } = require('../db');
 const { log }   = require('../audit');
 const { requireAuth } = require('../middleware/auth');
-const { getAppUrl } = require('../config');
 
 const router = express.Router();
 
@@ -130,7 +129,7 @@ router.post('/:id/share', async (req, res) => {
     await log({ userId: req.user.id, action: 'map.shared', entityType: 'mutual_action_plan',
                 entityId: req.params.id, ipAddress: req.ip });
     res.json({ ok: true, token,
-      url: `${getAppUrl()}/prospect-map.html#token=${token}` });
+      url: `${process.env.APP_URL || ''}/prospect-map.html#token=${token}` });
   } catch (e) { res.status(500).json({ error: 'Failed to share plan.' }); }
 });
 

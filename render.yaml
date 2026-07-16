@@ -1,6 +1,8 @@
 databases:
   - name: cloud-inventory-roi-db
-    plan: free
+    # basic-256mb (~$6/mo): paid Postgres — persistent (free tier is deleted
+    # after 30 days) and always available. Instance type sets RAM/CPU only.
+    plan: basic-256mb
     databaseName: ciroi
     user: ciroi_user
     ipAllowList: []
@@ -9,41 +11,34 @@ services:
   - type: web
     name: cloud-inventory-roi
     runtime: node
-    plan: free
+    # starter (~$7/mo): never spins down — eliminates the free-tier cold-start
+    # "loading" screen that appears after 15 min of inactivity.
+    plan: starter
     buildCommand: npm ci --omit=dev --no-audit --no-fund
-    # Run Node directly so Render's SIGTERM reaches the application process.
     startCommand: node server.js
     healthCheckPath: /health
-    maxShutdownDelaySeconds: 15
     autoDeployTrigger: commit
+    maxShutdownDelaySeconds: 15
 
     envVars:
+      # Database connection is injected automatically from the database above.
       - key: DATABASE_URL
         fromDatabase:
           name: cloud-inventory-roi-db
           property: connectionString
 
+      # Pin Node to a tested LTS major. Render's current default is newer.
       - key: NODE_VERSION
         value: 22.22.0
 
-      - key: NODE_ENV
-        value: production
-
-      - key: REQUIRE_DATABASE
-        value: "true"
-
-      # Allow the database created by the same Blueprint time to become ready.
-      - key: DB_STARTUP_MAX_ATTEMPTS
-        value: "60"
-      - key: DB_STARTUP_RETRY_MS
-        value: "3000"
-
+      # Authentication and password hashing.
       - key: JWT_SECRET
         generateValue: true
       - key: BCRYPT_ROUNDS
         value: "12"
 
-      # Initial administrator account. Keep the repository private.
+      # Initial administrator account. Change this password after first login.
+      # WARNING: These values are visible to anyone who can read the repository.
       - key: BOOTSTRAP_ADMIN_USERNAME
         value: admin
       - key: BOOTSTRAP_ADMIN_PASSWORD
@@ -51,9 +46,9 @@ services:
       - key: BOOTSTRAP_ADMIN_EMAIL
         value: admin@cloudinventory.com
 
+      - key: NODE_ENV
+        value: production
+      # Optional AI model name. Add ANTHROPIC_API_KEY manually in Render if AI Enhance is required.
       - key: ANTHROPIC_MODEL
         value: claude-sonnet-4-6
-
-# Optional secrets are intentionally omitted from this Blueprint so they do not
-# block initial creation with interactive secret prompts. Add them manually in Render
-# when needed: ANTHROPIC_API_KEY, SENDGRID_API_KEY, FROM_EMAIL, APP_URL.
+      # Optional email variables SENDGRID_API_KEY and FROM_EMAIL can be added manually in Render.

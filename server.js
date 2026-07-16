@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   server.js  —  Cloud Inventory ROI Builder  v2.4.2  (Phase 10 — Final)
+   server.js  —  Cloud Inventory ROI Builder  v2.8.1
    Database-backed multi-user edition — production hardened
 
    Security layers applied (Phase 10):
@@ -14,18 +14,22 @@ const express    = require('express');
 const path       = require('path');
 const https      = require('https');
 const crypto     = require('crypto');
+const { getAppUrl } = require('./src/config');
 const helmet     = require('helmet');
 const rateLimit  = require('express-rate-limit');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
-let httpServer = null;
-let cleanupTimer = null;
-let purgeTask = null;
-let shuttingDown = false;
 const PUBLIC_DIR = path.join(__dirname, 'public');
+
+/* Serve the shared ROI engine (canonical source in src/shared) to the
+   browser at a stable path, so client and server run identical math from
+   one file — no duplicated copy, no build step. */
+app.get('/roi-engine.js', (req, res) => {
+  res.type('application/javascript');
+  res.sendFile(path.join(__dirname, 'src', 'shared', 'roi-engine.js'));
+});
 const PROD = process.env.NODE_ENV === 'production';
-const { getAppUrl } = require('./src/config');
 const APP_URL = getAppUrl();
 const APP_VERSION = require('./package.json').version;
 
@@ -148,6 +152,7 @@ app.use('/api/maps', mapsRouter);
 /* ── Stakeholder maps ── */
 const stakeholdersRouter = require('./src/routes/stakeholders');
 app.use('/api/stakeholders', stakeholdersRouter);
+app.use('/api', require('./src/routes/analytics'));  // analytics + custom benchmarks
 
 /* ── Unified company list (v2.3) ──
    De-duplicated company names across scenarios, action plans and
@@ -316,18 +321,33 @@ function purgeHtmlPage(title, message, ok) {
 /* ── Health check — exempt from rate limiting ── */
 app.get('/health', async (req, res) => {
   try {
+    if (PROD && !process.env.DATABASE_URL) {
+      return res.status(503).json({
+        status: 'error',
+        version: APP_VERSION,
+        database: 'missing',
+        phase: 'production'
+      });
+    }
+
     if (process.env.DATABASE_URL) {
       await db().query('SELECT 1 AS healthy');
     }
+
     res.json({
       status: 'ok',
       version: APP_VERSION,
       database: process.env.DATABASE_URL ? 'connected' : 'not-configured',
-      phase: 'production'
+      phase: PROD ? 'production' : 'development'
     });
   } catch (err) {
     console.error('Health check failed:', err.message);
-    res.status(503).json({ status: 'error', database: 'unavailable' });
+    res.status(503).json({
+      status: 'error',
+      version: APP_VERSION,
+      database: 'unavailable',
+      phase: PROD ? 'production' : 'development'
+    });
   }
 });
 
@@ -495,98 +515,142 @@ app.use((err, req, res, next) => {
 });
 
 /* ═══════ STARTUP ═══════ */
-async function start() {
-  const databaseRequired = process.env.REQUIRE_DATABASE !== 'false';
+let server;
+let cleanupTimer;
+let purgeTask;
+let shuttingDown = false;
 
-  if (!process.env.DATABASE_URL && databaseRequired) {
-    throw new Error('DATABASE_URL is required but is not configured.');
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForDatabase(maxAttempts = 60, delayMs = 3000) {
+  if (!process.env.DATABASE_URL) {
+    if (PROD) {
+      throw new Error('DATABASE_URL is required in production.');
+    }
+    console.warn('⚠️  DATABASE_URL not set — running without database in development.');
+    return;
   }
 
-  if (process.env.DATABASE_URL) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
-      const { runMigrations } = require('./src/migrate');
-      await runMigrations();
-    } catch(err) {
-      console.error('Migration failed — aborting:', err.message);
-      process.exit(1);
-    }
-
-    /* Hourly cleanup of expired sessions and reset tokens */
-    cleanupTimer = setInterval(async () => {
-      try {
-        const { query } = require('./src/db');
-        const s = await query('DELETE FROM sessions WHERE expires_at < NOW()');
-        const t = await query('DELETE FROM password_reset_tokens WHERE expires_at < NOW() AND used_at IS NULL');
-        const p = await query('DELETE FROM purge_tokens WHERE expires_at < NOW()');
-        const total = s.rowCount + t.rowCount + p.rowCount;
-        if (total > 0) console.log(`[cleanup] Expired: ${s.rowCount} sessions, ${t.rowCount} reset tokens, ${p.rowCount} purge tokens.`);
-      } catch(err) {
-        console.error('[cleanup] Error:', err.message);
+      const dbTime = await db().testConnection();
+      console.log('✅ PostgreSQL connected — server time:', dbTime);
+      return;
+    } catch (err) {
+      if (attempt === maxAttempts) {
+        throw new Error(`PostgreSQL not ready after ${maxAttempts} attempts: ${err.message}`);
       }
-    }, 60 * 60 * 1000);
-    cleanupTimer.unref();
-
-  } else {
-    console.warn('⚠️  DATABASE_URL not set — database features are disabled for this local smoke test.');
-  }
-
-  httpServer = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`\n🚀 Cloud Inventory ROI Builder v${APP_VERSION} — port ${PORT}`);
-    console.log(`   Phase    : 10 / 10 — Production hardened ✅`);
-    console.log(`   Database : ${process.env.DATABASE_URL ? '✅ connected' : '⚠️  not configured'}`);
-    console.log(`   Helmet   : ✅ security headers active`);
-    console.log(`   Rate lim : ✅ 100/min global + 10/min auth`);
-    console.log(`   AI model : ${ANTHROPIC_MODEL}`);
-    console.log(`   AI key   : ${process.env.ANTHROPIC_API_KEY ? '✅ set' : '⚠️  not set'}`);
-    console.log(`   SendGrid : ${process.env.SENDGRID_API_KEY  ? '✅ set' : '⚠️  not set'}`);
-    console.log(`   Env      : ${process.env.NODE_ENV || 'development'}\n`);
-
-    if (process.env.DATABASE_URL) {
-      const { startPurgeJob } = require('./src/jobs/auditPurge');
-      purgeTask = startPurgeJob();
+      console.warn(`PostgreSQL not ready (attempt ${attempt}/${maxAttempts}); retrying in ${delayMs}ms...`);
+      await sleep(delayMs);
     }
+  }
+}
+
+function startCleanupTimer() {
+  cleanupTimer = setInterval(async () => {
+    try {
+      const { query } = require('./src/db');
+      const s = await query('DELETE FROM sessions WHERE expires_at < NOW()');
+      const t = await query('DELETE FROM password_reset_tokens WHERE expires_at < NOW() AND used_at IS NULL');
+      const p = await query('DELETE FROM purge_tokens WHERE expires_at < NOW()');
+      const total = s.rowCount + t.rowCount + p.rowCount;
+      if (total > 0) {
+        console.log(`[cleanup] Expired: ${s.rowCount} sessions, ${t.rowCount} reset tokens, ${p.rowCount} purge tokens.`);
+      }
+    } catch(err) {
+      console.error('[cleanup] Error:', err.message);
+    }
+  }, 60 * 60 * 1000);
+
+  if (typeof cleanupTimer.unref === 'function') {
+    cleanupTimer.unref();
+  }
+}
+
+function closeServer() {
+  return new Promise((resolve, reject) => {
+    if (!server) return resolve();
+    server.close((err) => (err ? reject(err) : resolve()));
   });
 }
 
 async function shutdown(signal) {
   if (shuttingDown) return;
   shuttingDown = true;
-  console.log(`${signal} received — shutting down cleanly...`);
 
-  if (cleanupTimer) clearInterval(cleanupTimer);
-  if (purgeTask && typeof purgeTask.stop === 'function') purgeTask.stop();
+  console.log(`${signal} received — shutting down Cloud Inventory ROI Builder...`);
 
   const forceExit = setTimeout(() => {
-    console.error('Graceful shutdown timed out; forcing exit.');
+    console.error('Forced shutdown after timeout.');
     process.exit(1);
   }, 10000);
-  forceExit.unref();
 
   try {
-    if (httpServer) {
-      const closePromise = new Promise((resolve) => httpServer.close(resolve));
-      if (typeof httpServer.closeIdleConnections === 'function') {
-        httpServer.closeIdleConnections();
-      }
-      await closePromise;
+    if (cleanupTimer) {
+      clearInterval(cleanupTimer);
+      cleanupTimer = null;
     }
+
+    if (purgeTask && typeof purgeTask.stop === 'function') {
+      purgeTask.stop();
+    }
+
+    if (server && typeof server.closeIdleConnections === 'function') {
+      server.closeIdleConnections();
+    }
+
+    await closeServer();
+
     if (process.env.DATABASE_URL) {
-      const { pool } = require('./src/db');
-      await pool.end();
+      await db().pool.end();
+      console.log('Database pool closed.');
     }
+
     clearTimeout(forceExit);
     console.log('Shutdown complete.');
     process.exit(0);
   } catch (err) {
-    console.error('Shutdown error:', err.message);
+    clearTimeout(forceExit);
+    console.error('Shutdown failed:', err.message);
     process.exit(1);
   }
 }
 
 process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT',  () => shutdown('SIGINT'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
-start().catch((err) => {
-  console.error('Fatal startup error:', err.message);
-  process.exit(1);
-});
+async function start() {
+  try {
+    await waitForDatabase();
+
+    if (process.env.DATABASE_URL) {
+      const { runMigrations } = require('./src/migrate');
+      await runMigrations();
+
+      startCleanupTimer();
+
+      const { startPurgeJob } = require('./src/jobs/auditPurge');
+      purgeTask = startPurgeJob();
+    }
+
+    server = app.listen(PORT, '0.0.0.0', () => {
+      console.log(`\n🚀 Cloud Inventory ROI Builder v${APP_VERSION} — port ${PORT}`);
+      console.log(`   Phase    : production-ready`);
+      console.log(`   Database : ${process.env.DATABASE_URL ? '✅ connected' : '⚠️  not configured'}`);
+      console.log(`   App URL  : ${APP_URL || 'not configured'}`);
+      console.log(`   Helmet   : ✅ security headers active`);
+      console.log(`   Rate lim : ✅ 100/min global + 10/min auth`);
+      console.log(`   AI model : ${ANTHROPIC_MODEL}`);
+      console.log(`   AI key   : ${process.env.ANTHROPIC_API_KEY ? '✅ set' : '⚠️  not set'}`);
+      console.log(`   SendGrid : ${process.env.SENDGRID_API_KEY  ? '✅ set' : '⚠️  not set'}`);
+      console.log(`   Env      : ${process.env.NODE_ENV || 'development'}\n`);
+    });
+  } catch (err) {
+    console.error('Startup failed — aborting:', err.message);
+    process.exit(1);
+  }
+}
+
+start();
