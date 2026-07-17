@@ -542,7 +542,7 @@ function setDiscoveryAnswer(id, value, enteredBy = 'rep') {
     const el = document.getElementById(q.sync);
     if (el) {
       el.value = num;
-      if (typeof fieldStates !== 'undefined') fieldStates[q.sync] = enteredBy === 'prospect' ? 'confirmed' : 'estimated';
+      if (typeof fieldStates !== 'undefined') fieldStates[q.sync] = enteredBy === 'prospect' ? 'confirmed_prospect' : 'estimated';
       if (typeof confirmedFields !== 'undefined' && enteredBy === 'prospect') confirmedFields.add(q.sync);
     }
   }
@@ -709,7 +709,7 @@ async function loadDiscoverySession() {
           const el  = document.getElementById(q.sync);
           if (el && !isNaN(num) && num > 0 && !el.value) {
             el.value = num;
-            if (typeof fieldStates !== 'undefined') fieldStates[q.sync] = enteredBy === 'prospect' ? 'confirmed' : 'estimated';
+            if (typeof fieldStates !== 'undefined') fieldStates[q.sync] = enteredBy === 'prospect' ? 'confirmed_prospect' : 'estimated';
           }
         }
       }

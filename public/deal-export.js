@@ -481,7 +481,21 @@ function buildRoiMethodology() {
     ['Discount rate (NPV)', PC(v.discRate)],
   ];
 
-  return { v, r, M, PC, N, levers, revenueLever, inputs };
+  /* ── Provenance: which inputs the prospect verified via discovery ──
+     Reads the confidence fieldStates (confirmed_prospect = customer-verified).
+     Surfaces the value-engineering credibility signal in the CFO doc.     */
+  const fs = (typeof fieldStates !== 'undefined') ? fieldStates : {};
+  const provFields = (typeof CONFIDENCE_FIELDS !== 'undefined') ? CONFIDENCE_FIELDS : [];
+  let prospectVerified = 0, repConfirmed = 0, totalTracked = provFields.length;
+  const verifiedLabels = [];
+  provFields.forEach(f => {
+    const s = fs[f.id] || '';
+    if (s === 'confirmed_prospect') { prospectVerified++; verifiedLabels.push(f.label); }
+    else if (s === 'confirmed') repConfirmed++;
+  });
+  const provenance = { prospectVerified, repConfirmed, totalTracked, verifiedLabels };
+
+  return { v, r, M, PC, N, levers, revenueLever, inputs, provenance };
 }
 
 /* ── PDF variant ── */
@@ -501,10 +515,29 @@ function roiMethodologyPDF() {
       <td class="f">${esc(L.formula)}</td><td class="f">${esc(L.plugged)}</td><td class="r"><strong>${M(L.value)}</strong>/yr</td></tr>`;
   }).join('');
 
-  const inputRows = m.inputs.map(([k,val]) =>
-    `<tr><td>${esc(k)}</td><td class="${val==='Not Provided'?'np-cell':''}">${esc(val)}</td></tr>`).join('');
+  /* Map confidence field IDs → whether prospect-verified, to badge input rows */
+  const fsMap = (typeof fieldStates !== 'undefined') ? fieldStates : {};
+  const verifiedByInputLabel = {
+    'Annual revenue': fsMap['revenue'] === 'confirmed_prospect',
+    'Inventory users': fsMap['userCount'] === 'confirmed_prospect',
+    'Inventory value on hand': fsMap['inventoryValue'] === 'confirmed_prospect',
+    'Annual write-off value': fsMap['annualWriteOff'] === 'confirmed_prospect',
+    'OTIF baseline / target': fsMap['otifBaseline'] === 'confirmed_prospect',
+    'Current inventory turns': fsMap['invTurnsCurrent'] === 'confirmed_prospect',
+    'Current IT / systems cost': fsMap['itCost'] === 'confirmed_prospect'
+  };
+  const inputRows = m.inputs.map(([k,val]) => {
+    const mark = verifiedByInputLabel[k] ? ' <span class="prov-mark" title="Verified by prospect">◉</span>' : '';
+    return `<tr><td>${esc(k)}${mark}</td><td class="${val==='Not Provided'?'np-cell':''}">${esc(val)}</td></tr>`;
+  }).join('');
 
   const rampNote = `Year-1 benefit is ramp-adjusted (${Math.round((v.ramp1||0.4)*100)}% / ${Math.round((v.ramp2||0.75)*100)}% / ${Math.round((v.ramp3||1)*100)}% over the first three periods), so it is lower than the full annual benefit.`;
+
+  /* Prospect-verification headline (value-engineering credibility signal) */
+  const p = m.provenance || { prospectVerified:0, totalTracked:0 };
+  const provenanceBanner = p.prospectVerified > 0
+    ? `<div class="prov-banner"><span class="prov-check">◉</span> <strong>${p.prospectVerified} of ${p.totalTracked} core value drivers were verified directly by ${esc(company)}</strong> through the discovery process — the remainder are estimated from provided data or industry benchmarks. Verified inputs are marked <span class="prov-mark">◉</span> below.</div>`
+    : '';
 
   const html = `
     <div class="doc-head"><img src="${window.location.origin}/ci-logo.png" onerror="this.style.display='none'"/><div class="ht">ROI Methodology &amp; Calculation Detail</div></div>
@@ -513,6 +546,7 @@ function roiMethodologyPDF() {
     <p class="intro">This appendix documents how the return on investment in the business case was calculated, following a structured, data-driven methodology built to withstand independent financial review. The approach captures <strong>your operational data</strong> through guided discovery, decomposes the benefit into independently-quantified value drivers each tied to a metric you provided, and models every driver conservatively — applying ramp-up, benchmark grounding, and overlap adjustments. Cost savings and revenue growth are reported separately. Every result below traces to an input in the first table. Items marked <em>Not Provided</em> were not captured and represent potential upside not included in the totals.</p>
 
     <h2>1. Inputs used</h2>
+    ${provenanceBanner}
     <table class="kv"><tbody>${inputRows}</tbody></table>
 
     <h2>2. Benefit breakdown</h2>
@@ -560,7 +594,10 @@ function roiMethodologyPDF() {
     .np-cell{color:#C77700;font-weight:600;}
     tfoot td{border-top:2px solid #243646;font-size:13px;padding-top:8px;}
     .notes{margin:4px 0 16px;padding-left:18px;} .notes li{font-size:11px;color:#5A6570;margin-bottom:5px;line-height:1.5;}
-    .disc{font-size:10px;color:#94A3B8;font-style:italic;margin-top:14px;line-height:1.5;}`;
+    .disc{font-size:10px;color:#94A3B8;font-style:italic;margin-top:14px;line-height:1.5;}
+    .prov-banner{background:#E6F4EF;border:1px solid #0F6E56;border-radius:7px;padding:9px 13px;margin-bottom:12px;font-size:11px;color:#0B4A3A;line-height:1.5;}
+    .prov-check{color:#0F6E56;font-weight:700;}
+    .prov-mark{color:#0F6E56;font-size:10px;}`;
   dePrintWindow('ROI Methodology — ' + company, html, extraCss);
 }
 

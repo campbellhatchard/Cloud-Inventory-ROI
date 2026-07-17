@@ -38,7 +38,8 @@ function showCustomerGate() {
   if (switchBtn) switchBtn.style.display = 'none';
   cgRenderList('');
   cgRenderRecent();
-  const s = document.getElementById('cgNewCompany'); if (s) s.focus();
+  const s = document.getElementById('cgNewCompany');
+  if (s) { s.value = ''; s.focus(); }  // clear any browser autofill, then focus
 }
 function showCalcBody() {
   const gate = document.getElementById('customerGate');

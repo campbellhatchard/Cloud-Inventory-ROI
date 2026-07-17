@@ -393,10 +393,17 @@ function autoFlagConfidence() {
 
 function toggleConfidence(fieldId) {
   const current = fieldStates[fieldId] || '';
-  if (current === 'confirmed') {
+  if (current === 'confirmed_prospect') {
+    /* Prospect-verified is authoritative. Allow a rep to override, but only
+       with an explicit confirmation, since it erases customer provenance. */
+    if (!confirm('This input was verified by the prospect through discovery. Override that status? It will become a rep estimate.')) return;
+    fieldStates[fieldId] = 'estimated';
+    confirmedFields.delete(fieldId);
+  } else if (current === 'confirmed') {
     fieldStates[fieldId] = 'estimated';
     confirmedFields.delete(fieldId);
   } else {
+    /* Rep manually confirming (plain 'confirmed' = rep-confirmed) */
     fieldStates[fieldId] = 'confirmed';
     confirmedFields.add(fieldId);
   }
@@ -407,16 +414,28 @@ function renderConfidence() {
   const el = document.getElementById('confidencePanel');
   if (!el) return;
   let confirmedW = 0, estimatedW = 0, totalW = 0;
+  let nProspect = 0, nRep = 0, nEstimated = 0;
   CONFIDENCE_FIELDS.forEach(f => {
     totalW += f.weight;
     const s = fieldStates[f.id] || '';
-    if (s === 'confirmed') confirmedW += f.weight;
+    if (s === 'confirmed' || s === 'confirmed_prospect') confirmedW += f.weight;  // both full weight
     if (s === 'estimated') estimatedW += f.weight * 0.5;
+    if (s === 'confirmed_prospect') nProspect++;
+    else if (s === 'confirmed') nRep++;
+    else if (s === 'estimated') nEstimated++;
   });
   const pct = Math.round(((confirmedW + estimatedW) / totalW) * 100);
   const color = pct >= 80 ? '#2E7D32' : pct >= 50 ? '#E65100' : '#C62828';
   const label = pct >= 80 ? 'High confidence' : pct >= 50 ? 'Moderate — confirm key inputs' : 'Low — needs discovery';
   const groups = [...new Set(CONFIDENCE_FIELDS.map(f => f.group))];
+
+  /* Provenance summary line */
+  const summaryBits = [];
+  if (nProspect)  summaryBits.push(`<strong style="color:#0F6E56;">${nProspect} prospect-verified</strong>`);
+  if (nRep)       summaryBits.push(`${nRep} rep-confirmed`);
+  if (nEstimated) summaryBits.push(`${nEstimated} rep-estimated`);
+  const summary = summaryBits.length ? `<div class="conf-summary">${summaryBits.join(' · ')}</div>` : '';
+
   el.innerHTML = `
     <div class="conf-header">
       <div class="conf-title">Model confidence</div>
@@ -425,25 +444,33 @@ function renderConfidence() {
     <div class="conf-bar-track">
       <div class="conf-bar-fill" style="width:${pct}%;background:${color};transition:width .4s;"></div>
     </div>
+    ${summary}
     <div class="conf-legend">
       <span class="conf-legend-item"><span class="conf-dot" style="background:#94A3B8;"></span>Empty</span>
-      <span class="conf-legend-item"><span class="conf-dot" style="background:#E65100;"></span>Estimated (auto)</span>
-      <span class="conf-legend-item"><span class="conf-dot" style="background:#2E7D32;"></span>Confirmed by prospect</span>
+      <span class="conf-legend-item"><span class="conf-dot" style="background:#E65100;"></span>Rep-estimated</span>
+      <span class="conf-legend-item"><span class="conf-dot" style="background:#5FA88C;"></span>Rep-confirmed</span>
+      <span class="conf-legend-item"><span class="conf-dot" style="background:#0F6E56;"></span>Prospect-verified</span>
     </div>
     ${groups.map(group => `
       <div class="conf-group-label">${group}</div>
       <div class="conf-fields">
         ${CONFIDENCE_FIELDS.filter(f => f.group === group).map(f => {
           const state = fieldStates[f.id] || '';
-          const cls = state === 'confirmed' ? 'conf-confirmed' : state === 'estimated' ? 'conf-estimated' : 'conf-empty';
-          const icon = state === 'confirmed' ? '✓' : state === 'estimated' ? '~' : '?';
-          const tip = state === 'confirmed' ? 'Prospect-confirmed — click to revert'
+          const cls = state === 'confirmed_prospect' ? 'conf-confirmed-prospect'
+                    : state === 'confirmed' ? 'conf-confirmed'
+                    : state === 'estimated' ? 'conf-estimated' : 'conf-empty';
+          const icon = state === 'confirmed_prospect' ? '✓'
+                     : state === 'confirmed' ? '✓'
+                     : state === 'estimated' ? '~' : '?';
+          const badge = state === 'confirmed_prospect' ? '<span class="conf-chip-badge" title="Verified by prospect via discovery">◉</span>' : '';
+          const tip = state === 'confirmed_prospect' ? 'Verified by prospect via discovery — click to override'
+                    : state === 'confirmed' ? 'Rep-confirmed — click to revert'
                     : state === 'estimated' ? 'Auto-flagged from input — click to confirm'
                     : 'No value entered yet';
-          return `<button class="conf-chip ${cls}" onclick="toggleConfidence('${f.id}')" title="${tip}" ${state === '' ? 'disabled' : ''}><span class="conf-chip-icon">${icon}</span>${f.label}</button>`;
+          return `<button class="conf-chip ${cls}" onclick="toggleConfidence('${f.id}')" title="${tip}" ${state === '' ? 'disabled' : ''}><span class="conf-chip-icon">${icon}</span>${f.label}${badge}</button>`;
         }).join('')}
       </div>`).join('')}
-    <div class="conf-hint">Values auto-flag as estimated when entered. Click to mark prospect-confirmed.</div>`;
+    <div class="conf-hint">Values auto-flag as rep-estimated when entered. Prospect answers via the discovery link are verified automatically. Click a chip to confirm or override.</div>`;
 }
 
 /* ─────────────────────────────────────────

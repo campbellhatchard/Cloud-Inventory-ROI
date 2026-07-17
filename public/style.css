@@ -944,3 +944,11 @@ body.impact-active .impact-fab-group{display:flex;}
 .cc-fill{height:100%;border-radius:4px;transition:width .3s;}
 .cc-fill.cc-strong{background:#2E7D32;} .cc-fill.cc-ok{background:#F79424;} .cc-fill.cc-weak{background:#C62828;}
 .cc-hint{font-size:11px;color:var(--gray-500);margin-top:6px;}
+
+/* ══ v2.9 rep-vs-prospect confidence distinction ══ */
+/* Rep-confirmed: muted green (a rep assertion). Prospect-verified: strong deep green + badge (customer-verified). */
+.conf-chip.conf-confirmed{background:#EAF5EE;border-color:#9CCCA9;color:#4A7C59;}
+.conf-chip.conf-confirmed-prospect{background:#0F6E56;border-color:#0F6E56;color:#fff;font-weight:700;}
+.conf-chip.conf-confirmed-prospect .conf-chip-icon{color:#fff;}
+.conf-chip-badge{font-size:9px;margin-left:3px;opacity:.9;}
+.conf-summary{font-size:11px;color:var(--gray-600);margin:8px 0 4px;padding:6px 10px;background:var(--gray-50);border-radius:6px;}

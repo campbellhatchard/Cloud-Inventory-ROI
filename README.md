@@ -1,8 +1,12 @@
-# Cloud Inventory ROI Builder v2.8.1 — Render-ready package
+# Cloud Inventory ROI Builder v2.9.1
 
-This package is structured for GitHub repository root deployment through a Render Blueprint.
+Render-ready production package.
 
-## Required root files
+## Deployment
+
+This package is structured for a Render Blueprint deployment from the GitHub repository root.
+
+Required root files:
 
 - `render.yaml`
 - `package.json`
@@ -13,39 +17,48 @@ This package is structured for GitHub repository root deployment through a Rende
 - `public/`
 - `migrations/`
 
-## Render deployment
+Render build command:
 
-The Blueprint creates or updates:
+```bash
+npm ci --omit=dev --no-audit --no-fund
+```
 
-- Web service: `cloud-inventory-roi`
-- PostgreSQL database: `cloud-inventory-roi-db`
+Render start command:
 
-The service uses:
+```bash
+node server.js
+```
 
-- Node runtime
-- Build command: `npm ci --omit=dev --no-audit --no-fund`
-- Start command: `node server.js`
-- Health check path: `/health`
-- Auto deploy on commit
-- Shutdown delay: 15 seconds
+Health check:
 
-## Administrator account
+```text
+/health
+```
 
-Initial account:
+Expected health response after deployment:
+
+```json
+{
+  "status": "ok",
+  "version": "2.9.1",
+  "database": "connected",
+  "phase": "production"
+}
+```
+
+## Bootstrap administrator
 
 - Username: `admin`
 - Password: `CloudInventory2026!`
 - Email: `admin@cloudinventory.com`
 
-Keep the GitHub repository private because the bootstrap password is present in `render.yaml` and migration history.
+Keep the GitHub repository private because the bootstrap credential is present in `render.yaml`.
 
 ## Optional integrations
 
-Add these manually in Render only if required:
+Add these manually in Render only when required:
 
 - `ANTHROPIC_API_KEY`
 - `SENDGRID_API_KEY`
 - `FROM_EMAIL`
 - `APP_URL` for a custom domain override
-
-The application can derive the default onrender.com URL from Render runtime variables.
