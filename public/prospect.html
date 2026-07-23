@@ -161,14 +161,21 @@ function showToast(msg) {
 }
 
 async function init() {
-  const hash = window.location.hash;
-  if (!hash.startsWith('#token=')) {
+  /* Prefer ?token= (survives email/chat link-rewriting); fall back to the
+     legacy #token= hash so links shared before this change still work. */
+  let token = '';
+  try {
+    const params = new URLSearchParams(window.location.search);
+    token = (params.get('token') || '').trim();
+  } catch (e) { /* ignore */ }
+  if (!token && window.location.hash.startsWith('#token=')) {
+    token = window.location.hash.replace('#token=', '').split('&')[0].trim();
+  }
+  if (!token) {
     showError('Invalid link', 'This link is missing a valid session token. Please ask your Cloud Inventory contact for a new link.');
     return;
   }
-
-  const token = hash.replace('#token=', '').split('&')[0].trim();
-  if (!token || token.length < 8) {
+  if (token.length < 8) {
     showError('Invalid link', 'This link does not appear to be valid. Please request a new one.');
     return;
   }
@@ -204,8 +211,11 @@ async function init() {
 }
 
 function getQueryParam(name) {
-  const url = new URL(window.location.href.replace('#', '?'));
-  return url.searchParams.get(name) || '';
+  /* Check the real query string first, then any hash-encoded params. */
+  const q = new URLSearchParams(window.location.search).get(name);
+  if (q) return q;
+  const hash = window.location.hash.replace(/^#/, '');
+  return new URLSearchParams(hash).get(name) || '';
 }
 
 function showError(title, msg) {
@@ -223,7 +233,7 @@ function renderQuestionnaire() {
   const company  = sessionData.company || 'your organisation';
 
   // Get questions for this industry
-  const sections = DISC_QUESTIONS[industry] || DISC_QUESTIONS.default;
+  const sections = getProspectQuestions(industry);
 
   // Count total
   totalQuestions = sections.reduce((s, sec) => s + sec.questions.length, 0);
@@ -272,6 +282,22 @@ function renderQuestionnaire() {
 function renderProspectQuestion(q) {
   const answer = prospectAnswers[q.id] || '';
   const isAnswered = answer.trim().length > 0;
+  if (q.type === 'context') {
+    return `
+      <div class="question ${isAnswered?'answered':''}" id="wrap-${q.id}">
+        <div class="q-text">${q.text}</div>
+        <textarea
+          class="q-input ${isAnswered?'has-answer':''}"
+          id="pq-${q.id}"
+          rows="3"
+          placeholder="Share your thoughts…"
+          oninput="handleAnswer('${q.id}', this.value)"
+          onfocus="this.parentElement.style.background='#FAFFFE'"
+          onblur="this.parentElement.style.background=''"
+        >${escapeHtml(answer)}</textarea>
+        ${isAnswered ? `<div class="q-answered-badge">✓ Answered</div>` : ''}
+      </div>`;
+  }
   return `
     <div class="question ${isAnswered?'answered':''}" id="wrap-${q.id}">
       <div class="q-text">${q.text}</div>
@@ -322,7 +348,7 @@ function handleAnswer(id, value) {
 }
 
 function updateSectionCounts() {
-  const sections = DISC_QUESTIONS[sessionData?.industry || 'default'] || DISC_QUESTIONS.default;
+  const sections = getProspectQuestions(sessionData?.industry || 'default');
   sections.forEach((section, si) => {
     const el = document.querySelector(`#section-${si} .section-count`);
     if (el) {
@@ -333,7 +359,7 @@ function updateSectionCounts() {
 }
 
 function updateProgress() {
-  const sections = DISC_QUESTIONS[sessionData?.industry || 'default'] || DISC_QUESTIONS.default;
+  const sections = getProspectQuestions(sessionData?.industry || 'default');
   const total = sections.reduce((s, sec) => s + sec.questions.length, 0);
   const answered = Object.keys(prospectAnswers).filter(k => !k.endsWith('_by') && prospectAnswers[k]?.trim()).length;
   const pct = total > 0 ? Math.round((answered / total) * 100) : 0;

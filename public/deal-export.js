@@ -582,6 +582,22 @@ function roiMethodologyPDF() {
 
     <p class="disc">Figures are based on data provided by ${esc(company)} and modeled conservatively with ramp-up and overlap adjustments. This analysis is an estimate for evaluation purposes and is not a guarantee of results.</p>`;
 
+  /* Business context — qualitative discovery answers (customer-facing only, no internal-only items) */
+  const da = (typeof discoveryAnswers !== 'undefined') ? discoveryAnswers : {};
+  const ctxItems = [
+    ['Key initiatives this supports', da['ve1']],
+    ['Why now', da['ve2']],
+    ['Impact of the problem', da['ve5']],
+    ['Cost of inaction', da['ve6']],
+    ['How success will be measured', da['ve13']]
+  ].filter(([,v]) => v && v.trim());
+  const contextSection = ctxItems.length
+    ? `<h2>Business context</h2><table class="kv"><tbody>${
+        ctxItems.map(([k,v]) => `<tr><td style="width:32%;vertical-align:top;">${esc(k)}</td><td style="text-align:left;font-weight:400;">${esc(v)}</td></tr>`).join('')
+      }</tbody></table>`
+    : '';
+  const htmlWithContext = html.replace('<p class="disc">', contextSection + '<p class="disc">');
+
   const extraCss = `
     .intro{font-size:12px;color:#5A6570;line-height:1.6;margin-bottom:16px;}
     table.kv td:first-child{color:#5A6570;width:55%;}
@@ -598,7 +614,7 @@ function roiMethodologyPDF() {
     .prov-banner{background:#E6F4EF;border:1px solid #0F6E56;border-radius:7px;padding:9px 13px;margin-bottom:12px;font-size:11px;color:#0B4A3A;line-height:1.5;}
     .prov-check{color:#0F6E56;font-weight:700;}
     .prov-mark{color:#0F6E56;font-size:10px;}`;
-  dePrintWindow('ROI Methodology — ' + company, html, extraCss);
+  dePrintWindow('ROI Methodology — ' + company, htmlWithContext, extraCss);
 }
 
 /* ── PowerPoint variant ── */

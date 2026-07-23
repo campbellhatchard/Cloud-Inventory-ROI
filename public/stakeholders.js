@@ -201,6 +201,68 @@ function addStakeholder() {
   }
   stakeholderModal(null);
 }
+
+/* ── Pre-populate stakeholders from value-engineering discovery answers ──
+   Reads ve8 (sponsor), ve9 (others impacted), ve10 (blocker) and offers
+   them as draft entries the rep can accept into the map. Non-destructive:
+   the rep confirms each; nothing is auto-created. */
+function suggestStakeholdersFromDiscovery() {
+  if (!_stakeCompany || !_stakeCompany.trim()) { showToast('Select a company first.'); return; }
+  const da = (typeof discoveryAnswers !== 'undefined') ? discoveryAnswers : {};
+  const suggestions = [];
+  if (da['ve8'])  suggestions.push({ role:'economic_buyer', text:da['ve8'],  hint:'Executive sponsor (from discovery)' });
+  if (da['ve9'])  suggestions.push({ role:'influencer',     text:da['ve9'],  hint:'Impacted stakeholder (from discovery)' });
+  if (da['ve10']) suggestions.push({ role:'blocker',        text:da['ve10'], hint:'Potential blocker (from discovery)' });
+  if (!suggestions.length) {
+    showToast('No stakeholder answers captured in discovery yet (questions ve8–ve10).');
+    return;
+  }
+  const rows = suggestions.map((s, i) => `
+    <div class="sug-row">
+      <label class="sug-check"><input type="checkbox" id="sug-${i}" checked/> Import</label>
+      <div class="sug-body">
+        <div class="sug-hint">${escapeHtml(s.hint)} · role: <strong>${STAKE_ROLES[s.role].label}</strong></div>
+        <input type="text" id="sug-name-${i}" class="sug-name" value="${escapeHtml(s.text.slice(0,60))}" placeholder="Name / title"/>
+        <input type="hidden" id="sug-role-${i}" value="${s.role}"/>
+      </div>
+    </div>`).join('');
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay'; modal.id = 'sugModal';
+  modal.innerHTML = `<div class="modal" style="max-width:520px;">
+    <div class="modal-title">Suggested stakeholders from discovery</div>
+    <p style="font-size:12px;color:var(--gray-500);margin-bottom:12px;">These are drawn from your value-engineering answers. Edit the names, uncheck any to skip, then import. You can refine roles and influence after.</p>
+    ${rows}
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="document.getElementById('sugModal').remove()">Cancel</button>
+      <button class="btn btn-cta" onclick="importSuggestedStakeholders(${suggestions.length})">Import selected</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+}
+
+async function importSuggestedStakeholders(count) {
+  let imported = 0;
+  for (let i = 0; i < count; i++) {
+    const chk = document.getElementById('sug-'+i);
+    if (!chk || !chk.checked) continue;
+    const name = document.getElementById('sug-name-'+i).value.trim();
+    if (!name) continue;
+    const role = document.getElementById('sug-role-'+i).value;
+    const resp = await apiFetch('/api/stakeholders', {
+      method: 'POST',
+      body: JSON.stringify({
+        name, title:'', company:_stakeCompany, role,
+        influence: role === 'economic_buyer' ? 5 : 3,
+        support: 3, engaged: false,
+        notes: 'Imported from value-engineering discovery.'
+      })
+    });
+    if (resp && resp.ok) imported++;
+  }
+  document.getElementById('sugModal')?.remove();
+  showToast(imported ? `Imported ${imported} stakeholder${imported!==1?'s':''}.` : 'Nothing imported.');
+  if (imported) { await loadCompanies(); populateStakeCompanySelect(); await loadStakeholders(); }
+}
 function editStakeholder(id) { const s = _stakeholders.find(x => x.id === id); if (s) stakeholderModal(s); }
 
 async function saveStakeholder(id) {

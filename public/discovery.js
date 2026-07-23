@@ -448,9 +448,104 @@ const DISC_QUESTIONS = {
    falling back to the generic 'default' set when the industry is
    unknown, blank, or has no bespoke questions defined.
    ───────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════
+   QUALITATIVE DISCOVERY (v2.10) — context questions, NO calc impact.
+   type:'context' questions carry no `sync`, so they can never affect ROI.
+   `internal:true` questions are rep-only and hidden from the prospect link.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Value-engineering strategic core — the "must-ask" set, shown for EVERY
+   industry. 14 questions across the value-engineering arc. */
+const VE_CORE_QUESTIONS = {
+  section: 'Value-engineering core (must-ask)',
+  isVeCore: true,
+  questions: [
+    /* Business context & priorities */
+    { id:'ve1', text:'What are the top 2–3 corporate initiatives this year that this problem touches?', why:'Anchors the business case to executive priorities.', type:'context' },
+    { id:'ve2', text:'Why is solving this a priority now, versus 6–12 months ago?', why:'Identifies the compelling event driving urgency.', type:'context' },
+    { id:'ve3', text:'Is this tied to any board-level, investor, or regulatory commitment?', why:'Surfaces top-down pressure and executive visibility.', type:'context' },
+    /* Impact & consequence */
+    { id:'ve4', text:'Who in the organization feels this pain most acutely today?', why:'Begins the stakeholder and impact map.', type:'context' },
+    { id:'ve5', text:'What has this problem prevented you from doing — growth, expansion, service levels?', why:'Frames opportunity cost, not just hard savings.', type:'context' },
+    { id:'ve6', text:'What happens if nothing changes over the next 12–18 months?', why:'Establishes the cost of inaction.', type:'context' },
+    { id:'ve7', text:'Have you tried to solve this before? What happened?', why:'Reveals prior failures and objections to pre-empt.', type:'context' },
+    /* Stakeholders & decision */
+    { id:'ve8', text:'Who is the executive sponsor, and what outcome are they accountable for?', why:'Identifies the economic buyer. Feeds the stakeholder map.', type:'context' },
+    { id:'ve9', text:'Who else is impacted across operations, finance, IT, and field teams?', why:'Maps the full set of stakeholders. Feeds the stakeholder map.', type:'context' },
+    { id:'ve10', text:'Who could block or slow this decision, and why?', why:'Identifies detractors early (internal assessment).', type:'context', internal:true },
+    { id:'ve11', text:'What is your decision process and typical timeline for an investment like this?', why:'Drives the mutual action plan timeline.', type:'context', internal:true },
+    { id:'ve12', text:'What does the budget or funding picture look like for this initiative?', why:'Qualifies budget authority and availability (internal).', type:'context', internal:true },
+    /* Success & value realization */
+    { id:'ve13', text:'How will you measure success at 6 and 12 months post-implementation?', why:'Defines value-realization metrics for the business case.', type:'context' },
+    { id:'ve14', text:'Who needs to see the business case, and in what format?', why:'Shapes deliverables and the exec-readout plan.', type:'context', internal:true },
+  ]
+};
+
+/* Industry-specific qualitative context — 3–5 per industry, no calc impact. */
+const INDUSTRY_CONTEXT = {
+  default: { section:'Industry context', questions:[
+    { id:'ic_d1', text:'What operational event most recently exposed this problem?', why:'Grounds the case in a concrete recent event.', type:'context' },
+    { id:'ic_d2', text:'What systems do you use today to manage inventory, and where do they fall short?', why:'Maps the current-state tech landscape.', type:'context' },
+    { id:'ic_d3', text:'How is inventory data shared across sites, teams, or systems today?', why:'Reveals data-silo and integration pain.', type:'context' },
+  ]},
+  mfg: { section:'Manufacturing context', questions:[
+    { id:'ic_m1', text:'Are you running lean / just-in-time, and how does material availability affect the line?', why:'Connects inventory to production continuity.', type:'context' },
+    { id:'ic_m2', text:'Have you had line-down or slowdown events tied to material shortages recently?', why:'Concrete downtime narrative.', type:'context' },
+    { id:'ic_m3', text:'What traceability or quality-audit requirements apply to your materials?', why:'Surfaces compliance drivers.', type:'context' },
+    { id:'ic_m4', text:'How do you manage WIP and raw-material staging on the shop floor today?', why:'Shop-floor process color.', type:'context' },
+  ]},
+  telecom: { section:'Telecommunications context', questions:[
+    { id:'ic_t1', text:'What is your field truck-roll volume, and how often is the wrong/missing part a cause?', why:'First-fix narrative.', type:'context' },
+    { id:'ic_t2', text:'How is field technician turnover affecting inventory accuracy?', why:'Workforce dimension.', type:'context' },
+    { id:'ic_t3', text:'How does your network build-out pace strain materials management?', why:'Growth-driven pressure.', type:'context' },
+  ]},
+  construction: { section:'Engineering & Construction context', questions:[
+    { id:'ic_c1', text:'How many active job sites are you managing materials across right now?', why:'Multi-site complexity.', type:'context' },
+    { id:'ic_c2', text:'How do material delays translate into schedule penalties or liquidated damages?', why:'Ties inventory to contractual risk.', type:'context' },
+    { id:'ic_c3', text:'How is material allocated and tracked across concurrent projects?', why:'Project-allocation pain.', type:'context' },
+    { id:'ic_c4', text:'What visibility do project managers have into on-site inventory today?', why:'Field-visibility gap.', type:'context' },
+  ]},
+  oil: { section:'Oil & Gas context', questions:[
+    { id:'ic_o1', text:'How remote are your sites, and what connectivity constraints affect data capture?', why:'Offline/remote justification.', type:'context' },
+    { id:'ic_o2', text:'How critical are MRO and safety-critical spares to avoiding downtime?', why:'Spare-parts criticality.', type:'context' },
+    { id:'ic_o3', text:'What regulatory inspection or safety regime governs your operations?', why:'Compliance driver.', type:'context' },
+  ]},
+  mining: { section:'Minerals & Mining context', questions:[
+    { id:'ic_mn1', text:'How remote are your sites, and how does that affect parts availability?', why:'Remote-operations color.', type:'context' },
+    { id:'ic_mn2', text:'What is the cost of equipment downtime from a missing critical spare?', why:'Downtime-cost narrative.', type:'context' },
+    { id:'ic_mn3', text:'What safety and environmental compliance requirements apply?', why:'Regulatory dimension.', type:'context' },
+  ]},
+  distribution: { section:'Distribution context', questions:[
+    { id:'ic_ds1', text:'How pronounced are your seasonal demand peaks, and how do they strain inventory?', why:'Seasonality pressure.', type:'context' },
+    { id:'ic_ds2', text:'What customer SLA penalties apply for late or inaccurate shipments?', why:'Service-penalty exposure.', type:'context' },
+    { id:'ic_ds3', text:'How complex is your channel or 3PL network today?', why:'Network-complexity color.', type:'context' },
+  ]},
+  food: { section:'Food & Beverage context', questions:[
+    { id:'ic_f1', text:'How much lot, expiry, or FEFO pressure do you manage day to day?', why:'Perishability narrative.', type:'context' },
+    { id:'ic_f2', text:'What is your recall exposure, and how quickly can you trace affected lots?', why:'Traceability/recall risk.', type:'context' },
+    { id:'ic_f3', text:'How frequent are your FDA/USDA or customer audits?', why:'Compliance cadence.', type:'context' },
+  ]},
+  retail: { section:'Retail context', questions:[
+    { id:'ic_r1', text:'How does inventory accuracy affect store replenishment and availability?', why:'Availability narrative.', type:'context' },
+    { id:'ic_r2', text:'How do you manage inventory across stores, DCs, and online today?', why:'Omnichannel complexity.', type:'context' },
+    { id:'ic_r3', text:'What is the impact of shrink on your margins?', why:'Shrink-margin color.', type:'context' },
+  ]},
+};
+
 function getDiscoveryQuestions(industry) {
-  if (industry && DISC_QUESTIONS[industry]) return DISC_QUESTIONS[industry];
-  return DISC_QUESTIONS.default || [];
+  const base = (industry && DISC_QUESTIONS[industry]) ? DISC_QUESTIONS[industry] : (DISC_QUESTIONS.default || []);
+  const ctx  = INDUSTRY_CONTEXT[industry] || INDUSTRY_CONTEXT.default;
+  /* VE core first (strategic framing), then the quantitative industry set,
+     then the qualitative industry-context questions. */
+  return [VE_CORE_QUESTIONS, ...base, ctx];
+}
+
+/* Prospect-facing set excludes internal-only questions. */
+function getProspectQuestions(industry) {
+  return getDiscoveryQuestions(industry).map(section => ({
+    ...section,
+    questions: section.questions.filter(q => !q.internal)
+  })).filter(section => section.questions.length > 0);
 }
 
 /* ─────────────────────────────────────────
@@ -627,7 +722,7 @@ async function revokeProspectLink() {
 }
 
 function prospectUrl() {
-  return window.location.origin + '/prospect.html#token=' + discoverySessionToken;
+  return window.location.origin + '/prospect.html?token=' + discoverySessionToken;
 }
 
 function updateProspectLinkDisplay() {
@@ -792,6 +887,22 @@ function renderDiscQuestion(q) {
   const isSynced  = q.sync && answer;
   const byClass   = enteredBy === 'prospect' ? 'disc-answer-prospect' : enteredBy === 'rep' ? 'disc-answer-rep' : '';
   const syncBadge = isSynced ? `<span class="disc-sync-badge">→ ${q.sync}</span>` : '';
+
+  /* Context (qualitative) questions: free-text, no calc impact, tagged. */
+  if (q.type === 'context') {
+    const tags = `<span class="disc-context-tag">Context</span>` +
+      (q.internal ? `<span class="disc-internal-tag" title="Internal — not shown to the prospect">Internal</span>` : '');
+    return `
+      <div class="disc-q disc-q-context ${answer ? 'disc-q-answered' : ''}">
+        <div class="q-text">${q.text} ${tags}</div>
+        <div class="q-why">${q.why}</div>
+        <div class="disc-input-wrap">
+          <textarea id="${q.id}" class="disc-textarea ${byClass}" rows="2"
+            placeholder="${q.placeholder || 'Capture the answer…'}"
+            oninput="handleDiscInput('${q.id}', this.value, 'rep')">${answer}</textarea>
+        </div>
+      </div>`;
+  }
 
   return `
     <div class="disc-q ${answer ? 'disc-q-answered' : ''}">

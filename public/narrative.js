@@ -74,10 +74,18 @@ let aiGenerating = false;
 function loadThreeWhysDefaults() {
   const ind = document.getElementById('industry')?.value || 'default';
   const lib = THREE_WHYS_LIBRARY[ind] || THREE_WHYS_LIBRARY.default;
+  /* Prefer the prospect's own words captured in value-engineering discovery:
+     ve5/ve6 (impact & cost of inaction) → why act; ve2 (compelling event) → why now. */
+  const da = (typeof discoveryAnswers !== 'undefined') ? discoveryAnswers : {};
+  const fromDiscovery = {
+    act: da['ve5'] || da['ve6'] || '',
+    ci:  '',
+    now: da['ve2'] || da['ve3'] || ''
+  };
   ['act','ci','now'].forEach(key => {
     const el = document.getElementById('why_'+key);
-    if (el && !el.value.trim()) el.value = lib[key];
-    threeWhys[key] = el?.value || lib[key];
+    if (el && !el.value.trim()) el.value = fromDiscovery[key] || lib[key];
+    threeWhys[key] = el?.value || fromDiscovery[key] || lib[key];
   });
 }
 

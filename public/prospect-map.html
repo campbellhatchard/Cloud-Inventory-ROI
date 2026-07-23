@@ -66,7 +66,8 @@ body{font-family:var(--font);background:var(--navy);min-height:100vh;padding:2re
 </div>
 
 <script>
-const token = (window.location.hash.match(/token=([a-f0-9]+)/) || [])[1] || '';
+const token = (new URLSearchParams(window.location.search).get('token')
+  || (window.location.hash.match(/token=([a-f0-9]+)/) || [])[1] || '').trim();
 let plan = null;
 
 function showError(title, msg) {

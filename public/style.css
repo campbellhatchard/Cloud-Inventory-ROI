@@ -952,3 +952,19 @@ body.impact-active .impact-fab-group{display:flex;}
 .conf-chip.conf-confirmed-prospect .conf-chip-icon{color:#fff;}
 .conf-chip-badge{font-size:9px;margin-left:3px;opacity:.9;}
 .conf-summary{font-size:11px;color:var(--gray-600);margin:8px 0 4px;padding:6px 10px;background:var(--gray-50);border-radius:6px;}
+
+/* ══ v2.10 qualitative discovery (context questions) ══ */
+.disc-q-context{border-left:3px solid var(--cyan);background:linear-gradient(90deg,rgba(0,167,207,.04),transparent);}
+.disc-context-tag{display:inline-block;background:var(--cyan);color:#fff;font-size:8px;font-weight:700;padding:1px 6px;border-radius:8px;text-transform:uppercase;vertical-align:middle;margin-left:6px;}
+.disc-internal-tag{display:inline-block;background:#854F0B;color:#fff;font-size:8px;font-weight:700;padding:1px 6px;border-radius:8px;text-transform:uppercase;vertical-align:middle;margin-left:4px;}
+.disc-textarea{width:100%;padding:8px 10px;font-size:13px;font-family:var(--font);border:1.5px solid var(--gray-200);border-radius:8px;outline:none;resize:vertical;min-height:44px;}
+.disc-textarea:focus{border-color:var(--cyan);}
+/* VE core section heading emphasis */
+.disc-section-ve{border:1px solid var(--cyan);border-radius:10px;padding:4px 0;}
+/* Suggest-from-discovery modal rows */
+.sug-row{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--gray-100);}
+.sug-check{font-size:11px;color:var(--gray-500);white-space:nowrap;display:flex;align-items:center;gap:4px;padding-top:6px;}
+.sug-body{flex:1;}
+.sug-hint{font-size:11px;color:var(--gray-500);margin-bottom:4px;}
+.sug-name{width:100%;padding:6px 10px;font-size:13px;border:1.5px solid var(--gray-200);border-radius:6px;outline:none;}
+.sug-name:focus{border-color:var(--cyan);}

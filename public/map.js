@@ -101,7 +101,7 @@ function renderMapEditor() {
     ? (m.token
       ? `<div class="map-share-box">
           <div style="font-size:12px;font-weight:600;color:var(--green);">🔗 Live prospect link active</div>
-          <div class="map-share-url" id="mapShareUrl">${window.location.origin}/prospect-map.html#token=${m.token}</div>
+          <div class="map-share-url" id="mapShareUrl">${window.location.origin}/prospect-map.html?token=${m.token}</div>
           <div style="display:flex;gap:6px;margin-top:6px;">
             <button class="btn btn-cta btn-sm" onclick="copyMapLink()">Copy link</button>
             <button class="btn btn-ghost btn-sm" onclick="emailMapLink()">✉️ Email via my mail client</button>
@@ -262,7 +262,7 @@ async function revokeMapLink() {
   if (resp && resp.ok) { _mapCurrent.token = null; renderMapEditor(); showToast('Link revoked.'); }
 }
 
-function mapUrl() { return window.location.origin + '/prospect-map.html#token=' + _mapCurrent.token; }
+function mapUrl() { return window.location.origin + '/prospect-map.html?token=' + _mapCurrent.token; }
 function copyMapLink() { navigator.clipboard.writeText(mapUrl()).then(() => showToast('Link copied!')); }
 
 function emailMapLink() {

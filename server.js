@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   server.js  —  Cloud Inventory ROI Builder  v2.9.1
+   server.js  —  Cloud Inventory ROI Builder  v2.9.2
    Database-backed multi-user edition — production hardened
 
    Security layers applied (Phase 10):
@@ -430,7 +430,7 @@ app.post('/api/discovery/sessions', requireAuth, async (req, res) => {
     );
     const { log, ACTIONS } = require('./src/audit');
     await log({ userId: req.user.id, action: ACTIONS.DISCOVERY_LINK_GENERATED, entityType: 'discovery_session', entityId: rows[0].id, ipAddress: req.ip });
-    res.json({ ok: true, token: rows[0].token, sessionId: rows[0].id, prospectUrl: `${APP_URL}/prospect.html#token=${rows[0].token}` });
+    res.json({ ok: true, token: rows[0].token, sessionId: rows[0].id, prospectUrl: `${APP_URL}/prospect.html?token=${rows[0].token}` });
   } catch(err) { res.status(500).json({ error: 'Failed to create discovery session.' }); }
 });
 
@@ -481,7 +481,7 @@ app.put('/api/discovery/sessions/:token/rotate', requireAuth, async (req, res) =
       [newToken, String(req.params.token || '')]
     );
     if (!rows.length) return res.status(404).json({ error: 'Session not found or already inactive.' });
-    res.json({ ok: true, token: newToken, prospectUrl: `${APP_URL}/prospect.html#token=${newToken}` });
+    res.json({ ok: true, token: newToken, prospectUrl: `${APP_URL}/prospect.html?token=${newToken}` });
   } catch(err) { res.status(500).json({ error: 'Failed to rotate session token.' }); }
 });
 
