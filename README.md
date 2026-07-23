@@ -1,4 +1,4 @@
-# Cloud Inventory ROI Builder v2.9.2
+# Cloud Inventory ROI Builder v2.9.3
 
 Render-ready release prepared from the v2.9.1 developer package.
 
@@ -40,3 +40,17 @@ The application derives its default public URL from Render when possible. `APP_U
 ## Public discovery links
 
 This release preserves the developer update to generate prospect links with `?token=` and supports legacy `#token=` links in `public/prospect.html`.
+
+## v2.9.3 Discovery Link Authentication Fix
+
+This release fixes public prospect questionnaire links returning `401 NO_TOKEN`.
+
+The cause was `src/routes/analytics.js` applying authentication globally while being mounted at `/api`, which intercepted `/api/discovery/sessions/:token` before the public discovery route could run.
+
+After deployment, public prospect links should call:
+
+```text
+GET /api/discovery/sessions/:token
+```
+
+without requiring a user login session.

@@ -171,23 +171,39 @@ async function init() {
   if (!token && window.location.hash.startsWith('#token=')) {
     token = window.location.hash.replace('#token=', '').split('&')[0].trim();
   }
+  token = decodeURIComponent(token || '').trim();
+
   if (!token) {
     showError('Invalid link', 'This link is missing a valid session token. Please ask your Cloud Inventory contact for a new link.');
     return;
   }
-  if (token.length < 8) {
-    showError('Invalid link', 'This link does not appear to be valid. Please request a new one.');
+  if (!/^[a-f0-9]{64}$/i.test(token)) {
+    showError('Invalid link', 'The questionnaire link appears incomplete or changed. Please request a new link.');
     return;
   }
 
   try {
-    const res = await fetch('/api/discovery/sessions/' + encodeURIComponent(token));
+    const res = await fetch('/api/discovery/sessions/' + encodeURIComponent(token), {
+      method: 'GET',
+      cache: 'no-store',
+      headers: { 'Accept': 'application/json' }
+    });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      if (res.status === 410) {
-        showError('Link no longer active', err.error || 'This prospect link has been revoked or expired. Please ask your Cloud Inventory contact for a new link.');
+      console.warn('Discovery link failed', { status: res.status, error: err.error || null, code: err.code || null });
+
+      if (res.status === 400) {
+        showError('Invalid link', 'The questionnaire link appears incomplete or changed. Please request a new link.');
+      } else if (res.status === 401 || res.status === 403) {
+        showError('Access configuration error', 'This questionnaire is currently being blocked by access controls. Please contact Cloud Inventory for a corrected link.');
+      } else if (res.status === 404) {
+        showError('Link not found', 'This questionnaire could not be found. Please request a new link.');
+      } else if (res.status === 410) {
+        showError('Link no longer active', err.error || 'This link has expired or been revoked. Please request a new link.');
+      } else if (res.status === 429) {
+        showError('Temporarily unavailable', 'Too many requests were received from your network. Please wait a minute and try again.');
       } else {
-        showError('Link not found', 'This prospect link could not be found. Please ask your Cloud Inventory contact for a new link.');
+        showError('Service temporarily unavailable', 'The questionnaire could not be loaded. Please refresh or try again shortly.');
       }
       return;
     }

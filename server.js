@@ -395,6 +395,26 @@ app.post('/api/enhance', requireAuth, async (req, res) => {
 
 /* Authentication is handled by src/routes/auth.js. */
 
+/* ── Public discovery route hardening ─────────────────────────────
+   Prospect questionnaire links are intentionally public bearer-token URLs.
+   These routes must not require an authenticated user session. Responses are
+   no-store to avoid stale proxy/browser failures, and logging uses only a
+   short token hash reference so reusable tokens are not written to logs. */
+app.use('/api/discovery/sessions', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
+function discoveryTokenRef(token) {
+  return crypto.createHash('sha256').update(String(token || '')).digest('hex').slice(0, 12);
+}
+
+function isValidDiscoveryToken(token) {
+  return /^[a-f0-9]{64}$/i.test(String(token || '').trim());
+}
+
 /* ── Discovery sessions ─────────────────────────────────────────── */
 
 app.get('/api/discovery/sessions', requireAuth, async (req, res) => {
@@ -436,15 +456,29 @@ app.post('/api/discovery/sessions', requireAuth, async (req, res) => {
 
 app.get('/api/discovery/sessions/:token', async (req, res) => {
   try {
-    const token = String(req.params.token || '');
-    if (!token || token.length < 16) return res.status(400).json({ error: 'Invalid token.' });
+    const token = String(req.params.token || '').trim();
+    if (!isValidDiscoveryToken(token)) {
+      console.warn('Discovery session invalid token', {
+        tokenReference: discoveryTokenRef(token),
+        ip: req.ip,
+        userAgent: req.get('user-agent')
+      });
+      return res.status(400).json({ error: 'Invalid token.' });
+    }
     const { query } = db();
     const { rows } = await query(
       `SELECT ds.id, ds.token, ds.industry, ds.company, ds.is_active, ds.expires_at,
               COALESCE(json_agg(json_build_object('questionId', da.question_id, 'answer', da.answer, 'enteredBy', da.entered_by) ORDER BY da.question_id) FILTER (WHERE da.id IS NOT NULL), '[]'::json) AS answers
        FROM discovery_sessions ds LEFT JOIN discovery_answers da ON da.session_id = ds.id WHERE ds.token = $1 GROUP BY ds.id`, [token]
     );
-    if (!rows.length) return res.status(404).json({ error: 'Session not found.' });
+    if (!rows.length) {
+      console.warn('Discovery session not found', {
+        tokenReference: discoveryTokenRef(token),
+        ip: req.ip,
+        userAgent: req.get('user-agent')
+      });
+      return res.status(404).json({ error: 'Session not found.' });
+    }
     const s = rows[0];
     if (!s.is_active) return res.status(410).json({ error: 'This prospect link is no longer active.' });
     if (s.expires_at && new Date(s.expires_at) < new Date()) return res.status(410).json({ error: 'This prospect link has expired.' });
@@ -454,9 +488,11 @@ app.get('/api/discovery/sessions/:token', async (req, res) => {
 
 app.put('/api/discovery/sessions/:token/answers', async (req, res) => {
   try {
-    const token = String(req.params.token || '');
+    const token = String(req.params.token || '').trim();
     const { questionId, answer, enteredBy } = req.body;
-    if (!token || !questionId) return res.status(400).json({ error: 'token and questionId required.' });
+    if (!isValidDiscoveryToken(token) || !questionId) {
+      return res.status(400).json({ error: 'valid token and questionId required.' });
+    }
     const { query } = db();
     const { rows: sessions } = await query('SELECT id, is_active, expires_at FROM discovery_sessions WHERE token = $1', [token]);
     if (!sessions.length) return res.status(404).json({ error: 'Session not found.' });

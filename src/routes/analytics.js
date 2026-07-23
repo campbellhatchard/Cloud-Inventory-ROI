@@ -7,10 +7,14 @@ const { query } = require('../db');
 const { requireAuth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
-router.use(requireAuth);
+
+/* Do not apply requireAuth globally at router level.
+   This router is mounted at /api, and a broad router-level auth middleware
+   intercepts public routes such as /api/discovery/sessions/:token before
+   server.js can serve them. Apply auth only to the routes declared here. */
 
 /* ── Record a usage event (fire-and-forget from the client) ── */
-router.post('/analytics', async (req, res) => {
+router.post('/analytics', requireAuth, async (req, res) => {
   try {
     const { event, data } = req.body || {};
     if (!event || typeof event !== 'string') {
@@ -28,7 +32,7 @@ router.post('/analytics', async (req, res) => {
 });
 
 /* ── Team-wide analytics summary (admin only) ── */
-router.get('/analytics/summary', requireRole('admin'), async (req, res) => {
+router.get('/analytics/summary', requireAuth, requireRole('admin'), async (req, res) => {
   try {
     const [byEvent, byUser, recent, totals] = await Promise.all([
       query(`SELECT event, COUNT(*)::int AS count FROM analytics_events GROUP BY event ORDER BY count DESC LIMIT 25`),
@@ -54,7 +58,7 @@ router.get('/analytics/summary', requireRole('admin'), async (req, res) => {
 });
 
 /* ── Custom benchmarks: load (all users) ── */
-router.get('/benchmarks', async (req, res) => {
+router.get('/benchmarks', requireAuth, async (req, res) => {
   try {
     const { rows } = await query(`SELECT industry, metric, value FROM custom_benchmarks`);
     /* Shape into { industry: { metric: value } } for easy client merge */
@@ -71,7 +75,7 @@ router.get('/benchmarks', async (req, res) => {
 });
 
 /* ── Custom benchmarks: save (admin only) ── */
-router.put('/benchmarks', requireRole('admin'), async (req, res) => {
+router.put('/benchmarks', requireAuth, requireRole('admin'), async (req, res) => {
   try {
     const { benchmarks } = req.body || {};
     if (!benchmarks || typeof benchmarks !== 'object') {

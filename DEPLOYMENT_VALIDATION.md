@@ -1,37 +1,76 @@
-# Deployment Validation Report — Cloud Inventory ROI v2.9.2
-## Summary
-The uploaded v2.9.1 package was intact but was not cleanly Render-ready as submitted. This v2.9.2 package preserves the developer's discovery-link functional changes and restores the production deployment hardening required for stable Render Blueprint deployment.
-## Corrections applied
-- Added `package-lock.json` for deterministic `npm ci` builds.
-- Changed Render build command from `npm install` to `npm ci --omit=dev --no-audit --no-fund`.
-- Changed Render start command from `npm start` to direct `node server.js`.
-- Added `maxShutdownDelaySeconds: 15`.
-- Restored coordinated shutdown for the HTTP server, cleanup timer, audit purge cron task, and PostgreSQL pool.
-- Restored bounded PostgreSQL startup retries.
-- Made PostgreSQL mandatory in production and made `/health` database-aware.
-- Added centralized URL generation through `APP_URL`, `RENDER_EXTERNAL_URL`, and `RENDER_EXTERNAL_HOSTNAME`.
-- Removed optional `sync: false` secrets from the core Blueprint flow.
-- Removed dev-only Jest files and obsolete patch-history documents from the deployment package.
-- Preserved query-token prospect links and legacy hash-token support.
-- Updated release/version markers to `2.9.2`.
+# Cloud Inventory ROI Builder v2.9.3 — Deployment Validation
 
-## Validation performed in sandbox
+## Result
+
+Validated and packaged as a Render-ready release to fix public prospect questionnaire links returning `401 NO_TOKEN`.
+
+## Primary defect corrected
+
+The public discovery API was accidentally blocked by authentication middleware. The analytics router was mounted broadly at `/api` and applied `requireAuth` at router level. Because that router loaded before the public discovery routes, `/api/discovery/sessions/:token` was intercepted and rejected before the token lookup ran.
+
+## Code fixes
+
+- Removed global router-level authentication from `src/routes/analytics.js`.
+- Applied `requireAuth` route-by-route to analytics and benchmark endpoints.
+- Preserved public access for:
+  - `GET /api/discovery/sessions/:token`
+  - `PUT /api/discovery/sessions/:token/answers`
+- Added no-store headers to `/api/discovery/sessions` API responses.
+- Added strict 64-character hex-token validation.
+- Added privacy-safe discovery token references in server logs.
+- Improved prospect-page error handling so `401`, `403`, `404`, `410`, `429`, and `5xx` failures are shown distinctly.
+- Updated package version to `2.9.3`.
+
+## Render deployment checks
+
+- `render.yaml` is at repository root.
+- Build command remains deterministic: `npm ci --omit=dev --no-audit --no-fund`.
+- Start command remains direct Node execution: `node server.js`.
+- Health check path remains `/health`.
+- `maxShutdownDelaySeconds: 15` remains configured.
+- PostgreSQL remains injected through `fromDatabase.connectionString`.
+- Node is pinned to `22.22.0`.
+
+## Local validation performed in this environment
 
 Passed:
 
-- ZIP integrity of the uploaded source package.
-- Required root-file inspection.
-- Render Blueprint field inspection for web service, database, build command, start command, health check, shutdown delay, and environment variables.
-- `package.json` and `package-lock.json` JSON parsing.
-- Package-lock private-registry scan.
-- JavaScript syntax checks for `server.js`, all `src/**/*.js`, all `public/**/*.js`, and inline HTML scripts.
-- Discovery-link review confirmed generated links now use `?token=` and the prospect page accepts both `?token=` and legacy `#token=`.
-- Version marker inspection confirmed package/server/login/change-password use `2.9.2`.
+- ZIP/package root structure check.
+- `package.json` parse and version validation.
+- `package-lock.json` parse and version validation.
+- Private npm registry reference scan.
+- `node --check server.js`.
+- `node --check` across `src/**/*.js` and `public/**/*.js`.
+- Inline script syntax checks across `public/*.html`.
+- Static verification that `src/routes/analytics.js` no longer contains `router.use(requireAuth)`.
+- Static verification that discovery API no-store hardening is present.
 
-Not completed in this sandbox:
+Not executed here:
 
-- A live `npm ci` against the public npm registry, because the registry call timed out from this environment.
-- A live Render Blueprint sync.
-- Live migrations against the existing Render PostgreSQL database.
+- Live `npm ci` against the public npm registry, due sandbox network limitations.
+- Live Render deployment.
+- Live query against the Render PostgreSQL database.
 
-The PowerShell deployment toolkit performs `npm ci` in a temporary directory before it changes the local repository or pushes to GitHub.
+The PowerShell deployment toolkit runs `npm ci` locally in a temporary directory before changing the local repository or pushing to GitHub.
+
+## Post-deploy verification
+
+Run:
+
+```powershell
+$token = "PASTE_64_CHARACTER_TOKEN"
+$response = Invoke-WebRequest `
+  -Uri "https://cloud-inventory-roi.onrender.com/api/discovery/sessions/$token" `
+  -Method GET `
+  -SkipHttpErrorCheck `
+  -UseBasicParsing
+
+Write-Host "HTTP status: $($response.StatusCode)"
+$response.Content
+```
+
+The critical success condition is that the public discovery lookup no longer returns:
+
+```json
+{"error":"Authentication required.","code":"NO_TOKEN"}
+```
