@@ -515,7 +515,7 @@ const INDUSTRY_CONTEXT = {
     { id:'ic_mn2', text:'What is the cost of equipment downtime from a missing critical spare?', why:'Downtime-cost narrative.', type:'context' },
     { id:'ic_mn3', text:'What safety and environmental compliance requirements apply?', why:'Regulatory dimension.', type:'context' },
   ]},
-  distribution: { section:'Distribution context', questions:[
+  distribution: { section:'Wholesale Distribution context', questions:[
     { id:'ic_ds1', text:'How pronounced are your seasonal demand peaks, and how do they strain inventory?', why:'Seasonality pressure.', type:'context' },
     { id:'ic_ds2', text:'What customer SLA penalties apply for late or inaccurate shipments?', why:'Service-penalty exposure.', type:'context' },
     { id:'ic_ds3', text:'How complex is your channel or 3PL network today?', why:'Network-complexity color.', type:'context' },
@@ -525,19 +525,41 @@ const INDUSTRY_CONTEXT = {
     { id:'ic_f2', text:'What is your recall exposure, and how quickly can you trace affected lots?', why:'Traceability/recall risk.', type:'context' },
     { id:'ic_f3', text:'How frequent are your FDA/USDA or customer audits?', why:'Compliance cadence.', type:'context' },
   ]},
-  retail: { section:'Retail context', questions:[
-    { id:'ic_r1', text:'How does inventory accuracy affect store replenishment and availability?', why:'Availability narrative.', type:'context' },
-    { id:'ic_r2', text:'How do you manage inventory across stores, DCs, and online today?', why:'Omnichannel complexity.', type:'context' },
-    { id:'ic_r3', text:'What is the impact of shrink on your margins?', why:'Shrink-margin color.', type:'context' },
+  retail: { section:'Medical Devices / Life Sciences context', questions:[
+    { id:'ic_r1', text:'What lot, serial, and expiry (UDI) traceability requirements apply to your inventory?', why:'Regulatory traceability is central to med-device inventory.', type:'context' },
+    { id:'ic_r2', text:'How do you manage consignment and field/trunk stock at hospitals or clinician sites?', why:'Consignment and field inventory are major med-device pain points.', type:'context' },
+    { id:'ic_r3', text:'What is your recall exposure, and how quickly can you trace and pull affected lots?', why:'Recall speed is a compliance and patient-safety driver.', type:'context' },
+    { id:'ic_r4', text:'What FDA, ISO 13485, or other audit requirements govern your inventory records?', why:'Audit/compliance cadence for regulated devices.', type:'context' },
   ]},
 };
 
+/* ── Industry relevance for solution-specific question sections (Option B) ──
+   These sections were authored into every industry's array; we show them
+   only for industries where the value driver actually applies. Filtering
+   here keeps the underlying data intact and the logic centralized.        */
+const SECTION_INDUSTRY_RELEVANCE = {
+  /* Field service value drivers: field-heavy verticals. Medical Devices (retail
+     key) included — consignment / trunk stock at clinician sites is field work. */
+  'Field service value drivers': ['telecom', 'construction', 'oil', 'mining', 'retail', 'default'],
+  /* Warehouse throughput & order accuracy: DC/warehouse-heavy verticals. */
+  'Warehouse throughput & order accuracy': ['distribution', 'mfg', 'retail', 'food', 'default'],
+};
+
+function isSectionRelevant(sectionLabel, industry) {
+  const allow = SECTION_INDUSTRY_RELEVANCE[sectionLabel];
+  if (!allow) return true;                 // not a gated section — always show
+  return allow.includes(industry || 'default');
+}
+
 function getDiscoveryQuestions(industry) {
-  const base = (industry && DISC_QUESTIONS[industry]) ? DISC_QUESTIONS[industry] : (DISC_QUESTIONS.default || []);
-  const ctx  = INDUSTRY_CONTEXT[industry] || INDUSTRY_CONTEXT.default;
-  /* VE core first (strategic framing), then the quantitative industry set,
-     then the qualitative industry-context questions. */
-  return [VE_CORE_QUESTIONS, ...base, ctx];
+  const ind  = industry || 'default';
+  const base = (DISC_QUESTIONS[ind]) ? DISC_QUESTIONS[ind] : (DISC_QUESTIONS.default || []);
+  const ctx  = INDUSTRY_CONTEXT[ind] || INDUSTRY_CONTEXT.default;
+  /* Drop solution-specific sections that don't apply to this industry. */
+  const filteredBase = base.filter(section => isSectionRelevant(section.section, ind));
+  /* VE core first (strategic framing), then the relevant quantitative
+     industry set, then the qualitative industry-context questions. */
+  return [VE_CORE_QUESTIONS, ...filteredBase, ctx];
 }
 
 /* Prospect-facing set excludes internal-only questions. */
@@ -564,6 +586,7 @@ let discoveryAnswers      = {};   // { dqN: value, dqN_by: 'rep'|'prospect' }
 let discoverySessionToken = null; // current active token (from DB)
 let discoveryDbSessionId  = null; // DB row id (UUID) for the session
 let discoveryScenarioId   = null; // scenario this discovery session belongs to
+let discoveryEngagement   = null; // { openCount, firstOpened, lastOpened } for the active session
 
 /* Called when a scenario is loaded or a new one is started.
    Clears any in-memory discovery state from the PREVIOUS scenario so a
@@ -575,6 +598,7 @@ async function resetDiscoveryForScenario(scenarioId) {
   discoveryDbSessionId  = null;
   discoveryScenarioId   = scenarioId || null;
   discoveryAnswers      = {};
+  discoveryEngagement   = null;
 
   /* Re-attach to this scenario's existing active session, if any */
   if (scenarioId) {
@@ -586,6 +610,7 @@ async function resetDiscoveryForScenario(scenarioId) {
           const s = sessions[0]; // most recent active session for this scenario
           discoverySessionToken = s.token;
           discoveryDbSessionId  = s.id;
+          discoveryEngagement   = { openCount: s.open_count || 0, firstOpened: s.first_opened, lastOpened: s.last_opened };
           (s.answers || []).forEach(a => { discoveryAnswers[a.questionId] = a.answer; });
         }
       }
@@ -658,7 +683,14 @@ function setDiscoveryAnswer(id, value, enteredBy = 'rep') {
 /* Generate a new prospect link — creates a DB row via /api/discovery/sessions */
 async function generateProspectLink() {
   const industry  = document.getElementById('industry')?.value   || 'default';
-  const company   = document.getElementById('companyName')?.value || '';
+  const company   = (document.getElementById('companyName')?.value || '').trim();
+
+  /* Hard gate: never generate a link without an active customer. */
+  if (!company) {
+    if (typeof showToast === 'function') showToast('Select a customer first — discovery links are tied to a customer.');
+    if (typeof switchTab === 'function') switchTab('calc');
+    return;
+  }
 
   try {
     const resp = await apiFetch('/api/discovery/sessions', {
@@ -836,9 +868,25 @@ function renderDiscoveryTab() {
   const qs  = getDiscoveryQuestions(industry);
   const ind = (typeof IND !== 'undefined' && IND[industry]) ? IND[industry].label : 'General';
 
-  const prospectLinkHtml = discoverySessionToken
-    ? `<div class="disc-prospect-link">
-        <div class="disc-prospect-link-label">🔗 Prospect link active</div>
+  /* Hard gate: a prospect link must belong to a customer, so a rep can never
+     generate or copy a link without an active customer selected — this
+     prevents sending one customer's link to another by mistake. */
+  const activeCompany = (document.getElementById('companyName')?.value || '').trim();
+  const activeScenario = (document.getElementById('scenarioName')?.value || '').trim();
+
+  let prospectLinkHtml;
+  if (!activeCompany) {
+    prospectLinkHtml = `<div class="disc-link-gate">
+        <span class="disc-link-gate-icon">🔒</span>
+        <div>
+          <div class="disc-link-gate-title">Select a customer to enable the prospect link</div>
+          <div class="disc-link-gate-sub">Discovery links are tied to a customer so they're never sent to the wrong prospect. Choose or create a customer on the Calculator tab first.</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="switchTab('calc')">Go to Calculator</button>
+      </div>`;
+  } else if (discoverySessionToken) {
+    prospectLinkHtml = `<div class="disc-prospect-link">
+        <div class="disc-prospect-link-label">🔗 Prospect link active — <strong>${activeCompany}${activeScenario ? ' · ' + activeScenario : ''}</strong></div>
         <div class="disc-prospect-link-url" id="discProspectUrl"></div>
         <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
           <button class="btn btn-cta btn-sm" onclick="copyProspectLink()">Copy link</button>
@@ -846,11 +894,19 @@ function renderDiscoveryTab() {
           <button class="btn btn-ghost btn-sm" onclick="rotateProspectToken()">🔄 Rotate link</button>
           <button class="btn btn-danger btn-sm" onclick="revokeProspectLink()">Revoke</button>
         </div>
-        <div class="disc-prospect-note">Prospect answers are saved in real time. Click "Check submitted answers" to pull the latest from the database.</div>
-      </div>`
-    : `<button class="btn btn-cta btn-sm" onclick="generateProspectLink()" style="margin-left:auto;">
-        🔗 Generate prospect link
-      </button>`;
+        <div class="disc-prospect-note">This link belongs to <strong>${activeCompany}</strong>. Prospect answers are saved in real time. Click "Check submitted answers" to pull the latest.</div>
+        ${discoveryEngagement ? `<div class="disc-engagement">
+          ${discoveryEngagement.openCount > 0
+            ? `👁 Opened <strong>${discoveryEngagement.openCount}</strong> time${discoveryEngagement.openCount!==1?'s':''}${discoveryEngagement.lastOpened ? ' · last ' + new Date(discoveryEngagement.lastOpened).toLocaleString() : ''}`
+            : '⏳ Not opened by the prospect yet'}
+        </div>` : ''}
+      </div>`;
+  } else {
+    prospectLinkHtml = `<div style="text-align:right;">
+        <div class="disc-link-customer-tag">For customer: <strong>${activeCompany}</strong></div>
+        <button class="btn btn-cta btn-sm" onclick="generateProspectLink()" style="margin-left:auto;">🔗 Generate prospect link</button>
+      </div>`;
+  }
 
   el.innerHTML = `
     <div class="page-header">
@@ -991,8 +1047,8 @@ const IMPACT_LABELS = {
 };
 const IMPACT_IND_LABELS = {
   default:'Default / Generic', telecom:'Telecommunications', mfg:'Manufacturing',
-  construction:'Engineering & Construction', oil:'Oil & Gas', distribution:'Distribution & 3PL',
-  food:'Food & Beverage', retail:'Retail', mining:'Minerals & Mining'
+  construction:'Engineering & Construction', oil:'Oil & Gas', distribution:'Wholesale Distribution',
+  food:'Food & Beverage', retail:'Medical Devices / Life Sciences', mining:'Minerals & Mining'
 };
 
 function downloadImpactMap() {

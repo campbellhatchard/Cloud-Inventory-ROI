@@ -100,6 +100,14 @@ body{font-family:var(--font);background:#F0F4F8;color:var(--gray-800);min-height
   .question{padding:.9rem 1rem;}
   .welcome-card{padding:1.5rem 1rem;}
 }
+
+.autosave{font-size:11px;margin-top:6px;display:inline-flex;align-items:center;gap:5px;}
+.autosave.saving{color:rgba(255,255,255,.6);}
+.autosave.saved{color:#7FD99F;}
+.autosave.error{color:#FFB4A8;}
+.autosave .as-dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:as-pulse 1s infinite;}
+@keyframes as-pulse{0%,100%{opacity:.4}50%{opacity:1}}
+.resume-cue{background:#E0F5FD;border:1px solid var(--cyan);border-radius:var(--radius-sm);padding:.85rem 1rem;font-size:14px;color:var(--navy);margin-bottom:1.25rem;}
 </style>
 </head>
 <body>
@@ -117,6 +125,7 @@ body{font-family:var(--font);background:#F0F4F8;color:var(--gray-800);min-height
   <div class="progress-inner">
     <div class="progress-label" id="progressLabel">Loading…</div>
     <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <div class="autosave" id="autosaveIndicator" style="display:none;"></div>
   </div>
 </div>
 
@@ -260,8 +269,13 @@ function renderQuestionnaire() {
   updateProgress();
 
   const industryLabel = getIndustryLabel(industry);
+  const priorAnswers = Object.keys(prospectAnswers).filter(k => !k.endsWith('_by') && prospectAnswers[k]?.trim()).length;
+  const resumeCue = priorAnswers > 0
+    ? `<div class="resume-cue">👋 <strong>Welcome back!</strong> We've kept your ${priorAnswers} previous answer${priorAnswers!==1?'s':''} — pick up right where you left off.</div>`
+    : '';
 
   document.getElementById('mainContent').innerHTML = `
+    ${resumeCue}
     <div class="welcome-card">
       <div class="welcome-co">Welcome${company ? ', ' + company : ''}</div>
       <div class="welcome-sub">
@@ -401,8 +415,9 @@ function updateSaveButton() {
 /* Push a single answer to the DB immediately (called per-answer with debounce) */
 async function pushAnswer(questionId, answer, enteredBy) {
   if (!sessionData?.token) return;
+  setAutosaveState('saving');
   try {
-    await fetch(
+    const r = await fetch(
       '/api/discovery/sessions/' + encodeURIComponent(sessionData.token) + '/answers',
       {
         method: 'PUT',
@@ -410,9 +425,22 @@ async function pushAnswer(questionId, answer, enteredBy) {
         body: JSON.stringify({ questionId, answer, enteredBy: enteredBy || 'prospect' })
       }
     );
+    setAutosaveState(r && r.ok ? 'saved' : 'error');
   } catch(e) {
     console.error('pushAnswer error:', e.message);
+    setAutosaveState('error');
   }
+}
+
+/* Visible autosave reassurance — a persistent indicator so the prospect
+   always knows their answers are being saved as they go. */
+function setAutosaveState(state) {
+  const el = document.getElementById('autosaveIndicator');
+  if (!el) return;
+  el.style.display = 'inline-flex';
+  if (state === 'saving') { el.className = 'autosave saving'; el.innerHTML = '<span class="as-dot"></span> Saving…'; }
+  else if (state === 'saved') { el.className = 'autosave saved'; el.innerHTML = '✓ All answers saved automatically'; }
+  else { el.className = 'autosave error'; el.innerHTML = '⚠ Couldn\'t save — check your connection'; }
 }
 
 async function autoSave() {

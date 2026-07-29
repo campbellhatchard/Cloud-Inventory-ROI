@@ -19,7 +19,7 @@
   <img class="topbar-logo" src="ci-logo-negative.png" alt="Cloud Inventory" onerror="this.style.display='none'"/>
   <div class="topbar-divider"></div>
   <span class="topbar-title">ROI Business Case Builder</span>
-  <div class="topbar-right" id="topbarRight"><span class="topbar-date" id="todayDate"></span></div>
+  <div class="topbar-right" id="topbarRight"><span class="save-status" id="saveStatus" style="display:none;"></span><span class="topbar-date" id="todayDate"></span></div>
 </header>
 
 <div class="livebar">
@@ -100,6 +100,8 @@
 </nav>
 
 <main class="main-content">
+<div class="context-header" id="contextHeader" style="display:none;"></div>
+
 
 <!-- ═══ CALCULATOR ═══ -->
 <div id="tab-calc" class="pane active">
@@ -209,9 +211,9 @@
                 <option value="construction">Engineering &amp; Construction</option>
                 <option value="oil">Oil &amp; Gas</option>
                 <option value="mining">Minerals &amp; Mining</option>
-                <option value="distribution">Distribution &amp; 3PL</option>
+                <option value="distribution">Wholesale Distribution</option>
                 <option value="food">Food &amp; Beverage</option>
-                <option value="retail">Retail</option>
+                <option value="retail">Medical Devices / Life Sciences</option>
               </select>
             </div>
             <div class="field"><label>Cloud Inventory solution</label>
@@ -633,6 +635,8 @@
       <span class="export-divider"></span>
       <button class="btn btn-ghost" onclick="roiMethodologyPDF()" title="Personalized proof of how this ROI was calculated">📄 ROI methodology (PDF)</button>
       <button class="btn btn-ghost" id="roiMethodPptBtn" onclick="roiMethodologyPPT()" title="ROI methodology as PowerPoint">📊 ROI methodology (PPT)</button>
+      <button class="btn btn-ghost" onclick="shareBusinessCase()" title="Create a trackable link to share this business case — see when the prospect opens it">🔗 Share &amp; track</button>
+      <button class="btn btn-ghost" onclick="togglePresentationMode()" title="Full-screen, large-type view for live demos">🖥 Present</button>
       <button class="btn btn-ghost" onclick="window.print()">
         <svg viewBox="0 0 16 16" fill="none"><rect x="3" y="1" width="10" height="5" rx="1" stroke="currentColor" stroke-width="1.5"/><path d="M3 6H1v7h14V6h-2" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><rect x="3" y="9" width="10" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/></svg>
         Print
@@ -782,6 +786,7 @@
       <button class="admin-tab active" data-panel="users"      onclick="switchAdminPanel('users')">👥 Users</button>
       <button class="admin-tab"        data-panel="benchmarks" onclick="switchAdminPanel('benchmarks')">📊 Benchmarks</button>
       <button class="admin-tab"        data-panel="auditlog"   onclick="switchAdminPanel('auditlog')">📋 Audit log</button>
+      <button class="admin-tab"        data-panel="versions"   onclick="switchAdminPanel('versions')">🗂 Version history</button>
     </div>
 
     <!-- ─── USERS PANEL ─── -->
@@ -905,6 +910,18 @@
           <button class="btn btn-ghost btn-sm" id="auditNextBtn" onclick="auditPage(1)">Next →</button>
         </div>
       </div>
+    </div>
+
+    <!-- ─── VERSION HISTORY PANEL ─── -->
+    <div id="adminPanel-versions" class="admin-panel" style="display:none;">
+      <div class="card" style="margin-bottom:1rem;">
+        <div class="card-title">Version history</div>
+        <p style="font-size:13px;color:var(--gray-600);margin:0;">
+          A record of releases and the changes in each. Current version:
+          <strong id="vhCurrentVersion">—</strong>.
+        </p>
+      </div>
+      <div id="versionHistoryList" class="version-history"></div>
     </div>
 
   </div><!-- end adminContent -->
@@ -1140,6 +1157,9 @@
 <script src="pptx-export.js"></script>
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
+<script src="ux-enhancements.js"></script>
+<script>const APP_VERSION="3.2.3";</script>
+<script src="version-history.js"></script>
 <script src="map.js"></script>
 <script src="stakeholders.js"></script>
 <script src="deal-export.js"></script>
@@ -1215,7 +1235,7 @@ function showConfidenceWarningBanner(pct) {
   const banner = document.createElement('div');
   banner.id = 'confWarningBanner';
   banner.className = 'conf-warning-banner';
-  banner.innerHTML = `<span><strong>Moderate confidence (${pct}%)</strong> — Some inputs are still estimated. Consider completing discovery before sharing.</span><button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:var(--amber);font-size:16px;padding:0 4px;">×</button>`;
+  banner.innerHTML = `<span><strong>Moderate confidence (${pct}%)</strong> — Some inputs are still estimated. Consider completing discovery before sharing.</span><button aria-label="Dismiss" onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:var(--amber);font-size:16px;padding:0 4px;"><span aria-hidden="true">×</span></button>`;
   const execTab = document.getElementById('tab-exec');
   if (execTab) execTab.insertBefore(banner, execTab.firstChild);
   setTimeout(() => banner?.remove(), 8000);
@@ -1255,6 +1275,7 @@ window.switchTab = function(name) {
   }
   _origSwitchTab(name);
   if (name === 'calc' && typeof initCalcTab === 'function') initCalcTab();
+  if (typeof updateContextHeader === 'function') updateContextHeader();
   if (name === 'exec') { if (typeof loadThreeWhysDefaults === 'function') loadThreeWhysDefaults(); renderExec(); }
   if (name === 'disc' && typeof renderDiscoveryTab === 'function') renderDiscoveryTab();
   if (name === 'saved') { if (typeof renderListVersioned === 'function') renderListVersioned(); else if (typeof renderList === 'function') renderList(); }
@@ -1299,6 +1320,7 @@ function switchAdminPanel(panel) {
     p.style.display = p.id === 'adminPanel-' + panel ? 'block' : 'none'
   );
   if (panel === 'auditlog' && !_auditLoaded) loadAuditLog(0);
+  if (panel === 'versions' && typeof renderVersionHistory === 'function') renderVersionHistory();
 }
 
 /* ─────────────────────────────────────────
@@ -2110,6 +2132,7 @@ if (typeof populateIndustryFilter === 'function') populateIndustryFilter();
 /* Preload the unified company registry (v2.3) */
 (async () => { if (window._authReady) await window._authReady; if (typeof loadCompanies === 'function') await loadCompanies(); })();
 (async () => { if (window._authReady) await window._authReady; if (typeof initCalcTab === 'function') initCalcTab(); })();
+(async () => { if (window._authReady) await window._authReady; if (typeof initUxEnhancements === 'function') initUxEnhancements(); })();
 (async () => { if (window._authReady) await window._authReady; if (typeof initAdminScenarioControls === 'function') initAdminScenarioControls(); })();
 recalc();
 const _fabEl = document.getElementById('fabRow'); if (_fabEl) _fabEl.style.display = 'flex';

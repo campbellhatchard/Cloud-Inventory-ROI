@@ -10,9 +10,9 @@ const IND = {
   construction: { labor:20,shrinkage:35,carrying:15,otif:8, it:55,shrinkRate:3.0,carryRate:22,otifRisk:1.5,otifBaseline:88,otifTarget:95,invTurns:3,  downtime:25,expedite:25,count:35,throughput:25,accuracy:30,firstFix:35,utilization:20,leakage:30,label:'Engineering & Construction' },
   oil:          { labor:22,shrinkage:38,carrying:17,otif:9, it:58,shrinkRate:2.8,carryRate:24,otifRisk:2.0,otifBaseline:89,otifTarget:96,invTurns:4,  downtime:30,expedite:28,count:40,throughput:30,accuracy:35,firstFix:35,utilization:18,leakage:30,label:'Oil & Gas' },
   mining:       { labor:20,shrinkage:35,carrying:15,otif:8, it:55,shrinkRate:2.5,carryRate:23,otifRisk:1.5,otifBaseline:88,otifTarget:95,invTurns:3,  downtime:35,expedite:25,count:35,throughput:30,accuracy:35,firstFix:30,utilization:15,leakage:28,label:'Minerals & Mining' },
-  distribution: { labor:35,shrinkage:50,carrying:22,otif:15,it:70,shrinkRate:1.5,carryRate:30,otifRisk:3.0,otifBaseline:94,otifTarget:99,invTurns:12, downtime:20,expedite:35,count:50,throughput:35,accuracy:40,firstFix:20,utilization:10,leakage:20,label:'Distribution & 3PL' },
+  distribution: { labor:35,shrinkage:50,carrying:22,otif:15,it:70,shrinkRate:1.5,carryRate:30,otifRisk:3.0,otifBaseline:94,otifTarget:99,invTurns:12, downtime:20,expedite:35,count:50,throughput:35,accuracy:40,firstFix:20,utilization:10,leakage:20,label:'Wholesale Distribution' },
   food:         { labor:28,shrinkage:42,carrying:18,otif:12,it:60,shrinkRate:2.2,carryRate:27,otifRisk:2.5,otifBaseline:92,otifTarget:98,invTurns:15, downtime:25,expedite:30,count:45,throughput:30,accuracy:35,firstFix:20,utilization:10,leakage:22,label:'Food & Beverage' },
-  retail:       { labor:30,shrinkage:45,carrying:20,otif:13,it:62,shrinkRate:1.8,carryRate:28,otifRisk:2.8,otifBaseline:93,otifTarget:98,invTurns:8,  downtime:20,expedite:30,count:45,throughput:35,accuracy:40,firstFix:20,utilization:10,leakage:20,label:'Retail' }
+  retail:       { labor:30,shrinkage:40,carrying:22,otif:16,it:65,shrinkRate:1.5,carryRate:26,otifRisk:2.5,otifBaseline:95,otifTarget:99,invTurns:6,  downtime:25,expedite:35,count:45,throughput:30,accuracy:45,firstFix:25,utilization:12,leakage:25,label:'Medical Devices / Life Sciences' } /* PLACEHOLDER benchmarks — tune to validated figures */
 };
 
 /* ── Competitive data ── */
@@ -909,15 +909,24 @@ async function loadScenario(id) {
 
 async function deleteScenario(id) {
   const s = savedScenarios.find(x => x.id === id);
-  if (!s || !confirm('Delete "' + s.name + '"?')) return;
-  try {
-    const resp = await apiFetch('/api/scenarios/' + id, { method: 'DELETE' });
-    if (!resp || !resp.ok) { showToast('Delete failed.'); return; }
-    compareIds.delete(id);
-    showToast('Deleted.');
-    await fetchScenarios();
-  } catch(e) {
-    showToast('Delete failed — check your connection.');
+  if (!s) return;
+  /* Optimistic: hide from the list now, defer the real delete for the undo window. */
+  const doDelete = async () => {
+    try {
+      const resp = await apiFetch('/api/scenarios/' + id, { method: 'DELETE' });
+      if (!resp || !resp.ok) { showToast('Delete failed.'); await fetchScenarios(); return; }
+      compareIds.delete(id);
+      await fetchScenarios();
+    } catch(e) { showToast('Delete failed — check your connection.'); await fetchScenarios(); }
+  };
+  if (typeof undoableAction === 'function') {
+    /* Visually remove the row immediately; restore on undo. */
+    const row = document.querySelector(`[data-scenario-id="${id}"]`);
+    if (row) row.style.display = 'none';
+    undoableAction(`Deleted "${s.name}"`, doDelete, () => { if (row) row.style.display = ''; });
+  } else {
+    if (!confirm('Delete "' + s.name + '"?')) return;
+    await doDelete(); showToast('Deleted.');
   }
 }
 

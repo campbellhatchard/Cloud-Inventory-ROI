@@ -103,6 +103,10 @@ function cgSelectExisting(name) {
   if (cn) { cn.value = name; }
   rememberRecentCustomer(name);
   clearCalcDirty();
+  /* Clear any discovery session carried over from a prior customer, so a
+     stale link can never be shown/copied for the wrong customer. The correct
+     session (if any) is re-attached when a scenario for this customer loads. */
+  if (typeof resetDiscoveryForScenario === 'function') resetDiscoveryForScenario(null);
   showCalcBody();
   if (typeof promptScenarioForCompany === 'function') {
     promptScenarioForCompany(name, () => { if (typeof recalc === 'function') recalc(); });

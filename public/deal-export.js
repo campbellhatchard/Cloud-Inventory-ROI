@@ -700,3 +700,68 @@ async function roiMethodologyPPT() {
   } catch(e){ console.error('roiMethodologyPPT:',e); showToast('Export failed: '+(e.message||'error')); }
   finally { if(btn){ btn.disabled=false; btn.innerHTML=orig; } }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   shareBusinessCase — create a trackable link to the current scenario's
+   business case (link-view delivery tracking, no pixels). Requires the
+   scenario to be saved first, since the link points at a stored scenario.
+   The rep sees view engagement back on the Saved tab.
+   ═══════════════════════════════════════════════════════════════════ */
+async function shareBusinessCase() {
+  const v = (typeof getVals === 'function') ? getVals() : {};
+  const company = (v.company || '').trim();
+  const name    = (v.name || '').trim();
+  if (!company) { if (typeof showToast==='function') showToast('Select a customer first.'); return; }
+
+  /* Resolve the current scenario id: match saved scenarios on company+name. */
+  let scenario = (typeof savedScenarios !== 'undefined')
+    ? savedScenarios.find(s => s.company === company && s.name === name && s.isCurrent)
+    : null;
+
+  if (!scenario) {
+    if (!confirm('This business case needs to be saved before it can be shared. Save it now?')) return;
+    if (typeof saveScenario === 'function') {
+      await saveScenario();
+      /* Re-resolve after save. */
+      scenario = (typeof savedScenarios !== 'undefined')
+        ? savedScenarios.find(s => s.company === company && s.name === name && s.isCurrent)
+        : null;
+    }
+    if (!scenario) { if (typeof showToast==='function') showToast('Save the scenario, then click Share & track again.'); return; }
+  }
+
+  try {
+    const resp = await apiFetch('/api/business-case-shares', {
+      method: 'POST',
+      body: JSON.stringify({ scenarioId: scenario.id, company, title: name || 'ROI Business Case' })
+    });
+    if (!resp || !resp.ok) {
+      const err = resp ? await resp.json().catch(()=>({})) : {};
+      if (typeof showToast==='function') showToast('Could not create share link: ' + (err.error || 'unknown error'));
+      return;
+    }
+    const data = await resp.json();
+    showBusinessCaseShareModal(data.shareUrl, company);
+    if (typeof trackEvent === 'function') trackEvent('business_case_shared', { company });
+  } catch (e) {
+    console.error('shareBusinessCase error:', e.message);
+    if (typeof showToast==='function') showToast('Could not create share link — check your connection.');
+  }
+}
+
+function showBusinessCaseShareModal(url, company) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay'; modal.id = 'bcShareModal';
+  modal.innerHTML = `<div class="modal" style="max-width:520px;">
+    <div class="modal-title">Trackable business-case link</div>
+    <p style="font-size:12px;color:var(--gray-500);margin-bottom:12px;">
+      Share this link with <strong>${(company||'the prospect').replace(/</g,'&lt;')}</strong>. You'll see when they open it on the Saved tab (view count and last-viewed time). No tracking pixels are used — engagement is measured by views of this link.</p>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <input type="text" id="bcShareUrl" readonly value="${url}" style="flex:1;padding:8px 10px;font-size:12px;border:1.5px solid var(--gray-200);border-radius:8px;"/>
+      <button class="btn btn-cta btn-sm" onclick="(function(){var i=document.getElementById('bcShareUrl');i.select();navigator.clipboard.writeText(i.value).then(function(){if(typeof showToast==='function')showToast('Link copied.');});})()">Copy</button>
+    </div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="document.getElementById('bcShareModal').remove()">Done</button></div>
+  </div>`;
+  const existing = document.getElementById('bcShareModal'); if (existing) existing.remove();
+  document.body.appendChild(modal);
+}

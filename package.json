@@ -1,12 +1,13 @@
 {
   "name": "cloud-inventory-roi-builder",
-  "version": "2.9.3",
+  "version": "3.2.3",
   "description": "Cloud Inventory ROI Business Case Builder \u2014 database-backed multi-user edition",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "migrate": "node src/migrate.js"
+    "migrate": "node src/migrate.js",
+    "test:engine": "node test/roi-engine.test.js"
   },
   "engines": {
     "node": ">=22.0.0 <23.0.0"

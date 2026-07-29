@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   server.js  —  Cloud Inventory ROI Builder  v2.9.2
+   server.js  —  Cloud Inventory ROI Builder  v3.2.3
    Database-backed multi-user edition — production hardened
 
    Security layers applied (Phase 10):
@@ -95,6 +95,22 @@ const apiLimiter = rateLimit({
   skip:            (req) => req.path === '/health'  // health check is exempt
 });
 app.use('/api/', apiLimiter);
+
+/* ── AI endpoint limiter (cost protection) ──
+   /api/enhance calls the Anthropic API, which costs money per request, so it
+   gets a tighter limit than the general API budget AND is keyed on the
+   authenticated user (not IP) — several reps behind one office IP shouldn't
+   share a pool, and one user shouldn't be able to run up AI spend in a loop.
+   TUNE HERE: adjust `max` to raise/lower the per-user per-minute AI ceiling. */
+const aiLimiter = rateLimit({
+  windowMs:        60 * 1000,        // 1 minute
+  max:             15,               // per-user AI calls per minute (sensible default; tune freely)
+  standardHeaders: true,
+  legacyHeaders:   false,
+  message:         { error: 'AI request limit reached. Please wait a minute before generating more AI content.' },
+  /* Key on the authenticated user id when available, else fall back to IP. */
+  keyGenerator:    (req) => (req.user && req.user.id) ? 'user:' + req.user.id : (req.ip || 'anon')
+});
 
 /* ── Body parsing ── */
 app.use(express.json({ limit: '1mb' }));
@@ -368,7 +384,7 @@ app.get('/api/enhance/health', (req, res) => {
 /* ── AI Enhance proxy — requires auth ── */
 const { requireAuth } = require('./src/middleware/auth');
 
-app.post('/api/enhance', requireAuth, async (req, res) => {
+app.post('/api/enhance', requireAuth, aiLimiter, async (req, res) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set.' });
   const { model, max_tokens, messages } = req.body;
@@ -424,6 +440,7 @@ app.get('/api/discovery/sessions', requireAuth, async (req, res) => {
     const { rows } = await query(
       `SELECT ds.id, ds.token, ds.scenario_id, ds.industry, ds.company,
               ds.is_active, ds.expires_at, ds.created_at, ds.updated_at,
+              ds.open_count, ds.first_opened, ds.last_opened,
               COALESCE(
                 json_agg(json_build_object('questionId', da.question_id, 'answer', da.answer, 'enteredBy', da.entered_by) ORDER BY da.question_id)
                 FILTER (WHERE da.id IS NOT NULL), '[]'::json
@@ -482,6 +499,12 @@ app.get('/api/discovery/sessions/:token', async (req, res) => {
     const s = rows[0];
     if (!s.is_active) return res.status(410).json({ error: 'This prospect link is no longer active.' });
     if (s.expires_at && new Date(s.expires_at) < new Date()) return res.status(410).json({ error: 'This prospect link has expired.' });
+    /* Engagement tracking: count this open (fire-and-forget, never blocks). */
+    query(`UPDATE discovery_sessions
+           SET open_count = COALESCE(open_count,0) + 1,
+               first_opened = COALESCE(first_opened, NOW()),
+               last_opened = NOW()
+           WHERE id = $1`, [s.id]).catch(() => {});
     res.json(s);
   } catch(err) { res.status(500).json({ error: 'Failed to load discovery session.' }); }
 });
@@ -533,6 +556,64 @@ app.delete('/api/discovery/sessions/:token', requireAuth, async (req, res) => {
 /* Legacy endpoint — returns 410 Gone */
 app.post('/api/prospect-sessions', (req, res) => res.status(410).json({ error: 'Replaced by /api/discovery/sessions' }));
 
+/* ═══════════════════════════════════════════════════════════════════
+   BUSINESS-CASE SHARES (v3.1) — link-view delivery tracking (no pixels).
+   A rep creates a share token for a scenario; each prospect view of the
+   hosted business-case link is counted. Rep sees view engagement.
+   ═══════════════════════════════════════════════════════════════════ */
+
+app.post('/api/business-case-shares', requireAuth, async (req, res) => {
+  try {
+    const { scenarioId, company, title } = req.body || {};
+    if (!scenarioId) return res.status(400).json({ error: 'scenarioId required.' });
+    const { query } = db();
+    const token = crypto.randomBytes(32).toString('hex');
+    const { rows } = await query(
+      `INSERT INTO business_case_shares (token, scenario_id, owner_id, company, title)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id, token, created_at`,
+      [token, scenarioId, req.user.id, company || '', title || '']
+    );
+    res.json({ ok: true, token: rows[0].token, shareUrl: `${APP_URL}/business-case.html?token=${rows[0].token}` });
+  } catch (err) { res.status(500).json({ error: 'Failed to create business-case share.' }); }
+});
+
+app.get('/api/business-case-shares/:token', async (req, res) => {
+  try {
+    const token = String(req.params.token || '').trim();
+    if (!/^[a-f0-9]{64}$/.test(token)) return res.status(400).json({ error: 'Invalid token.' });
+    const { query } = db();
+    const { rows } = await query(
+      `SELECT b.id, b.is_active, b.company, b.title, s.data
+       FROM business_case_shares b JOIN scenarios s ON s.id = b.scenario_id
+       WHERE b.token = $1`, [token]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Business case not found.' });
+    if (!rows[0].is_active) return res.status(410).json({ error: 'This business case link is no longer active.' });
+    query(`UPDATE business_case_shares
+           SET view_count = COALESCE(view_count,0) + 1,
+               first_viewed = COALESCE(first_viewed, NOW()),
+               last_viewed = NOW()
+           WHERE id = $1`, [rows[0].id]).catch(() => {});
+    res.set('Cache-Control', 'no-store');
+    res.json({ company: rows[0].company, title: rows[0].title, data: rows[0].data });
+  } catch (err) { res.status(500).json({ error: 'Failed to load business case.' }); }
+});
+
+app.get('/api/business-case-shares', requireAuth, async (req, res) => {
+  try {
+    const { scenarioId } = req.query;
+    const { query } = db();
+    const { rows } = await query(
+      `SELECT id, token, scenario_id, company, title, is_active, view_count, first_viewed, last_viewed, created_at
+       FROM business_case_shares
+       WHERE owner_id = $1 ${scenarioId ? 'AND scenario_id = $2' : ''}
+       ORDER BY created_at DESC LIMIT 20`,
+      scenarioId ? [req.user.id, scenarioId] : [req.user.id]
+    );
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: 'Failed to load shares.' }); }
+});
+
 /* ── Page routes ── */
 app.get('/login.html',           (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'login.html')));
 app.get('/change-password.html', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'change-password.html')));
@@ -540,6 +621,7 @@ app.get('/reset-password.html',  (req, res) => res.sendFile(path.join(PUBLIC_DIR
 app.get('/print.html',           (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'print.html')));
 app.get('/prospect-map.html',  (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'prospect-map.html')));
 app.get('/prospect.html',        (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'prospect.html')));
+app.get('/business-case.html',   (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'business-case.html')));
 
 /* SPA fallback */
 app.get('*', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'index.html')));

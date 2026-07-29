@@ -290,9 +290,17 @@ async function saveStakeholder(id) {
 
 async function deleteStakeholder(id) {
   const s = _stakeholders.find(x => x.id === id);
-  if (!s || !confirm(`Remove ${s.name} from the map?`)) return;
-  const resp = await apiFetch('/api/stakeholders/' + id, { method: 'DELETE' });
-  if (resp && resp.ok) { showToast('Removed.'); loadStakeholders(); }
+  if (!s) return;
+  const doDelete = async () => {
+    const resp = await apiFetch('/api/stakeholders/' + id, { method: 'DELETE' });
+    if (resp && resp.ok) loadStakeholders(); else { showToast('Remove failed.'); loadStakeholders(); }
+  };
+  if (typeof undoableAction === 'function') {
+    undoableAction(`Removed ${s.name} from the map`, doDelete, () => loadStakeholders());
+  } else {
+    if (!confirm(`Remove ${s.name} from the map?`)) return;
+    await doDelete();
+  }
 }
 
 /* ── AI GAP ANALYSIS ── */

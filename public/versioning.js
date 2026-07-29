@@ -266,7 +266,7 @@ function renderListVersioned() {
     const versionCount = savedScenarios.filter(x => x.baseId === s.baseId).length;
     const isShared = s.ownerUsername && s.ownerUsername !== me.username;
     return `
-    <li class="scenario-item">
+    <li class="scenario-item" data-scenario-id="${s.id}">
       <label class="compare-check" title="Add to comparison">
         <input type="checkbox" ${compareIds.has(s.id)?'checked':''} onchange="toggleCompare('${s.id}')"/>
       </label>
@@ -289,8 +289,10 @@ function renderListVersioned() {
       </div>
       <div class="scenario-actions">
         <button class="btn btn-ghost btn-sm" onclick="loadScenario('${s.id}')">Load</button>
+        <button class="btn btn-ghost btn-sm" onclick="cloneScenario('${s.id}')" title="Duplicate as a new business case">Duplicate</button>
         <button class="btn btn-ghost btn-sm" onclick="generateShareURLFromScenario('${s.id}')" title="Copy share link">🔗</button>
         ${versionCount > 1 ? `<button class="btn btn-ghost btn-sm" onclick="showVersionHistory('${s.baseId}')">History</button>` : ''}
+        ${versionCount > 1 ? `<button class="btn btn-ghost btn-sm" onclick="compareVersions('${s.baseId}')" title="See what changed between versions">Compare versions</button>` : ''}
         ${!isShared ? `<button class="btn btn-ghost btn-sm" onclick="openShareModal('${s.id}','${s.name.replace(/'/g,"\\'")}')">Share</button>` : ''}
         ${!isShared ? `<button class="btn btn-danger btn-sm" onclick="deleteScenarioGroup('${s.baseId}')">Delete</button>` : ''}
       </div>
@@ -319,4 +321,135 @@ async function deleteScenarioGroup(baseId) {
     console.error('deleteScenarioGroup error:', e.message);
     showToast('Delete failed — check your connection.');
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   cloneScenario — duplicate a saved scenario as a NEW business case.
+   Loads the source inputs into the calculator but strips the identity
+   (base_id/version/scenario id) so the next save starts a fresh group
+   rather than a new version of the source. The rep sets a new customer
+   / name and saves.
+   ═══════════════════════════════════════════════════════════════════ */
+async function cloneScenario(id) {
+  try {
+    let scenario = savedScenarios.find(x => x.id === id);
+    let inputs = scenario?.inputs;
+    if (!inputs) {
+      const resp = await apiFetch('/api/scenarios/' + id);
+      if (!resp || !resp.ok) { showToast('Could not load scenario to duplicate.'); return; }
+      const full = await resp.json();
+      inputs = full.data;
+    }
+    if (!inputs) { showToast('Scenario data not found.'); return; }
+
+    /* Copy inputs, strip identity so save creates a new base_id (new group). */
+    const copy = { ...inputs };
+    delete copy.baseId; delete copy.base_id; delete copy.id;
+    delete copy.version; delete copy.is_current; delete copy.versionNote;
+    copy.name = (inputs.name ? inputs.name + ' (copy)' : 'New scenario');
+
+    if (typeof loadFromObject === 'function') loadFromObject(copy);
+    /* A clone is a brand-new business case — detach any discovery session. */
+    if (typeof resetDiscoveryForScenario === 'function') resetDiscoveryForScenario(null);
+    /* Save matches on company+name; the "(copy)" name + a new customer ensures
+       the next Save creates a fresh scenario group rather than a new version. */
+
+    switchTab('calc');
+    showToast('Duplicated — set the customer and name, then Save to create a new business case.');
+    trackEvent('scenario_cloned', { fromCompany: inputs.company || '' });
+  } catch(e) {
+    console.error('cloneScenario error:', e.message);
+    showToast('Failed to duplicate scenario.');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   compareVersions — side-by-side "what changed" between two versions
+   of the same base_id. Purely client-side diff of the stored data JSON.
+   ═══════════════════════════════════════════════════════════════════ */
+async function compareVersions(baseId) {
+  try {
+    const resp = await apiFetch('/api/scenarios?base_id=' + encodeURIComponent(baseId));
+    if (!resp || !resp.ok) { showToast('Could not load versions.'); return; }
+    const versions = await resp.json();
+    if (!Array.isArray(versions) || versions.length < 2) { showToast('Need at least two versions to compare.'); return; }
+    /* Sort newest first; default compare newest vs previous. */
+    versions.sort((a,b) => (b.version||0) - (a.version||0));
+    renderVersionCompare(baseId, versions, versions[1].id, versions[0].id);
+  } catch(e) {
+    console.error('compareVersions error:', e.message);
+    showToast('Failed to compare versions.');
+  }
+}
+
+/* Fields worth diffing (label + how to format). Inputs that drive ROI. */
+const DIFF_FIELDS = [
+  ['company','Company',null],['name','Scenario name',null],
+  ['userCount','Users',null],['annualWriteOff','Write-off $','money'],
+  ['inventoryValue','Inventory value','money'],['invTurnsCurrent','Inventory turns',null],
+  ['otifBaseline','OTIF baseline','pct'],['otifTarget','OTIF target','pct'],
+  ['itCost','IT cost','money'],['revenue','Revenue','money'],
+  ['annualBenefit','Annual benefit','money'],['roi','ROI','pct'],
+  ['npv3','NPV (3yr)','money'],['npv5','NPV (5yr)','money']
+];
+
+async function renderVersionCompare(baseId, versions, idA, idB) {
+  /* Fetch full data for both selected versions. */
+  const fetchData = async (id) => {
+    const r = await apiFetch('/api/scenarios/' + id);
+    if (!r || !r.ok) return null;
+    const full = await r.json();
+    return full.data || {};
+  };
+  const [dA, dB] = await Promise.all([fetchData(idA), fetchData(idB)]);
+  if (!dA || !dB) { showToast('Could not load version data.'); return; }
+
+  const fmtVal = (v, kind) => {
+    if (v === undefined || v === null || v === '') return '—';
+    if (kind === 'money') return (typeof fmtFull === 'function') ? fmtFull(v) : '$' + v;
+    if (kind === 'pct')   return (typeof fmtPct === 'function') ? fmtPct(v) : v + '%';
+    return String(v);
+  };
+  const vLabel = (id) => { const x = versions.find(v => v.id === id); return x ? ('v' + x.version) : '—'; };
+
+  const rows = DIFF_FIELDS.map(([key,label,kind]) => {
+    const a = dA[key], b = dB[key];
+    const changed = String(a) !== String(b);
+    const delta = (kind === 'money' || kind === 'pct') && typeof a === 'number' && typeof b === 'number' && a !== b
+      ? `<span class="vc-delta ${b>a?'up':'down'}">${b>a?'▲':'▼'} ${fmtVal(Math.abs(b-a), kind)}</span>` : '';
+    return `<tr class="${changed?'vc-changed':''}">
+      <td class="vc-label">${label}</td>
+      <td>${fmtVal(a,kind)}</td>
+      <td>${fmtVal(b,kind)} ${delta}</td>
+    </tr>`;
+  }).join('');
+
+  const options = versions.map(v => `v${v.version}`).join(', ');
+  const selA = versions.map(v => `<option value="${v.id}" ${v.id===idA?'selected':''}>v${v.version}</option>`).join('');
+  const selB = versions.map(v => `<option value="${v.id}" ${v.id===idB?'selected':''}>v${v.version}</option>`).join('');
+
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay'; modal.id = 'versionCompareModal';
+  modal.innerHTML = `<div class="modal" style="max-width:620px;">
+    <div class="modal-title">What changed between versions</div>
+    <div class="vc-selectors">
+      <label>From <select onchange="reRenderVersionCompare('${baseId}', this.value, document.getElementById('vcSelB').value)">${selA}</select></label>
+      <label>To <select id="vcSelB" onchange="reRenderVersionCompare('${baseId}', document.querySelector('#versionCompareModal select').value, this.value)">${selB}</select></label>
+    </div>
+    <table class="vc-table"><thead><tr><th>Field</th><th>${vLabel(idA)}</th><th>${vLabel(idB)}</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+    <div class="vc-hint">Highlighted rows changed between the selected versions.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="document.getElementById('versionCompareModal').remove()">Close</button>
+    </div>
+  </div>`;
+  const existing = document.getElementById('versionCompareModal');
+  if (existing) existing.remove();
+  document.body.appendChild(modal);
+  window._vcVersions = versions;
+}
+
+function reRenderVersionCompare(baseId, idA, idB) {
+  const versions = window._vcVersions || [];
+  renderVersionCompare(baseId, versions, idA, idB);
 }

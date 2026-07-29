@@ -31,10 +31,28 @@
     const resp = await fetch(url, { ...options, headers });
 
     if (resp.status === 401) {
-      /* Session expired or invalid — clear and redirect */
-      sessionStorage.removeItem('ci_token');
-      sessionStorage.removeItem('ci_user');
-      window.location.href = '/login.html';
+      /* Session expired or invalid — explain, remember where they were, redirect.
+         Guard against re-entrancy so multiple in-flight 401s don't stack. */
+      if (!window.__ciSessionExpiring) {
+        window.__ciSessionExpiring = true;
+        sessionStorage.removeItem('ci_token');
+        sessionStorage.removeItem('ci_user');
+        /* Remember the current view so login can return the rep to it. */
+        try {
+          const returnTo = window.location.pathname + window.location.search + window.location.hash;
+          if (returnTo && !returnTo.includes('login.html')) {
+            sessionStorage.setItem('ci_return_to', returnTo);
+          }
+        } catch (e) {}
+        /* Brief, clear message before redirecting so it never looks broken. */
+        const notify = (window.showToast || null);
+        if (typeof notify === 'function') {
+          notify('Your session has expired — taking you back to sign in.');
+          setTimeout(() => { window.location.href = '/login.html?expired=1'; }, 1200);
+        } else {
+          window.location.href = '/login.html?expired=1';
+        }
+      }
       return null;
     }
 

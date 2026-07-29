@@ -126,9 +126,24 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   </div>
 </div>
 
-<div class="page-footer">Cloud Inventory &mdash; Nextworld Company &mdash; Internal tool &mdash; v2.9.2</div>
+<div class="page-footer">Cloud Inventory &mdash; Nextworld Company &mdash; Internal tool &mdash; v3.2.3</div>
 
 <script>
+/* ── Show a clear message if the rep was sent here by an expired session ── */
+(function() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('expired') === '1') {
+      const banner = document.getElementById('errorBanner');
+      const msg = document.getElementById('errorMsg');
+      if (banner && msg) {
+        msg.textContent = 'Your session expired for security. Please sign in again to continue where you left off.';
+        banner.style.display = 'flex';
+      }
+    }
+  } catch (e) {}
+})();
+
 /* ── Check if already logged in ── */
 (function() {
   const token = sessionStorage.getItem('ci_token');
@@ -197,7 +212,13 @@ async function handleLogin(e) {
     if (data.user.firstLogin) {
       window.location.href = '/change-password.html?first=1';
     } else {
-      window.location.href = '/';
+      /* Return the rep to where they were when the session expired, if known. */
+      let dest = '/';
+      try {
+        const rt = sessionStorage.getItem('ci_return_to');
+        if (rt && !rt.includes('login.html')) { dest = rt; sessionStorage.removeItem('ci_return_to'); }
+      } catch (e) {}
+      window.location.href = dest;
     }
 
   } catch (err) {

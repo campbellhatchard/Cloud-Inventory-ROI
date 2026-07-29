@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="robots" content="noindex, nofollow"/>
+<title>Business Case — Cloud Inventory</title>
+<style>
+  :root{ --navy:#243646; --cyan:#00A7CF; --orange:#F79424; --green:#2E7D32;
+         --gray-50:#F7F9FA; --gray-200:#E2E8F0; --gray-500:#5A6570; --gray-700:#3A4653; }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Helvetica Neue',Arial,sans-serif;color:var(--navy);background:var(--gray-50);line-height:1.5;}
+  .wrap{max-width:820px;margin:0 auto;padding:32px 20px;}
+  .head{display:flex;align-items:center;gap:14px;border-bottom:3px solid var(--cyan);padding-bottom:16px;margin-bottom:24px;}
+  .head img{height:40px;}
+  .head .t{font-size:12px;color:var(--gray-500);}
+  h1{font-size:24px;margin-bottom:4px;letter-spacing:-.01em;}
+  .sub{font-size:13px;color:var(--gray-500);margin-bottom:24px;}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px;}
+  .kpi{background:#fff;border:1px solid var(--gray-200);border-radius:10px;padding:18px;text-align:center;}
+  .kpi-val{font-size:24px;font-weight:800;color:var(--navy);}
+  .kpi-lbl{font-size:11px;color:var(--gray-500);text-transform:uppercase;letter-spacing:.04em;margin-top:4px;}
+  .card{background:#fff;border:1px solid var(--gray-200);border-radius:10px;padding:20px;margin-bottom:16px;}
+  .card h2{font-size:14px;color:var(--cyan);margin-bottom:10px;}
+  table{width:100%;border-collapse:collapse;}
+  td{font-size:13px;padding:7px 0;border-bottom:1px solid var(--gray-200);}
+  td:last-child{text-align:right;font-weight:600;}
+  .foot{font-size:11px;color:#94A3B8;text-align:center;margin-top:24px;font-style:italic;}
+  .state{text-align:center;padding:60px 20px;color:var(--gray-500);}
+  @media(max-width:640px){.kpis{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <div class="state" id="state">Loading business case…</div>
+</div>
+<script>
+function fmtMoney(n){ if(n===null||n===undefined||isNaN(n))return '—'; return '$'+Math.round(n).toLocaleString(); }
+function fmtPct(n){ if(n===null||n===undefined||isNaN(n))return '—'; return Math.round(n)+'%'; }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+async function init(){
+  const token = (new URLSearchParams(window.location.search).get('token') || '').trim();
+  if(!/^[a-f0-9]{64}$/.test(token)){
+    document.getElementById('state').textContent = 'This business-case link is missing a valid token. Please ask your Cloud Inventory contact for a new link.';
+    return;
+  }
+  try{
+    const res = await fetch('/api/business-case-shares/' + encodeURIComponent(token));
+    if(!res.ok){
+      const m = res.status===410 ? 'This business-case link is no longer active.'
+              : res.status===404 ? 'This business case could not be found.'
+              : 'Unable to load this business case.';
+      document.getElementById('state').textContent = m + ' Please ask your Cloud Inventory contact for a new link.';
+      return;
+    }
+    const payload = await res.json();
+    render(payload);
+  }catch(e){
+    document.getElementById('state').textContent = 'Connection error. Please refresh the page.';
+  }
+}
+
+function render(payload){
+  const d = payload.data || {};
+  const company = payload.company || d.company || 'Your Company';
+  const wrap = document.getElementById('wrap');
+  wrap.innerHTML = `
+    <div class="head">
+      <img src="/ci-logo.png" onerror="this.style.display='none'"/>
+      <div class="t">Business Case</div>
+    </div>
+    <h1>${esc(company)} — ROI Business Case</h1>
+    <div class="sub">A data-driven business case built from your operational data. Prepared by Cloud Inventory.</div>
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-val">${fmtMoney(d.annualBenefit)}</div><div class="kpi-lbl">Annual benefit</div></div>
+      <div class="kpi"><div class="kpi-val">${fmtPct(d.roi)}</div><div class="kpi-lbl">First-year ROI</div></div>
+      <div class="kpi"><div class="kpi-val">${d.payback? (Number(d.payback).toFixed(1)+' mo') : '—'}</div><div class="kpi-lbl">Payback</div></div>
+    </div>
+    <div class="card">
+      <h2>Financial summary</h2>
+      <table><tbody>
+        <tr><td>Total annual benefit</td><td>${fmtMoney(d.annualBenefit)}</td></tr>
+        <tr><td>First-year ROI</td><td>${fmtPct(d.roi)}</td></tr>
+        <tr><td>Payback period</td><td>${d.payback? Number(d.payback).toFixed(1)+' months':'—'}</td></tr>
+        <tr><td>Net present value (3-year)</td><td>${fmtMoney(d.npv3)}</td></tr>
+        <tr><td>Net present value (5-year)</td><td>${fmtMoney(d.npv5)}</td></tr>
+      </tbody></table>
+    </div>
+    <div class="foot">This analysis is based on data provided by ${esc(company)} and modeled conservatively. It is an estimate for evaluation purposes and is not a guarantee of results.</div>
+  `;
+}
+init();
+</script>
+</body>
+</html>

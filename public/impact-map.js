@@ -44,8 +44,8 @@ const IMPACT_FIELD_INFO = {
 const IMPACT_IND_ORDER = ['default','telecom','mfg','construction','oil','distribution','food','retail','mining'];
 const IMPACT_IND_LABEL = {
   default:'Default / Generic', telecom:'Telecommunications', mfg:'Manufacturing',
-  construction:'Engineering & Construction', oil:'Oil & Gas', distribution:'Distribution & 3PL',
-  food:'Food & Beverage', retail:'Retail', mining:'Minerals & Mining'
+  construction:'Engineering & Construction', oil:'Oil & Gas', distribution:'Wholesale Distribution',
+  food:'Food & Beverage', retail:'Medical Devices / Life Sciences', mining:'Minerals & Mining'
 };
 
 let _impactBuilt = false;
