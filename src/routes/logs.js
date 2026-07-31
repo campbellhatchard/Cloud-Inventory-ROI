@@ -125,4 +125,30 @@ router.get('/', async (req, res) => {
   }
 });
 
+/* ═══════════════════════════════════════
+   GET /api/logs/errors  — recent server errors (Admin only)
+   DELETE /api/logs/errors — prune errors older than ?days (default 90)
+   ═══════════════════════════════════════ */
+router.get('/errors', async (req, res) => {
+  try {
+    const { recentErrors } = require('../error-log');
+    const data = await recentErrors(req.query.limit || 100, req.query.offset || 0);
+    res.json(data);
+  } catch (err) {
+    console.error('List errors failed:', err.message);
+    res.status(500).json({ error: 'Failed to load error log.' });
+  }
+});
+
+router.delete('/errors', async (req, res) => {
+  try {
+    const { pruneErrors } = require('../error-log');
+    const removed = await pruneErrors(req.query.days || 90);
+    res.json({ ok: true, removed });
+  } catch (err) {
+    console.error('Prune errors failed:', err.message);
+    res.status(500).json({ error: 'Failed to prune error log.' });
+  }
+});
+
 module.exports = router;

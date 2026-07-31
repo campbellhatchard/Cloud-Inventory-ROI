@@ -260,7 +260,7 @@ function renderListVersioned() {
 
   const initials    = n => n.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase()||'?';
   const payStr      = pb => pb===null?'—':pb>=60?'60+mo':pb.toFixed(1)+'mo';
-  const stageColors = { Discovery:'#185FA5', Demo:'#854F0B', Proposal:'#0F6E56', Negotiation:'#3C3489', 'Closed Won':'#2E7D32', 'Closed Lost':'#C62828' };
+  const stageColors = { Discovery:'#0089A6', Demo:'#854F0B', Proposal:'#0F6E56', Negotiation:'#3C3489', 'Closed Won':'#2E7D32', 'Closed Lost':'#C81E10' };
 
   el.innerHTML = `<ul class="scenario-list">${filtered.map(s => {
     const versionCount = savedScenarios.filter(x => x.baseId === s.baseId).length;
@@ -281,6 +281,7 @@ function renderListVersioned() {
           ${s.company}${s.industry&&IND[s.industry]?' · '+IND[s.industry].label:''} · ${s.date} · Payback: ${payStr(s.payback)}
         </div>
         ${s.dealStage?`<span class="stage-pill" style="background:${stageColors[s.dealStage]||'#64748B'}20;color:${stageColors[s.dealStage]||'#64748B'};border:1px solid ${stageColors[s.dealStage]||'#64748B'}40">${s.dealStage}</span>`:''}
+        ${s.outcome?`<span class="outcome-pill outcome-${s.outcome}">${outcomeLabel(s.outcome)}${s.outcome==='won'&&s.realizedValue!=null?' · '+fmtFull(s.realizedValue)+'/yr actual':''}</span>`:''}
         ${s.versionNote?`<span class="version-note-inline">${s.versionNote}</span>`:''}
       </div>
       <div class="scenario-kpis">
@@ -290,6 +291,7 @@ function renderListVersioned() {
       <div class="scenario-actions">
         <button class="btn btn-ghost btn-sm" onclick="loadScenario('${s.id}')">Load</button>
         <button class="btn btn-ghost btn-sm" onclick="cloneScenario('${s.id}')" title="Duplicate as a new business case">Duplicate</button>
+        <button class="btn btn-ghost btn-sm" onclick="openOutcomeModal('${s.baseId}')" title="Record whether this deal was won or lost">${s.outcome?'✎ Outcome':'＋ Outcome'}</button>
         <button class="btn btn-ghost btn-sm" onclick="generateShareURLFromScenario('${s.id}')" title="Copy share link">🔗</button>
         ${versionCount > 1 ? `<button class="btn btn-ghost btn-sm" onclick="showVersionHistory('${s.baseId}')">History</button>` : ''}
         ${versionCount > 1 ? `<button class="btn btn-ghost btn-sm" onclick="compareVersions('${s.baseId}')" title="See what changed between versions">Compare versions</button>` : ''}
@@ -452,4 +454,105 @@ async function renderVersionCompare(baseId, versions, idA, idB) {
 function reRenderVersionCompare(baseId, idA, idB) {
   const versions = window._vcVersions || [];
   renderVersionCompare(baseId, versions, idA, idB);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Win/loss outcome capture (phase 1) — set the real-world result of a
+   business case so benchmarks can later be calibrated against outcomes.
+   ═══════════════════════════════════════════════════════════════════ */
+function outcomeLabel(o) {
+  return o === 'won' ? '✓ Won' : o === 'lost' ? '✗ Lost' : o === 'no_decision' ? '— No decision' : '';
+}
+
+function openOutcomeModal(baseId) {
+  /* Current outcome (from any version in the group). */
+  const s = savedScenarios.find(x => x.baseId === baseId && x.isCurrent)
+         || savedScenarios.find(x => x.baseId === baseId);
+  if (!s) { showToast('Scenario not found.'); return; }
+  const cur = s.outcome || '';
+  const reason = s.outcomeReason || '';
+  const realized = (s.realizedValue != null) ? s.realizedValue : '';
+  const projected = s.annualBenefit || 0;
+
+  const opt = (val, label) =>
+    `<label class="oc-opt ${cur===val?'oc-opt-sel':''}">
+       <input type="radio" name="ocChoice" value="${val}" ${cur===val?'checked':''} onchange="onOutcomeChoice()"/>
+       <span>${label}</span>
+     </label>`;
+
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay'; modal.id = 'outcomeModal';
+  modal.setAttribute('role','dialog'); modal.setAttribute('aria-modal','true'); modal.setAttribute('aria-label','Record deal outcome');
+  modal.innerHTML = `<div class="modal" style="max-width:480px;">
+    <div class="modal-title">Record outcome — ${escapeOutcomeHtml(s.company || s.name)}</div>
+    <p style="font-size:12px;color:var(--gray-500);margin-bottom:14px;">
+      Recording the result helps calibrate our benchmarks over time. Projected benefit for this case: <strong>${fmtFull(projected)}/yr</strong>.</p>
+    <div class="oc-opts">
+      ${opt('won','✓ Won')}
+      ${opt('lost','✗ Lost')}
+      ${opt('no_decision','— No decision')}
+    </div>
+    <div id="ocRealizedWrap" style="display:${cur==='won'?'block':'none'};margin-top:14px;">
+      <label class="oc-field-label">Actual annual benefit realized (optional)</label>
+      <input type="number" id="ocRealized" class="oc-input" placeholder="e.g. ${Math.round(projected)}" value="${realized}"/>
+      <div class="oc-hint">Fill this in once the customer has been live long enough to measure. Leave blank if unknown.</div>
+    </div>
+    <div style="margin-top:14px;">
+      <label class="oc-field-label">Notes (optional${cur==='lost'||!cur?' — reason if lost':''})</label>
+      <textarea id="ocReason" class="oc-input" rows="2" placeholder="e.g. chose competitor, no budget, champion left">${escapeOutcomeHtml(reason)}</textarea>
+    </div>
+    <div class="modal-actions" style="justify-content:space-between;">
+      <button class="btn btn-ghost btn-sm" onclick="saveOutcome('${baseId}','')" title="Clear the recorded outcome">Clear outcome</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" onclick="document.getElementById('outcomeModal').remove()">Cancel</button>
+        <button class="btn btn-cta" onclick="saveOutcomeFromModal('${baseId}')">Save outcome</button>
+      </div>
+    </div>
+  </div>`;
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  const existing = document.getElementById('outcomeModal'); if (existing) existing.remove();
+  document.body.appendChild(modal);
+}
+
+function onOutcomeChoice() {
+  const choice = document.querySelector('input[name="ocChoice"]:checked');
+  const wrap = document.getElementById('ocRealizedWrap');
+  if (wrap) wrap.style.display = (choice && choice.value === 'won') ? 'block' : 'none';
+  document.querySelectorAll('.oc-opt').forEach(l => {
+    const r = l.querySelector('input');
+    l.classList.toggle('oc-opt-sel', r && r.checked);
+  });
+}
+
+function saveOutcomeFromModal(baseId) {
+  const choice = document.querySelector('input[name="ocChoice"]:checked');
+  const outcome = choice ? choice.value : '';
+  const reason = (document.getElementById('ocReason')?.value || '').trim();
+  const realizedRaw = document.getElementById('ocRealized')?.value;
+  const realizedValue = (outcome === 'won' && realizedRaw !== '' && realizedRaw != null) ? realizedRaw : null;
+  saveOutcome(baseId, outcome, reason, realizedValue);
+}
+
+async function saveOutcome(baseId, outcome, reason, realizedValue) {
+  try {
+    const resp = await apiFetch('/api/scenarios/group/' + encodeURIComponent(baseId) + '/outcome', {
+      method: 'PUT',
+      body: JSON.stringify({ outcome: outcome || null, reason: reason || null, realizedValue: realizedValue })
+    });
+    if (!resp || !resp.ok) {
+      const e = resp ? await resp.json().catch(()=>({})) : {};
+      showToast('Could not save outcome: ' + (e.error || 'unknown error'));
+      return;
+    }
+    document.getElementById('outcomeModal')?.remove();
+    showToast(outcome ? 'Outcome recorded.' : 'Outcome cleared.');
+    await fetchScenarios();
+  } catch (e) {
+    console.error('saveOutcome error:', e.message);
+    showToast('Could not save outcome — check your connection.');
+  }
+}
+
+function escapeOutcomeHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }

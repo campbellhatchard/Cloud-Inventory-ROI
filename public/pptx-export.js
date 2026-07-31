@@ -33,6 +33,7 @@ const PPT = {
 /* ── Formatting helpers ── */
 function pptFmtMoney(n) {
   if (n === null || n === undefined || isNaN(n)) return '—';
+  if (typeof moneyAbbrev === 'function') return moneyAbbrev(n);
   const abs = Math.abs(n);
   if (abs >= 1e9) return '$' + (n/1e9).toFixed(1) + 'B';
   if (abs >= 1e6) return '$' + (n/1e6).toFixed(1) + 'M';

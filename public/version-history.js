@@ -7,6 +7,60 @@
 
 const VERSION_HISTORY = [
   {
+    version: '3.7.0', date: '2026', tag: 'Foundation',
+    title: 'First-class customer entity (Solution Fit groundwork, phase 1a)',
+    changes: [
+      'Introduced a stable customer record; scenarios now link to a customer by ID instead of only a free-text company name.',
+      'Existing scenarios are backfilled and linked automatically (migration 011) — no manual cleanup needed.',
+      'Groundwork for the upcoming SE Solution Fit & Handoff tab; no user-facing change yet.'
+    ]
+  },
+  {
+    version: '3.6.0', date: '2026', tag: 'Reliability',
+    title: 'Production error monitoring + automated route tests',
+    changes: [
+      'Server errors are now captured to a database log (migration 010) and reviewable in Admin → Error log, instead of only in transient hosting logs.',
+      'Process-level crashes (uncaught exceptions, unhandled rejections) are recorded too.',
+      'Added an integration test suite covering the auth boundary, prospect-link path, and scenario/outcome round-trip, plus a CI workflow that runs all tests on every push.'
+    ]
+  },
+  {
+    version: '3.5.0', date: '2026', tag: 'Features',
+    title: 'Multi-currency display (USD, GBP, EUR, AUD, NZD)',
+    changes: [
+      'Currency selector on the calculator; the choice is saved per scenario.',
+      'Every money figure — calculator, exec view, PDF/PPT exports, and the shared business-case viewer — shows symbol + code (e.g. £1.2M GBP).',
+      'Display only: no exchange-rate conversion. Reps enter the customer’s own-currency figures, so the ROI reads in that currency without introducing FX error.'
+    ]
+  },
+  {
+    version: '3.4.0', date: '2026', tag: 'Features',
+    title: 'Benchmark credibility: sourcing + provisional-data warnings',
+    changes: [
+      'Every default benchmark family now has a documented basis, surfaced in the ROI methodology PDF for finance review.',
+      'Industries using provisional (unvalidated) benchmarks — currently Medical Devices / Life Sciences — show a visible warning banner on the calculator so reps confirm figures before sharing externally.'
+    ]
+  },
+  {
+    version: '3.3.1', date: '2026', tag: 'Features',
+    title: 'Executive View data infographics',
+    changes: [
+      'Benefit waterfall: shows how each value driver builds up and how the conservative year-1 ramp adjustment brings gross to the defensible figure.',
+      'Payback timeline: signing → implementation → ramp → break-even, making the payback period concrete.',
+      'Both are lightweight SVG (no libraries), brand-themed, accessible, and print/PDF-safe.'
+    ]
+  },
+  {
+    version: '3.3.0', date: '2026', tag: 'Release',
+    title: 'Rebrand, outcome tracking, calculator wizard, input guidance',
+    changes: [
+      'New brand palette applied across the entire app (dark, blue, orange, red, light surfaces).',
+      'Win/loss outcome tracking: tag each business case won/lost/no-decision with optional realized value (migration 009).',
+      'Calculator progress tracking + optional step-by-step Guided mode.',
+      'Input format guidance on ROI dollar fields: format hints, magnitude sanity checks, and forgiving paste ($50M → 50000000).'
+    ]
+  },
+  {
     version: '3.2.1', date: '2026', tag: 'UX',
     title: 'User-experience enhancements (batch 3)',
     changes: [

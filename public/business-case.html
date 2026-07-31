@@ -35,7 +35,9 @@
   <div class="state" id="state">Loading business case…</div>
 </div>
 <script>
-function fmtMoney(n){ if(n===null||n===undefined||isNaN(n))return '—'; return '$'+Math.round(n).toLocaleString(); }
+const CURR_SYMBOLS = { USD:'$', GBP:'\u00A3', EUR:'\u20AC', AUD:'$', NZD:'$' };
+let _viewCurrency = 'USD';
+function fmtMoney(n){ if(n===null||n===undefined||isNaN(n))return '—'; const s=CURR_SYMBOLS[_viewCurrency]||'$'; return (n<0?'-':'')+s+Math.abs(Math.round(n)).toLocaleString()+' '+_viewCurrency; }
 function fmtPct(n){ if(n===null||n===undefined||isNaN(n))return '—'; return Math.round(n)+'%'; }
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -63,6 +65,7 @@ async function init(){
 
 function render(payload){
   const d = payload.data || {};
+  _viewCurrency = (d.currency && CURR_SYMBOLS[d.currency]) ? d.currency : 'USD';
   const company = payload.company || d.company || 'Your Company';
   const wrap = document.getElementById('wrap');
   wrap.innerHTML = `

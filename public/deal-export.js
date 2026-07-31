@@ -53,7 +53,7 @@ function dePrintWindow(title, innerHtml, extraCss) {
       .prog-fill { height: 100%; background: linear-gradient(90deg,#00A7CF,#2E7D32); }
       .meta-line { font-size: 12px; color: #5A6570; margin-bottom: 3px; }
       .foot { margin-top: 28px; padding-top: 12px; border-top: 1px solid #E2E8F0; font-size: 11px; color: #94A3B8; text-align: center; }
-      .overdue { color: #C62828; font-weight: 700; }
+      .overdue { color: #C81E10; font-weight: 700; }
       .done td { color: #94A3B8; }
       .quad { position: relative; width: 460px; height: 340px; border: 1.5px solid #CBD5E1; margin: 10px 0 8px; }
       .quad-line { position: absolute; background: #E2E8F0; }
@@ -348,7 +348,7 @@ async function pptStakeholderMap() {
 /* Build the personalized lever + roll-up data model once, shared by both formats. */
 function buildRoiMethodology() {
   const v = getVals(), r = calcROI(v);
-  const M = n => (n===null||n===undefined||isNaN(n)) ? '—' : '$' + Math.round(n).toLocaleString();
+  const M = n => (n===null||n===undefined||isNaN(n)) ? '—' : (typeof moneyFull==='function' ? moneyFull(n) : '$' + Math.round(n).toLocaleString());
   const PC = n => (n===null||n===undefined||isNaN(n)) ? '—' : Math.round(n*100) + '%';
   const N  = n => (n===null||n===undefined||isNaN(n)) ? '—' : Number(n).toLocaleString();
 
@@ -567,6 +567,12 @@ function roiMethodologyPDF() {
       <li><strong>15% carrying-cost overlap deduction.</strong> Applied to avoid double-counting between carrying-cost, write-off, and turns benefits (${M(r.overlapAdj)} removed).</li>
       <li><strong>Ramp-up applied.</strong> ${esc(rampNote)}</li>
       <li><strong>Prospect-provided figures</strong> are used wherever supplied; industry benchmarks fill only what was not provided.</li>
+    </ul>
+
+    <h2>3a. Benchmark sourcing</h2>
+    <p class="intro">Where the customer's own figures were not available, the following default benchmarks were used. Each is documented so it can be reviewed and challenged.</p>
+    <ul class="notes">
+      ${(typeof benchmarkProvenanceLines === 'function' ? benchmarkProvenanceLines(v.industry) : []).map(line => `<li>${esc(line)}</li>`).join('')}
     </ul>
 
     <h2>4. Return calculation</h2>

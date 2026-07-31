@@ -1,4 +1,4 @@
-# Cloud Inventory ROI Builder v3.2.3
+# Cloud Inventory ROI Builder v3.7.0
 
 Render-ready release. Promoted from the validated v2.9.3 package (public prospect-link auth fix) with the dependency-free ROI engine test suite restored (`npm run test:engine`).
 
@@ -108,3 +108,41 @@ Remaining UX (batch 3, planned): discovery-side progress + save reassurance, res
 ## v3.2.2
 
 - Admin → Version history: a new admin-only panel showing a timeline of releases with a summary of each change. Maintained in public/version-history.js (prepend an entry per release).
+
+## v3.3.0
+
+- Rebrand: applied the new colour palette (Dark #1E2931, Blue #00A9CC, Orange #F9642E/#C24A1E, Red #FF341F/#C81E10, Light surfaces) across all CSS, inline styles, generated markup, and PDF/PPT exports. Semantic green and the grey text scale (WCAG-tuned) preserved.
+- Win/loss outcome tracking (migration 009): capture deal results + realized value for later benchmark calibration.
+- Calculator UX: live progress-tracking stepper, per-section completion, next-best-action nudge, Advanced disclosure, and an optional step-by-step Guided mode.
+- ROI dollar-field input guidance: persistent format hints, magnitude sanity warnings, and forgiving paste normalization.
+
+## v3.3.1
+
+- Executive View data infographics: a benefit waterfall (drivers → ramp adjustment → defensible year-1 figure) and a payback timeline (signing → implementation → ramp → break-even). Lightweight SVG in public/exec-infographics.js, brand-themed and print-safe.
+
+## v3.4.0 — benchmark credibility (gap-closing batch A)
+
+- Benchmark sourcing: documented basis for each default-benchmark family (public/benchmark-provenance.js), surfaced in the ROI methodology PDF.
+- Provisional-benchmark banner: industries with unvalidated benchmarks (currently Medical Devices / Life Sciences) show a rep-facing warning to confirm figures before external use.
+
+## v3.5.0 — multi-currency display
+
+- Currency selector (USD, GBP, EUR, AUD, NZD) on the calculator, saved per scenario, restored on load.
+- All money displays route through a central currency-aware formatter (public/currency.js): symbol + code, US-style grouping (e.g. £1,250,000 GBP). Covers calculator, exec view, ROI methodology + PPT exports, and the public business-case viewer.
+- Display only — no exchange-rate conversion. Figures are entered and shown in the selected currency; the ROI math is currency-agnostic (ratios and the customer’s own numbers).
+
+## v3.6.0 — reliability (gap-closing batch B)
+
+- Production error monitoring: server-side errors persist to an error_log table (migration 010) via a resilient logger that never throws. Global Express handler + uncaughtException/unhandledRejection hooks feed it. Admin → Error log shows recent errors with a prune control. Endpoints GET/DELETE /api/logs/errors are admin-gated.
+- Automated route/integration tests (test/routes.test.js, node:test): auth boundary (protected routes 401 for anon; public prospect route stays reachable), health, admin-gating of the error log, and a scenario create → server-authoritative ROI → outcome → delete round-trip. Skips cleanly when DATABASE_URL is unset.
+  - Run: `npm test` (engine + routes) or `npm run test:routes`. Needs DATABASE_URL, JWT_SECRET, ADMIN_PASSWORD.
+- CI: .github/workflows/ci.yml spins up Postgres, runs migrations, and executes both test suites on every push/PR.
+- server.js now exports { app, start } and only auto-starts when run directly, so the test suite can boot it on an ephemeral port.
+
+## v3.7.0 — first-class customer entity (Solution Fit phase 1a)
+
+Foundation for the SE Solution Fit & Handoff feature. No user-facing change yet.
+- New `customers` table (migration 011): stable id, owned by an AE, case-insensitive unique per owner.
+- scenarios.customer_id FK added (nullable, ON DELETE SET NULL). New saves link via ensureCustomer(); existing scenarios are backfilled and linked from their company name. Idempotent; take a DB snapshot before applying.
+- /api/customers (list) and /api/customers/:id (owner-scoped; SE cross-customer read arrives in phase 1b/2).
+- Integration tests cover customer listing and scenario→customer linking.

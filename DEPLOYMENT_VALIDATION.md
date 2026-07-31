@@ -1,24 +1,34 @@
-# Cloud Inventory ROI Builder v3.2.3 — Deployment Validation
+# Cloud Inventory ROI v3.7.0 — Staging Package Validation
 
-## Result
-Validated and corrected for GitHub-to-Render deployment.
+Validated for staging deployment through GitHub + Render Blueprint.
 
-## Corrections applied to uploaded v3.2.2 package
-- Aligned `package.json` and `package-lock.json` versions to `3.2.3`.
-- Added `.npmrc` to force installs through the public npm registry.
-- Preserved deterministic Render build command: `npm ci --omit=dev --no-audit --no-fund`.
-- Preserved direct Render start command: `node server.js`.
-- Confirmed `render.yaml` contains `healthCheckPath: /health`, `autoDeployTrigger: commit`, and `maxShutdownDelaySeconds: 15`.
-- Confirmed public discovery routes are not blocked by the analytics authentication middleware.
-- Confirmed prospect page supports `?token=` links and legacy `#token=` links.
-- Confirmed displayed version markers were updated to `3.2.3`.
+## Corrections applied to uploaded package
 
-## Static validation performed
-- ZIP integrity passed on the source upload.
-- JavaScript syntax checks passed for `server.js`, `src/**/*.js`, and `public/**/*.js`.
-- Inline HTML script syntax checks passed.
-- Required Render root files are present: `render.yaml`, `package.json`, `package-lock.json`, `.node-version`, `server.js`, `src/`, `public/`, and `migrations/`.
-- No private npm registry references found in `package-lock.json`.
+- Fixed `package-lock.json` root version from `2.9.3` to `3.7.0`.
+- Added `.npmrc` to force the public npm registry.
+- Replaced production Render resource names with staging resource names.
+- Added `branch: staging` to the Render web service.
+- Added `APP_ENV=staging` while preserving `NODE_ENV=production` for production-equivalent startup, SSL, migration, and health behavior.
 
-## Runtime validation note
-A live `npm ci` and Render deployment must be run from the deployment machine / Render environment. The PowerShell toolkit validates this locally in a temporary folder before updating the Git repository.
+## Render resource names
+
+- Service: `cloud-inventory-roi-staging`
+- Database: `cloud-inventory-roi-staging-db`
+- Branch: `staging`
+
+## Validated checks
+
+- ZIP archive integrity.
+- Required root files present.
+- `render.yaml` has staging service/database names.
+- `render.yaml` references staging database via `fromDatabase`.
+- `package.json` and `package-lock.json` version alignment.
+- No private npm registry references in `package-lock.json`.
+- `.npmrc` forces `https://registry.npmjs.org/`.
+- JavaScript syntax checks passed for server, src, public, and test JS files.
+- ROI engine tests passed.
+- Migration `011_customers.sql` present and additive.
+
+## Limitation
+
+A live `npm ci` could not be completed from the sandbox due transient DNS/network failures to the npm registry. The PowerShell deployment toolkit runs `npm ci` locally in a temporary directory before replacing files or pushing to GitHub.

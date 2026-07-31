@@ -17,6 +17,7 @@ const { query, transaction } = require('../db');
 const { log, ACTIONS } = require('../audit');
 const { requireAuth } = require('../middleware/auth');
 const { calcROI } = require('../shared/roi-engine');
+const { ensureCustomer } = require('../customers');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -26,6 +27,8 @@ const LIST_COLS = `
   s.id, s.base_id, s.version, s.is_current, s.name, s.company,
   s.owner_id, s.shared_with, s.industry, s.deal_stage, s.exec_audience, s.solution,
   s.version_note, s.created_at, s.updated_at,
+  s.outcome, s.outcome_reason, s.realized_value, s.outcome_at,
+  s.customer_id,
   (s.data->>'annualBenefit')::numeric AS annual_benefit,
   (s.data->>'roi')::numeric           AS roi,
   (s.data->>'npv3')::numeric          AS npv3,
@@ -263,16 +266,19 @@ router.post('/', async (req, res) => {
       /* Merge server metrics into data JSONB so they're always in sync */
       const dataWithMetrics = { ...data, ...metrics };
 
+      /* Link to a first-class customer (create if new), atomic with the save. */
+      const customerId = await ensureCustomer(req.user.id, company, client.query.bind(client));
+
       const { rows } = await client.query(
         `INSERT INTO scenarios
-           (base_id, version, is_current, name, company, owner_id,
+           (base_id, version, is_current, name, company, owner_id, customer_id,
             industry, deal_stage, exec_audience, solution, data, version_note)
-         VALUES ($1, $2, TRUE, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         VALUES ($1, $2, TRUE, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
          RETURNING id, base_id, version, name, company, is_current,
                    industry, deal_stage, exec_audience, solution, version_note,
                    created_at, updated_at`,
         [
-          resolvedBaseId, nextVersion, name.trim(), company.trim(), req.user.id,
+          resolvedBaseId, nextVersion, name.trim(), company.trim(), req.user.id, customerId,
           industry || null, dealStage || null, execAudience || 'mixed',
           solution || null, JSON.stringify(dataWithMetrics), versionNote || null
         ]
@@ -441,6 +447,61 @@ router.delete('/group/:baseId', async (req, res) => {
   } catch (err) {
     console.error('Delete scenario group error:', err.message);
     res.status(500).json({ error: 'Failed to delete scenario group.' });
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════════
+   PUT /api/scenarios/group/:baseId/outcome — record win/loss outcome
+   Outcome applies to the whole scenario group, so it's written to every
+   version sharing the base_id. Phase 1 of outcome tracking (capture).
+   ═══════════════════════════════════════════════════════════════════ */
+router.put('/group/:baseId/outcome', async (req, res) => {
+  try {
+    const { outcome, reason, realizedValue } = req.body || {};
+    const VALID = ['won', 'lost', 'no_decision', null, ''];
+    if (!VALID.includes(outcome)) {
+      return res.status(400).json({ error: "outcome must be 'won', 'lost', 'no_decision', or empty to clear." });
+    }
+    /* Verify the caller owns (or admins) at least one version of the group. */
+    const { rows } = await query(
+      `SELECT DISTINCT owner_id FROM scenarios WHERE base_id = $1 AND deleted_at IS NULL`,
+      [req.params.baseId]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Scenario group not found.' });
+    const ownerIds = rows.map(r => r.owner_id);
+    if (!ownerIds.includes(req.user.id) && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Only the owner can set the outcome for this scenario.' });
+    }
+
+    const cleared = !outcome;
+    const realized = (realizedValue === undefined || realizedValue === null || realizedValue === '')
+      ? null : Number(realizedValue);
+    if (realized !== null && (isNaN(realized) || realized < 0)) {
+      return res.status(400).json({ error: 'realizedValue must be a non-negative number.' });
+    }
+
+    const { rowCount } = await query(
+      `UPDATE scenarios
+         SET outcome        = $2,
+             outcome_reason = $3,
+             realized_value = $4,
+             outcome_at     = CASE WHEN $2 IS NULL THEN NULL ELSE NOW() END,
+             updated_at     = NOW()
+       WHERE base_id = $1 AND deleted_at IS NULL`,
+      [req.params.baseId, cleared ? null : outcome, reason || null, realized]
+    );
+
+    await log({
+      userId: req.user.id, action: ACTIONS.SCENARIO_OUTCOME_SET,
+      entityType: 'scenario', entityId: null,
+      detail: { baseId: req.params.baseId, outcome: cleared ? 'cleared' : outcome, realizedValue: realized },
+      ipAddress: req.ip
+    });
+
+    res.json({ ok: true, updatedVersions: rowCount, outcome: cleared ? null : outcome });
+  } catch (err) {
+    console.error('Set scenario outcome error:', err.message);
+    res.status(500).json({ error: 'Failed to record outcome.' });
   }
 });
 

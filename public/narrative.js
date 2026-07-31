@@ -209,7 +209,7 @@ function calcRiskOfInaction(r, v) {
 /* Audience definitions — used by buildExecHeadlines and the AI prompt */
 const AUDIENCE_CONFIG = {
   cfo: {
-    key: 'cfo', label: 'CFO', icon: '💰', color: '#185FA5',
+    key: 'cfo', label: 'CFO', icon: '💰', color: '#0089A6',
     description: 'Financial focus — cost, ROI, NPV, payback',
     aiInstruction: 'Write for a CFO audience. Lead with hard financial metrics: NPV, ROI, payback period, total cost of ownership, and working capital impact. Every sentence should be defensible with the numbers in the model. Avoid operational detail unless it directly ties to a dollar figure.',
   },
@@ -219,7 +219,7 @@ const AUDIENCE_CONFIG = {
     aiInstruction: 'Write for a COO or VP of Operations audience. Focus on process improvement, accuracy rates, headcount efficiency, cycle time reduction, and operational risk elimination. Translate financial figures into operational outcomes (e.g. hours saved, error rates reduced, stockouts prevented).',
   },
   ceo: {
-    key: 'ceo', label: 'CEO / Executive Sponsor', icon: '🎯', color: '#042C53',
+    key: 'ceo', label: 'CEO / Executive Sponsor', icon: '🎯', color: '#1E2931',
     description: 'Strategic focus — growth, risk, competitive advantage',
     aiInstruction: 'Write for a CEO or executive sponsor audience. Focus on strategic positioning, competitive differentiation, growth enablement, and enterprise risk reduction. Connect inventory accuracy to the broader business strategy. Minimize granular financial or operational detail — executives want the "so what", not the mechanics.',
   },
@@ -256,7 +256,7 @@ function buildExecHeadlines(v, r) {
       key: 'cfo',
       audience: 'CFO',
       icon: '💰',
-      color: '#185FA5',
+      color: '#0089A6',
       headline: `${fmtFull(r.npv5)} in net present value over 5 years`,
       detail: `A total year-1 investment of ${fmtFull(r.totalInvestY1)} generates ${fmtFull(r.annualBenefit)} in annual recurring benefit — a ${fmtPct(r.roi)} first-year return with payback ${payStr}. The 5-year NPV of ${fmtFull(r.npv5)} at a ${fmtPct(v.discRate*100)} discount rate delivers strong risk-adjusted returns that meet or exceed most capital allocation hurdle rates.`
     },
@@ -272,7 +272,7 @@ function buildExecHeadlines(v, r) {
       key: 'ceo',
       audience: 'CEO / Executive Sponsor',
       icon: '🎯',
-      color: '#042C53',
+      color: '#1E2931',
       headline: `Inventory accuracy as a foundation for scalable growth`,
       detail: `Real-time visibility across warehouse and field operations enables the ${indLabel} business to scale without scaling operational risk or headcount. OTIF improvement of ${fmtPct(v.mOtif*100)} protects ${fmtFull(r.otifSav)} in revenue at risk annually — while a foundation of trusted inventory data enables the automation and customer commitments that create long-term competitive differentiation.`
     },
@@ -323,7 +323,7 @@ function buildHeadlineSection(headlines, v) {
    ───────────────────────────────────────────────────────────── */
 function buildTimeline() {
   return [
-    { phase: 'Phase 1', name: 'Kickoff & configure', weeks: 'Weeks 1–3', color: '#185FA5',
+    { phase: 'Phase 1', name: 'Kickoff & configure', weeks: 'Weeks 1–3', color: '#0089A6',
       steps: ['Project kickoff and stakeholder alignment','ERP integration mapping and setup','System configuration — workflows, locations, users','Data migration — items, locations, on-hand counts'] },
     { phase: 'Phase 2', name: 'Pilot & train', weeks: 'Weeks 4–5', color: '#0F6E56',
       steps: ['Pilot go-live with core warehouse team','Mobile device provisioning and scanning setup','End-user training — typically 2–4 hours per user','Parallel run with existing system for validation'] },
@@ -390,13 +390,13 @@ function buildNarrativeSections(v, r) {
   const whysSection = `
     <div class="e-section">
       <div class="e-h2">The business case — three critical questions</div>
-      <div class="e-why-card" style="border-left:4px solid #C62828;">
-        <div class="e-why-label" style="color:#C62828;">01 &nbsp;WHY ACT AT ALL?</div>
+      <div class="e-why-card" style="border-left:4px solid #C81E10;">
+        <div class="e-why-label" style="color:#C81E10;">01 &nbsp;WHY ACT AT ALL?</div>
         <div class="e-why-sub">The cost of the status quo</div>
         <div class="e-why-text">${why_act}</div>
       </div>
-      <div class="e-why-card" style="border-left:4px solid #185FA5;">
-        <div class="e-why-label" style="color:#185FA5;">02 &nbsp;WHY CLOUD INVENTORY?</div>
+      <div class="e-why-card" style="border-left:4px solid #0089A6;">
+        <div class="e-why-label" style="color:#0089A6;">02 &nbsp;WHY CLOUD INVENTORY?</div>
         <div class="e-why-sub">Why this solution, not an alternative</div>
         <div class="e-why-text">${why_ci}</div>
       </div>
@@ -414,17 +414,17 @@ function buildNarrativeSections(v, r) {
       <div class="e-roi-strip">
         <div class="e-roi-cell">
           <div class="e-roi-period">Every week of delay costs</div>
-          <div class="e-roi-amount" style="color:#C62828;">${fmtFull(roi.weeklyLoss)}</div>
+          <div class="e-roi-amount" style="color:#C81E10;">${fmtFull(roi.weeklyLoss)}</div>
           <div class="e-roi-label">in avoidable losses</div>
         </div>
         <div class="e-roi-cell e-roi-featured">
           <div class="e-roi-period">Every month of delay costs</div>
-          <div class="e-roi-amount" style="color:#C62828;">${fmtFull(roi.monthlyLoss)}</div>
+          <div class="e-roi-amount" style="color:#C81E10;">${fmtFull(roi.monthlyLoss)}</div>
           <div class="e-roi-label">in avoidable losses</div>
         </div>
         <div class="e-roi-cell">
           <div class="e-roi-period">Every quarter of delay costs</div>
-          <div class="e-roi-amount" style="color:#C62828;">${fmtFull(roi.quarterlyLoss)}</div>
+          <div class="e-roi-amount" style="color:#C81E10;">${fmtFull(roi.quarterlyLoss)}</div>
           <div class="e-roi-label">in avoidable losses</div>
         </div>
       </div>
@@ -477,7 +477,7 @@ function buildNarrativeSections(v, r) {
       <div class="e-h2">Recommended next steps</div>
       ${nextSteps.map((step, i) => `
         <div class="e-next-row">
-          <div class="e-next-num" style="background:#042C53;">${i+1}</div>
+          <div class="e-next-num" style="background:#1E2931;">${i+1}</div>
           <div class="e-next-body">
             <div class="e-next-by">By ${step.by}</div>
             <div class="e-next-action">${step.action}</div>

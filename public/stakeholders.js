@@ -11,7 +11,7 @@ const STAKE_ROLES = {
   economic_buyer:  { label: 'Economic Buyer',  color: '#0C447C' },
   technical_buyer: { label: 'Technical Buyer', color: '#00A7CF' },
   influencer:      { label: 'Influencer',      color: '#854F0B' },
-  blocker:         { label: 'Blocker',         color: '#C62828' },
+  blocker:         { label: 'Blocker',         color: '#C81E10' },
   end_user:        { label: 'End User',        color: '#5A6570' }
 };
 

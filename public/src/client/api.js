@@ -119,7 +119,7 @@
       .trim().split(/\s+/)
       .map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
-    const roleColors = { admin: '#5B2D8E', rep: '#042C53' };
+    const roleColors = { admin: '#5B2D8E', rep: '#1E2931' };
     const roleLabels = { admin: 'Admin', rep: 'Rep/SE' };
 
     right.innerHTML = `
@@ -131,7 +131,7 @@
         <div class="user-dropdown" id="userDropdown" style="display:none;">
           <div class="ud-header">
             <div class="ud-name">${user.username}</div>
-            <div class="ud-role" style="background:${(roleColors[user.role]||'#042C53')}20;color:${roleColors[user.role]||'#042C53'}">${roleLabels[user.role]||user.role}</div>
+            <div class="ud-role" style="background:${(roleColors[user.role]||'#1E2931')}20;color:${roleColors[user.role]||'#1E2931'}">${roleLabels[user.role]||user.role}</div>
             <div class="ud-email">${user.email || ''}</div>
           </div>
           <div class="ud-items">

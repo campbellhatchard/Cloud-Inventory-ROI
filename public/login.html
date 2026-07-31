@@ -8,8 +8,8 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --navy:#042C53;--navy-mid:#0A3D6B;--cyan:#00AEEF;--cyan-dark:#0090C5;
-  --green:#2E7D32;--red:#C62828;--amber:#E65100;
+  --navy:#1E2931;--navy-mid:#2B3A44;--cyan:#00A9CC;--cyan-dark:#0089A6;
+  --green:#2E7D32;--red:#C81E10;--amber:#C24A1E;
   --gray-100:#F1F5F9;--gray-200:#E2E8F0;--gray-400:#94A3B8;
   --gray-600:#475569;--gray-800:#1E293B;--white:#fff;
   --font:'Inter',system-ui,sans-serif;--radius:10px;
@@ -45,7 +45,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .error-banner svg{flex-shrink:0;margin-top:1px;}
 
 /* Lockout banner */
-.lockout-banner{display:none;align-items:flex-start;gap:9px;background:#FFF3E0;border:1px solid #FFCC80;border-radius:7px;padding:10px 12px;margin-bottom:1.25rem;font-size:13px;color:var(--amber);line-height:1.5;}
+.lockout-banner{display:none;align-items:flex-start;gap:9px;background:#FDEDE6;border:1px solid #FFCC80;border-radius:7px;padding:10px 12px;margin-bottom:1.25rem;font-size:13px;color:var(--amber);line-height:1.5;}
 .lockout-banner.show{display:flex;}
 
 /* Submit button */
@@ -90,13 +90,13 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
     <!-- Error banner -->
     <div class="error-banner" id="errorBanner">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#C62828" stroke-width="1.4"/><line x1="8" y1="4.5" x2="8" y2="8.5" stroke="#C62828" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11" r=".85" fill="#C62828"/></svg>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#C81E10" stroke-width="1.4"/><line x1="8" y1="4.5" x2="8" y2="8.5" stroke="#C81E10" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11" r=".85" fill="#C81E10"/></svg>
       <span id="errorMsg"></span>
     </div>
 
     <!-- Lockout banner -->
     <div class="lockout-banner" id="lockoutBanner">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 7V5a4 4 0 018 0v2" stroke="#E65100" stroke-width="1.4" stroke-linecap="round"/><rect x="2" y="7" width="12" height="8" rx="2" stroke="#E65100" stroke-width="1.4"/></svg>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 7V5a4 4 0 018 0v2" stroke="#C24A1E" stroke-width="1.4" stroke-linecap="round"/><rect x="2" y="7" width="12" height="8" rx="2" stroke="#C24A1E" stroke-width="1.4"/></svg>
       <span id="lockoutMsg"></span>
     </div>
 
@@ -126,7 +126,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   </div>
 </div>
 
-<div class="page-footer">Cloud Inventory &mdash; Nextworld Company &mdash; Internal tool &mdash; v3.2.3</div>
+<div class="page-footer">Cloud Inventory &mdash; Nextworld Company &mdash; Internal tool &mdash; v2.9.2</div>
 
 <script>
 /* ── Show a clear message if the rep was sent here by an expired session ── */
