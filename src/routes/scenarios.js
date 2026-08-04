@@ -174,6 +174,7 @@ router.post('/', async (req, res) => {
     const result = await transaction(async (client) => {
       let resolvedBaseId = baseId;
       let nextVersion    = 1;
+      let adminOnBehalfOwner = null;   // set if an admin edits another user's scenario
 
       if (resolvedBaseId) {
         /* Versioning an existing scenario — verify ownership */
@@ -189,6 +190,11 @@ router.post('/', async (req, res) => {
             throw Object.assign(new Error('Access denied.'), { status: 403 });
           }
           nextVersion = (existing[0].version || 1) + 1;
+          /* Admin editing another user's scenario: keep the original owner
+             (don't let admin silently take over the deal) and flag it. */
+          if (existing[0].owner_id !== req.user.id && req.user.role === 'admin') {
+            adminOnBehalfOwner = existing[0].owner_id;
+          }
         } else {
           /* baseId provided but no existing rows found — treat as new */
           resolvedBaseId = null;
@@ -278,13 +284,13 @@ router.post('/', async (req, res) => {
                    industry, deal_stage, exec_audience, solution, version_note,
                    created_at, updated_at`,
         [
-          resolvedBaseId, nextVersion, name.trim(), company.trim(), req.user.id, customerId,
+          resolvedBaseId, nextVersion, name.trim(), company.trim(), (adminOnBehalfOwner || req.user.id), customerId,
           industry || null, dealStage || null, execAudience || 'mixed',
           solution || null, JSON.stringify(dataWithMetrics), versionNote || null
         ]
       );
 
-      return { row: rows[0], recomputeDiscrepancy };
+      return { row: rows[0], recomputeDiscrepancy, adminOnBehalfOwner };
     });
     const savedRow = result.row;
 
@@ -294,6 +300,16 @@ router.post('/', async (req, res) => {
       detail: { name: savedRow.name, company: savedRow.company, version: savedRow.version },
       ipAddress: req.ip
     });
+
+    /* Admin-on-behalf edit: record who edited whose scenario, for accountability. */
+    if (result.adminOnBehalfOwner) {
+      await log({
+        userId: req.user.id, action: ACTIONS.ADMIN_EDIT_ON_BEHALF,
+        entityType: 'scenario', entityId: savedRow.id,
+        detail: { editedByAdmin: req.user.id, originalOwner: result.adminOnBehalfOwner, name: savedRow.name, company: savedRow.company },
+        ipAddress: req.ip
+      });
+    }
 
     /* Visibility into client/server ROI drift (Fix 1, option b) */
     if (result.recomputeDiscrepancy) {

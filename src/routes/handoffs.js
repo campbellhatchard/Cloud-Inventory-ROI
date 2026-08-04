@@ -109,6 +109,16 @@ router.put('/:customerId', async (req, res) => {
       ipAddress: req.ip
     });
 
+    /* Admin/SE editing a customer they don't own — record for accountability. */
+    if (access.customer.ownerId !== req.user.id) {
+      await log({
+        userId: req.user.id, action: ACTIONS.ADMIN_EDIT_ON_BEHALF,
+        entityType: 'handoff', entityId: rows[0].id,
+        detail: { editedBy: req.user.id, role: req.user.role, customerOwner: access.customer.ownerId, customerId: req.params.customerId },
+        ipAddress: req.ip
+      });
+    }
+
     res.json({ ok: true, id: rows[0].id, readiness: rows[0].readiness, status: rows[0].status, updatedAt: rows[0].updated_at });
   } catch (err) {
     console.error('Save handoff error:', err.message);

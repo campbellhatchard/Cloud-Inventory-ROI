@@ -154,6 +154,14 @@
 
   <!-- CALCULATOR BODY (hidden until a customer is chosen or gate skipped) -->
   <div id="calcBody" style="display:none;">
+  <div class="customer-search" id="customerSearchBar">
+    <label for="customerSearchInput">Find an existing customer</label>
+    <div class="cs-input-wrap">
+      <input type="text" id="customerSearchInput" placeholder="Search customers by name…" autocomplete="off" oninput="onCustomerSearch(this.value)" onfocus="onCustomerSearch(this.value)">
+      <div id="customerSearchResults" class="cs-results" style="display:none;"></div>
+    </div>
+    <span class="cs-hint">or start a new one below</span>
+  </div>
   <div id="calcBreadcrumb" class="calc-breadcrumb"></div>
   <div id="caseCompleteness" class="case-completeness"></div>
   <div id="nextBestAction" class="next-best-action" style="display:none;"></div>
@@ -199,7 +207,7 @@
             <div class="field"><label>Company name</label><input type="text" id="companyName" placeholder="Prospect company" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="prospect-company-field" onblur="calcCompanyCheck(this)"/></div>
           </div>
           <div class="two-col">
-            <div class="field"><label>Rep / SE name</label><input type="text" id="repName" placeholder="Your name"/></div>
+            <div class="field"><label>AE / SE name</label><input type="text" id="repName" placeholder="Your name"/></div>
             <div class="field"><label>Deal stage</label>
               <select id="dealStage">
                 <option value="">— Select stage —</option>
@@ -706,7 +714,7 @@
           <span class="why-sublabel">The cost of the status quo</span>
         </div>
       </div>
-      <textarea id="why_act" placeholder="Describe the burning platform — what happens if they do nothing? What is the cost of inaction in this specific industry and situation?" oninput="saveThreeWhys()"></textarea>
+      <textarea id="why_act" data-dictate placeholder="Describe the burning platform — what happens if they do nothing? What is the cost of inaction in this specific industry and situation?" oninput="saveThreeWhys()"></textarea>
     </div>
 
     <div class="why-card why-card-ci">
@@ -717,7 +725,7 @@
           <span class="why-sublabel">Why this solution, not an alternative</span>
         </div>
       </div>
-      <textarea id="why_ci" placeholder="What makes Cloud Inventory specifically the right choice for this prospect — vs. their current solution, doing nothing, or a competitor?" oninput="saveThreeWhys()"></textarea>
+      <textarea id="why_ci" data-dictate placeholder="What makes Cloud Inventory specifically the right choice for this prospect — vs. their current solution, doing nothing, or a competitor?" oninput="saveThreeWhys()"></textarea>
     </div>
 
     <div class="why-card why-card-now">
@@ -728,7 +736,7 @@
           <span class="why-sublabel">The urgency to act in this window</span>
         </div>
       </div>
-      <textarea id="why_now" placeholder="What is the specific trigger or urgency that makes acting now — not next quarter — the right decision?" oninput="saveThreeWhys()"></textarea>
+      <textarea id="why_now" data-dictate placeholder="What is the specific trigger or urgency that makes acting now — not next quarter — the right decision?" oninput="saveThreeWhys()"></textarea>
     </div>
   </div>
 
@@ -823,7 +831,8 @@
           <div class="field" style="margin:0;">
             <label>Role</label>
             <select id="newRole">
-              <option value="rep">Rep / SE</option>
+              <option value="rep">Account Executive (AE)</option>
+              <option value="se">Solution Engineer (SE)</option>
               <option value="admin">Admin</option>
             </select>
           </div>
@@ -1205,7 +1214,7 @@
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="3.11.1";</script>
+<script>const APP_VERSION="3.12.0";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
 <script src="input-format.js"></script>
@@ -1213,6 +1222,7 @@
 <script src="benchmark-provenance.js"></script>
 <script src="/handoff-readiness.js"></script>
 <script src="solution-fit.js"></script>
+<script src="dictation.js"></script>
 <script src="map.js"></script>
 <script src="stakeholders.js"></script>
 <script src="deal-export.js"></script>
@@ -1344,7 +1354,7 @@ window.switchTab = function(name) {
   if (name === 'calc' && typeof initBenchmarkProvenance === 'function') initBenchmarkProvenance();
   if (name === 'calc' && typeof initCurrency === 'function') initCurrency();
   if (typeof updateContextHeader === 'function') updateContextHeader();
-  if (name === 'exec') { if (typeof loadThreeWhysDefaults === 'function') loadThreeWhysDefaults(); renderExec(); }
+  if (name === 'exec') { if (typeof loadThreeWhysDefaults === 'function') loadThreeWhysDefaults(); renderExec(); if (typeof SFDictation!=='undefined' && SFDictation.supported) SFDictation.enhanceAll(document.getElementById('tab-exec')); }
   if (name === 'disc' && typeof renderDiscoveryTab === 'function') renderDiscoveryTab();
   if (name === 'saved') { if (typeof renderListVersioned === 'function') renderListVersioned(); else if (typeof renderList === 'function') renderList(); }
   if (name === 'admin') initAdminTab();
@@ -1620,7 +1630,7 @@ async function loadUsers() {
 }
 
 function renderUserTable(users) {
-  const roleColors = { admin: 'var(--purple)', rep: 'var(--navy)' };
+  const roleColors = { admin: 'var(--purple)', se: 'var(--cyan-dark)', rep: 'var(--navy)' };
   const me = window.ciAuth ? window.ciAuth.getUser() : {};
   return `<div class="user-table-wrap"><table class="user-table">
     <thead><tr>
@@ -1642,7 +1652,7 @@ function renderUserTable(users) {
         return `<tr class="${!u.is_active?'user-row-inactive':''}${isMe?' user-row-me':''}">
           <td><strong>${escapeHtml(u.username)}</strong>${isMe?' <span class="you-badge">you</span>':''}</td>
           <td style="font-size:12px;color:var(--gray-500);">${escapeHtml(u.email)}</td>
-          <td><span class="role-badge" style="background:${roleColors[u.role]||'var(--gray-500)'}20;color:${roleColors[u.role]||'var(--gray-500)'};">${u.role==='admin'?'Admin':'Rep / SE'}</span></td>
+          <td><span class="role-badge" style="background:${roleColors[u.role]||'var(--gray-500)'}20;color:${roleColors[u.role]||'var(--gray-500)'};">${u.role==='admin'?'Admin':u.role==='se'?'Solution Engineer':'Account Executive'}</span></td>
           <td>${statusBadge}</td>
           <td style="font-size:12px;color:var(--gray-500);">${lastLogin}</td>
           <td style="text-align:center;">${u.scenario_count||0}</td>
@@ -1752,7 +1762,8 @@ function editUser(id, username, email, role) {
       <div class="field"><label>Email</label><input type="email" id="editEmail" value="${escapeHtml(email)}"/></div>
       <div class="field"><label>Role</label>
         <select id="editRole">
-          <option value="rep" ${role==='rep'?'selected':''}>Rep / SE</option>
+          <option value="rep" ${role==='rep'?'selected':''}>Account Executive (AE)</option>
+          <option value="se" ${role==='se'?'selected':''}>Solution Engineer (SE)</option>
           <option value="admin" ${role==='admin'?'selected':''}>Admin</option>
         </select>
       </div>
@@ -2048,8 +2059,8 @@ async function loadProfileInfo() {
     const resp = await apiFetch('/api/auth/me');
     if (!resp || !resp.ok) { wrap.innerHTML = '<p style="color:var(--red)">Could not load profile.</p>'; return; }
     const user = await resp.json();
-    const roleColors = { admin: 'var(--purple)', rep: 'var(--navy)' };
-    const roleLabels = { admin: 'Admin', rep: 'Rep / SE' };
+    const roleColors = { admin: 'var(--purple)', se: 'var(--cyan-dark)', rep: 'var(--navy)' };
+    const roleLabels = { admin: 'Admin', se: 'Solution Engineer', rep: 'Account Executive' };
     wrap.innerHTML = `
       <div class="profile-info-grid">
         <span class="pil">Username</span><span class="piv"><strong>${escapeHtml(user.username)}</strong></span>
@@ -2228,6 +2239,65 @@ if (typeof renderCalcIndustryQuestions === 'function') renderCalcIndustryQuestio
 if (typeof fetchScenarios === 'function') fetchScenarios();
 /* Industry filter dropdown + admin view-all button (Feature 3) */
 /* Calculator company field — check-existing on blur (v2.3) */
+/* ── Customer search on the landing page ── */
+let _customerCache = null;
+async function loadCustomerCache() {
+  if (_customerCache) return _customerCache;
+  try {
+    const resp = await apiFetch('/api/customers');
+    _customerCache = (resp && resp.ok) ? await resp.json() : [];
+  } catch (e) { _customerCache = []; }
+  return _customerCache;
+}
+async function onCustomerSearch(q) {
+  const box = document.getElementById('customerSearchResults');
+  if (!box) return;
+  const customers = await loadCustomerCache();
+  const term = (q || '').trim().toLowerCase();
+  const matches = !term ? customers.slice(0, 8)
+    : customers.filter(c => (c.name || '').toLowerCase().includes(term)).slice(0, 8);
+  if (!customers.length) { box.style.display = 'none'; return; }
+  box.innerHTML = matches.length
+    ? matches.map(c => `<button type="button" class="cs-result" onclick="selectCustomerFromSearch('${escapeHtml(c.id)}')">
+        <span class="cs-name">${escapeHtml(c.name)}</span>
+        <span class="cs-meta">${c.scenarioCount||0} scenario${(c.scenarioCount===1)?'':'s'}${c.ownerUsername?` · ${escapeHtml(c.ownerUsername)}`:''}</span>
+      </button>`).join('')
+    : '<div class="cs-empty">No matching customers</div>';
+  box.style.display = 'block';
+}
+async function selectCustomerFromSearch(customerId) {
+  const box = document.getElementById('customerSearchResults');
+  if (box) box.style.display = 'none';
+  const input = document.getElementById('customerSearchInput');
+  try {
+    /* Load that customer's most recent current scenario. */
+    const resp = await apiFetch('/api/scenarios' + (getUser() && getUser().role === 'admin' ? '?all=true' : ''));
+    if (!resp || !resp.ok) { showToast('Could not load scenarios.'); return; }
+    const list = await resp.json();
+    const rows = Array.isArray(list) ? list : (list.scenarios || []);
+    const forCustomer = rows.filter(s => s.customerId === customerId);
+    if (!forCustomer.length) {
+      /* Customer exists but no scenario loaded — set the company name and remember the id. */
+      const c = (_customerCache || []).find(x => x.id === customerId);
+      if (c) { const cn = document.getElementById('companyName'); if (cn) cn.value = c.name; window.currentScenarioCustomerId = customerId; window._sfSelectedCustomerId = customerId; }
+      if (input) input.value = c ? c.name : '';
+      showToast('Customer selected — no saved scenario yet.');
+      return;
+    }
+    forCustomer.sort((a,b) => new Date(b.updatedAt||0) - new Date(a.updatedAt||0));
+    if (input) input.value = '';
+    await loadScenario(forCustomer[0].id);
+  } catch (e) { console.error('selectCustomerFromSearch error:', e.message); showToast('Could not load that customer.'); }
+}
+/* Hide results when clicking away. */
+document.addEventListener('click', (e) => {
+  const bar = document.getElementById('customerSearchBar');
+  const box = document.getElementById('customerSearchResults');
+  if (bar && box && !bar.contains(e.target)) box.style.display = 'none';
+});
+/* Invalidate the cache when scenarios change so new customers show up. */
+window.invalidateCustomerCache = function(){ _customerCache = null; };
+
 function calcCompanyCheck(input) {
   const typed = (input.value || '').trim();
   if (!typed || typeof checkCompanyOnEntry !== 'function') return;

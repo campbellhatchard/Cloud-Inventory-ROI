@@ -91,6 +91,7 @@ const ACTIONS = {
   SCENARIO_SHARED:          'scenario.shared',
   SCENARIO_OUTCOME_SET:     'scenario.outcome_set',
   HANDOFF_SAVED:            'handoff.saved',
+  ADMIN_EDIT_ON_BEHALF:     'admin.edit_on_behalf',
 
   // Discovery
   DISCOVERY_LINK_GENERATED: 'discovery.link_generated',

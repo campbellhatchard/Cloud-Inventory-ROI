@@ -1294,3 +1294,94 @@ kbd{background:var(--gray-100);border:1px solid var(--gray-300);border-radius:5p
 .sf-doc-preview .hd-table td{padding:6px 8px;border:1px solid var(--gray-200);vertical-align:top;}
 .sf-doc-preview .hd-ul{font-size:12.5px;padding-left:18px;}
 .sf-doc-preview .hd-foot{margin-top:24px;font-size:9px;color:var(--gray-400);border-top:1px solid var(--gray-200);padding-top:10px;}
+
+/* ══ Customer search on landing ══ */
+.customer-search{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--cyan-pale);border:1px solid var(--cyan);border-radius:10px;padding:12px 16px;margin-bottom:16px;}
+.customer-search > label{font-size:13px;font-weight:600;color:var(--navy);white-space:nowrap;}
+.cs-input-wrap{position:relative;flex:1;min-width:220px;}
+.cs-input-wrap input{width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;font-family:var(--font);outline:none;}
+.cs-input-wrap input:focus{border-color:var(--cyan);}
+.cs-results{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid var(--gray-200);border-radius:10px;box-shadow:var(--shadow-md);z-index:40;max-height:320px;overflow-y:auto;}
+.cs-result{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--gray-100);padding:10px 14px;cursor:pointer;}
+.cs-result:hover{background:var(--cyan-pale);}
+.cs-result:last-child{border-bottom:none;}
+.cs-name{font-size:14px;font-weight:600;color:var(--navy);}
+.cs-meta{font-size:11px;color:var(--gray-500);}
+.cs-empty{padding:12px 14px;font-size:13px;color:var(--gray-500);}
+.cs-hint{font-size:12px;color:var(--gray-500);white-space:nowrap;}
+@media(max-width:640px){.customer-search{flex-direction:column;align-items:stretch;}.cs-hint{display:none;}}
+
+/* ══ Microphone dictation ══ */
+.dictate-wrap{position:relative;display:block;}
+.dictate-btn{position:absolute;top:6px;right:6px;width:26px;height:26px;border:none;border-radius:6px;background:var(--gray-100);color:var(--gray-500);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:all .15s;}
+.dictate-btn:hover{background:var(--cyan-pale);color:var(--cyan-dark);}
+.dictate-btn.dictating{background:var(--red);color:#fff;animation:dictate-pulse 1.2s infinite;}
+@keyframes dictate-pulse{0%,100%{opacity:1;}50%{opacity:.55;}}
+.dictate-wrap textarea,.dictate-wrap input{padding-right:38px;}
+
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE LAYER — desktop / tablet / phone (v3.12)
+   Drives layout by viewport + input capability (touch), not
+   brittle device sniffing. Tiers: >1024 desktop · 641-1024
+   tablet · ≤640 phone. Complements earlier 900px rules.
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Touch devices: larger tap targets everywhere ── */
+@media (pointer: coarse) {
+  .nav-item{padding-top:12px;padding-bottom:12px;}
+  .btn,.btn-sm{min-height:40px;}
+  .sf-tab{padding:12px 16px;}
+  .cs-result{padding:14px;}
+  input,select,textarea{font-size:16px;}   /* prevents iOS zoom-on-focus */
+  .dictate-btn{width:32px;height:32px;}
+}
+
+/* ── Tablet (641–1024px) ── */
+@media (min-width:641px) and (max-width:1024px){
+  .main-content{padding:1.5rem 1.5rem 3rem;}
+  .results-grid{grid-template-columns:repeat(3,1fr);}
+  .analytics-grid{grid-template-columns:repeat(2,1fr);}
+  .admin-fields-grid{grid-template-columns:repeat(2,1fr);}
+  .sf-process-grid{grid-template-columns:repeat(2,1fr);}
+  .help-layout{grid-template-columns:180px 1fr;}
+}
+
+/* ── Phone (≤640px) ── */
+@media (max-width:640px){
+  :root{--topbar-h:52px;}
+  .main-content{padding:1rem 0.9rem 2.5rem;}
+  .page-title{font-size:19px;}
+  .page-header{flex-direction:column;align-items:flex-start;gap:10px;}
+  .page-header .btn-row{margin-top:0;flex-wrap:wrap;}
+  /* single-column everything */
+  .results-grid{grid-template-columns:1fr 1fr;}
+  .analytics-grid,.admin-fields-grid,.comp-two,.two-col{grid-template-columns:1fr;}
+  .sens-row{grid-template-columns:1fr;gap:6px;}
+  .sf-process-grid{grid-template-columns:1fr;}
+  .sf-row2,.sf-row3{grid-template-columns:1fr;}
+  .help-layout{grid-template-columns:1fr;}
+  /* Solution Fit tabs scroll horizontally instead of wrapping messily */
+  .sf-tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .sf-tab{white-space:nowrap;flex-shrink:0;}
+  /* document preview + tables: let wide tables scroll */
+  .sf-doc-preview{padding:18px;}
+  .sf-table-wrap,.sf-doc-preview .hd-table{overflow-x:auto;display:block;}
+  .sf-doc-preview .hd-summary{flex-wrap:wrap;gap:14px;}
+  .sf-readiness-head{flex-direction:column;align-items:flex-start;gap:8px;}
+  .sf-context-bar{font-size:12px;}
+  .sf-readiness{margin-left:0;}
+  /* modals fit the screen */
+  .modal-box,.modal-content{max-width:94vw;max-height:88vh;overflow-y:auto;}
+  /* topbar: hide non-essential text */
+  .topbar-title,.topbar-date{display:none;}
+  .customer-search{padding:10px 12px;}
+  /* stack the doc toggle full width */
+  .sf-doc-toggle{width:100%;}
+  .sf-doc-btn{flex:1;}
+}
+
+/* ── Very small phones (≤380px) ── */
+@media (max-width:380px){
+  .results-grid{grid-template-columns:1fr;}
+  .livebar{grid-template-columns:1fr 1fr;}
+}

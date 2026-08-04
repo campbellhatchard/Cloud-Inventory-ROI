@@ -7,7 +7,17 @@
 
 const VERSION_HISTORY = [
   {
-    version: '3.11.1', date: '2026', tag: 'Features',
+    version: '3.12.0', date: '2026', tag: 'Features & fixes',
+    title: 'Distinct AE/SE roles, admin full access, responsive, dictation, customer search',
+    changes: [
+      'Account Executive and Solution Engineer are now distinct, assignable roles; you can change any existing user’s role. (Everyone previously on the combined role shows as AE.)',
+      'Admins can view and edit any user’s data; admin-on-behalf edits are recorded in the audit log and keep the original owner.',
+      'Fixed the Solution Fit documents: the Internal / Customer-facing toggle and Print / Save as PDF now work.',
+      'Responsive layout for desktop, tablet, and phone; microphone dictation on text fields where supported; and a customer search on the calculator to open an existing customer.'
+    ]
+  },
+  {
+    version: '3.11.0', date: '2026', tag: 'Features',
     title: 'Solution Fit handoff documents (phase 4)',
     changes: [
       'The Readiness tab now generates two branded documents: an internal Services handoff (full gaps, ownership, assumptions) and a customer-facing discovery summary (internal scoping language removed).',

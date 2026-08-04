@@ -1,4 +1,4 @@
-# Cloud Inventory ROI Builder v3.11.1
+# Cloud Inventory ROI Builder v3.12.0
 
 Render-ready release. Promoted from the validated v2.9.3 package (public prospect-link auth fix) with the dependency-free ROI engine test suite restored (`npm run test:engine`).
 
@@ -179,7 +179,7 @@ The risky structural phase, kept surgical and heavily tested.
 - Permission-aware UI: SE/admin edit; AE gets read + print (inputs disabled, add/delete hidden). Server still enforces authoritatively.
 - Handoff documents (internal + customer-facing, branded) are Phase 4.
 
-## v3.11.1 — Solution Fit handoff documents (phase 4, feature complete)
+## v3.11.0 — Solution Fit handoff documents (phase 4, feature complete)
 
 - Two branded handoff documents generated from the handoff state, in the Readiness tab:
   - Internal handoff (Solution Fit, Gap & Services Handoff): summary metrics, business context, architecture & delivery ownership, demo/fit evidence table, full gap register (classification, acceptance, dependencies, open questions), integration drivers, readiness blockers, CONFIDENTIAL footer.
@@ -188,12 +188,11 @@ The risky structural phase, kept surgical and heavily tested.
 - Read + print for AEs: the document toggle, print, and copy work for read-only AE users; editing controls remain SE/admin-only. Server still enforces write access.
 - This completes the SE Solution Fit & Handoff feature (phases 1a, 1b, 2, 3, 4).
 
-## Deployment packaging note — v3.11.1
+## v3.12.0 — roles, admin access, responsive, dictation, customer search
 
-This corrected package aligns `package.json` and `package-lock.json` versions and includes `.npmrc` so Render and local deployment scripts install from the public npm registry using `npm ci --omit=dev --no-audit --no-fund`.
-
-The package is configured for the existing production Render service names in `render.yaml`:
-- `cloud-inventory-roi`
-- `cloud-inventory-roi-db`
-
-Do not use this package unchanged for staging unless the service/database names and branch are intentionally changed.
+- Distinct roles: Account Executive (AE = rep) and Solution Engineer (SE) are now separate, assignable options in create + edit user (backend already supported se since v3.9.0; this exposes it in the UI). Badges/labels distinguish AE / SE / Admin. Existing combined-role users display as AE.
+- Admin full access: admins can view (View all) and edit any user’s scenarios/handoffs. Admin-on-behalf edits preserve the original owner and are logged (audit action admin.edit_on_behalf) for accountability.
+- Solution Fit fixes: the Internal / Customer-facing document toggle and Print / Save as PDF now work (tab re-render was not re-binding handlers).
+- Responsive layer (public/style.css): desktop / tablet (641–1024) / phone (≤640) tiers plus touch (pointer:coarse) tuning — larger tap targets, iOS-zoom-safe inputs, Solution Fit tabs scroll, tables/doc preview scroll, single-column stacking. Feature/viewport driven, not device sniffing.
+- Microphone dictation (public/dictation.js): Web Speech API mic button on text fields (three-whys + all Solution Fit textareas). Degrades gracefully where unsupported; needs HTTPS + mic permission.
+- Customer search on the calculator landing: type-ahead to find an existing customer and load their most recent scenario.

@@ -198,7 +198,7 @@
   function renderContext() {
     const o=S.opportunity, a=S.architecture, p=S.partner;
     const f = (label, path, ph='') => `<div class="sf-field"><label>${esc(label)}</label><input data-sfbind="${path}" value="${esc(val(S,path))}" placeholder="${esc(ph)}"></div>`;
-    const ta = (label, path, ph='') => `<div class="sf-field"><label>${esc(label)}</label><textarea data-sfbind="${path}" placeholder="${esc(ph)}">${esc(val(S,path))}</textarea></div>`;
+    const ta = (label, path, ph='') => `<div class="sf-field"><label>${esc(label)}</label><textarea data-dictate data-sfbind="${path}" placeholder="${esc(ph)}">${esc(val(S,path))}</textarea></div>`;
     const sel = (label, path, opts) => `<div class="sf-field"><label>${esc(label)}</label><select data-sfbind="${path}">${opts.map(x=>`<option ${val(S,path)===x?'selected':''}>${esc(x)}</option>`).join('')}</select></div>`;
     return `
       <div class="sf-card"><h3>Opportunity</h3>
@@ -245,7 +245,7 @@
           <div class="sf-field"><label>Fit</label><select data-sfpfit="${i}">${['Not reviewed','Full fit','Partial fit','Gap','Unknown'].map(x=>`<option ${p.fit===x?'selected':''}>${x}</option>`).join('')}</select></div>
         </div>
         <div class="sf-demo-flag ${p.demoStatus==='Demonstrated'?'yes':'no'}">${p.demoStatus==='Demonstrated'?'✓ Demonstrated':'! Demo evidence not confirmed'}</div>
-        ${showNote?`<div class="sf-field"><label>Short note</label><textarea data-sfpnote="${i}" placeholder="Evidence or exception for handoff.">${esc(p.notes)}</textarea></div>`:''}
+        ${showNote?`<div class="sf-field"><label>Short note</label><textarea data-dictate data-sfpnote="${i}" placeholder="Evidence or exception for handoff.">${esc(p.notes)}</textarea></div>`:''}
       `:''}
     </div>`;
   }
@@ -277,19 +277,19 @@
           <div class="sf-field"><label>Demo evidence</label><select data-sfgfield="demoEvidence" data-sfgid="${g.id}">${['Yes','Partially','No','Not applicable'].map(x=>`<option ${g.demoEvidence===x?'selected':''}>${x}</option>`).join('')}</select></div>
           <div class="sf-field"><label>Classification</label><select data-sfgfield="classification" data-sfgid="${g.id}">${CLASSIFICATIONS.map(x=>`<option ${x===g.classification?'selected':''}>${x}</option>`).join('')}</select></div>
         </div>
-        <div class="sf-field"><label>Customer need / outcome</label><textarea data-sfgfield="need" data-sfgid="${g.id}">${esc(g.need)}</textarea></div>
+        <div class="sf-field"><label>Customer need / outcome</label><textarea data-dictate data-sfgfield="need" data-sfgid="${g.id}">${esc(g.need)}</textarea></div>
         <div class="sf-row2">
-          <div class="sf-field"><label>Current process</label><textarea data-sfgfield="currentProcess" data-sfgid="${g.id}">${esc(g.currentProcess)}</textarea></div>
-          <div class="sf-field"><label>Standard behavior demonstrated</label><textarea data-sfgfield="standardBehavior" data-sfgid="${g.id}">${esc(g.standardBehavior)}</textarea></div>
+          <div class="sf-field"><label>Current process</label><textarea data-dictate data-sfgfield="currentProcess" data-sfgid="${g.id}">${esc(g.currentProcess)}</textarea></div>
+          <div class="sf-field"><label>Standard behavior demonstrated</label><textarea data-dictate data-sfgfield="standardBehavior" data-sfgid="${g.id}">${esc(g.standardBehavior)}</textarea></div>
         </div>
-        <div class="sf-field"><label>Precise gap / difference</label><textarea data-sfgfield="gapDescription" data-sfgid="${g.id}">${esc(g.gapDescription)}</textarea></div>
+        <div class="sf-field"><label>Precise gap / difference</label><textarea data-dictate data-sfgfield="gapDescription" data-sfgid="${g.id}">${esc(g.gapDescription)}</textarea></div>
         <div class="sf-row2">
           <div class="sf-field"><label>Priority</label><select data-sfgfield="priority" data-sfgid="${g.id}">${['Must Have','Should Have','Could Have'].map(x=>`<option ${g.priority===x?'selected':''}>${x}</option>`).join('')}</select></div>
           <div class="sf-field"><label>Required for go-live?</label><select data-sfgfield="goLive" data-sfgid="${g.id}">${['Unknown','Yes','No'].map(x=>`<option ${g.goLive===x?'selected':''}>${x}</option>`).join('')}</select></div>
         </div>
-        <div class="sf-field"><label>Acceptance criteria</label><textarea data-sfgfield="acceptance" data-sfgid="${g.id}">${esc(g.acceptance)}</textarea></div>
-        <div class="sf-field"><label>Dependencies / assumptions</label><textarea data-sfgfield="dependencies" data-sfgid="${g.id}">${esc(g.dependencies)}</textarea></div>
-        <div class="sf-field"><label>Open questions</label><textarea data-sfgfield="openQuestions" data-sfgid="${g.id}">${esc(g.openQuestions)}</textarea></div>
+        <div class="sf-field"><label>Acceptance criteria</label><textarea data-dictate data-sfgfield="acceptance" data-sfgid="${g.id}">${esc(g.acceptance)}</textarea></div>
+        <div class="sf-field"><label>Dependencies / assumptions</label><textarea data-dictate data-sfgfield="dependencies" data-sfgid="${g.id}">${esc(g.dependencies)}</textarea></div>
+        <div class="sf-field"><label>Open questions</label><textarea data-dictate data-sfgfield="openQuestions" data-sfgid="${g.id}">${esc(g.openQuestions)}</textarea></div>
       </div>
     </div>`;
   }
@@ -487,7 +487,16 @@
 
   /* ── Wiring ─────────────────────────────────────────────────────── */
   function wireTabs(){
-    document.querySelectorAll('.sf-tab').forEach(t=>t.onclick=()=>{ activeTab=t.dataset.sftab; document.querySelectorAll('.sf-tab').forEach(x=>x.classList.toggle('active',x===t)); showActivePane(); if(activeTab==='handoff'){ const r=computeReadiness(); const pane=document.querySelector('[data-sfpane="handoff"]'); if(pane) pane.innerHTML=renderReadinessTab(r);} });
+    document.querySelectorAll('.sf-tab').forEach(t=>t.onclick=()=>{
+      activeTab=t.dataset.sftab;
+      document.querySelectorAll('.sf-tab').forEach(x=>x.classList.toggle('active',x===t));
+      showActivePane();
+      if(activeTab==='handoff'){
+        const r=computeReadiness();
+        const pane=document.querySelector('[data-sfpane="handoff"]');
+        if(pane){ pane.innerHTML=renderReadinessTab(r); wireBindings(); if(!canWrite) disableInputs(); }
+      }
+    });
   }
   function showActivePane(){ document.querySelectorAll('.sf-pane').forEach(p=>p.style.display = p.dataset.sfpane===activeTab?'block':'none'); }
 
@@ -518,6 +527,7 @@
     const inv=document.querySelector('[data-sfbind="partner.involved"]');
     if(inv) inv.addEventListener('change',()=>{ const pane=document.querySelector('[data-sfpane="context"]'); if(pane){pane.innerHTML=renderContext(); wireBindings();} });
     if(!canWrite) disableInputs();
+    if(typeof SFDictation!=='undefined' && SFDictation.supported && canWrite) SFDictation.enhanceAll(document.getElementById('sfApp'));
   }
   function onEdit(path){ scheduleSave(); }
 
