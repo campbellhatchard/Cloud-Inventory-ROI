@@ -89,6 +89,8 @@ const ACTIONS = {
   SCENARIO_LOADED:          'scenario.loaded',
   SCENARIO_DELETED:         'scenario.deleted',
   SCENARIO_SHARED:          'scenario.shared',
+  SCENARIO_OUTCOME_SET:     'scenario.outcome_set',
+  HANDOFF_SAVED:            'handoff.saved',
 
   // Discovery
   DISCOVERY_LINK_GENERATED: 'discovery.link_generated',

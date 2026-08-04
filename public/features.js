@@ -64,6 +64,7 @@ function loadFromObject(i) {
   set('scenarioName', i.name);   set('companyName', i.company);
   set('repName', i.rep);         set('industry', i.industry);
   set('competitor', i.competitor || '');
+  if (typeof setCurrency === 'function') setCurrency(i.currency || 'USD');
   set('revenue', i.revenue);     set('userCount', i.users);
   set('laborCost', i.labor);     set('inventoryValue', i.inventory);
   set('itCost', i.itCost);       set('invest', i.invest);
@@ -425,7 +426,7 @@ function renderConfidence() {
     else if (s === 'estimated') nEstimated++;
   });
   const pct = Math.round(((confirmedW + estimatedW) / totalW) * 100);
-  const color = pct >= 80 ? '#2E7D32' : pct >= 50 ? '#E65100' : '#C62828';
+  const color = pct >= 80 ? '#2E7D32' : pct >= 50 ? '#C24A1E' : '#C81E10';
   const label = pct >= 80 ? 'High confidence' : pct >= 50 ? 'Moderate — confirm key inputs' : 'Low — needs discovery';
   const groups = [...new Set(CONFIDENCE_FIELDS.map(f => f.group))];
 
@@ -447,7 +448,7 @@ function renderConfidence() {
     ${summary}
     <div class="conf-legend">
       <span class="conf-legend-item"><span class="conf-dot" style="background:#94A3B8;"></span>Empty</span>
-      <span class="conf-legend-item"><span class="conf-dot" style="background:#E65100;"></span>Rep-estimated</span>
+      <span class="conf-legend-item"><span class="conf-dot" style="background:#C24A1E;"></span>Rep-estimated</span>
       <span class="conf-legend-item"><span class="conf-dot" style="background:#5FA88C;"></span>Rep-confirmed</span>
       <span class="conf-legend-item"><span class="conf-dot" style="background:#0F6E56;"></span>Prospect-verified</span>
     </div>

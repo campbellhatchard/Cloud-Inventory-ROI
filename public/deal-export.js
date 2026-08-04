@@ -53,7 +53,7 @@ function dePrintWindow(title, innerHtml, extraCss) {
       .prog-fill { height: 100%; background: linear-gradient(90deg,#00A7CF,#2E7D32); }
       .meta-line { font-size: 12px; color: #5A6570; margin-bottom: 3px; }
       .foot { margin-top: 28px; padding-top: 12px; border-top: 1px solid #E2E8F0; font-size: 11px; color: #94A3B8; text-align: center; }
-      .overdue { color: #C62828; font-weight: 700; }
+      .overdue { color: #C81E10; font-weight: 700; }
       .done td { color: #94A3B8; }
       .quad { position: relative; width: 460px; height: 340px; border: 1.5px solid #CBD5E1; margin: 10px 0 8px; }
       .quad-line { position: absolute; background: #E2E8F0; }
@@ -348,7 +348,7 @@ async function pptStakeholderMap() {
 /* Build the personalized lever + roll-up data model once, shared by both formats. */
 function buildRoiMethodology() {
   const v = getVals(), r = calcROI(v);
-  const M = n => (n===null||n===undefined||isNaN(n)) ? '—' : '$' + Math.round(n).toLocaleString();
+  const M = n => (n===null||n===undefined||isNaN(n)) ? '—' : (typeof moneyFull==='function' ? moneyFull(n) : '$' + Math.round(n).toLocaleString());
   const PC = n => (n===null||n===undefined||isNaN(n)) ? '—' : Math.round(n*100) + '%';
   const N  = n => (n===null||n===undefined||isNaN(n)) ? '—' : Number(n).toLocaleString();
 
@@ -569,6 +569,12 @@ function roiMethodologyPDF() {
       <li><strong>Prospect-provided figures</strong> are used wherever supplied; industry benchmarks fill only what was not provided.</li>
     </ul>
 
+    <h2>3a. Benchmark sourcing</h2>
+    <p class="intro">Where the customer's own figures were not available, the following default benchmarks were used. Each is documented so it can be reviewed and challenged.</p>
+    <ul class="notes">
+      ${(typeof benchmarkProvenanceLines === 'function' ? benchmarkProvenanceLines(v.industry) : []).map(line => `<li>${esc(line)}</li>`).join('')}
+    </ul>
+
     <h2>4. Return calculation</h2>
     <table class="kv"><tbody>
       <tr><td>Total annual benefit (steady-state)</td><td>${M(r.annualBenefit)}</td></tr>
@@ -711,41 +717,62 @@ async function shareBusinessCase() {
   const v = (typeof getVals === 'function') ? getVals() : {};
   const company = (v.company || '').trim();
   const name    = (v.name || '').trim();
-  if (!company) { if (typeof showToast==='function') showToast('Select a customer first.'); return; }
+  if (!company || company === 'Prospect') {
+    if (typeof showToast==='function') showToast('Select a customer and save the scenario first, then Share & track.');
+    return;
+  }
 
-  /* Resolve the current scenario id: match saved scenarios on company+name. */
-  let scenario = (typeof savedScenarios !== 'undefined')
-    ? savedScenarios.find(s => s.company === company && s.name === name && s.isCurrent)
+  /* Ensure scenarios are loaded before resolving (the rep may be on Exec View
+     without the Saved tab ever loading the list). */
+  if ((typeof savedScenarios === 'undefined' || !savedScenarios.length) && typeof fetchScenarios === 'function') {
+    try { await fetchScenarios(); } catch(e) {}
+  }
+
+  const resolve = () => (typeof savedScenarios !== 'undefined')
+    ? savedScenarios.find(s => s.isCurrent && (s.company||'').trim().toLowerCase() === company.toLowerCase()
+        && (s.name||'').trim().toLowerCase() === name.toLowerCase())
     : null;
 
+  let scenario = resolve();
+
   if (!scenario) {
-    if (!confirm('This business case needs to be saved before it can be shared. Save it now?')) return;
+    if (!confirm('This business case needs to be saved before it can be shared. Save it now?')) {
+      if (typeof showToast==='function') showToast('Not shared — save the scenario first.');
+      return;
+    }
     if (typeof saveScenario === 'function') {
       await saveScenario();
-      /* Re-resolve after save. */
-      scenario = (typeof savedScenarios !== 'undefined')
-        ? savedScenarios.find(s => s.company === company && s.name === name && s.isCurrent)
-        : null;
+      await new Promise(r => setTimeout(r, 150));   // let the version dialog / fetch settle
+      if (typeof fetchScenarios === 'function') { try { await fetchScenarios(); } catch(e){} }
+      scenario = resolve();
     }
-    if (!scenario) { if (typeof showToast==='function') showToast('Save the scenario, then click Share & track again.'); return; }
+    if (!scenario) {
+      if (typeof showToast==='function') showToast('Save the scenario (check the Saved tab), then click Share & track again.');
+      return;
+    }
   }
 
   try {
+    if (typeof showToast==='function') showToast('Creating share link…');
     const resp = await apiFetch('/api/business-case-shares', {
       method: 'POST',
       body: JSON.stringify({ scenarioId: scenario.id, company, title: name || 'ROI Business Case' })
     });
     if (!resp || !resp.ok) {
       const err = resp ? await resp.json().catch(()=>({})) : {};
-      if (typeof showToast==='function') showToast('Could not create share link: ' + (err.error || 'unknown error'));
+      if (typeof showToast==='function') showToast('Could not create share link: ' + (err.error || ('HTTP ' + (resp ? resp.status : 'no response'))));
       return;
     }
     const data = await resp.json();
+    if (!data || !data.shareUrl) {
+      if (typeof showToast==='function') showToast('Share link created but no URL was returned — check APP_URL configuration.');
+      return;
+    }
     showBusinessCaseShareModal(data.shareUrl, company);
     if (typeof trackEvent === 'function') trackEvent('business_case_shared', { company });
   } catch (e) {
-    console.error('shareBusinessCase error:', e.message);
-    if (typeof showToast==='function') showToast('Could not create share link — check your connection.');
+    console.error('shareBusinessCase error:', e && e.message);
+    if (typeof showToast==='function') showToast('Could not create share link — ' + (e && e.message ? e.message : 'check your connection.'));
   }
 }
 

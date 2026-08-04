@@ -129,8 +129,8 @@ router.post('/', async (req, res) => {
   const emailError = validateEmail(email);
   if (emailError) return res.status(400).json({ error: emailError });
 
-  if (!role || !['admin', 'rep'].includes(role)) {
-    return res.status(400).json({ error: 'Role must be "admin" or "rep".' });
+  if (!role || !['admin', 'rep', 'se'].includes(role)) {
+    return res.status(400).json({ error: 'Role must be "admin", "rep" (AE), or "se" (Solution Engineer).' });
   }
 
   /* Guard: cannot create a second admin without explicit intent (soft guard — UX) */
@@ -251,8 +251,8 @@ router.patch('/:id', async (req, res) => {
     }
 
     if (role !== undefined) {
-      if (!['admin', 'rep'].includes(role)) {
-        return res.status(400).json({ error: 'Role must be "admin" or "rep".' });
+      if (!['admin', 'rep', 'se'].includes(role)) {
+        return res.status(400).json({ error: 'Role must be "admin", "rep" (AE), or "se" (Solution Engineer).' });
       }
       updates.push(`role = $${idx++}`);
       values.push(role);

@@ -82,6 +82,10 @@
     <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="5" cy="5" r="2.2" stroke="currentColor" stroke-width="1.4"/><circle cx="11.5" cy="7" r="1.8" stroke="currentColor" stroke-width="1.4"/><path d="M1.5 13.5c0-2.2 1.6-3.7 3.5-3.7s3.5 1.5 3.5 3.7M9.5 13.5c.2-1.7 1.1-2.8 2-2.8 1.5 0 2.8 1.2 2.8 2.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
     Stakeholders
   </button>
+  <button class="nav-item" onclick="switchTab('solfit')" id="nav-solfit">
+    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M3 2h7l3 3v9H3V2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M9.5 2v3.5H13M5.5 8.5h5M5.5 11h5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+    Solution Fit
+  </button>
   <button class="nav-item" onclick="switchTab('help')" id="nav-help">
     <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.4"/><path d="M6 6.5C6 5.4 6.9 4.5 8 4.5s2 .9 2 2c0 .83-.5 1.55-1.22 1.88C8.3 8.65 8 9.1 8 9.5v.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="11.5" r=".75" fill="currentColor"/></svg>
     How to Use
@@ -122,7 +126,7 @@
 
       <div class="cg-cards">
         <div class="cg-card">
-          <div class="cg-card-icon" style="background:#185FA5;">＋</div>
+          <div class="cg-card-icon" style="background:#0089A6;">＋</div>
           <div class="cg-card-title">New customer</div>
           <div class="cg-card-desc">Begin a fresh business case for a company you haven't modeled yet.</div>
           <div class="cg-new-row">
@@ -152,6 +156,8 @@
   <div id="calcBody" style="display:none;">
   <div id="calcBreadcrumb" class="calc-breadcrumb"></div>
   <div id="caseCompleteness" class="case-completeness"></div>
+  <div id="nextBestAction" class="next-best-action" style="display:none;"></div>
+  <div id="benchmarkProvenanceBanner" class="benchmark-banner" style="display:none;"></div>
 
   <!-- Workflow steps -->
   <div class="workflow-steps">
@@ -222,6 +228,15 @@
                 <option value="wms">Warehouse Operations (WMS)</option>
                 <option value="mep">Field Inventory (MEP)</option>
                 <option value="mfgmat">Manufacturing Materials</option>
+              </select>
+            </div>
+            <div class="field"><label>Currency</label>
+              <select id="currencySelect">
+                <option value="USD">US Dollar (USD)</option>
+                <option value="GBP">British Pound (GBP)</option>
+                <option value="EUR">Euro (EUR)</option>
+                <option value="AUD">Australian Dollar (AUD)</option>
+                <option value="NZD">New Zealand Dollar (NZD)</option>
               </select>
             </div>
             <div class="field"><label>Current competing solution</label>
@@ -322,7 +337,7 @@
       <!-- WRITE-OFF INPUTS (moved out of assumptions, into prospect details) -->
       <div class="accordion" id="lossesSection">
         <button class="acc-head open" onclick="toggleAcc(this)">
-          <div class="acc-left"><span class="acc-dot" style="background:#C62828"></span><div><div class="acc-title" id="lossesPanelTitle">Baseline questions &amp; value drivers</div><div class="acc-sub" id="lossesPanelSub">Select an industry to replace baseline inputs with industry-specific discovery questions</div></div></div>
+          <div class="acc-left"><span class="acc-dot" style="background:#C81E10"></span><div><div class="acc-title" id="lossesPanelTitle">Baseline questions &amp; value drivers</div><div class="acc-sub" id="lossesPanelSub">Select an industry to replace baseline inputs with industry-specific discovery questions</div></div></div>
           <svg class="acc-chevron" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
         <div class="acc-body">
@@ -685,9 +700,9 @@
 
     <div class="why-card why-card-act">
       <div class="why-card-header">
-        <div class="why-number" style="background:#C62828;">1</div>
+        <div class="why-number" style="background:#C81E10;">1</div>
         <div>
-          <span class="why-label-text" style="color:#C62828;">Why act at all?</span>
+          <span class="why-label-text" style="color:#C81E10;">Why act at all?</span>
           <span class="why-sublabel">The cost of the status quo</span>
         </div>
       </div>
@@ -696,9 +711,9 @@
 
     <div class="why-card why-card-ci">
       <div class="why-card-header">
-        <div class="why-number" style="background:#185FA5;">2</div>
+        <div class="why-number" style="background:#0089A6;">2</div>
         <div>
-          <span class="why-label-text" style="color:#185FA5;">Why Cloud Inventory?</span>
+          <span class="why-label-text" style="color:#0089A6;">Why Cloud Inventory?</span>
           <span class="why-sublabel">Why this solution, not an alternative</span>
         </div>
       </div>
@@ -787,6 +802,7 @@
       <button class="admin-tab"        data-panel="benchmarks" onclick="switchAdminPanel('benchmarks')">📊 Benchmarks</button>
       <button class="admin-tab"        data-panel="auditlog"   onclick="switchAdminPanel('auditlog')">📋 Audit log</button>
       <button class="admin-tab"        data-panel="versions"   onclick="switchAdminPanel('versions')">🗂 Version history</button>
+      <button class="admin-tab"        data-panel="errors"     onclick="switchAdminPanel('errors')">🛠 Error log</button>
     </div>
 
     <!-- ─── USERS PANEL ─── -->
@@ -922,6 +938,21 @@
         </p>
       </div>
       <div id="versionHistoryList" class="version-history"></div>
+    </div>
+
+    <!-- ─── ERROR LOG PANEL ─── -->
+    <div id="adminPanel-errors" class="admin-panel" style="display:none;">
+      <div class="card" style="margin-bottom:1rem;">
+        <div class="card-title">Server error log</div>
+        <p style="font-size:13px;color:var(--gray-600);margin:0 0 10px;">
+          Server-side errors captured for visibility. <span id="errorLogCount"></span>
+        </p>
+        <div class="btn-row" style="margin-top:0;">
+          <button class="btn btn-ghost btn-sm" onclick="loadErrorLog()">Refresh</button>
+          <button class="btn btn-ghost btn-sm" onclick="pruneErrorLog()" title="Delete errors older than 90 days">Prune &gt; 90 days</button>
+        </div>
+      </div>
+      <div id="errorLogList"></div>
     </div>
 
   </div><!-- end adminContent -->
@@ -1080,6 +1111,21 @@
   </div>
 </div>
 
+<!-- ═══ SOLUTION FIT & HANDOFF (SE) ═══ -->
+<div id="tab-solfit" class="pane">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Solution Fit &amp; Handoff</div>
+      <div class="page-subtitle">SE discovery, demo/fit, gaps, and services handoff — tied to the selected customer.</div>
+    </div>
+    <div class="btn-row" style="margin-top:0;">
+      <span id="sfSaveState" class="sf-savestate"></span>
+    </div>
+  </div>
+  <div id="sfGate" class="sf-gate"></div>
+  <div id="sfApp" style="display:none;"></div>
+</div>
+
 </main>
 </div>
 
@@ -1145,6 +1191,7 @@
 </div>
 
 <script src="/roi-engine.js"></script>
+<script src="currency.js"></script>
 <script src="app.js"></script>
 <script src="features.js"></script>
 <script src="narrative.js"></script>
@@ -1158,8 +1205,14 @@
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="3.2.3";</script>
+<script>const APP_VERSION="3.11.1";</script>
 <script src="version-history.js"></script>
+<script src="calc-wizard.js"></script>
+<script src="input-format.js"></script>
+<script src="exec-infographics.js"></script>
+<script src="benchmark-provenance.js"></script>
+<script src="/handoff-readiness.js"></script>
+<script src="solution-fit.js"></script>
 <script src="map.js"></script>
 <script src="stakeholders.js"></script>
 <script src="deal-export.js"></script>
@@ -1186,15 +1239,26 @@ function downloadPDF() {
   v.threeWhysCi  = document.getElementById('why_ci')?.value  || '';
   v.threeWhysNow = document.getElementById('why_now')?.value || '';
   const vForPDF = { ...v };
-  if (vForPDF.prospectLogoDataUrl && vForPDF.prospectLogoDataUrl.length > 50000) {
-    vForPDF.prospectLogoDataUrl = null;
-    showToast('Note: prospect logo omitted from PDF (file too large for URL).');
-  }
+  /* The prospect logo is a large base64 data URL that bloats the handoff URL
+     and is the main cause of truncation/parse failures. It's decorative, so
+     always drop it from the PDF payload — the print page falls back to the
+     Cloud Inventory logo. */
+  delete vForPDF.prospectLogoDataUrl;
   try {
-    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(vForPDF))));
+    const json = JSON.stringify(vForPDF);
+    const encoded = btoa(unescape(encodeURIComponent(json)));
+    /* Guard against exceeding practical URL limits (corrupts on truncation).
+       ~60k chars is comfortably under browser limits with margin. */
+    if (encoded.length > 60000) {
+      showToast('This scenario is too large to open as a PDF via the browser. Please remove very long free-text notes and try again.');
+      return;
+    }
     window.open(window.location.origin + '/print.html#data=' + encoded, '_blank');
     trackEvent('pdf_download', { company: v.company });
-  } catch(e) { showToast('Could not open PDF page — scenario may be too large.'); }
+  } catch(e) {
+    console.error('PDF encode error:', e && e.message);
+    showToast('Could not open the PDF page. Please try again, or export to PowerPoint.');
+  }
 }
 
 let currentScenarioMode = 'base';
@@ -1275,6 +1339,10 @@ window.switchTab = function(name) {
   }
   _origSwitchTab(name);
   if (name === 'calc' && typeof initCalcTab === 'function') initCalcTab();
+  if (name === 'calc' && typeof initCalcWizard === 'function') initCalcWizard();
+  if (name === 'calc' && typeof bindInputFormat === 'function') bindInputFormat();
+  if (name === 'calc' && typeof initBenchmarkProvenance === 'function') initBenchmarkProvenance();
+  if (name === 'calc' && typeof initCurrency === 'function') initCurrency();
   if (typeof updateContextHeader === 'function') updateContextHeader();
   if (name === 'exec') { if (typeof loadThreeWhysDefaults === 'function') loadThreeWhysDefaults(); renderExec(); }
   if (name === 'disc' && typeof renderDiscoveryTab === 'function') renderDiscoveryTab();
@@ -1284,6 +1352,7 @@ window.switchTab = function(name) {
   if (name === 'impact') initImpactTab();
   if (name === 'map')   initMapTab();
   if (name === 'stake') initStakeTab();
+  if (name === 'solfit' && typeof initSolutionFit === 'function') initSolutionFit();
   if (name === 'profile') initProfileTab();
   const fab = document.getElementById('fabRow');
   if (fab) fab.style.display = name === 'calc' ? 'flex' : 'none';
@@ -1321,6 +1390,7 @@ function switchAdminPanel(panel) {
   );
   if (panel === 'auditlog' && !_auditLoaded) loadAuditLog(0);
   if (panel === 'versions' && typeof renderVersionHistory === 'function') renderVersionHistory();
+  if (panel === 'errors' && typeof loadErrorLog === 'function') loadErrorLog();
 }
 
 /* ─────────────────────────────────────────
@@ -1360,6 +1430,48 @@ async function populateAuditFilterDropdowns() {
       }
     }
   } catch(e) { /* dropdowns stay at defaults */ }
+}
+
+/* ── Error log (admin) ── */
+async function loadErrorLog() {
+  const host = document.getElementById('errorLogList');
+  const countEl = document.getElementById('errorLogCount');
+  if (!host) return;
+  if (typeof renderLoadingState === 'function') renderLoadingState(host, 'Loading error log…');
+  try {
+    const resp = await apiFetch('/api/logs/errors?limit=100');
+    if (!resp || !resp.ok) { host.innerHTML = '<div class="empty-state"><p>Could not load the error log.</p></div>'; return; }
+    const { errors, total } = await resp.json();
+    if (countEl) countEl.textContent = total ? `${total} recorded.` : 'None recorded — clean.';
+    if (!errors || !errors.length) {
+      if (typeof renderEmptyState === 'function') renderEmptyState(host, { icon: '✓', title: 'No errors recorded', sub: 'Nothing has gone wrong on the server recently.' });
+      else host.innerHTML = '<div class="empty-state"><p>No errors recorded.</p></div>';
+      return;
+    }
+    host.innerHTML = '<div class="error-log-list">' + errors.map(e => {
+      const when = e.occurred_at ? new Date(e.occurred_at).toLocaleString() : '—';
+      const lvl = (e.level || 'error').toLowerCase();
+      return `<div class="elog-item elog-${lvl}">
+        <div class="elog-head">
+          <span class="elog-level elog-lvl-${lvl}">${escapeHtml(e.level || 'error')}</span>
+          <span class="elog-source">${escapeHtml(e.source || '')}</span>
+          ${e.method ? `<span class="elog-route">${escapeHtml(e.method)} ${escapeHtml(e.path || '')}</span>` : ''}
+          <span class="elog-when">${escapeHtml(when)}</span>
+        </div>
+        <div class="elog-msg">${escapeHtml(e.message || '')}</div>
+      </div>`;
+    }).join('') + '</div>';
+  } catch (err) {
+    host.innerHTML = '<div class="empty-state"><p>Could not load the error log.</p></div>';
+  }
+}
+async function pruneErrorLog() {
+  if (!confirm('Delete error records older than 90 days?')) return;
+  try {
+    const resp = await apiFetch('/api/logs/errors?days=90', { method: 'DELETE' });
+    if (resp && resp.ok) { const { removed } = await resp.json(); showToast(`Removed ${removed} old error record(s).`); loadErrorLog(); }
+    else showToast('Prune failed.');
+  } catch (e) { showToast('Prune failed — check your connection.'); }
 }
 
 async function loadAuditLog(offset) {
@@ -1402,10 +1514,10 @@ async function loadAuditLog(offset) {
 
 function renderAuditTable(rows) {
   const actionColors = {
-    'user.login': '#2E7D32', 'user.login_failed': '#C62828', 'user.login_locked': '#C62828',
-    'user.logout': '#475569', 'user.created': '#185FA5', 'user.deactivated': '#E65100',
-    'scenario.saved': '#0F6E56', 'scenario.deleted': '#C62828', 'pdf.downloaded': '#3C3489',
-    'audit.purge_completed': '#C62828', 'audit.purge_pending': '#E65100'
+    'user.login': '#2E7D32', 'user.login_failed': '#C81E10', 'user.login_locked': '#C81E10',
+    'user.logout': '#475569', 'user.created': '#0089A6', 'user.deactivated': '#C24A1E',
+    'scenario.saved': '#0F6E56', 'scenario.deleted': '#C81E10', 'pdf.downloaded': '#3C3489',
+    'audit.purge_completed': '#C81E10', 'audit.purge_pending': '#C24A1E'
   };
   return `<div class="audit-table-wrap"><table class="audit-table">
     <thead><tr>
@@ -1942,7 +2054,7 @@ async function loadProfileInfo() {
       <div class="profile-info-grid">
         <span class="pil">Username</span><span class="piv"><strong>${escapeHtml(user.username)}</strong></span>
         <span class="pil">Email</span><span class="piv">${escapeHtml(user.email||'—')}</span>
-        <span class="pil">Role</span><span class="piv"><span class="role-badge" style="background:${(roleColors[user.role]||'#042C53')}20;color:${roleColors[user.role]||'#042C53'}">${roleLabels[user.role]||user.role}</span></span>
+        <span class="pil">Role</span><span class="piv"><span class="role-badge" style="background:${(roleColors[user.role]||'#1E2931')}20;color:${roleColors[user.role]||'#1E2931'}">${roleLabels[user.role]||user.role}</span></span>
         <span class="pil">Member since</span><span class="piv">${new Date(user.created_at).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</span>
         <span class="pil">Last login</span><span class="piv">${user.last_login_at ? new Date(user.last_login_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : 'First login'}</span>
       </div>`;
@@ -2000,7 +2112,7 @@ function profileCheckStrength() {
   const pw = document.getElementById('profileNewPw')?.value || '';
   const checks = { len: pw.length>=12, upper:/[A-Z]/.test(pw), lower:/[a-z]/.test(pw), num:/[0-9]/.test(pw), special:/[^A-Za-z0-9]/.test(pw) };
   const score = Object.values(checks).filter(Boolean).length;
-  const colors = ['#E2E8F0','#C62828','#E65100','#854F0B','#2E7D32','#0F6E56'];
+  const colors = ['#E2E8F0','#C81E10','#C24A1E','#854F0B','#2E7D32','#0F6E56'];
   const labels = ['','Very weak','Weak','Fair','Strong','Very strong'];
   const fill = document.getElementById('profileStrengthFill');
   const lbl  = document.getElementById('profileStrengthLabel');
@@ -2133,6 +2245,10 @@ if (typeof populateIndustryFilter === 'function') populateIndustryFilter();
 (async () => { if (window._authReady) await window._authReady; if (typeof loadCompanies === 'function') await loadCompanies(); })();
 (async () => { if (window._authReady) await window._authReady; if (typeof initCalcTab === 'function') initCalcTab(); })();
 (async () => { if (window._authReady) await window._authReady; if (typeof initUxEnhancements === 'function') initUxEnhancements(); })();
+(async () => { if (window._authReady) await window._authReady; if (typeof initCalcWizard === 'function') initCalcWizard(); })();
+(async () => { if (window._authReady) await window._authReady; if (typeof bindInputFormat === 'function') bindInputFormat(); })();
+(async () => { if (window._authReady) await window._authReady; if (typeof initBenchmarkProvenance === 'function') initBenchmarkProvenance(); })();
+(async () => { if (window._authReady) await window._authReady; if (typeof initCurrency === 'function') initCurrency(); })();
 (async () => { if (window._authReady) await window._authReady; if (typeof initAdminScenarioControls === 'function') initAdminScenarioControls(); })();
 recalc();
 const _fabEl = document.getElementById('fabRow'); if (_fabEl) _fabEl.style.display = 'flex';

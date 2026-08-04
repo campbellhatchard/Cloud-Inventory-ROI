@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   server.js  —  Cloud Inventory ROI Builder  v3.2.3
+   server.js  —  Cloud Inventory ROI Builder  v2.9.2
    Database-backed multi-user edition — production hardened
 
    Security layers applied (Phase 10):
@@ -28,6 +28,10 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 app.get('/roi-engine.js', (req, res) => {
   res.type('application/javascript');
   res.sendFile(path.join(__dirname, 'src', 'shared', 'roi-engine.js'));
+});
+app.get('/handoff-readiness.js', (req, res) => {
+  res.type('application/javascript');
+  res.sendFile(path.join(__dirname, 'src', 'shared', 'handoff-readiness.js'));
 });
 const PROD = process.env.NODE_ENV === 'production';
 const APP_URL = getAppUrl();
@@ -168,6 +172,8 @@ app.use('/api/maps', mapsRouter);
 /* ── Stakeholder maps ── */
 const stakeholdersRouter = require('./src/routes/stakeholders');
 app.use('/api/stakeholders', stakeholdersRouter);
+const handoffsRouter = require('./src/routes/handoffs');
+app.use('/api/handoffs', handoffsRouter);
 app.use('/api', require('./src/routes/analytics'));  // analytics + custom benchmarks
 
 /* ── Unified company list (v2.3) ──
@@ -216,6 +222,37 @@ app.get('/api/companies', _reqAuthCompanies, async (req, res) => {
   } catch (err) {
     console.error('List companies error:', err.message);
     res.status(500).json({ error: 'Failed to load companies.' });
+  }
+});
+
+/* First-class customers (stable IDs). Owner-scoped for now; Phase 2 will
+   widen read access for the SE role. */
+app.get('/api/customers', _reqAuthCompanies, async (req, res) => {
+  try {
+    const { listCustomersForOwner, listAllCustomers } = require('./src/customers');
+    const { isCrossCustomer } = require('./src/handoff-access');
+    /* SE and admin see every AE's customers (an SE supports multiple AEs);
+       an AE (rep) sees only their own. */
+    const customers = isCrossCustomer(req.user)
+      ? await listAllCustomers()
+      : await listCustomersForOwner(req.user.id);
+    res.json(customers);
+  } catch (err) {
+    console.error('List customers error:', err.message);
+    res.status(500).json({ error: 'Failed to load customers.' });
+  }
+});
+
+app.get('/api/customers/:id', _reqAuthCompanies, async (req, res) => {
+  try {
+    const { getCustomer } = require('./src/customers');
+    const { isCrossCustomer } = require('./src/handoff-access');
+    const c = await getCustomer(req.params.id, req.user.id, isCrossCustomer(req.user));
+    if (!c) return res.status(404).json({ error: 'Customer not found.' });
+    res.json(c);
+  } catch (err) {
+    console.error('Get customer error:', err.message);
+    res.status(500).json({ error: 'Failed to load customer.' });
   }
 });
 
@@ -628,8 +665,12 @@ app.get('*', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'index.html')));
 
 /* ── ⑤ Error handler — never leak stack traces to clients ── */
 app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err.message);
-  res.status(err.status || 500).json({ error: 'An unexpected error occurred.' });
+  const status = err.status || 500;
+  /* Persist for in-app visibility (best-effort, never throws). */
+  try {
+    require('./src/error-log').logError(err, { req, source: 'express', status });
+  } catch (e) { console.error('Unhandled error:', err.message); }
+  res.status(status).json({ error: 'An unexpected error occurred.' });
 });
 
 /* ═══════ STARTUP ═══════ */
@@ -739,6 +780,20 @@ async function shutdown(signal) {
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
 
+/* Capture process-level failures to the error log (best-effort). We log and
+   keep running for unhandledRejection; for uncaughtException we log then let
+   the process exit so the platform can restart cleanly. */
+process.on('unhandledRejection', (reason) => {
+  try { require('./src/error-log').logError(reason instanceof Error ? reason : new Error(String(reason)), { source: 'unhandledRejection', level: 'error' }); }
+  catch (e) { console.error('unhandledRejection:', reason); }
+});
+process.on('uncaughtException', (err) => {
+  try { require('./src/error-log').logError(err, { source: 'uncaughtException', level: 'fatal' }); }
+  catch (e) { console.error('uncaughtException:', err && err.message); }
+  /* Give the async log a brief moment, then exit for a clean restart. */
+  setTimeout(() => process.exit(1), 500);
+});
+
 async function start() {
   try {
     await waitForDatabase();
@@ -771,4 +826,10 @@ async function start() {
   }
 }
 
-start();
+/* Only auto-start when run directly (node server.js). When required by the
+   integration test suite, the app is exported and the test controls listen(). */
+if (require.main === module) {
+  start();
+}
+
+module.exports = { app, start };

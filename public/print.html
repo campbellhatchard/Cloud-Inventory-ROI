@@ -8,9 +8,9 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --navy:#042C53;--cyan:#00AEEF;--cyan-dark:#0090C5;--cyan-pale:#E0F5FD;
-  --green:#2E7D32;--green-pale:#E8F5E9;--red:#C62828;
-  --amber:#E65100;--amber-pale:#FFF3E0;--purple:#5B2D8E;
+  --navy:#1E2931;--cyan:#00A9CC;--cyan-dark:#0089A6;--cyan-pale:#E4F6FA;
+  --green:#2E7D32;--green-pale:#E8F5E9;--red:#C81E10;
+  --amber:#C24A1E;--amber-pale:#FDEDE6;--purple:#5B2D8E;
   --teal:#0F6E56;--brown:#854F0B;
   --gray-50:#F8FAFC;--gray-100:#F1F5F9;--gray-200:#E2E8F0;
   --gray-400:#94A3B8;--gray-500:#64748B;--gray-600:#475569;
@@ -124,7 +124,7 @@ body{font-family:var(--font);background:#EAECEF;color:var(--gray-800);font-size:
 .tbl tr:nth-child(even) td{background:var(--gray-50);}
 .tbl td.pos{color:var(--green);font-weight:700;}.tbl td.neg{color:var(--red);}
 .tbl td.blu{color:var(--navy);font-weight:700;}
-.tbl tfoot td{background:#E0F5FD;font-weight:700;border-top:2px solid var(--cyan);color:var(--navy);}
+.tbl tfoot td{background:#E4F6FA;font-weight:700;border-top:2px solid var(--cyan);color:var(--navy);}
 .tbl tr.orow td{background:var(--amber-pale);font-style:italic;color:var(--gray-500);}
 .rtag{font-size:9px;color:var(--brown);font-weight:700;}
 
@@ -139,7 +139,7 @@ body{font-family:var(--font);background:#EAECEF;color:var(--gray-800);font-size:
 .itbl td:nth-child(2){color:var(--gray-400);font-size:10px;}
 .itbl td:last-child{text-align:right;font-weight:600;}
 .itbl tr:nth-child(even) td{background:var(--gray-50);}
-.itbl tfoot td{background:#E0F5FD;font-weight:700;border-top:2px solid var(--cyan);color:var(--navy);}
+.itbl tfoot td{background:#E4F6FA;font-weight:700;border-top:2px solid var(--cyan);color:var(--navy);}
 .itbl tfoot td:last-child{text-align:right;}
 
 .ctbl{width:100%;border-collapse:collapse;font-size:11px;}
@@ -262,7 +262,7 @@ function fp(n){return Math.round(n)+'%';}
 /* ════════ SVG CHARTS ════════ */
 
 function donutChart(r,sz=180){
-  const COLS=['#185FA5','#2E7D32','#0F6E56','#854F0B','#6B3FA0','#3C3489'];
+  const COLS=['#0089A6','#2E7D32','#0F6E56','#854F0B','#6B3FA0','#3C3489'];
   const segs=[{l:'Labor savings',v:r.laborSav,c:COLS[0]},{l:'Write-off reduction',v:r.shrinkSav,c:COLS[1]},
     {l:'Carrying cost',v:r.carrySav,c:COLS[2]},{l:'OTIF protection',v:r.otifSav,c:COLS[3]},
     {l:'Turns (capital)',v:r.turnsSav,c:COLS[4]},{l:'IT displaced',v:r.itSav,c:COLS[5]}].filter(s=>s.v>0);
@@ -278,11 +278,11 @@ function donutChart(r,sz=180){
     sa=ea;
   });
   const legend=segs.map(s=>`<div class="dl-row"><div class="dl-sw" style="background:${s.c}"></div><span class="dl-lbl">${s.l}</span><span class="dl-val">${f(s.v)}</span><span class="dl-pct">${Math.round(s.v/tot*100)}%</span></div>`).join('');
-  return`<div class="dnut"><div><svg width="${sz}" height="${sz}" viewBox="0 0 ${sz} ${sz}">${paths}<text x="${cx}" y="${cy-6}" text-anchor="middle" font-size="11" font-weight="800" fill="#042C53" font-family="Inter,sans-serif">${f(tot)}</text><text x="${cx}" y="${cy+8}" text-anchor="middle" font-size="8" fill="#94A3B8" font-family="Inter,sans-serif">ANNUAL</text><text x="${cx}" y="${cy+19}" text-anchor="middle" font-size="8" fill="#94A3B8" font-family="Inter,sans-serif">BENEFIT</text></svg></div><div class="dleg">${legend}</div></div>`;
+  return`<div class="dnut"><div><svg width="${sz}" height="${sz}" viewBox="0 0 ${sz} ${sz}">${paths}<text x="${cx}" y="${cy-6}" text-anchor="middle" font-size="11" font-weight="800" fill="#1E2931" font-family="Inter,sans-serif">${f(tot)}</text><text x="${cx}" y="${cy+8}" text-anchor="middle" font-size="8" fill="#94A3B8" font-family="Inter,sans-serif">ANNUAL</text><text x="${cx}" y="${cy+19}" text-anchor="middle" font-size="8" fill="#94A3B8" font-family="Inter,sans-serif">BENEFIT</text></svg></div><div class="dleg">${legend}</div></div>`;
 }
 
 function waterfallBars(r){
-  const bars=[{l:'Labor & productivity',v:r.laborSav,c:'#185FA5'},{l:'Write-off reduction',v:r.shrinkSav,c:'#2E7D32'},
+  const bars=[{l:'Labor & productivity',v:r.laborSav,c:'#0089A6'},{l:'Write-off reduction',v:r.shrinkSav,c:'#2E7D32'},
     {l:'Carrying cost savings',v:r.carrySav,c:'#0F6E56'},{l:'OTIF protection',v:r.otifSav,c:'#854F0B'},
     {l:'Turns: capital freed',v:r.turnsSav,c:'#6B3FA0'},{l:'IT displaced',v:r.itSav,c:'#3C3489'}]
     .filter(b=>b.v>0).sort((a,b)=>b.v-a.v);
@@ -290,7 +290,7 @@ function waterfallBars(r){
   return bars.map(b=>{
     const p=Math.round(b.v/mx*100);
     return`<div class="wf-row"><span class="wf-lbl">${b.l}</span><div class="wf-track"><div class="wf-fill" style="width:${p}%;background:${b.c};">${p>22?`<span style="font-size:10px;font-weight:700;color:#fff;">${fp(p)}</span>`:''}</div></div><span class="wf-val">${f(b.v)}</span></div>`;
-  }).join('')+`<div class="wf-total"><span style="font-size:11px;font-weight:700;color:#042C53;text-align:right;">Total</span><div></div><span style="font-size:13px;font-weight:800;color:#042C53;text-align:right;">${ff(r.annualBenefit)}</span></div>`;
+  }).join('')+`<div class="wf-total"><span style="font-size:11px;font-weight:700;color:#1E2931;text-align:right;">Total</span><div></div><span style="font-size:13px;font-weight:800;color:#1E2931;text-align:right;">${ff(r.annualBenefit)}</span></div>`;
 }
 
 function npvCurve(r,v){
@@ -309,15 +309,15 @@ function npvCurve(r,v){
   const z0=py(0);
   const gl=[mx*.5,mx].filter(vv=>vv>mn+rng*.1).map(vv=>`<line x1="${PL}" y1="${py(vv).toFixed(0)}" x2="${PL+cW}" y2="${py(vv).toFixed(0)}" stroke="#E2E8F0" stroke-width="1" stroke-dasharray="3,3"/><text x="${PL-4}" y="${(py(vv)+4).toFixed(0)}" text-anchor="end" font-size="8" fill="#94A3B8" font-family="Inter,sans-serif">${f(vv)}</text>`).join('');
   const yl=[0,1,2,3,4,5].map(y=>`<text x="${px(y).toFixed(0)}" y="${H-4}" text-anchor="middle" font-size="9" fill="#94A3B8" font-family="Inter,sans-serif">${y===0?'Now':'Yr '+y}</text>`).join('');
-  const dd=pts.map(p=>`<circle cx="${px(p.y).toFixed(1)}" cy="${py(p.c).toFixed(1)}" r="3.5" fill="${p.c>=0?'#2E7D32':'#C62828'}" stroke="#fff" stroke-width="1.5"/>`).join('');
-  const bm=bx?`<line x1="${bx.toFixed(0)}" y1="${PT}" x2="${bx.toFixed(0)}" y2="${H-PB}" stroke="#00AEEF" stroke-width="1.5" stroke-dasharray="4,3"/><text x="${bx.toFixed(0)}" y="${PT-4}" text-anchor="middle" font-size="8" fill="#00AEEF" font-weight="700" font-family="Inter,sans-serif">Break-even</text>`:'';
-  return`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;max-width:100%;"><defs><linearGradient id="ng" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2E7D32" stop-opacity=".25"/><stop offset="100%" stop-color="#2E7D32" stop-opacity="0"/></linearGradient></defs>${gl}<line x1="${PL}" y1="${z0.toFixed(0)}" x2="${PL+cW}" y2="${z0.toFixed(0)}" stroke="#CBD5E1" stroke-width="1.5"/><path d="${ad}" fill="url(#ng)"/><path d="${pd}" fill="none" stroke="#042C53" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${bm}${dd}${yl}<text x="${PL-4}" y="${(z0+3).toFixed(0)}" text-anchor="end" font-size="8" fill="#042C53" font-weight="700" font-family="Inter,sans-serif">$0</text></svg>`;
+  const dd=pts.map(p=>`<circle cx="${px(p.y).toFixed(1)}" cy="${py(p.c).toFixed(1)}" r="3.5" fill="${p.c>=0?'#2E7D32':'#C81E10'}" stroke="#fff" stroke-width="1.5"/>`).join('');
+  const bm=bx?`<line x1="${bx.toFixed(0)}" y1="${PT}" x2="${bx.toFixed(0)}" y2="${H-PB}" stroke="#00A9CC" stroke-width="1.5" stroke-dasharray="4,3"/><text x="${bx.toFixed(0)}" y="${PT-4}" text-anchor="middle" font-size="8" fill="#00A9CC" font-weight="700" font-family="Inter,sans-serif">Break-even</text>`:'';
+  return`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;max-width:100%;"><defs><linearGradient id="ng" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2E7D32" stop-opacity=".25"/><stop offset="100%" stop-color="#2E7D32" stop-opacity="0"/></linearGradient></defs>${gl}<line x1="${PL}" y1="${z0.toFixed(0)}" x2="${PL+cW}" y2="${z0.toFixed(0)}" stroke="#CBD5E1" stroke-width="1.5"/><path d="${ad}" fill="url(#ng)"/><path d="${pd}" fill="none" stroke="#1E2931" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${bm}${dd}${yl}<text x="${PL-4}" y="${(z0+3).toFixed(0)}" text-anchor="end" font-size="8" fill="#1E2931" font-weight="700" font-family="Inter,sans-serif">$0</text></svg>`;
 }
 
 function scenChart(bv){
   const sc=Object.entries(MODES).map(([k,m])=>{
     const sv=scaleV(bv,m.scale),r=calcROI(sv);
-    const c=k==='conservative'?'#854F0B':k==='base'?'#185FA5':'#2E7D32';
+    const c=k==='conservative'?'#854F0B':k==='base'?'#0089A6':'#2E7D32';
     return{k,lbl:k==='conservative'?'Conservative':k==='base'?'Base':'Aggressive',c,r};
   });
   const mb=Math.max(...sc.map(s=>s.r.annualBenefit));
@@ -328,7 +328,7 @@ function scenChart(bv){
     const pb=s.r.paybackFromSigning===null?'—':s.r.paybackFromSigning>=60?'60+mo':s.r.paybackFromSigning.toFixed(1)+'mo';
     return`<tr><td class="l"><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:9px;height:9px;border-radius:2px;background:${s.c};display:inline-block;"></span>${s.lbl}</span></td><td><div style="background:#F1F5F9;border-radius:3px;height:18px;overflow:hidden;"><div style="width:${bp}%;height:100%;background:${s.c};opacity:.8;"></div></div><div style="font-size:10px;font-weight:700;color:${s.c};text-align:right;margin-top:2px;">${f(s.r.annualBenefit)}</div></td><td style="font-weight:700;color:${s.c};">${fp(s.r.roi)}</td><td style="color:#475569;">${pb}</td><td><div style="background:#F1F5F9;border-radius:3px;height:18px;overflow:hidden;"><div style="width:${np}%;height:100%;background:${s.c};opacity:.65;"></div></div><div style="font-size:10px;font-weight:700;color:${s.c};text-align:right;margin-top:2px;">${f(s.r.npv5)}</div></td></tr>`;
   }).join('');
-  return`<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr><th style="background:#042C53;color:#fff;padding:7px 10px;text-align:left;font-size:10px;width:105px;">Scenario</th><th style="background:#042C53;color:#fff;padding:7px 10px;font-size:10px;">Annual benefit</th><th style="background:#042C53;color:#fff;padding:7px 10px;font-size:10px;">Y1 ROI</th><th style="background:#042C53;color:#fff;padding:7px 10px;font-size:10px;">Payback</th><th style="background:#042C53;color:#fff;padding:7px 10px;font-size:10px;">5-yr NPV</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td colspan="5" style="padding:5px 10px;font-size:9px;color:#94A3B8;font-style:italic;background:#F8FAFC;">Conservative=70% · Aggressive=130% of base improvement assumptions · Investment costs fixed</td></tr></tfoot></table>`;
+  return`<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr><th style="background:#1E2931;color:#fff;padding:7px 10px;text-align:left;font-size:10px;width:105px;">Scenario</th><th style="background:#1E2931;color:#fff;padding:7px 10px;font-size:10px;">Annual benefit</th><th style="background:#1E2931;color:#fff;padding:7px 10px;font-size:10px;">Y1 ROI</th><th style="background:#1E2931;color:#fff;padding:7px 10px;font-size:10px;">Payback</th><th style="background:#1E2931;color:#fff;padding:7px 10px;font-size:10px;">5-yr NPV</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td colspan="5" style="padding:5px 10px;font-size:9px;color:#94A3B8;font-style:italic;background:#F8FAFC;">Conservative=70% · Aggressive=130% of base improvement assumptions · Investment costs fixed</td></tr></tfoot></table>`;
 }
 
 function paybackTimeline(r,v){
@@ -340,13 +340,13 @@ function paybackTimeline(r,v){
   return`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;max-width:100%;">
     <rect x="${PL}" y="${TY-TH/2}" width="${tW}" height="${TH}" rx="3" fill="#E2E8F0"/>
     ${impl>0?`<rect x="${PL}" y="${TY-TH/2}" width="${impX-PL}" height="${TH}" rx="3" fill="#854F0B"/>`:``}
-    <rect x="${impX}" y="${TY-TH/2}" width="${rampX-impX}" height="${TH}" fill="#00AEEF"/>
+    <rect x="${impX}" y="${TY-TH/2}" width="${rampX-impX}" height="${TH}" fill="#00A9CC"/>
     <rect x="${rampX}" y="${TY-TH/2}" width="${PL+tW-rampX}" height="${TH}" rx="3" fill="#2E7D32"/>
     ${impl>0?`<circle cx="${impX}" cy="${TY}" r="5" fill="#854F0B" stroke="#fff" stroke-width="1.5"/><text x="${impX}" y="${TY+16}" text-anchor="middle" font-size="8" fill="#854F0B" font-weight="700" font-family="Inter,sans-serif">Go-live</text><text x="${impX}" y="${TY+26}" text-anchor="middle" font-size="8" fill="#64748B" font-family="Inter,sans-serif">Mo.${impl+1}</text>`:''}
-    ${pbX?`<circle cx="${pbX}" cy="${TY}" r="7" fill="#fff" stroke="#042C53" stroke-width="2"/><text x="${pbX}" y="${TY+4}" text-anchor="middle" font-size="7" font-weight="800" fill="#042C53" font-family="Inter,sans-serif">✓</text><line x1="${pbX}" y1="${TY-10}" x2="${pbX}" y2="${TY-24}" stroke="#042C53" stroke-width="1.5" stroke-dasharray="2,2"/><text x="${pbX}" y="${TY-27}" text-anchor="middle" font-size="9" font-weight="700" fill="#042C53" font-family="Inter,sans-serif">Break-even ${r.paybackFromSigning.toFixed(1)} mo</text>`:''}
+    ${pbX?`<circle cx="${pbX}" cy="${TY}" r="7" fill="#fff" stroke="#1E2931" stroke-width="2"/><text x="${pbX}" y="${TY+4}" text-anchor="middle" font-size="7" font-weight="800" fill="#1E2931" font-family="Inter,sans-serif">✓</text><line x1="${pbX}" y1="${TY-10}" x2="${pbX}" y2="${TY-24}" stroke="#1E2931" stroke-width="1.5" stroke-dasharray="2,2"/><text x="${pbX}" y="${TY-27}" text-anchor="middle" font-size="9" font-weight="700" fill="#1E2931" font-family="Inter,sans-serif">Break-even ${r.paybackFromSigning.toFixed(1)} mo</text>`:''}
     ${mos.map(m=>`<text x="${xAt(m)}" y="${H-4}" text-anchor="middle" font-size="8" fill="#94A3B8" font-family="Inter,sans-serif">Mo.${m}</text><line x1="${xAt(m)}" y1="${TY+TH/2+2}" x2="${xAt(m)}" y2="${H-14}" stroke="#E2E8F0" stroke-width="1"/>`).join('')}
     <rect x="${PL}" y="8" width="9" height="5" rx="1" fill="#854F0B"/><text x="${PL+13}" y="14" font-size="8" fill="#64748B" font-family="Inter,sans-serif">Implementation</text>
-    <rect x="${PL+95}" y="8" width="9" height="5" rx="1" fill="#00AEEF"/><text x="${PL+108}" y="14" font-size="8" fill="#64748B" font-family="Inter,sans-serif">Ramp-up</text>
+    <rect x="${PL+95}" y="8" width="9" height="5" rx="1" fill="#00A9CC"/><text x="${PL+108}" y="14" font-size="8" fill="#64748B" font-family="Inter,sans-serif">Ramp-up</text>
     <rect x="${PL+162}" y="8" width="9" height="5" rx="1" fill="#2E7D32"/><text x="${PL+175}" y="14" font-size="8" fill="#64748B" font-family="Inter,sans-serif">Full efficiency</text>
   </svg>`;
 }
@@ -422,8 +422,8 @@ function render(v,mode){
     <!-- 3. Three Whys -->
     <div class="sec">
       <div class="sh"><div class="sn">${secNum()}</div><span class="st">The business case — three critical questions</span></div>
-      <div class="why" style="background:#FFF5F5;border:1px solid #FFCDD2;border-left:4px solid #C62828;"><div class="why-lbl" style="color:#C62828;">01 — Why act at all?</div><div class="why-sub">The cost of the status quo</div><div class="why-txt">${wa||'Complete the Three Whys in the Executive tab.'}</div></div>
-      <div class="why" style="background:#F0F7FF;border:1px solid #BBDEFB;border-left:4px solid #185FA5;"><div class="why-lbl" style="color:#185FA5;">02 — Why Cloud Inventory?</div><div class="why-sub">Why this solution, not an alternative</div><div class="why-txt">${wc||'Complete the Three Whys in the Executive tab.'}</div></div>
+      <div class="why" style="background:#FFF5F5;border:1px solid #FFCDD2;border-left:4px solid #C81E10;"><div class="why-lbl" style="color:#C81E10;">01 — Why act at all?</div><div class="why-sub">The cost of the status quo</div><div class="why-txt">${wa||'Complete the Three Whys in the Executive tab.'}</div></div>
+      <div class="why" style="background:#F0F7FF;border:1px solid #BBDEFB;border-left:4px solid #0089A6;"><div class="why-lbl" style="color:#0089A6;">02 — Why Cloud Inventory?</div><div class="why-sub">Why this solution, not an alternative</div><div class="why-txt">${wc||'Complete the Three Whys in the Executive tab.'}</div></div>
       <div class="why" style="background:#F0FFF4;border:1px solid #C8E6C9;border-left:4px solid #2E7D32;"><div class="why-lbl" style="color:#2E7D32;">03 — Why now?</div><div class="why-sub">The urgency to act in this window</div><div class="why-txt">${wn||'Complete the Three Whys in the Executive tab.'}</div></div>
     </div>
 
@@ -433,7 +433,7 @@ function render(v,mode){
       <div class="sh"><div class="sn">${secNum()}</div><span class="st">Implementation timeline &amp; ROI proviso</span></div>
       <div style="margin-bottom:.9rem;">${paybackTimeline(r,sv)}</div>
       <div class="prov-grid">
-        <div class="prov" style="border-left:4px solid #185FA5;"><div class="pv-icon">📅</div><div><div class="pv-lbl">Implementation</div><div class="pv-val">${sv.implMonths} months</div><div class="pv-det">No benefit accrues during implementation. Go-live month ${sv.implMonths+1}.</div></div></div>
+        <div class="prov" style="border-left:4px solid #0089A6;"><div class="pv-icon">📅</div><div><div class="pv-lbl">Implementation</div><div class="pv-val">${sv.implMonths} months</div><div class="pv-det">No benefit accrues during implementation. Go-live month ${sv.implMonths+1}.</div></div></div>
         <div class="prov" style="border-left:4px solid #854F0B;"><div class="pv-icon">📈</div><div><div class="pv-lbl">Efficiency ramp</div><div class="pv-val">${Math.round(sv.ramp1*100)}% / ${Math.round(sv.ramp2*100)}% / ${Math.round(sv.ramp3*100)}%</div><div class="pv-det">Mo 1 / 2 / 3+ post go-live. Year 1: ${yr1p}% of steady-state (${ff(r.year1Benefit)}).</div></div></div>
         <div class="prov" style="border-left:4px solid #2E7D32;"><div class="pv-icon">💰</div><div><div class="pv-lbl">Break-even</div><div class="pv-val">${ps}</div><div class="pv-det">From contract signing. ${pl} from go-live.</div></div></div>
       </div>

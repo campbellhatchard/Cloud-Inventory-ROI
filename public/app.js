@@ -94,6 +94,11 @@ function normaliseRow(r) {
     npv3:          parseFloat(r.npv3)           || 0,
     npv5:          parseFloat(r.npv5)           || 0,
     payback:       r.payback !== null ? parseFloat(r.payback) : null,
+    outcome:       r.outcome || '',
+    outcomeReason: r.outcome_reason || '',
+    realizedValue: r.realized_value !== null && r.realized_value !== undefined ? parseFloat(r.realized_value) : null,
+    outcomeAt:     r.outcome_at || null,
+    customerId:    r.customer_id || null,
     /* inputs come from GET /api/scenarios/:id — not included in list */
     inputs:        r.data || null
   };
@@ -106,7 +111,7 @@ function persistSaved(arr)   { savedScenarios = arr; updateSavedBadge(); }
 /* ════════════════════════════════════════
    Navigation
    ════════════════════════════════════════ */
-const ALL_TABS = ['calc','disc','comp','exec','saved','compare','sensitivity','analytics','map','stake','admin','help','impact','profile'];
+const ALL_TABS = ['calc','disc','comp','exec','saved','compare','sensitivity','analytics','map','stake','solfit','admin','help','impact','profile'];
 
 function switchTab(name) {
   ALL_TABS.forEach(n => {
@@ -168,6 +173,7 @@ function updateSavedBadge() {
    ════════════════════════════════════════ */
 function applyDefaults() {
   const ind = document.getElementById('industry').value;
+  if (typeof updateBenchmarkBanner === 'function') updateBenchmarkBanner();
   if (!ind) return;
   const d = IND[ind];
 
@@ -265,6 +271,7 @@ function getVals() {
     dealStage: gs('dealStage'),
     execAudience: gs('execAudience') || 'mixed',
     solution: gs('solution') || 'all',
+    currency: (typeof getCurrency === 'function') ? getCurrency() : 'USD',
     revenue: g('revenue'), users: g('userCount'), labor: g('laborCost'),
     inventory: inventoryVal, itCost: g('itCost'), invest: g('invest'),
     psvc, hw, train, otc: psvc+hw+train,
@@ -323,6 +330,7 @@ function getVals() {
    Formatters
    ════════════════════════════════════════ */
 function fmt(n) {
+  if (typeof moneyAbbrev === 'function') return moneyAbbrev(n);
   if (n===null||n===undefined||isNaN(n)) return '—';
   const abs=Math.abs(Math.round(n));
   if (abs>=1000000) return (n<0?'-$':'$')+(abs/1000000).toFixed(1).replace(/\.0$/,'')+'M';
@@ -330,6 +338,7 @@ function fmt(n) {
   return (n<0?'-$':'$')+abs.toLocaleString();
 }
 function fmtFull(n) {
+  if (typeof moneyFull === 'function') return moneyFull(n);
   if (n===null||isNaN(n)) return '—';
   return (n<0?'-$':'$')+Math.abs(Math.round(n)).toLocaleString();
 }
@@ -523,12 +532,12 @@ function buildPreviewScenarioTable(baseV) {
         <thead><tr>
           <th class="left">Metric</th>
           <th style="background:#854F0B;">Conservative (70%)</th>
-          <th style="background:#185FA5;">Base (100%)</th>
+          <th style="background:#0089A6;">Base (100%)</th>
           <th style="background:#2E7D32;">Aggressive (130%)</th>
         </tr></thead>
         <tbody>
           <tr><td class="left">Annual benefit</td>${scenarios.map(s=>`<td class="pos">${fmtFull(s.r.annualBenefit)}</td>`).join('')}</tr>
-          <tr><td class="left">Year 1 ROI</td>${scenarios.map(s=>`<td style="font-weight:600;color:#185FA5;">${fmtPct(s.r.roi)}</td>`).join('')}</tr>
+          <tr><td class="left">Year 1 ROI</td>${scenarios.map(s=>`<td style="font-weight:600;color:#0089A6;">${fmtPct(s.r.roi)}</td>`).join('')}</tr>
           <tr><td class="left">Payback period</td>${scenarios.map(s=>`<td>${payStr(s.r.payback)}</td>`).join('')}</tr>
           <tr><td class="left">3-yr NPV</td>${scenarios.map(s=>`<td class="${s.r.npv3>=0?'pos':'neg'}">${fmtFull(s.r.npv3)}</td>`).join('')}</tr>
           <tr><td class="left">5-yr NPV</td>${scenarios.map(s=>`<td class="${s.r.npv5>=0?'pos':'neg'}">${fmtFull(s.r.npv5)}</td>`).join('')}</tr>
@@ -565,7 +574,7 @@ function renderExec() {
   const comp = v.competitor ? COMP[v.competitor] : null;
 
   const valueRows=[
-    {label:'Labor & productivity savings',  val:r.laborSav,  color:'#185FA5'},
+    {label:'Labor & productivity savings',  val:r.laborSav,  color:'#0089A6'},
     {label:'Shrinkage / write-off reduction',val:r.shrinkSav,color:'#2E7D32'},
     {label:'Inventory carrying cost reduction',val:r.carrySav,color:'#0F6E56'},
     {label:'OTIF / order accuracy improvement',val:r.otifSav, color:'#854F0B'},
@@ -590,7 +599,7 @@ function renderExec() {
     <div class="e-section e-proviso-section">
       <div class="e-h2">Implementation timeline &amp; assumptions</div>
       <div class="e-proviso-grid">
-        <div class="e-proviso-card" style="border-left:4px solid #185FA5;">
+        <div class="e-proviso-card" style="border-left:4px solid #0089A6;">
           <div class="e-proviso-icon">📅</div>
           <div>
             <div class="e-proviso-label">Implementation period</div>
@@ -658,7 +667,7 @@ function renderExec() {
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;">
         ${proofPoints.map(p=>`
           <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:.85rem;">
-            <div style="font-size:10px;font-weight:700;color:#042C53;margin-bottom:4px;">${p.company}</div>
+            <div style="font-size:10px;font-weight:700;color:#1E2931;margin-bottom:4px;">${p.company}</div>
             <div style="font-size:11px;color:#334155;margin-bottom:4px;">${p.result}</div>
             <div style="font-size:11px;font-weight:700;color:#2E7D32;">${p.metric}</div>
           </div>`).join('')}
@@ -712,7 +721,7 @@ function renderExec() {
         </div>
         <div class="e-approach-pillars">
           <div class="e-approach-pillar">
-            <div class="e-approach-icon" style="background:#185FA5;">◆</div>
+            <div class="e-approach-icon" style="background:#0089A6;">◆</div>
             <div class="e-approach-pt">Your data, not assumptions</div>
             <div class="e-approach-pd">Inputs captured through structured discovery of your actual metrics.</div>
           </div>
@@ -743,6 +752,7 @@ function renderExec() {
         ${bars}
         <div class="e-bar-total"><span style="flex:1">Total annual value</span><span>${fmtFull(r.annualBenefit)}</span></div>
       </div>
+      ${typeof buildExecInfographics === 'function' ? buildExecInfographics(r, v) : ''}
       <div class="e-section">
         <div class="e-h2">5-year cash flow & NPV (discount rate: ${fmtPct(v.discRate*100)})</div>
         <table class="e-tbl">
@@ -895,6 +905,9 @@ async function loadScenario(id) {
     }
     if (!inputs) { showToast('Scenario data not found.'); return; }
     if (typeof loadFromObject === 'function') loadFromObject(inputs);
+    /* Remember which customer this scenario belongs to, so the Solution Fit
+       tab can attach to it. */
+    window.currentScenarioCustomerId = (scenario && scenario.customerId) || null;
     /* Reset + reattach discovery session to THIS scenario — prevents a
        prospect link from a previously-loaded customer being reused.    */
     if (typeof resetDiscoveryForScenario === 'function') await resetDiscoveryForScenario(id);
@@ -948,7 +961,7 @@ function renderList() {
 
   const initials    = n => n.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase()||'?';
   const payStr      = pb => pb===null?'—':pb>=60?'60+mo':pb.toFixed(1)+'mo';
-  const stageColors = { Discovery:'#185FA5', Demo:'#854F0B', Proposal:'#0F6E56', Negotiation:'#3C3489', 'Closed Won':'#2E7D32', 'Closed Lost':'#C62828' };
+  const stageColors = { Discovery:'#0089A6', Demo:'#854F0B', Proposal:'#0F6E56', Negotiation:'#3C3489', 'Closed Won':'#2E7D32', 'Closed Lost':'#C81E10' };
   const me          = window.ciAuth ? window.ciAuth.getUser() : {};
 
   el.innerHTML = `<ul class="scenario-list">${filtered.map(s => `
