@@ -14,16 +14,16 @@
 const PPT = {
   W: 10,           // slide width inches
   H: 5.625,        // slide height inches
-  NAVY:      '243646',
-  CYAN:      '00A7CF',
-  ORANGE:    'F79424',
-  ORANGE2:   'F46C13',
-  RED:       'E51D1D',
-  GRAY_BG:   'F0F0F0',
-  GRAY_TXT:  '5A6570',
-  DARK_TXT:  '222222',
+  NAVY:      '1E2931',
+  CYAN:      '00A9CC',
+  ORANGE:    'C24A1E',
+  ORANGE2:   'A6791E',
+  RED:       'C81E10',
+  GRAY_BG:   'F1F5F9',
+  GRAY_TXT:  '64748B',
+  DARK_TXT:  '1E293B',
   WHITE:     'FFFFFF',
-  GREEN:     '2BB673',
+  GREEN:     '2E7D32',
   LOGO:      'ci-logo-pptx.png',
   LOGO_W:    0.95,           // logo width in inches (1000:349 ratio)
   LOGO_H:    0.95 * 349/1000,

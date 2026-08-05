@@ -8,11 +8,11 @@ let _stakeCompany = '';
 
 const STAKE_ROLES = {
   champion:        { label: 'Champion',        color: '#2E7D32' },
-  economic_buyer:  { label: 'Economic Buyer',  color: '#0C447C' },
-  technical_buyer: { label: 'Technical Buyer', color: '#00A7CF' },
-  influencer:      { label: 'Influencer',      color: '#854F0B' },
+  economic_buyer:  { label: 'Economic Buyer',  color: '#45688A' },
+  technical_buyer: { label: 'Technical Buyer', color: '#00A9CC' },
+  influencer:      { label: 'Influencer',      color: '#A6791E' },
   blocker:         { label: 'Blocker',         color: '#C81E10' },
-  end_user:        { label: 'End User',        color: '#5A6570' }
+  end_user:        { label: 'End User',        color: '#64748B' }
 };
 
 async function initStakeTab() {

@@ -214,7 +214,7 @@ const AUDIENCE_CONFIG = {
     aiInstruction: 'Write for a CFO audience. Lead with hard financial metrics: NPV, ROI, payback period, total cost of ownership, and working capital impact. Every sentence should be defensible with the numbers in the model. Avoid operational detail unless it directly ties to a dollar figure.',
   },
   coo: {
-    key: 'coo', label: 'COO / VP Operations', icon: '⚙️', color: '#0F6E56',
+    key: 'coo', label: 'COO / VP Operations', icon: '⚙️', color: '#12786F',
     description: 'Operational focus — efficiency, accuracy, headcount',
     aiInstruction: 'Write for a COO or VP of Operations audience. Focus on process improvement, accuracy rates, headcount efficiency, cycle time reduction, and operational risk elimination. Translate financial figures into operational outcomes (e.g. hours saved, error rates reduced, stockouts prevented).',
   },
@@ -224,12 +224,12 @@ const AUDIENCE_CONFIG = {
     aiInstruction: 'Write for a CEO or executive sponsor audience. Focus on strategic positioning, competitive differentiation, growth enablement, and enterprise risk reduction. Connect inventory accuracy to the broader business strategy. Minimize granular financial or operational detail — executives want the "so what", not the mechanics.',
   },
   cio: {
-    key: 'cio', label: 'CIO / CTO', icon: '💻', color: '#5B2D8E',
+    key: 'cio', label: 'CIO / CTO', icon: '💻', color: '#6A4C93',
     description: 'Technology focus — integration, architecture, IT displacement, scalability',
     aiInstruction: 'Write for a CIO or CTO audience. Focus on technology integration, system architecture, IT cost displacement, implementation risk, time-to-value, and scalability. Address how Cloud Inventory integrates with the existing ERP and technology stack, the effort required from the IT team, and the elimination of legacy technical debt. Quantify IT cost savings and reduced maintenance burden. Emphasise the no-code configuration model that reduces dependence on IT for ongoing changes. Avoid financial jargon — frame value in technology and architecture terms.',
   },
   mixed: {
-    key: 'mixed', label: 'Mixed audience', icon: '👥', color: '#3C3489',
+    key: 'mixed', label: 'Mixed audience', icon: '👥', color: '#6A4C93',
     description: 'All personas — CFO, COO, CEO, and CIO/CTO',
     aiInstruction: 'Write for a mixed executive audience that includes a CFO (cost/ROI), COO (operational efficiency), CEO (strategic risk/growth), and CIO/CTO (technology integration and IT displacement). Each Why should contain at least one hook for each persona — open with the strategic framing, support with operational and technology proof, and close with financial justification.',
   }
@@ -264,7 +264,7 @@ function buildExecHeadlines(v, r) {
       key: 'coo',
       audience: 'COO / VP Operations',
       icon: '⚙️',
-      color: '#0F6E56',
+      color: '#12786F',
       headline: `${fmtFull(r.laborSav + r.shrinkSav)} in annual labor and inventory loss reduction`,
       detail: `${Math.round(v.users)} inventory users reclaim an estimated ${fmtPct(v.mLabor*100)} of productive time through scan-verified, directed workflows — eliminating manual counts, paper-based processes, and reconciliation rework. Accuracy improvements reduce write-offs by ${fmtFull(r.shrinkSav)} and free ${fmtFull(r.carrySav)} in carrying costs annually.`
     },
@@ -280,7 +280,7 @@ function buildExecHeadlines(v, r) {
       key: 'cio',
       audience: 'CIO / CTO',
       icon: '💻',
-      color: '#5B2D8E',
+      color: '#6A4C93',
       headline: `${fmtFull(r.itSav)}/yr in IT & legacy system cost displacement`,
       detail: `Cloud Inventory is a cloud-native, API-first SaaS platform that integrates with ${v.competitor && COMP[v.competitor] ? 'your existing systems replacing ' + COMP[v.competitor].name : 'any ERP or system of record'} via standard REST APIs — no custom middleware, no on-premise infrastructure, no IT-managed upgrade cycles. No-code configuration means operational teams own changes without raising IT tickets. The ${fmtFull(v.otc)} one-time implementation cost covers full ERP integration, data migration, and go-live, with typical project delivery in ${v.implMonths || 3} months.`
     }
@@ -325,9 +325,9 @@ function buildTimeline() {
   return [
     { phase: 'Phase 1', name: 'Kickoff & configure', weeks: 'Weeks 1–3', color: '#0089A6',
       steps: ['Project kickoff and stakeholder alignment','ERP integration mapping and setup','System configuration — workflows, locations, users','Data migration — items, locations, on-hand counts'] },
-    { phase: 'Phase 2', name: 'Pilot & train', weeks: 'Weeks 4–5', color: '#0F6E56',
+    { phase: 'Phase 2', name: 'Pilot & train', weeks: 'Weeks 4–5', color: '#12786F',
       steps: ['Pilot go-live with core warehouse team','Mobile device provisioning and scanning setup','End-user training — typically 2–4 hours per user','Parallel run with existing system for validation'] },
-    { phase: 'Phase 3', name: 'Full go-live', weeks: 'Week 6+', color: '#3C3489',
+    { phase: 'Phase 3', name: 'Full go-live', weeks: 'Week 6+', color: '#6A4C93',
       steps: ['Full production go-live across all locations','Hypercare support period — daily check-ins','Field inventory module activation if applicable','First cycle count and accuracy benchmark established'] },
   ];
 }
@@ -468,7 +468,7 @@ function buildNarrativeSections(v, r) {
             </tr>`).join('')}
         </tbody>
       </table>
-      <div style="margin-top:.5rem;font-size:10px;color:#94A3B8;">✓ = Full capability &nbsp;~ = Partial / requires configuration &nbsp;✗ = Not available or requires separate solution</div>
+      <div style="margin-top:.5rem;font-size:10px;color:#6B7A8D;">✓ = Full capability &nbsp;~ = Partial / requires configuration &nbsp;✗ = Not available or requires separate solution</div>
     </div>`;
 
   /* ── Next steps ── */
@@ -486,7 +486,7 @@ function buildNarrativeSections(v, r) {
         </div>`).join('')}
       <div class="e-next-cta">
         <div class="e-next-cta-text">Ready to move forward?</div>
-        <div style="font-size:11px;color:#7DB8DC;margin-top:4px;">Contact your Cloud Inventory representative to schedule the next step &nbsp;·&nbsp; cloudinventory.com</div>
+        <div style="font-size:11px;color:#45688A;margin-top:4px;">Contact your Cloud Inventory representative to schedule the next step &nbsp;·&nbsp; cloudinventory.com</div>
       </div>
     </div>`;
 

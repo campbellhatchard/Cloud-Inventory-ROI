@@ -13,15 +13,20 @@
   const STANDARD_PROCESSES = ['Receiving','Putaway','Inventory Movement','Picking','Packing','Shipping','Cycle Counting','Replenishment','Production Issue / Return','Field Inventory','Returns','Printing / Labeling'];
   const CLASSIFICATIONS = ['UNKNOWN','CONFIGURATION','PROCESS CHANGE','EXTENSION','INTEGRATION','REPORT / PRINT','DATA','NON-FUNCTIONAL','ROADMAP','OUT OF SCOPE'];
 
+  const PRODUCTS = ['MEP','CIP','CPP','Platform'];
   const blankProcess = (name, i) => ({ id:`P-${String(i+1).padStart(3,'0')}`, name, selected:false, demoStatus:'Not reviewed', fit:'Not reviewed', notes:'' });
   const blankState = () => ({
-    opportunity:{customer:'',opportunityId:'',solutionEngineer:'',stage:'Discovery',products:'',goLive:'',locations:'',users:'',problem:'',outcome:'',businessOwner:'',technicalOwner:''},
-    architecture:{relationship:'',erp:'',version:'',otherSystems:'',integrationMethod:'',integrationOwner:'',integrationNotes:''},
+    opportunity:{customer:'',solutionEngineer:'',solutionEngineerId:'',stage:'Discovery',products:[],productsOther:'',goLive:'',users:'',problem:'',outcome:'',
+      businessOwnerName:'',businessOwnerTitle:'',businessOwnerEmail:'',businessOwnerPhone:'',
+      technicalOwnerName:'',technicalOwnerTitle:'',technicalOwnerEmail:'',technicalOwnerPhone:''},
+    architecture:{relationship:'',erp:'',version:'',otherSystems:'',integrationMethod:'',integrationOwner:'',integrationNotes:'',
+      hasCustomizations:'',customizations:[]},
     partner:{involved:'',company:'',role:'',contactName:'',email:'',phone:'',title:''},
     processes:STANDARD_PROCESSES.map(blankProcess), gaps:[], interfaces:[],
     drivers:{offline:'Unknown',offlineDuration:'',devices:'',peripherals:'',customOutput:'Unknown',volumeConcern:'Unknown',volume:'',otherConstraint:''},
     handoffType:'internal'
   });
+  const blankCustomization = () => ({ module:'', description:'', impact:'None' });
 
   /* Module state */
   let S = blankState();
@@ -29,6 +34,24 @@
   let openGapId = null, activeTab = 'context', saveTimer = null, dirty = false;
 
   const esc = v => String(v==null?'':v).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+
+  /* Format the products list for documents (includes Other free-text). */
+  function fmtProducts(o) {
+    const list = Array.isArray(o.products) ? o.products.slice() : [];
+    const out = list.filter(p => p !== 'Other');
+    if (list.includes('Other') && o.productsOther) out.push(o.productsOther);
+    return out.length ? out.join(', ') : '—';
+  }
+  /* Format an owner block: "Name, Title (email · phone)". */
+  function fmtOwner(o, k) {
+    const name = o[k+'Name'], title = o[k+'Title'], email = o[k+'Email'], phone = o[k+'Phone'];
+    if (!name && !title) return '—';
+    let s = name || '';
+    if (title) s += (s?', ':'') + title;
+    const contact = [email, phone].filter(Boolean).join(' · ');
+    if (contact) s += ` (${contact})`;
+    return s || '—';
+  }
   const $ = s => document.getElementById(s);
   const val = (obj, path) => path.split('.').reduce((a,k)=>a?.[k], obj);
   const setVal = (obj, path, v) => { const p=path.split('.'); let o=obj; while(p.length>1) o=o[p.shift()]; o[p[0]]=v; };
@@ -53,12 +76,45 @@
       customerName = data.customerName || '';
       exists = !!data.exists;
       S = mergeState(blankState(), data.data || {});
+      migrateState(S);
       /* Seed customer name into opportunity if empty. */
       if (!S.opportunity.customer && customerName) S.opportunity.customer = customerName;
+      /* Default Solution Engineer to the logged-in user (SE), or the admin. */
+      const u = currentUser();
+      if (!S.opportunity.solutionEngineer && (u.role === 'se' || u.role === 'admin')) {
+        S.opportunity.solutionEngineer = u.username || u.name || '';
+        S.opportunity.solutionEngineerId = u.id || '';
+      }
+      await loadSEList();
       /* Permission: can this user write? (server is authoritative; we mirror for UI). */
       canWrite = await resolveCanWrite();
       return true;
     } catch (e) { console.error('loadHandoff error:', e.message); renderGate('Could not load the handoff — check your connection.'); return false; }
+  }
+
+  /* Tolerate handoffs saved under the previous field shapes (no data loss). */
+  function migrateState(s) {
+    const o = s.opportunity || (s.opportunity = {});
+    if (typeof o.products === 'string') { o.products = o.products ? [o.products] : []; }
+    if (!Array.isArray(o.products)) o.products = [];
+    if (o.productsOther === undefined) o.productsOther = '';
+    /* old single owner fields → name */
+    if (o.businessOwner && !o.businessOwnerName) o.businessOwnerName = o.businessOwner;
+    if (o.technicalOwner && !o.technicalOwnerName) o.technicalOwnerName = o.technicalOwner;
+    ['businessOwnerName','businessOwnerTitle','businessOwnerEmail','businessOwnerPhone',
+     'technicalOwnerName','technicalOwnerTitle','technicalOwnerEmail','technicalOwnerPhone',
+     'solutionEngineerId','productsOther'].forEach(k=>{ if(o[k]===undefined) o[k]=''; });
+    const a = s.architecture || (s.architecture = {});
+    if (a.hasCustomizations === undefined) a.hasCustomizations = '';
+    if (!Array.isArray(a.customizations)) a.customizations = [];
+  }
+
+  let _seList = [];
+  async function loadSEList() {
+    try {
+      const resp = await apiFetch('/api/solution-engineers');
+      _seList = (resp && resp.ok) ? await resp.json() : [];
+    } catch (e) { _seList = []; }
   }
 
   function currentUser() {
@@ -203,24 +259,62 @@
     const f = (label, path, ph='') => `<div class="sf-field"><label>${esc(label)}</label><input data-sfbind="${path}" value="${esc(val(S,path))}" placeholder="${esc(ph)}"></div>`;
     const ta = (label, path, ph='') => `<div class="sf-field"><label>${esc(label)}</label><textarea data-dictate data-sfbind="${path}" placeholder="${esc(ph)}">${esc(val(S,path))}</textarea></div>`;
     const sel = (label, path, opts) => `<div class="sf-field"><label>${esc(label)}</label><select data-sfbind="${path}">${opts.map(x=>`<option ${val(S,path)===x?'selected':''}>${esc(x)}</option>`).join('')}</select></div>`;
+
+    /* Solution Engineer dropdown from SE + Admin users. */
+    const seOpts = ['<option value="">— Select —</option>'].concat(
+      _seList.map(u => `<option value="${esc(u.name)}" ${o.solutionEngineer===u.name?'selected':''}>${esc(u.name)}${u.role==='admin'?' (Admin)':''}</option>`)
+    ).join('');
+    const seField = `<div class="sf-field"><label>Solution Engineer</label><select data-sfbind="opportunity.solutionEngineer">${seOpts}</select></div>`;
+
+    /* Products checkboxes + Other. */
+    const prodChecks = PRODUCTS.map(pr => `<label class="sf-check"><input type="checkbox" data-sfprod="${esc(pr)}" ${o.products.includes(pr)?'checked':''}><span>${esc(pr)}</span></label>`).join('');
+    const otherChecked = o.products.includes('Other');
+    const productsField = `<div class="sf-field"><label>Cloud Inventory product(s)</label>
+      <div class="sf-checks">${prodChecks}<label class="sf-check"><input type="checkbox" data-sfprod="Other" ${otherChecked?'checked':''}><span>Other</span></label></div>
+      <div id="sfProductsOther" class="${otherChecked?'':'sf-hidden'}" style="margin-top:8px;"><input data-sfbind="opportunity.productsOther" value="${esc(o.productsOther)}" placeholder="Describe other product(s)"></div>
+    </div>`;
+
+    /* Owner blocks: name / title / email / phone. */
+    const ownerBlock = (title, k) => `<div class="sf-owner">
+      <div class="sf-owner-title">${esc(title)}</div>
+      <div class="sf-row2">${f('Name','opportunity.'+k+'Name')}${f('Title','opportunity.'+k+'Title')}</div>
+      <div class="sf-row2">${f('Email (optional)','opportunity.'+k+'Email')}${f('Phone (optional)','opportunity.'+k+'Phone')}</div>
+    </div>`;
+
+    /* Known customizations rows. */
+    const customRows = a.customizations.map((c,i)=>`<div class="sf-custom-row" data-sfcustidx="${i}">
+      <input data-sfcustfield="module" data-sfcustidx="${i}" value="${esc(c.module)}" placeholder="Module (e.g. Sales Order)">
+      <input data-sfcustfield="description" data-sfcustidx="${i}" value="${esc(c.description)}" placeholder="What was customized">
+      <select data-sfcustfield="impact" data-sfcustidx="${i}">${['None','Low','Med','High'].map(x=>`<option ${c.impact===x?'selected':''}>${x}</option>`).join('')}</select>
+      <button class="btn btn-danger btn-sm" data-sfcustdel="${i}" title="Remove">×</button>
+    </div>`).join('');
+
     return `
       <div class="sf-card"><h3>Opportunity</h3>
-        <div class="sf-row2">${f('Customer / prospect','opportunity.customer')}${f('Opportunity ID','opportunity.opportunityId','OPP-…')}</div>
-        <div class="sf-row2">${f('Solution Engineer','opportunity.solutionEngineer')}${sel('Stage','opportunity.stage',['Discovery','Technical validation','Proposal','Closed'])}</div>
-        <div class="sf-row2">${f('Cloud Inventory product(s)','opportunity.products','e.g. CIP + MEP')}${f('Target go-live','opportunity.goLive','e.g. Q1 2027')}</div>
-        <div class="sf-row2">${f('Locations / operating scope','opportunity.locations')}${f('Estimated users','opportunity.users')}</div>
+        <div class="sf-row2">${f('Customer / prospect','opportunity.customer')}${seField}</div>
+        <div class="sf-row2">${sel('Stage','opportunity.stage',['Discovery','Technical validation','Proposal','Closed'])}${f('Target go-live','opportunity.goLive','e.g. Q1 2027')}</div>
+        ${productsField}
+        <div class="sf-row2">${f('Estimated users','opportunity.users')}<div></div></div>
         ${ta('Business problem','opportunity.problem','What is the customer trying to solve?')}
         ${ta('Desired outcome','opportunity.outcome','What does success look like?')}
-        <div class="sf-row2">${f('Business owner','opportunity.businessOwner')}${f('Technical owner','opportunity.technicalOwner')}</div>
+        <div class="sf-row2">${ownerBlock('Business owner','businessOwner')}${ownerBlock('Technical owner','technicalOwner')}</div>
       </div>
       <div class="sf-card"><h3>System of record &amp; solution relationship</h3>
         ${sel('Deployment relationship','architecture.relationship',['','Standalone','Integrated to system of record','Hybrid'])}
         <div id="sfIntFields" class="${a.relationship==='Standalone'?'sf-hidden':''}">
           <div class="sf-row2">${f('ERP / system of record','architecture.erp')}${f('Version','architecture.version')}</div>
-          <div class="sf-row2">${sel('Primary integration method','architecture.integrationMethod',['','Cloud Inventory REST API','SOAP / web service','File','Middleware / iPaaS','Connector','Other'])}${sel('Integration delivery owner','architecture.integrationOwner',['','Cloud Inventory','Customer','Partner','Shared'])}</div>
+          <div class="sf-row2">${sel('Primary integration method','architecture.integrationMethod',['','Standalone','Cloud Inventory REST API','SOAP / web service','File','Middleware / iPaaS','Connector','Other'])}${sel('Integration delivery owner','architecture.integrationOwner',['','Cloud Inventory','Customer','Partner','Shared'])}</div>
           ${ta('Integration notes','architecture.integrationNotes')}
         </div>
         <div id="sfStandaloneNote" class="sf-note ${a.relationship==='Standalone'?'':'sf-hidden'}">Standalone deployment — no system-of-record integration in scope.</div>
+        <div class="sf-subsection">
+          ${sel('Known customizations to the system of record?','architecture.hasCustomizations',['','No','Yes'])}
+          <div id="sfCustomizations" class="${a.hasCustomizations==='Yes'?'':'sf-hidden'}">
+            <div class="sf-custom-head"><span>Module</span><span>Customization</span><span>Impact</span><span></span></div>
+            <div id="sfCustomRows">${customRows || '<div class="sf-muted" style="padding:4px 0;">No customizations added yet.</div>'}</div>
+            <button class="btn btn-ghost btn-sm" data-sfaction="addCustomization">＋ Add another</button>
+          </div>
+        </div>
       </div>
       <div class="sf-card"><h3>Partner involvement</h3>
         ${sel('Partner involved?','partner.involved',['','No','Yes'])}
@@ -234,7 +328,7 @@
   /* ── Tab 2: Demo & Fit checklist ────────────────────────────────── */
   function renderChecklist() {
     return `<div class="sf-card">
-      <div class="sf-card-head"><h3>Business processes</h3><button class="btn btn-ghost btn-sm" data-sfaction="addProcess">+ Add process</button></div>
+      <div class="sf-card-head"><h3>Business processes</h3><button class="btn btn-accent btn-sm sf-add-process" data-sfaction="addProcess">＋ Add process</button></div>
       <div class="sf-process-grid">${S.processes.map((p,i)=>renderProcessCard(p,i)).join('')}</div>
     </div>`;
   }
@@ -374,7 +468,7 @@
     const sel=S.processes.filter(x=>x.selected);
     const demoed=sel.filter(x=>x.demoStatus==='Demonstrated');
     return `${docHeadBrand('Solution Fit, Gap & Services Handoff',
-        `${esc(o.customer||'Customer not entered')}${o.opportunityId?` · ${esc(o.opportunityId)}`:''}`,
+        `${esc(o.customer||'Customer not entered')}`,
         `INTERNAL · ${r.score}% READY`)}
     <div class="hd-summary">
       <div><b>${sel.length}</b><span>Processes in scope</span></div>
@@ -383,12 +477,15 @@
       <div><b>${S.interfaces.length}</b><span>Additional interfaces</span></div>
     </div>
     <h2 class="hd-h2">Business context</h2>
-    <p><strong>Products:</strong> ${esc(o.products||'—')} &nbsp;·&nbsp; <strong>Locations:</strong> ${esc(o.locations||'—')} &nbsp;·&nbsp; <strong>Users:</strong> ${esc(o.users||'—')} &nbsp;·&nbsp; <strong>Target go-live:</strong> ${esc(o.goLive||'—')}</p>
+    <p><strong>Solution Engineer:</strong> ${esc(o.solutionEngineer||'—')} &nbsp;·&nbsp; <strong>Stage:</strong> ${esc(o.stage||'—')}</p>
+    <p><strong>Products:</strong> ${esc(fmtProducts(o))} &nbsp;·&nbsp; <strong>Users:</strong> ${esc(o.users||'—')} &nbsp;·&nbsp; <strong>Target go-live:</strong> ${esc(o.goLive||'—')}</p>
+    <p><strong>Business owner:</strong> ${esc(fmtOwner(o,'businessOwner'))} &nbsp;·&nbsp; <strong>Technical owner:</strong> ${esc(fmtOwner(o,'technicalOwner'))}</p>
     <p><strong>Business problem:</strong> ${esc(o.problem||'—')}</p>
     <p><strong>Desired outcome:</strong> ${esc(o.outcome||'—')}</p>
     <h2 class="hd-h2">Architecture &amp; delivery ownership</h2>
     <p><strong>Relationship:</strong> ${esc(a.relationship||'—')} &nbsp;·&nbsp; <strong>ERP/SOR:</strong> ${esc(a.erp||'—')} &nbsp;·&nbsp; <strong>Version:</strong> ${esc(a.version||'—')}</p>
     ${a.relationship!=='Standalone'?`<p><strong>Primary integration:</strong> ${esc(a.integrationMethod||'—')} &nbsp;·&nbsp; <strong>Integration delivery:</strong> ${esc(a.integrationOwner||'—')}</p>`:''}
+    ${a.hasCustomizations==='Yes' && a.customizations.length ? `<p><strong>Known SOR customizations:</strong></p><ul class="hd-ul">${a.customizations.map(c=>`<li><strong>${esc(c.module||'Module')}</strong> — ${esc(c.description||'—')} <em>(impact: ${esc(c.impact||'None')})</em></li>`).join('')}</ul>` : (a.hasCustomizations==='No'?'<p><strong>Known SOR customizations:</strong> None reported.</p>':'')}
     <p><strong>Partner involved:</strong> ${esc(p.involved||'—')}${p.involved==='Yes'?` &nbsp;·&nbsp; <strong>Partner:</strong> ${esc(p.company||'—')} &nbsp;·&nbsp; <strong>Contact:</strong> ${esc(p.contactName||'—')} (${esc(p.email||'—')})`:''}</p>
     <h2 class="hd-h2">Demo &amp; fit evidence</h2>
     ${sel.length?`<table class="hd-table"><thead><tr><th>Process</th><th>Demo status</th><th>Fit</th><th>Evidence / note</th></tr></thead><tbody>${sel.map(x=>`<tr><td><strong>${esc(x.name)}</strong></td><td>${esc(x.demoStatus)}</td><td>${esc(x.fit)}</td><td>${esc(x.notes||'—')}</td></tr>`).join('')}</tbody></table>`:'<p>No process scope recorded.</p>'}
@@ -423,7 +520,7 @@
     <p><strong>Current challenge:</strong> ${esc(o.problem||'To be confirmed')}</p>
     <p><strong>Desired outcome:</strong> ${esc(o.outcome||'To be confirmed')}</p>
     <h2 class="hd-h2">Proposed solution context</h2>
-    <p><strong>Cloud Inventory product(s):</strong> ${esc(o.products||'To be confirmed')} &nbsp;·&nbsp; <strong>Operating scope:</strong> ${esc(o.locations||'To be confirmed')} &nbsp;·&nbsp; <strong>Estimated users:</strong> ${esc(o.users||'To be confirmed')}</p>
+    <p><strong>Cloud Inventory product(s):</strong> ${esc(fmtProducts(o) || 'To be confirmed')} &nbsp;·&nbsp; <strong>Estimated users:</strong> ${esc(o.users||'To be confirmed')}</p>
     <p><strong>System relationship:</strong> ${esc(a.relationship||'To be confirmed')} &nbsp;·&nbsp; <strong>System of record:</strong> ${esc(a.erp||'To be confirmed')} &nbsp;·&nbsp; <strong>Version:</strong> ${esc(a.version||'To be confirmed')}</p>
     ${a.relationship!=='Standalone'?`<p><strong>Expected integration approach:</strong> ${esc(a.integrationMethod||'To be confirmed')} &nbsp;·&nbsp; <strong>Expected delivery responsibility:</strong> ${esc(a.integrationOwner||'To be confirmed')}</p>`:''}
     ${p.involved==='Yes'?`<p><strong>Partner participation:</strong> ${esc(p.company||'Partner to be confirmed')} ${p.role?`(${esc(p.role)})`:''}</p>`:''}
@@ -525,10 +622,26 @@
     /* handoff doc type toggle (allowed read-only too) */
     document.querySelectorAll('[data-sfdoc]').forEach(el=>el.onclick=()=>setDocType(el.dataset.sfdoc));
     /* conditional UI on context selects */
+    const reRenderContext = () => { const pane=document.querySelector('[data-sfpane="context"]'); if(pane){pane.innerHTML=renderContext(); wireBindings();} };
     const rel=document.querySelector('[data-sfbind="architecture.relationship"]');
-    if(rel) rel.addEventListener('change',()=>{ const pane=document.querySelector('[data-sfpane="context"]'); if(pane){pane.innerHTML=renderContext(); wireBindings();} });
+    if(rel) rel.addEventListener('change',reRenderContext);
     const inv=document.querySelector('[data-sfbind="partner.involved"]');
-    if(inv) inv.addEventListener('change',()=>{ const pane=document.querySelector('[data-sfpane="context"]'); if(pane){pane.innerHTML=renderContext(); wireBindings();} });
+    if(inv) inv.addEventListener('change',reRenderContext);
+    const custToggle=document.querySelector('[data-sfbind="architecture.hasCustomizations"]');
+    if(custToggle) custToggle.addEventListener('change',(e)=>{ S.architecture.hasCustomizations=e.target.value; scheduleSave(); reRenderContext(); });
+    /* product checkboxes */
+    document.querySelectorAll('[data-sfprod]').forEach(el=>el.addEventListener('change',(e)=>{
+      const pr=el.dataset.sfprod; const arr=S.opportunity.products;
+      if(e.target.checked){ if(!arr.includes(pr)) arr.push(pr); } else { const i=arr.indexOf(pr); if(i>-1) arr.splice(i,1); if(pr==='Other') S.opportunity.productsOther=''; }
+      scheduleSave();
+      if(pr==='Other') reRenderContext();   // toggle the Other text field
+    }));
+    /* customization rows */
+    document.querySelectorAll('[data-sfcustfield]').forEach(el=>el.addEventListener('input',(e)=>{
+      const i=+el.dataset.sfcustidx; const row=S.architecture.customizations[i];
+      if(row){ row[el.dataset.sfcustfield]=e.target.value; scheduleSave(); }
+    }));
+    document.querySelectorAll('[data-sfcustdel]').forEach(el=>el.onclick=()=>{ S.architecture.customizations.splice(+el.dataset.sfcustdel,1); reRenderContext(); scheduleSave(); });
     if(!canWrite) disableInputs();
     if(typeof SFDictation!=='undefined' && SFDictation.supported && canWrite) SFDictation.enhanceAll(document.getElementById('sfApp'));
   }
@@ -547,6 +660,7 @@
     if(a==='addProcess'){ const n=prompt('New process name:'); if(n&&n.trim()){ S.processes.push(blankProcess(n.trim(),S.processes.length)); S.processes.at(-1).selected=true; rerenderChecklist(); scheduleSave(); } }
     else if(a==='addGap'){ S.gaps.push(newGap({})); openGapId=S.gaps.at(-1).id; rerenderGaps(); scheduleSave(); }
     else if(a==='addInterface'){ S.interfaces.push({id:nextIntId(),source:'',target:'',object:'',method:'TBD',direction:'Bidirectional',trigger:'',volume:'',owner:'TBD'}); rerenderIntegration(); scheduleSave(); }
+    else if(a==='addCustomization'){ S.architecture.customizations.push(blankCustomization()); const pane=document.querySelector('[data-sfpane="context"]'); if(pane){pane.innerHTML=renderContext(); wireBindings();} scheduleSave(); }
     else if(a==='printDoc'){ printHandoffDoc(); }
     else if(a==='copyDoc'){ copyDocText(); }
   }

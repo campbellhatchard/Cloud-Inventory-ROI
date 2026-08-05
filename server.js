@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   server.js  —  Cloud Inventory ROI Builder  v2.9.2
+   server.js  —  Cloud Inventory ROI Builder  v4.0.0
    Database-backed multi-user edition — production hardened
 
    Security layers applied (Phase 10):
@@ -225,8 +225,25 @@ app.get('/api/companies', _reqAuthCompanies, async (req, res) => {
   }
 });
 
-/* First-class customers (stable IDs). Owner-scoped for now; Phase 2 will
-   widen read access for the SE role. */
+/* Lightweight list of assignable Solution Engineers + Admins, readable by any
+   authenticated user (returns only id/username/role — no sensitive fields).
+   Used to populate the Solution Fit "Solution Engineer" dropdown. */
+app.get('/api/solution-engineers', _reqAuthCompanies, async (req, res) => {
+  try {
+    const { query } = db();
+    const { rows } = await query(
+      `SELECT id, username, role FROM users
+        WHERE role IN ('se','admin') AND is_active = TRUE
+        ORDER BY role DESC, username ASC`
+    );
+    res.json(rows.map(r => ({ id: r.id, name: r.username, role: r.role })));
+  } catch (err) {
+    console.error('List solution engineers error:', err.message);
+    res.status(500).json({ error: 'Failed to load solution engineers.' });
+  }
+});
+
+/* First-class customers (stable IDs). SE/admin see all; AE sees their own. */
 app.get('/api/customers', _reqAuthCompanies, async (req, res) => {
   try {
     const { listCustomersForOwner, listAllCustomers } = require('./src/customers');

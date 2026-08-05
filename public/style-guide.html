@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Cloud Inventory — Design system v4.0.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="style.css"/>
+<style>
+  body{display:block;background:var(--canvas);}
+  .sg-shell{max-width:1080px;margin:0 auto;padding:48px 32px 96px;}
+  .sg-head{border-bottom:1px solid var(--gray-200);padding-bottom:28px;margin-bottom:44px;}
+  .sg-kicker{font-size:var(--fs-xs);font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan-dark);margin-bottom:12px;}
+  .sg-title{font-size:var(--fs-2xl);font-weight:700;color:var(--navy);letter-spacing:-.03em;}
+  .sg-lede{font-size:var(--fs-md);color:var(--gray-500);margin-top:10px;max-width:70ch;text-wrap:pretty;}
+  .sg-section{margin-bottom:56px;}
+  .sg-h2{font-size:var(--fs-lg);font-weight:700;color:var(--navy);letter-spacing:-.02em;margin-bottom:6px;}
+  .sg-note{font-size:var(--fs-sm);color:var(--gray-500);margin-bottom:20px;max-width:68ch;}
+  .sg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;}
+  .sw{border:1px solid var(--gray-200);border-radius:var(--radius-md);overflow:hidden;background:var(--white);}
+  .sw-chip{height:76px;}
+  .sw-meta{padding:10px 12px;}
+  .sw-name{font-size:var(--fs-sm);font-weight:600;color:var(--navy);}
+  .sw-hex{font-size:var(--fs-xs);color:var(--gray-500);font-family:var(--font-mono);text-transform:uppercase;}
+  .sg-panel{background:var(--white);border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:24px 26px;box-shadow:var(--shadow-sm);}
+  .sg-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
+  .sg-stack{display:flex;flex-direction:column;gap:14px;}
+  .sg-type-row{display:flex;align-items:baseline;gap:20px;padding:12px 0;border-bottom:1px solid var(--gray-100);}
+  .sg-type-row:last-child{border-bottom:none;}
+  .sg-token{font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--gray-500);width:96px;flex-shrink:0;}
+  .sg-space{display:flex;align-items:center;gap:14px;padding:7px 0;}
+  .sg-space-bar{height:14px;background:var(--cyan);border-radius:3px;}
+</style>
+</head>
+<body>
+<div class="sg-shell">
+
+  <header class="sg-head">
+    <div class="sg-kicker">Cloud Inventory · ROI Business Case Builder</div>
+    <h1 class="sg-title">Design system v4.0.0</h1>
+    <p class="sg-lede">The live reference for the application shell. Everything on this page is rendered from <code>style.css</code> — if a value changes there, it changes here. Colours are the six brand colours plus a categorical set reserved for charts and tags.</p>
+  </header>
+
+  <section class="sg-section">
+    <h2 class="sg-h2">Brand palette</h2>
+    <p class="sg-note">The six brand colours. Blue is the action colour, Dark is the frame, Orange carries warnings, Red is destructive only.</p>
+    <div class="sg-grid">
+      <div class="sw"><div class="sw-chip" style="background:#1E2931;"></div><div class="sw-meta"><div class="sw-name">Dark</div><div class="sw-hex">#1E2931</div></div></div>
+      <div class="sw"><div class="sw-chip" style="background:#00A9CC;"></div><div class="sw-meta"><div class="sw-name">Blue</div><div class="sw-hex">#00A9CC</div></div></div>
+      <div class="sw"><div class="sw-chip" style="background:#F9642E;"></div><div class="sw-meta"><div class="sw-name">Orange</div><div class="sw-hex">#F9642E</div></div></div>
+      <div class="sw"><div class="sw-chip" style="background:#FF341F;"></div><div class="sw-meta"><div class="sw-name">Red</div><div class="sw-hex">#FF341F</div></div></div>
+      <div class="sw"><div class="sw-chip" style="background:#F5F8FA;"></div><div class="sw-meta"><div class="sw-name">Light Blue</div><div class="sw-hex">#F5F8FA</div></div></div>
+      <div class="sw"><div class="sw-chip" style="background:#FFFFFF;border-bottom:1px solid var(--gray-200);"></div><div class="sw-meta"><div class="sw-name">White</div><div class="sw-hex">#FFFFFF</div></div></div>
+    </div>
+  </section>
+
+  <section class="sg-section">
+    <h2 class="sg-h2">Working colours</h2>
+    <p class="sg-note">Derived tints used for surfaces and state. Semantic green is reserved for confirmed value; the deep red is used for destructive actions so it never competes with brand Red.</p>
+    <div class="sg-grid">
+      <div class="sw"><div class="sw-chip" style="background:#0089A6;"></div><div class="sw-meta"><div class="sw-name">Blue dark</div><div class="sw-hex">#0089A6</div></div></div>
+      <div class="sw"><div class="sw-chip" style="background:#E4F6FA;"></div><div class="sw-meta"><div class="sw-name">Blue pale</div><div class="sw-hex">#E4F6FA</div></div></div>
+      <div class="sw"><div class="sw-chip" style="background:#2E7D32;"></div><div class="sw-meta"><div class="sw-name">Green</div><div class="sw-hex">#2E7D32</div></div></div>
+      <div class="sw"><div class="sw-chip" style="background:#C81E10;"></div><div class="sw-meta"><div class="sw-name">Red deep</div><div class="sw-hex">#C81E10</div></div></div>
+      <div class="sw"><div class="sw-chip" style="background:#C24A1E;"></div><div class="sw-meta"><div class="sw-name">Orange dark</div><div class="sw-hex">#C24A1E</div></div></div>
+      <div class="sw"><div class="sw-chip" style="background:#F4F7FA;"></div><div class="sw-meta"><div class="sw-name">Canvas</div><div class="sw-hex">#F4F7FA</div></div></div>
+      <div class="sw"><div class="sw-chip" style="background:#E3E9EE;"></div><div class="sw-meta"><div class="sw-name">Line</div><div class="sw-hex">#E3E9EE</div></div></div>
+      <div class="sw"><div class="sw-chip" style="background:#6B7A8D;"></div><div class="sw-meta"><div class="sw-name">Muted text</div><div class="sw-hex">#6B7A8D</div></div></div>
+    </div>
+  </section>
+
+  <section class="sg-section">
+    <h2 class="sg-h2">Categorical palette</h2>
+    <p class="sg-note">For value-driver charts, deal stages and audience tags. Chosen to stay distinct from each other and from the success and danger colours.</p>
+    <div class="sg-grid">
+      <div class="sw"><div class="sw-chip" style="background:#12786F;"></div><div class="sw-meta"><div class="sw-name">Teal</div><div class="sw-hex">#12786F</div></div></div>
+      <div class="sw"><div class="sw-chip" style="background:#6A4C93;"></div><div class="sw-meta"><div class="sw-name">Violet</div><div class="sw-hex">#6A4C93</div></div></div>
+      <div class="sw"><div class="sw-chip" style="background:#A6791E;"></div><div class="sw-meta"><div class="sw-name">Gold</div><div class="sw-hex">#A6791E</div></div></div>
+      <div class="sw"><div class="sw-chip" style="background:#45688A;"></div><div class="sw-meta"><div class="sw-name">Slate</div><div class="sw-hex">#45688A</div></div></div>
+      <div class="sw"><div class="sw-chip" style="background:#A23E5C;"></div><div class="sw-meta"><div class="sw-name">Berry</div><div class="sw-hex">#A23E5C</div></div></div>
+    </div>
+  </section>
+
+  <section class="sg-section">
+    <h2 class="sg-h2">Type scale</h2>
+    <p class="sg-note">Seven steps, Inter throughout. The floor is 12px — v4 raised it from 11px so hints, benchmarks and table cells stay legible.</p>
+    <div class="sg-panel">
+      <div class="sg-type-row"><span class="sg-token">--fs-2xl</span><span style="font-size:var(--fs-2xl);font-weight:700;letter-spacing:-.03em;color:var(--navy);">34 · Page hero</span></div>
+      <div class="sg-type-row"><span class="sg-token">--fs-xl</span><span style="font-size:var(--fs-xl);font-weight:700;letter-spacing:-.02em;color:var(--navy);">26 · Page title, KPI value</span></div>
+      <div class="sg-type-row"><span class="sg-token">--fs-lg</span><span style="font-size:var(--fs-lg);font-weight:700;color:var(--navy);">20 · Section heading</span></div>
+      <div class="sg-type-row"><span class="sg-token">--fs-md</span><span style="font-size:var(--fs-md);font-weight:600;color:var(--navy);">16 · Card title, emphasis</span></div>
+      <div class="sg-type-row"><span class="sg-token">--fs-base</span><span style="font-size:var(--fs-base);color:var(--gray-700);">14 · Body copy and form inputs</span></div>
+      <div class="sg-type-row"><span class="sg-token">--fs-sm</span><span style="font-size:var(--fs-sm);color:var(--gray-700);">13 · Labels, secondary copy</span></div>
+      <div class="sg-type-row"><span class="sg-token">--fs-xs</span><span style="font-size:var(--fs-xs);color:var(--gray-500);">12 · Hints, benchmarks, pills</span></div>
+    </div>
+  </section>
+
+  <section class="sg-section">
+    <h2 class="sg-h2">Spacing</h2>
+    <p class="sg-note">A 4px rhythm. Use the tokens rather than ad hoc pixel values.</p>
+    <div class="sg-panel">
+      <div class="sg-space"><span class="sg-token">--sp-1</span><span class="sg-space-bar" style="width:4px;"></span><span class="sw-hex">4px</span></div>
+      <div class="sg-space"><span class="sg-token">--sp-2</span><span class="sg-space-bar" style="width:8px;"></span><span class="sw-hex">8px</span></div>
+      <div class="sg-space"><span class="sg-token">--sp-3</span><span class="sg-space-bar" style="width:12px;"></span><span class="sw-hex">12px</span></div>
+      <div class="sg-space"><span class="sg-token">--sp-4</span><span class="sg-space-bar" style="width:16px;"></span><span class="sw-hex">16px</span></div>
+      <div class="sg-space"><span class="sg-token">--sp-5</span><span class="sg-space-bar" style="width:24px;"></span><span class="sw-hex">24px</span></div>
+      <div class="sg-space"><span class="sg-token">--sp-6</span><span class="sg-space-bar" style="width:32px;"></span><span class="sw-hex">32px</span></div>
+      <div class="sg-space"><span class="sg-token">--sp-7</span><span class="sg-space-bar" style="width:48px;"></span><span class="sw-hex">48px</span></div>
+    </div>
+  </section>
+
+  <section class="sg-section">
+    <h2 class="sg-h2">Buttons</h2>
+    <p class="sg-note">One primary action per screen, one secondary beside it, everything else quiet or inside a More menu. Minimum target height is 40px.</p>
+    <div class="sg-panel sg-stack">
+      <div class="sg-row">
+        <button class="btn btn-cta">Primary action</button>
+        <button class="btn btn-primary">Secondary action</button>
+        <button class="btn btn-ghost">Quiet action</button>
+        <button class="btn btn-danger">Destructive</button>
+        <button class="btn btn-ghost btn-sm">Small</button>
+      </div>
+      <div class="sg-row">
+        <span class="badge badge-cyan">Preferred</span>
+        <span class="badge badge-green">Confirmed</span>
+        <span class="pill pill-amber">Provisional</span>
+        <span class="pill pill-gray">Fallback</span>
+        <span class="pill pill-teal">Manufacturing</span>
+        <span class="pill pill-violet">Proposal</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="sg-section">
+    <h2 class="sg-h2">Form controls</h2>
+    <p class="sg-note">Currency and percentage live in an affix on the control, not in the label text. Every input has a real label bound to it.</p>
+    <div class="sg-panel">
+      <div class="two-col">
+        <div class="field">
+          <label for="sg-a">Annual write-off <span class="field-badge field-badge-primary">Preferred</span></label>
+          <div class="affix-wrap"><span class="affix affix-pre">$</span><input id="sg-a" type="text" value="412,000"/></div>
+          <div class="field-hint">Rep-confirmed on 14 Jul from the Q2 shrink report.</div>
+        </div>
+        <div class="field">
+          <label for="sg-b">Current OTIF rate</label>
+          <div class="affix-wrap"><input id="sg-b" type="text" value="91.4"/><span class="affix affix-post">%</span></div>
+          <div class="field-hint">5.1 points below the industry benchmark.</div>
+        </div>
+        <div class="field">
+          <label for="sg-c">Industry</label>
+          <select id="sg-c"><option>Manufacturing</option><option>Wholesale Distribution</option></select>
+        </div>
+        <div class="field">
+          <label for="sg-d">Scenario name</label>
+          <input id="sg-d" type="text" placeholder="e.g. Ridgeline – Q3"/>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sg-section">
+    <h2 class="sg-h2">Progress and guidance</h2>
+    <p class="sg-note">v4 collapses the breadcrumb, completeness meter, progress bar and next-best-action banner into one stepper plus one line of guidance.</p>
+    <div class="workflow-steps">
+      <button class="ws-step ws-done"><span class="ws-num">✓</span>Prospect</button>
+      <button class="ws-step ws-done"><span class="ws-num">✓</span>Investment</button>
+      <button class="ws-step ws-active"><span class="ws-num">3</span>Value drivers</button>
+      <button class="ws-step"><span class="ws-num">4</span>Benchmarks</button>
+      <button class="ws-step"><span class="ws-num">5</span>Review</button>
+    </div>
+    <div class="next-best-action"><span class="nba-icon">•</span>Confirm the write-off baseline with the prospect — it drives 46% of the case.</div>
+  </section>
+
+  <section class="sg-section">
+    <h2 class="sg-h2">Results</h2>
+    <p class="sg-note">Result cards carry meaning through their tint: green for realised value, blue for ratios, orange for caution, dark for the headline figure.</p>
+    <div class="results-grid">
+      <div class="result-card r-hero"><div class="r-label">Annual benefit</div><div class="r-value">$1,284,000</div></div>
+      <div class="result-card r-blue"><div class="r-label">Year-1 ROI</div><div class="r-value">412%</div></div>
+      <div class="result-card r-pos"><div class="r-label">5-year NPV</div><div class="r-value">$4.81M</div></div>
+      <div class="result-card r-warn"><div class="r-label">Payback</div><div class="r-value">4.2 mo</div></div>
+      <div class="result-card r-neu"><div class="r-label">One-time cost</div><div class="r-value">$260,000</div></div>
+    </div>
+  </section>
+
+  <section class="sg-section">
+    <h2 class="sg-h2">Notices</h2>
+    <p class="sg-note">One treatment for every advisory band: a tinted surface with a 3px accent edge. Orange advises, green confirms, blue suggests.</p>
+    <div class="sg-stack">
+      <div class="benchmark-banner">Medical Devices / Life Sciences benchmarks are provisional. Confirm the figures with the prospect before sharing externally.</div>
+      <div class="turns-insight turns-insight-ok">Inventory turns are at or above the industry benchmark. No working-capital opportunity is claimed in this case.</div>
+      <div class="accuracy-suggestion">Discovery answers suggest a 92% inventory accuracy baseline. Apply it to the model?</div>
+    </div>
+  </section>
+
+  <section class="sg-section">
+    <h2 class="sg-h2">Context bar</h2>
+    <p class="sg-note">The deal a rep is working on stays visible on every screen.</p>
+    <div class="context-header" style="display:flex;">
+      <span class="ctx-icon">RM</span>
+      <span class="ctx-company">Ridgeline Manufacturing</span>
+      <span class="ctx-sep">·</span>
+      <span class="ctx-scenario">Ridgeline – Q3 renewal</span>
+      <button class="ctx-switch">Switch</button>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

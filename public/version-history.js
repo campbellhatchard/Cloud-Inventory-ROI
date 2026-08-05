@@ -7,6 +7,56 @@
 
 const VERSION_HISTORY = [
   {
+    version: '4.0.0',
+    date: '2026-08-05',
+    tag: 'ux',
+    title: 'UI/UX rebuild — one design system across every page',
+    changes: [
+      'Navigation restructured from 13 flat tabs into a numbered deal workflow (Discovery → Calculator → Executive view → Solution Fit) plus Strengthen the case, Library and Settings groups.',
+      'The live KPI bar now belongs to the modelling context and hides on screens with no live model, returning 60px of vertical space to Admin, Help, Stakeholders and the rest.',
+      'Action hierarchy: long button rows collapse to one primary, one secondary and a More menu. The Executive view header went from eleven equal-weight buttons to three.',
+      'Calculator guidance consolidated: the breadcrumb, boxed completeness meter, progress bar and next-best-action banner are now one stepper and one line of guidance.',
+      'Currency and percentage moved out of label text into input affixes; the type floor was raised from 11px to 12px across the app.',
+      'Emoji glyphs in controls replaced with a single inline SVG icon set.',
+      'Design tokens rebuilt (neutrals, radii, shadows, focus ring, 7-step type scale, 4px spacing) and the undefined --radius, --shadow-lg, --ink and --font-mono tokens were defined.',
+      'Sign-in page rebuilt as a two-panel brand layout; executive document, tables, tabs, notices, modals and empty states normalised to one treatment.',
+      'Presentation layer only — the ROI engine, routes, database and every calculation are untouched (22/22 engine tests still pass).'
+    ]
+  },
+
+  {
+    version: '3.15.0', date: '2026', tag: 'Docs & responsive',
+    title: 'Updated How to Use guide; mobile/tablet/PC display hardening',
+    changes: [
+      'Refreshed the How to Use guide for current functionality (AE/SE roles, admin Customers landing, customer search, dictation) and added a Solution Fit & Handoff page.',
+      'Removed the default admin credentials from the in-app Admin guide.',
+      'Responsive hardening: global horizontal-overflow guard, fluid fixed-width boxes on phones, long-string wrapping, tablet grid tiers, and viewport-safe modals — verified across mobile, tablet, and desktop breakpoints.'
+    ]
+  },
+  {
+    version: '3.14.0', date: '2026', tag: 'Design system',
+    title: 'Brand consistency audit — documents, pages, and component system',
+    changes: [
+      'Fixed off-brand colors on the surfaces customers and prospects actually see: the PowerPoint export was running an entirely different, pre-rebrand palette; the shared business-case link had the wrong font AND wrong colors; the prospect map, ROI methodology PDF, discovery links, and stakeholder map all carried an intermediate draft palette that never got reconciled.',
+      'Fixed a real accessibility regression: a low-contrast gray, already corrected in the main app, was still in use as literal text color across 8 files (empty states, captions, legends).',
+      'Designed and formalized a new 5-color extended categorical palette (teal, violet, gold, slate, berry) for charts and stage tags — replacing an ad hoc set that included two nearly-identical purples.',
+      'Eliminated a duplicated color-mapping object that existed in two files and could have silently drifted apart.',
+      'Normalized ~30 near-duplicate badge/tag styles to one consistent shape, and added a shared pill component for future use — no visual change to existing badges, no HTML/JS call sites changed.',
+      'Added a spacing and type scale; safely tokenized 246 existing declarations that already matched it exactly (zero visual change).',
+      'Added a style guide page (style-guide.html) as a living reference for the palette, type scale, spacing scale, and components.'
+    ]
+  },
+  {
+    version: '3.13.0', date: '2026', tag: 'Features',
+    title: 'Solution Fit v2 + admin Customers landing',
+    changes: [
+      'Context tab reworked: Solution Engineer picklist (defaults to you), product checkboxes (MEP/CIP/CPP/Platform + Other), business & technical owner with name/title/email/phone, known system-of-record customizations with impact, and a Standalone integration option. Opportunity ID and Locations removed.',
+      'New admin Customers landing: see all customers, search, and open a saved scenario or start a new one.',
+      'Headline ROI figures stay at zero until a customer is selected and data entered.',
+      'The Add process button is now easy to read.'
+    ]
+  },
+  {
     version: '3.12.1', date: '2026', tag: 'Fixes',
     title: 'Fix: Solution Engineers and admins can now edit Solution Fit',
     changes: [

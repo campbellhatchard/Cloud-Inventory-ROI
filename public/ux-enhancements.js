@@ -118,10 +118,14 @@ function updateContextHeader() {
   const scenario = (document.getElementById('scenarioName')?.value || '').trim();
   if (!company) { bar.style.display = 'none'; return; }
   bar.style.display = 'flex';
-  bar.innerHTML = `<span class="ctx-icon">🏢</span>
+  bar.innerHTML = `<span class="ctx-icon">${ctxInitialsUX(company)}</span>
     <span class="ctx-company">${escapeHtmlUX(company)}</span>` +
     (scenario ? `<span class="ctx-sep">·</span><span class="ctx-scenario">${escapeHtmlUX(scenario)}</span>` : '') +
     `<button class="ctx-switch" onclick="showCustomerGate()" title="Switch customer">Switch</button>`;
+}
+function ctxInitialsUX(name) {
+  return String(name || '').trim().split(/\s+/).slice(0, 2)
+    .map(w => w.charAt(0).toUpperCase()).join('') || '—';
 }
 function escapeHtmlUX(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');

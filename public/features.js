@@ -133,7 +133,7 @@ function renderComparison() {
   if (!el) return;
   const selected = savedScenarios.filter(s => compareIds.has(s.id));
   if (selected.length < 2) {
-    el.innerHTML = '<p style="color:#94A3B8;font-size:13px;padding:1rem 0;">Select 2 or 3 scenarios from the list above to compare them side-by-side.</p>';
+    el.innerHTML = '<p style="color:#6B7A8D;font-size:13px;padding:1rem 0;">Select 2 or 3 scenarios from the list above to compare them side-by-side.</p>';
     return;
   }
   const rows = [
@@ -244,7 +244,7 @@ function renderSensitivity() {
           </div>
           <div class="sens-vals">
             <span class="neg">${fmtFull(r.low)}</span>
-            <span style="color:#94A3B8">→</span>
+            <span style="color:#6B7A8D">→</span>
             <span class="pos">${fmtFull(r.high)}</span>
           </div>
         </div>`;
@@ -432,7 +432,7 @@ function renderConfidence() {
 
   /* Provenance summary line */
   const summaryBits = [];
-  if (nProspect)  summaryBits.push(`<strong style="color:#0F6E56;">${nProspect} prospect-verified</strong>`);
+  if (nProspect)  summaryBits.push(`<strong style="color:#12786F;">${nProspect} prospect-verified</strong>`);
   if (nRep)       summaryBits.push(`${nRep} rep-confirmed`);
   if (nEstimated) summaryBits.push(`${nEstimated} rep-estimated`);
   const summary = summaryBits.length ? `<div class="conf-summary">${summaryBits.join(' · ')}</div>` : '';
@@ -447,10 +447,10 @@ function renderConfidence() {
     </div>
     ${summary}
     <div class="conf-legend">
-      <span class="conf-legend-item"><span class="conf-dot" style="background:#94A3B8;"></span>Empty</span>
+      <span class="conf-legend-item"><span class="conf-dot" style="background:#6B7A8D;"></span>Empty</span>
       <span class="conf-legend-item"><span class="conf-dot" style="background:#C24A1E;"></span>Rep-estimated</span>
-      <span class="conf-legend-item"><span class="conf-dot" style="background:#5FA88C;"></span>Rep-confirmed</span>
-      <span class="conf-legend-item"><span class="conf-dot" style="background:#0F6E56;"></span>Prospect-verified</span>
+      <span class="conf-legend-item"><span class="conf-dot" style="background:#3B9C90;"></span>Rep-confirmed</span>
+      <span class="conf-legend-item"><span class="conf-dot" style="background:#12786F;"></span>Prospect-verified</span>
     </div>
     ${groups.map(group => `
       <div class="conf-group-label">${group}</div>
@@ -795,7 +795,7 @@ async function renderAnalytics() {
               <div class="breakdown-bar" style="width:${Math.round(v/total*100)}%"></div>
             </div>
             <span class="breakdown-count">${v}</span>
-          </div>`).join('') || '<p style="color:#94A3B8;font-size:13px">No data yet.</p>'}
+          </div>`).join('') || '<p style="color:#6B7A8D;font-size:13px">No data yet.</p>'}
       </div>
       <div class="card" style="margin-bottom:0;">
         <div class="card-title">By deal stage</div>
@@ -806,7 +806,7 @@ async function renderAnalytics() {
               <div class="breakdown-bar" style="width:${Math.round(v/total*100)}%"></div>
             </div>
             <span class="breakdown-count">${v}</span>
-          </div>`).join('') || '<p style="color:#94A3B8;font-size:13px">No data yet.</p>'}
+          </div>`).join('') || '<p style="color:#6B7A8D;font-size:13px">No data yet.</p>'}
       </div>
     </div>
 
@@ -818,7 +818,7 @@ async function renderAnalytics() {
           <span class="activity-event">${(e.event||'').replace(/_/g,' ')}</span>
           <span class="activity-time">${new Date(e.created_at).toLocaleString()}</span>
         </div>`).join('')}
-    </div>` : (serverSummary ? '' : '<p style="color:#94A3B8;font-size:13px;margin-top:1rem;">Team-wide activity is visible to admins.</p>')}`;
+    </div>` : (serverSummary ? '' : '<p style="color:#6B7A8D;font-size:13px;margin-top:1rem;">Team-wide activity is visible to admins.</p>')}`;
 }
 
 /* ─────────────────────────────────────────

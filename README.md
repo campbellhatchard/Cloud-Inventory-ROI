@@ -1,43 +1,4 @@
-# Cloud Inventory ROI Builder v3.12.1
-
-Render-ready deployment package for the Cloud Inventory ROI Builder.
-
-## Deployment target
-
-This package targets the production Render Blueprint resources:
-
-- `cloud-inventory-roi`
-- `cloud-inventory-roi-db`
-
-The included PowerShell toolkit deploys to GitHub branch `main` by default and relies on Render auto-deploy from commit.
-
-## Admin bootstrap
-
-If the database is brand new, the bootstrap admin values in `render.yaml` are:
-
-- Username: `admin`
-- Password: `CloudInventory2026!`
-- Email: `admin@cloudinventory.com`
-
-If the database already contains an admin user, the existing password may be retained depending on the current bootstrap logic.
-
-## Post-deployment checks
-
-Check health:
-
-```powershell
-.\03-Check-Render-Health.ps1
-```
-
-Test a prospect link:
-
-```powershell
-.\04-Test-Prospect-Link.ps1 -Link "https://cloud-inventory-roi.onrender.com/prospect.html?token=PASTE_TOKEN_HERE"
-```
-
----
-
-# Cloud Inventory ROI Builder v3.12.1
+# Cloud Inventory ROI Builder v4.0.0
 
 Render-ready release. Promoted from the validated v2.9.3 package (public prospect-link auth fix) with the dependency-free ROI engine test suite restored (`npm run test:engine`).
 
@@ -239,3 +200,133 @@ The risky structural phase, kept surgical and heavily tested.
 ## v3.12.1 — bug fix
 
 - Fixed Solution Fit being read-only for SE and admin users. Root cause: the module called a bare `getUser()` that is not global (the app exposes it as `window.ciAuth.getUser`), so role resolution always failed and defaulted to read-only. Now uses `window.ciAuth.getUser()` (matching the rest of the app); SE/admin edit, AE read+print. Same bare-getUser bug fixed in the new customer search.
+
+## v3.13.0 — Solution Fit v2 + admin Customers landing
+
+Context tab (public/solution-fit.js):
+- Solution Engineer is now a dropdown of SE + Admin users (new SE-readable endpoint /api/solution-engineers), defaulting to the logged-in SE/admin.
+- Cloud Inventory products = checkboxes MEP / CIP / CPP / Platform + Other (free text).
+- Business owner and Technical owner each capture name, title, email, phone (email/phone optional).
+- Known customizations to the system of record: Yes/No; on Yes, repeatable {module, description, impact} rows (impact None/Low/Med/High) with + Add another.
+- Primary integration method now includes Standalone.
+- Removed Opportunity ID and Locations / operating scope. Old handoffs migrate-on-read (no data loss).
+
+Other:
+- Demo & Fit "Add process" restyled to a high-contrast brand button.
+- Headline calculator KPIs (Annual benefit / Year-1 ROI / 3-yr / 5-yr NPV) read $0 until a customer is selected AND inputs entered, or a saved scenario is loaded.
+- New admin-only "Customers" landing tab (public/admin-customers.js): all customers across the team, search, drill into a customer to load a saved scenario or start a new one; admin edits remain audit-logged.
+- Handoff documents updated to render the new products/owner/customization fields.
+- ROI engine unchanged: 22/22 engine tests still pass; calculation credibility unaffected.
+
+## v3.14.0 — brand consistency & design-system audit
+
+A senior UX/UI pass across every page, document, and export. Presentation-layer only — the ROI engine is unchanged (22/22 tests still pass).
+
+**Phase 1 — fixed off-brand colors on customer-visible surfaces:**
+- pptx-export.js: the entire PPT deck ran an old, pre-rebrand palette (navy #243646, cyan #00A7CF, orange #F79424) — now canonical.
+- business-case.html (the shared ROI link prospects open): had its OWN stale `:root` silently overriding the real brand tokens, AND used Helvetica Neue instead of Inter (the font wasn't even loaded). Both fixed.
+- prospect-map.html: same stale-palette issue, plus a regressed accessibility contrast fix (old low-contrast gray had crept back in).
+- deal-export.js, discovery.js, stakeholders.js: same intermediate draft palette, reconciled to canonical tokens.
+- Fixed a genuine accessibility regression found along the way: a low-contrast gray (#94A3B8), already corrected in the main app's CSS, was still hardcoded as literal text color in 8 files (features.js, narrative.js, print.html, login/prospect/change-password/reset-password.html, index.html) — all corrected to the accessible value (#6B7A8D).
+
+**Phase 2 — formalized the extended categorical palette:**
+- New tokens: --chart-teal (#12786F), --chart-violet (#6A4C93), --chart-gold (#A6791E), --chart-slate (#45688A), --chart-berry (#A23E5C) — designed to complement the 5 core brand colors without colliding with success/danger meaning, and to fix the old set's two nearly-identical purples.
+- New public/brand-palette.js: single source for the value-driver chart colors and deal-stage colors, previously duplicated verbatim in app.js AND versioning.js (a drift risk — a color change in one would silently not apply to the other).
+- Every scattered old categorical hex (teal/brown/purple family) across the whole app — charts, stage tags, audience tags, stakeholder roles, password-strength meters, audit-log action colors — reconciled to the new tokens.
+
+**Phase 3 — component consolidation:**
+- ~30 of ~49 near-duplicate badge/pill/tag CSS rules normalized to one consistent shape (2px 8px padding, 10px radius, 10px font) — metrics only, no class renames, so no call sites changed.
+- New shared .pill base class + 10 color modifiers (public/style.css) for any new badge going forward.
+- Card-container radius outliers (sf-card, ac-card) routed through the existing --radius-md token.
+
+**Phase 4 — spacing & type scale:**
+- New tokens: --sp-1..6 (4/8/12/16/24/32px) and --fs-xs..2xl (11–32px, 7 steps replacing ~20 ad hoc sizes).
+- 246 existing declarations that already matched the scale exactly were tokenized (zero visual change — same pixel output, just referencing the scale instead of a magic number). No blanket changes were made to values that didn't already fit the scale, to avoid unverified visual regressions.
+
+**New reference artifact:** public/style-guide.html — open in a browser to see the full palette, type scale, spacing scale, and components live.
+
+## v3.15.0 — How to Use guide update + responsive hardening
+
+- Updated the in-app How to Use guide (migration 014, applied once to existing databases; 002 seed updated for fresh installs):
+  - Removed the default admin credentials from the Admin guide. Credentials are now described as provided separately to authorized administrators.
+  - Refreshed terminology and content for AE/SE roles, the admin Customers landing, customer search, and dictation.
+  - Added a new "Solution Fit & Handoff (SE)" guide page.
+- Responsive display hardening (mobile / tablet / PC): global horizontal-overflow guard on the main content, media (img/svg/pre/canvas) constrained to container width, long unbroken strings wrap, tight fixed-width boxes (prospect link, map share box) go fluid on phones, a tablet tier for the 4-up grids, and viewport-capped modals. Viewport meta confirmed present on every page.
+- Note: the admin password still exists in migration 003 (the functional admin-account bootstrap) and in README.md (developer notes) — neither is the in-app admin guide. The 003 re-seeding behavior remains as previously scoped.
+
+
+## v4.0.0 — UI/UX rebuild
+
+A full presentation-layer rebuild across every page. **No calculation, route, migration or
+stored value was changed.** The ROI engine, `src/`, `migrations/` and the test suites are
+byte-identical to v3.15.0; `npm run test:engine` still passes 22/22.
+
+### Brand
+The six brand colours are unchanged — Dark `#1E2931`, Blue `#00A9CC`, Orange `#F9642E`,
+Red `#FF341F`, Light Blue `#F5F8FA`, White. v4 changes how they are *used*: Blue is the
+single action colour, Dark is the frame, Orange carries every advisory notice, and Red is
+reserved for destructive actions.
+
+### What changed
+
+**1. Navigation — thirteen flat tabs became a workflow.**
+The sidebar now reads Deal workflow (1 Discovery guide → 2 Calculator → 3 Executive view →
+4 Solution Fit), then Strengthen the case (Competitive, Sensitivity, Action Plan,
+Stakeholders), Library (Saved, Compare, Customers, Analytics, Impact Map) and Settings
+(How to Use, Admin). Every destination and every `switchTab()` target is unchanged.
+
+**2. The live KPI bar belongs to the model.**
+It was pinned to all sixteen screens, costing 60px everywhere and showing four em-dashes on
+Admin, Help and Stakeholders. It now shows on Calculator, Executive view, Sensitivity and
+Compare, and hides elsewhere (`body.livebar-off`).
+
+**3. Action hierarchy.**
+Any action row with five or more buttons collapses to one primary, one secondary and a
+**More** menu. The Executive view header went from eleven equal-weight buttons to three.
+Buttons keep their ids and their `onclick` handlers — they are moved, not rebuilt.
+
+**4. One stepper instead of four progress affordances.**
+The calculator stacked a breadcrumb, a completeness meter, a progress bar and a
+next-best-action banner above the first input. The breadcrumb is hidden, the completeness
+meter is now a slim rail, the nudge is one line of guidance, and the stepper carries the
+state.
+
+**5. Form ergonomics.**
+Currency and percentage moved out of the label text (`Annual revenue ($)`) into a real
+affix on the control. Labels are 13px with a proper `for`/`id` pair. The type floor rose
+from 11px to 12px, so hints, benchmarks and table cells meet contrast and size guidance.
+
+**6. One icon language.**
+The emoji glyphs in controls (🔗 ✉️ 📋 📄 📊 🖥 👥 ✨) are replaced at runtime with a single
+inline SVG set that inherits `currentColor`.
+
+**7. Design tokens.**
+Neutrals, radii, shadows, focus ring, a seven-step type scale and a 4px spacing scale were
+rebuilt in `:root`. Four tokens that were referenced but never defined — `--radius`,
+`--shadow-lg`, `--ink`, `--font-mono` — now exist, fixing silent fallbacks.
+
+**8. Pages.**
+`login.html` is a two-panel brand layout. `style-guide.html` is rebuilt as the live v4
+reference (open it in a browser). The executive document, tables, sub-tabs, notices,
+modals and empty states were normalised to one treatment. `print.html` geometry was left
+alone deliberately.
+
+### Files touched
+
+| File | Change |
+| --- | --- |
+| `public/style.css` | New token foundation + a v4 consolidation layer at the end |
+| `public/exec.css` | v4 document layer appended |
+| `public/ui-v4.js` | **New.** Runtime enhancement: livebar context, icons, More menus, input affixes |
+| `public/index.html` | Sidebar restructured; `ui-v4.js` loaded; version stamped 4.0.0 |
+| `public/ux-enhancements.js` | Context bar shows customer initials instead of an emoji |
+| `public/login.html` | Rebuilt |
+| `public/style-guide.html` | Rebuilt |
+| `public/change-password.html`, `reset-password.html`, `prospect.html`, `business-case.html`, `prospect-map.html` | Shared control metrics, focus ring, type |
+| `public/print.html` | Border token value only |
+| `public/version-history.js`, `package.json`, `README.md` | 4.0.0 |
+
+### Rollback
+Every change is additive or replaces a stylesheet. To revert the runtime layer alone,
+remove `<script src="ui-v4.js"></script>` from `public/index.html`; the app returns to its
+previous behaviour with the v4 styling intact.

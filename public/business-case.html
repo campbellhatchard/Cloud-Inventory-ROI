@@ -4,12 +4,14 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <meta name="robots" content="noindex, nofollow"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <title>Business Case — Cloud Inventory</title>
 <style>
-  :root{ --navy:#243646; --cyan:#00A7CF; --orange:#F79424; --green:#2E7D32;
-         --gray-50:#F7F9FA; --gray-200:#E2E8F0; --gray-500:#5A6570; --gray-700:#3A4653; }
+  :root{ --navy:#1E2931; --cyan:#00A9CC; --orange:#C24A1E; --green:#2E7D32;
+         --gray-50:#F5F8FA; --gray-200:#E3E9EE; --gray-500:#64748B; --gray-700:#334155; }
   *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:'Helvetica Neue',Arial,sans-serif;color:var(--navy);background:var(--gray-50);line-height:1.5;}
+  body{font-family:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;color:var(--navy);background:var(--gray-50);line-height:1.5;}
   .wrap{max-width:820px;margin:0 auto;padding:32px 20px;}
   .head{display:flex;align-items:center;gap:14px;border-bottom:3px solid var(--cyan);padding-bottom:16px;margin-bottom:24px;}
   .head img{height:40px;}
@@ -25,9 +27,18 @@
   table{width:100%;border-collapse:collapse;}
   td{font-size:13px;padding:7px 0;border-bottom:1px solid var(--gray-200);}
   td:last-child{text-align:right;font-weight:600;}
-  .foot{font-size:11px;color:#94A3B8;text-align:center;margin-top:24px;font-style:italic;}
+  .foot{font-size:11px;color:var(--gray-500);text-align:center;margin-top:24px;font-style:italic;}
   .state{text-align:center;padding:60px 20px;color:var(--gray-500);}
   @media(max-width:640px){.kpis{grid-template-columns:1fr;}}
+
+/* ── v4.0.0 polish: shared control metrics, focus ring, type ── */
+html{font-size:16px;}
+body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+input,select,textarea,button{font-family:inherit;}
+input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(0,169,204,.18);}
+:focus-visible{outline:2px solid #00A9CC;outline-offset:2px;border-radius:4px;}
+h1,h2,h3{letter-spacing:-.02em;text-wrap:pretty;}
+button{cursor:pointer;}
 </style>
 </head>
 <body>

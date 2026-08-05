@@ -111,7 +111,7 @@ function persistSaved(arr)   { savedScenarios = arr; updateSavedBadge(); }
 /* ════════════════════════════════════════
    Navigation
    ════════════════════════════════════════ */
-const ALL_TABS = ['calc','disc','comp','exec','saved','compare','sensitivity','analytics','map','stake','solfit','admin','help','impact','profile'];
+const ALL_TABS = ['calc','disc','comp','exec','saved','compare','sensitivity','analytics','map','stake','solfit','admincustomers','admin','help','impact','profile'];
 
 function switchTab(name) {
   ALL_TABS.forEach(n => {
@@ -410,10 +410,23 @@ function recalc() {
   }
 
   const lb=(id,val,cls)=>{ const e=el(id); if(!e)return; e.textContent=val; e.className='lb-value '+cls; };
-  lb('lb-benefit', fmt(r.annualBenefit), lbClass(r.annualBenefit));
-  lb('lb-roi',     r.roi?fmtPct(r.roi):'—', lbClass(r.roi));
-  lb('lb-npv3',    fmt(r.npv3), lbClass(r.npv3));
-  lb('lb-npv5',    fmt(r.npv5), lbClass(r.npv5));
+  /* Gate the headline KPIs: they read $0 / 0% until a customer is selected AND
+     meaningful inputs have been entered (or a saved scenario is loaded). This
+     avoids showing live numbers for an empty, customer-less exploratory form. */
+  const _companySelected = !!(v.company && v.company.trim() && v.company.trim() !== 'Prospect');
+  const _hasInputs = (v.revenue>0 || v.users>0 || v.inventory>0 || v.labor>0 || v.invest>0 || v.otc>0);
+  const _kpiLive = window._scenarioLoaded === true || (_companySelected && _hasInputs);
+  if (!_kpiLive) {
+    lb('lb-benefit', fmt(0), lbClass(0));
+    lb('lb-roi',     '0%', lbClass(0));
+    lb('lb-npv3',    fmt(0), lbClass(0));
+    lb('lb-npv5',    fmt(0), lbClass(0));
+  } else {
+    lb('lb-benefit', fmt(r.annualBenefit), lbClass(r.annualBenefit));
+    lb('lb-roi',     r.roi?fmtPct(r.roi):'—', lbClass(r.roi));
+    lb('lb-npv3',    fmt(r.npv3), lbClass(r.npv3));
+    lb('lb-npv5',    fmt(r.npv5), lbClass(r.npv5));
+  }
 
   const paySignStr  = r.paybackFromSigning  === null ? '—' : r.paybackFromSigning  >= 60 ? '60+ mo' : r.paybackFromSigning.toFixed(1)  + ' mo';
   const payLiveStr  = r.paybackFromGoLive   === null ? '—' : r.paybackFromGoLive   >= 60 ? '60+ mo' : r.paybackFromGoLive.toFixed(1)   + ' mo';
@@ -531,7 +544,7 @@ function buildPreviewScenarioTable(baseV) {
       <table class="e-tbl" style="margin-bottom:.5rem;">
         <thead><tr>
           <th class="left">Metric</th>
-          <th style="background:#854F0B;">Conservative (70%)</th>
+          <th style="background:#A6791E;">Conservative (70%)</th>
           <th style="background:#0089A6;">Base (100%)</th>
           <th style="background:#2E7D32;">Aggressive (130%)</th>
         </tr></thead>
@@ -573,13 +586,14 @@ function renderExec() {
   const today = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
   const comp = v.competitor ? COMP[v.competitor] : null;
 
+  const DC = (typeof DRIVER_CHART_COLORS !== 'undefined') ? DRIVER_CHART_COLORS : ['#0089A6','#2E7D32','#12786F','#A6791E','#6A4C93','#45688A'];
   const valueRows=[
-    {label:'Labor & productivity savings',  val:r.laborSav,  color:'#0089A6'},
-    {label:'Shrinkage / write-off reduction',val:r.shrinkSav,color:'#2E7D32'},
-    {label:'Inventory carrying cost reduction',val:r.carrySav,color:'#0F6E56'},
-    {label:'OTIF / order accuracy improvement',val:r.otifSav, color:'#854F0B'},
-    {label:'Inventory turns — capital freed', val:r.turnsSav, color:'#6B3FA0'},
-    {label:'IT & legacy system displacement', val:r.itSav,   color:'#3C3489'}
+    {label:'Labor & productivity savings',  val:r.laborSav,  color:DC[0]},
+    {label:'Shrinkage / write-off reduction',val:r.shrinkSav,color:DC[1]},
+    {label:'Inventory carrying cost reduction',val:r.carrySav,color:DC[2]},
+    {label:'OTIF / order accuracy improvement',val:r.otifSav, color:DC[3]},
+    {label:'Inventory turns — capital freed', val:r.turnsSav, color:DC[4]},
+    {label:'IT & legacy system displacement', val:r.itSav,   color:DC[5]}
   ].filter(row => row.val > 0).sort((a,b) => b.val - a.val);
   const maxVal=Math.max(...valueRows.map(x=>x.val),1);
 
@@ -607,7 +621,7 @@ function renderExec() {
             <div class="e-proviso-detail">No benefit accrues during implementation. Go-live in month ${v.implMonths+1}.</div>
           </div>
         </div>
-        <div class="e-proviso-card" style="border-left:4px solid #854F0B;">
+        <div class="e-proviso-card" style="border-left:4px solid #A6791E;">
           <div class="e-proviso-icon">📈</div>
           <div>
             <div class="e-proviso-label">Ramp-up to full efficiency</div>
@@ -634,7 +648,7 @@ function renderExec() {
 
   const cfRows=r.cashflows.map(c=>`
     <tr>
-      <td class="left">Year ${c.yr}${c.isRamped ? ' <span style="font-size:9px;color:#854F0B;font-weight:600">(ramp-adjusted)</span>' : ''}</td>
+      <td class="left">Year ${c.yr}${c.isRamped ? ' <span style="font-size:9px;color:#A6791E;font-weight:600">(ramp-adjusted)</span>' : ''}</td>
       <td>${fmtFull(c.benefit)}</td>
       <td class="neg">(${fmtFull(c.invest)})</td>
       <td class="${c.net>=0?'pos':'neg'}">${fmtFull(c.net)}</td>
@@ -726,12 +740,12 @@ function renderExec() {
             <div class="e-approach-pd">Inputs captured through structured discovery of your actual metrics.</div>
           </div>
           <div class="e-approach-pillar">
-            <div class="e-approach-icon" style="background:#0F6E56;">◆</div>
+            <div class="e-approach-icon" style="background:#12786F;">◆</div>
             <div class="e-approach-pt">Decomposed value drivers</div>
             <div class="e-approach-pd">Benefit broken into independently-quantified drivers, each traceable to a metric.</div>
           </div>
           <div class="e-approach-pillar">
-            <div class="e-approach-icon" style="background:#854F0B;">◆</div>
+            <div class="e-approach-icon" style="background:#A6791E;">◆</div>
             <div class="e-approach-pt">Conservatively modeled</div>
             <div class="e-approach-pd">Ramp-up, benchmark grounding, and overlap adjustments applied throughout.</div>
           </div>
@@ -905,6 +919,7 @@ async function loadScenario(id) {
     }
     if (!inputs) { showToast('Scenario data not found.'); return; }
     if (typeof loadFromObject === 'function') loadFromObject(inputs);
+    window._scenarioLoaded = true;
     /* Remember which customer this scenario belongs to, so the Solution Fit
        tab can attach to it. */
     window.currentScenarioCustomerId = (scenario && scenario.customerId) || null;
@@ -961,7 +976,7 @@ function renderList() {
 
   const initials    = n => n.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase()||'?';
   const payStr      = pb => pb===null?'—':pb>=60?'60+mo':pb.toFixed(1)+'mo';
-  const stageColors = { Discovery:'#0089A6', Demo:'#854F0B', Proposal:'#0F6E56', Negotiation:'#3C3489', 'Closed Won':'#2E7D32', 'Closed Lost':'#C81E10' };
+  const stageColors = (typeof STAGE_COLORS !== 'undefined') ? STAGE_COLORS : { Discovery:'#0089A6', Demo:'#A6791E', Proposal:'#12786F', Negotiation:'#6A4C93', 'Closed Won':'#2E7D32', 'Closed Lost':'#C81E10' };
   const me          = window.ciAuth ? window.ciAuth.getUser() : {};
 
   el.innerHTML = `<ul class="scenario-list">${filtered.map(s => `

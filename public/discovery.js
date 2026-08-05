@@ -1077,7 +1077,7 @@ function downloadImpactMap() {
     <p><strong>Original 6 levers:</strong> laborSav, shrinkSav, carrySav, turnsSav, otifSav, itSav.
     <strong>New in v2.5:</strong> downtimeSav (events × hrs × $/hr × recovery%),
     expediteSav (spend × recovery%), countSav (days × people × daily labor × recovery%).</p>
-    <p style="color:#5A6570;font-size:11px;">Scenarios saved before v2.5 compute an unchanged annual benefit — new levers contribute $0 until the new fields are entered.</p>`;
+    <p style="color:#64748B;font-size:11px;">Scenarios saved before v2.5 compute an unchanged annual benefit — new levers contribute $0 until the new fields are entered.</p>`;
 
   const w = window.open('', '_blank');
   if (!w) { if (typeof showToast==='function') showToast('Pop-up blocked — allow pop-ups to download.'); return; }
@@ -1085,18 +1085,18 @@ function downloadImpactMap() {
     <style>
       @page { margin: 0.5in; }
       * { box-sizing:border-box; margin:0; padding:0; }
-      body { font-family:'Helvetica Neue',Arial,sans-serif; color:#243646; padding:0; }
-      .head { display:flex; align-items:center; gap:14px; border-bottom:3px solid #00A7CF; padding-bottom:12px; margin-bottom:16px; }
-      .head img { height:40px; } .head .t { font-size:12px; color:#5A6570; }
+      body { font-family:'Helvetica Neue',Arial,sans-serif; color:#1E2931; padding:0; }
+      .head { display:flex; align-items:center; gap:14px; border-bottom:3px solid #00A9CC; padding-bottom:12px; margin-bottom:16px; }
+      .head img { height:40px; } .head .t { font-size:12px; color:#64748B; }
       h1 { font-size:22px; margin-bottom:4px; }
-      .intro { font-size:12px; color:#5A6570; margin-bottom:16px; }
-      h2 { font-size:14px; color:#00A7CF; margin:20px 0 6px; padding-bottom:3px; border-bottom:1.5px solid #E2E8F0; }
+      .intro { font-size:12px; color:#64748B; margin-bottom:16px; }
+      h2 { font-size:14px; color:#00A9CC; margin:20px 0 6px; padding-bottom:3px; border-bottom:1.5px solid #E2E8F0; }
       table { width:100%; border-collapse:collapse; margin-bottom:12px; }
-      th { background:#243646; color:#fff; font-size:10px; text-align:left; padding:6px 8px; }
-      td { font-size:11px; padding:5px 8px; border-bottom:1px solid #E8ECEF; vertical-align:top; }
-      tr:nth-child(even) td { background:#F7F9FA; }
-      code { font-size:10px; background:#EEF2F5; padding:1px 4px; border-radius:3px; }
-      .foot { margin-top:20px; padding-top:10px; border-top:1px solid #E2E8F0; font-size:10px; color:#94A3B8; text-align:center; }
+      th { background:#1E2931; color:#fff; font-size:10px; text-align:left; padding:6px 8px; }
+      td { font-size:11px; padding:5px 8px; border-bottom:1px solid #F1F5F9; vertical-align:top; }
+      tr:nth-child(even) td { background:#F5F8FA; }
+      code { font-size:10px; background:#F1F5F9; padding:1px 4px; border-radius:3px; }
+      .foot { margin-top:20px; padding-top:10px; border-top:1px solid #E2E8F0; font-size:10px; color:#6B7A8D; text-align:center; }
       @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
     </style></head><body>
     <div class="head"><img src="${window.location.origin}/ci-logo.png" onerror="this.style.display='none'"/><div class="t">Discovery → Calculator Impact Map</div></div>

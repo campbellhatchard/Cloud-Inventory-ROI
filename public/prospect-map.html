@@ -7,8 +7,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-:root{--navy:#243646;--cyan:#00A7CF;--green:#2E7D32;--red:#C81E10;--amber:#C24A1E;
---g100:#F1F5F9;--g200:#E2E8F0;--g400:#94A3B8;--g600:#475569;--g800:#1E293B;
+:root{--navy:#1E2931;--cyan:#00A9CC;--green:#2E7D32;--red:#C81E10;--amber:#C24A1E;
+--g100:#F1F5F9;--g200:#E3E9EE;--g400:#6B7A8D;--g600:#475569;--g800:#1E293B;
 --font:'Inter',system-ui,sans-serif;}
 body{font-family:var(--font);background:var(--navy);min-height:100vh;padding:2rem 1rem;}
 .wrap{max-width:760px;margin:0 auto;}
@@ -37,7 +37,7 @@ body{font-family:var(--font);background:var(--navy);min-height:100vh;padding:2re
 .ms-sub{font-size:11px;color:var(--g400);margin-top:2px;}
 .ms-owner{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap;}
 .ow-rep{background:rgba(36,54,70,.1);color:var(--navy);}
-.ow-prospect{background:rgba(0,167,207,.12);color:#0083A3;}
+.ow-prospect{background:rgba(0,169,204,.12);color:#0089A6;}
 .ow-joint{background:rgba(46,125,50,.1);color:var(--green);}
 .overdue{color:var(--red)!important;font-weight:700;}
 .footer{padding:1rem 2rem;background:var(--g100);font-size:12px;color:var(--g600);display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;}
@@ -45,6 +45,15 @@ body{font-family:var(--font);background:var(--navy);min-height:100vh;padding:2re
 .err-card h2{color:var(--navy);font-size:19px;margin-bottom:8px;}
 .err-card p{color:var(--g400);font-size:14px;}
 .hint{font-size:11px;color:var(--g400);margin-top:1.2rem;text-align:center;}
+
+/* ── v4.0.0 polish: shared control metrics, focus ring, type ── */
+html{font-size:16px;}
+body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+input,select,textarea,button{font-family:inherit;}
+input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(0,169,204,.18);}
+:focus-visible{outline:2px solid #00A9CC;outline-offset:2px;border-radius:4px;}
+h1,h2,h3{letter-spacing:-.02em;text-wrap:pretty;}
+button{cursor:pointer;}
 </style>
 </head>
 <body>

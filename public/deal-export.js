@@ -37,28 +37,28 @@ function dePrintWindow(title, innerHtml, extraCss) {
     <style>
       @page { margin: 0.6in; }
       * { box-sizing: border-box; margin: 0; padding: 0; }
-      body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #243646; line-height: 1.5; }
-      .doc-head { display: flex; align-items: center; gap: 14px; border-bottom: 3px solid #00A7CF; padding-bottom: 14px; margin-bottom: 20px; }
+      body { font-family: 'Inter','Segoe UI',system-ui,sans-serif; color: #1E2931; line-height: 1.5; }
+      .doc-head { display: flex; align-items: center; gap: 14px; border-bottom: 3px solid #00A9CC; padding-bottom: 14px; margin-bottom: 20px; }
       .doc-head img { height: 42px; }
-      .doc-head .ht { font-size: 12px; color: #5A6570; }
-      h1 { font-size: 22px; color: #243646; margin-bottom: 4px; }
-      .sub { font-size: 13px; color: #5A6570; margin-bottom: 18px; }
-      h2 { font-size: 13px; color: #00A7CF; text-transform: uppercase; letter-spacing: .06em; margin: 20px 0 8px; padding-bottom: 4px; border-bottom: 1.5px solid #E2E8F0; }
+      .doc-head .ht { font-size: 12px; color: #64748B; }
+      h1 { font-size: 22px; color: #1E2931; margin-bottom: 4px; }
+      .sub { font-size: 13px; color: #64748B; margin-bottom: 18px; }
+      h2 { font-size: 13px; color: #00A9CC; text-transform: uppercase; letter-spacing: .06em; margin: 20px 0 8px; padding-bottom: 4px; border-bottom: 1.5px solid #E2E8F0; }
       table { width: 100%; border-collapse: collapse; margin: 8px 0 16px; }
-      th { background: #243646; color: #fff; font-size: 11px; text-align: left; padding: 7px 9px; }
-      td { font-size: 12px; padding: 6px 9px; border-bottom: 1px solid #E8ECEF; vertical-align: top; }
-      tr:nth-child(even) td { background: #F7F9FA; }
+      th { background: #1E2931; color: #fff; font-size: 11px; text-align: left; padding: 7px 9px; }
+      td { font-size: 12px; padding: 6px 9px; border-bottom: 1px solid #F1F5F9; vertical-align: top; }
+      tr:nth-child(even) td { background: #F5F8FA; }
       .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
-      .prog-wrap { height: 12px; background: #EEF2F5; border-radius: 6px; overflow: hidden; max-width: 320px; margin: 6px 0 14px; }
-      .prog-fill { height: 100%; background: linear-gradient(90deg,#00A7CF,#2E7D32); }
-      .meta-line { font-size: 12px; color: #5A6570; margin-bottom: 3px; }
-      .foot { margin-top: 28px; padding-top: 12px; border-top: 1px solid #E2E8F0; font-size: 11px; color: #94A3B8; text-align: center; }
+      .prog-wrap { height: 12px; background: #F1F5F9; border-radius: 6px; overflow: hidden; max-width: 320px; margin: 6px 0 14px; }
+      .prog-fill { height: 100%; background: linear-gradient(90deg,#00A9CC,#2E7D32); }
+      .meta-line { font-size: 12px; color: #64748B; margin-bottom: 3px; }
+      .foot { margin-top: 28px; padding-top: 12px; border-top: 1px solid #E2E8F0; font-size: 11px; color: #6B7A8D; text-align: center; }
       .overdue { color: #C81E10; font-weight: 700; }
-      .done td { color: #94A3B8; }
+      .done td { color: #6B7A8D; }
       .quad { position: relative; width: 460px; height: 340px; border: 1.5px solid #CBD5E1; margin: 10px 0 8px; }
       .quad-line { position: absolute; background: #E2E8F0; }
       .quad-dot { position: absolute; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; }
-      .quad-lbl { position: absolute; font-size: 9px; color: #94A3B8; font-weight: 700; }
+      .quad-lbl { position: absolute; font-size: 9px; color: #6B7A8D; font-weight: 700; }
       @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display: none; } }
       ${extraCss || ''}
     </style></head><body>${innerHtml}
@@ -108,10 +108,10 @@ function printActionPlan(variant) {
     </div>
     <h1>${deEsc(m.title)}</h1>
     <div class="sub">${deEsc(m.company || '')}${m.target_close_date ? ' · Target close: ' + deDate(m.target_close_date, {month:'long',day:'numeric',year:'numeric'}) : ''}</div>
-    ${variant === 'customer' ? '<div class="meta-line" style="font-style:italic;color:#5A6570;">A jointly-owned plan built on a data-driven business case grounded in your operational metrics.</div>' : ''}
+    ${variant === 'customer' ? '<div class="meta-line" style="font-style:italic;color:#64748B;">A jointly-owned plan built on a data-driven business case grounded in your operational metrics.</div>' : ''}
     <div class="meta-line"><strong>Progress:</strong> ${done} of ${ms.length} complete (${pct}%)</div>
     <div class="prog-wrap"><div class="prog-fill" style="width:${pct}%;"></div></div>
-    ${rowsHtml || '<p style="font-size:13px;color:#94A3B8;">No milestones yet.</p>'}`;
+    ${rowsHtml || '<p style="font-size:13px;color:#6B7A8D;">No milestones yet.</p>'}`;
   dePrintWindow(m.title, html);
 }
 
@@ -199,7 +199,7 @@ function printStakeholderMap() {
   const dots = _stakeholders.map(s => {
     const x = ((s.support - 1) / 4) * 88 + 6;
     const y = 90 - ((s.influence - 1) / 4) * 84;
-    const c = (typeof STAKE_ROLES !== 'undefined' && STAKE_ROLES[s.role]) ? STAKE_ROLES[s.role].color : '#5A6570';
+    const c = (typeof STAKE_ROLES !== 'undefined' && STAKE_ROLES[s.role]) ? STAKE_ROLES[s.role].color : '#64748B';
     const initials = s.name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
     return `<div class="quad-dot" style="left:${x}%;top:${y}%;background:${c};${s.engaged?'':'opacity:.5;'}">${deEsc(initials)}</div>`;
   }).join('');
@@ -605,21 +605,21 @@ function roiMethodologyPDF() {
   const htmlWithContext = html.replace('<p class="disc">', contextSection + '<p class="disc">');
 
   const extraCss = `
-    .intro{font-size:12px;color:#5A6570;line-height:1.6;margin-bottom:16px;}
-    table.kv td:first-child{color:#5A6570;width:55%;}
+    .intro{font-size:12px;color:#64748B;line-height:1.6;margin-bottom:16px;}
+    table.kv td:first-child{color:#64748B;width:55%;}
     table.kv td:last-child{font-weight:600;text-align:right;}
-    .f{font-family:'Courier New',monospace;font-size:10px;color:#5A6570;}
+    .f{font-family:'Courier New',monospace;font-size:10px;color:#64748B;}
     .r{text-align:right;}
-    .ld{font-size:10px;color:#94A3B8;font-weight:400;margin-top:2px;}
-    .new{background:#F79424;color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:8px;}
-    tr.np td{color:#94A3B8;}
-    .np-cell{color:#C77700;font-weight:600;}
-    tfoot td{border-top:2px solid #243646;font-size:13px;padding-top:8px;}
-    .notes{margin:4px 0 16px;padding-left:18px;} .notes li{font-size:11px;color:#5A6570;margin-bottom:5px;line-height:1.5;}
-    .disc{font-size:10px;color:#94A3B8;font-style:italic;margin-top:14px;line-height:1.5;}
-    .prov-banner{background:#E6F4EF;border:1px solid #0F6E56;border-radius:7px;padding:9px 13px;margin-bottom:12px;font-size:11px;color:#0B4A3A;line-height:1.5;}
-    .prov-check{color:#0F6E56;font-weight:700;}
-    .prov-mark{color:#0F6E56;font-size:10px;}`;
+    .ld{font-size:10px;color:#6B7A8D;font-weight:400;margin-top:2px;}
+    .new{background:#C24A1E;color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:8px;}
+    tr.np td{color:#6B7A8D;}
+    .np-cell{color:#C24A1E;font-weight:600;}
+    tfoot td{border-top:2px solid #1E2931;font-size:13px;padding-top:8px;}
+    .notes{margin:4px 0 16px;padding-left:18px;} .notes li{font-size:11px;color:#64748B;margin-bottom:5px;line-height:1.5;}
+    .disc{font-size:10px;color:#6B7A8D;font-style:italic;margin-top:14px;line-height:1.5;}
+    .prov-banner{background:#E3F2F0;border:1px solid #12786F;border-radius:7px;padding:9px 13px;margin-bottom:12px;font-size:11px;color:#0D5A54;line-height:1.5;}
+    .prov-check{color:#12786F;font-weight:700;}
+    .prov-mark{color:#12786F;font-size:10px;}`;
   dePrintWindow('ROI Methodology — ' + company, htmlWithContext, extraCss);
 }
 

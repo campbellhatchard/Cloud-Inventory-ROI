@@ -176,3 +176,50 @@
   .wf-svg,.pt-svg{page-break-inside:avoid;}
   .infographic-section{page-break-inside:avoid;}
 }
+
+
+/* ═══════════════════════════════════════════════════════════
+   v4.0.0 — Executive document
+   The document is the deliverable a CFO reads on a screen
+   share. Bigger type, more air, lighter furniture. Layout and
+   content are unchanged.
+   ═══════════════════════════════════════════════════════════ */
+.exec-preview-wrap{background:#E7ECF1;padding:28px;border-radius:14px;border:none;}
+#execPrintTarget{border-radius:12px;box-shadow:0 8px 32px rgba(30,41,49,.14);max-width:880px;}
+.e-cover{padding:36px clamp(24px,4vw,46px) 30px;}
+.e-cover-logo{height:34px;margin-bottom:24px;}
+.e-tagline{font-size:11px;letter-spacing:.11em;color:#00A9CC;margin-bottom:10px;}
+.e-company{font-size:34px;font-weight:300;letter-spacing:-.02em;line-height:1.15;margin-bottom:10px;}
+.e-sub{font-size:14px;color:#8FC4D6;line-height:1.6;}
+.e-kpis{border-bottom:3px solid #00A9CC;}
+.e-kpi{padding:18px 20px;border-right:1px solid #E3E9EE;}
+.e-kv{font-size:26px;letter-spacing:-.025em;}
+.e-kl{font-size:12px;color:#64748B;margin-top:4px;}
+.e-body{padding:34px clamp(24px,4vw,46px) 40px;}
+.e-section{margin-bottom:34px;}
+.e-h2{font-size:11px;letter-spacing:.09em;border-bottom:2px solid #00A9CC;padding-bottom:8px;margin-bottom:18px;}
+.e-bar-row{gap:14px;margin-bottom:11px;}
+.e-bar-lbl{font-size:13px;color:#334155;width:auto;flex:0 1 190px;min-width:120px;}
+.e-bar-track{height:26px;border-radius:5px;background:#EDF4F8;}
+.e-bar-fill{border-radius:5px;}
+.e-bar-val{font-size:13px;min-width:92px;}
+.e-bar-total{font-size:14px;margin-top:14px;padding-top:14px;}
+.e-tbl,.e-assump-tbl,.e-comp-tbl,.e-invest-tbl{font-size:13px;}
+.e-tbl th,.e-comp-tbl th,.e-invest-tbl th{background:#F8FAFC;color:#64748B;font-size:11px;text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid #E3E9EE;padding:9px 11px;}
+.e-assump-tbl th{background:#F8FAFC;color:#64748B;font-size:11px;text-transform:uppercase;letter-spacing:.07em;}
+.e-tbl td,.e-comp-tbl td,.e-invest-tbl td,.e-assump-tbl td{padding:9px 11px;}
+.e-comp-tbl tr:nth-child(even) td{background:transparent;}
+.e-comp-item{font-size:12.5px;margin-bottom:7px;}
+.e-comp-col-title{font-size:11px;letter-spacing:.07em;margin-bottom:9px;}
+.e-headline-card,.e-why-card{background:#F8FAFC;border-radius:9px;padding:16px 18px;margin-bottom:12px;}
+.e-headline-text{font-size:15px;line-height:1.5;}
+.e-headline-detail,.e-why-text{font-size:13px;line-height:1.75;}
+.e-headline-audience,.e-why-label{font-size:11px;letter-spacing:.09em;}
+.e-why-sub{font-size:11px;font-style:normal;color:#64748B;margin-bottom:10px;}
+.e-roi-strip{border-radius:9px;}
+.e-roi-cell{padding:18px 16px;}
+.e-roi-period{font-size:11px;letter-spacing:.06em;}
+.e-footnote{font-size:11px;color:#6B7A8D;margin-top:10px;}
+.e-footer{margin-top:28px;padding-top:16px;}
+.e-footer-txt{font-size:11px;color:#6B7A8D;}
+@media print{#execPrintTarget{box-shadow:none;border-radius:0;}}

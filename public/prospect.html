@@ -10,8 +10,8 @@
 :root{
   --navy:#1E2931;--cyan:#00A9CC;--cyan-dark:#0089A6;--cyan-pale:#E4F6FA;
   --green:#2E7D32;--green-pale:#E8F5E9;--red:#C81E10;
-  --gray-50:#F8FAFC;--gray-100:#F1F5F9;--gray-200:#E2E8F0;
-  --gray-400:#94A3B8;--gray-500:#64748B;--gray-600:#475569;
+  --gray-50:#F8FAFC;--gray-100:#F1F5F9;--gray-200:#E3E9EE;
+  --gray-400:#6B7A8D;--gray-500:#64748B;--gray-600:#475569;
   --gray-700:#334155;--gray-800:#1E293B;--white:#FFFFFF;
   --font:'Inter',system-ui,sans-serif;
   --radius:10px;--radius-sm:6px;
@@ -108,6 +108,15 @@ body{font-family:var(--font);background:#F0F4F8;color:var(--gray-800);min-height
 .autosave .as-dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:as-pulse 1s infinite;}
 @keyframes as-pulse{0%,100%{opacity:.4}50%{opacity:1}}
 .resume-cue{background:#E4F6FA;border:1px solid var(--cyan);border-radius:var(--radius-sm);padding:.85rem 1rem;font-size:14px;color:var(--navy);margin-bottom:1.25rem;}
+
+/* ── v4.0.0 polish: shared control metrics, focus ring, type ── */
+html{font-size:16px;}
+body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+input,select,textarea,button{font-family:inherit;}
+input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(0,169,204,.18);}
+:focus-visible{outline:2px solid #00A9CC;outline-offset:2px;border-radius:4px;}
+h1,h2,h3{letter-spacing:-.02em;text-wrap:pretty;}
+button{cursor:pointer;}
 </style>
 </head>
 <body>

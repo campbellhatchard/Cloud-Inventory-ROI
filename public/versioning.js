@@ -260,7 +260,7 @@ function renderListVersioned() {
 
   const initials    = n => n.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase()||'?';
   const payStr      = pb => pb===null?'—':pb>=60?'60+mo':pb.toFixed(1)+'mo';
-  const stageColors = { Discovery:'#0089A6', Demo:'#854F0B', Proposal:'#0F6E56', Negotiation:'#3C3489', 'Closed Won':'#2E7D32', 'Closed Lost':'#C81E10' };
+  const stageColors = (typeof STAGE_COLORS !== 'undefined') ? STAGE_COLORS : { Discovery:'#0089A6', Demo:'#A6791E', Proposal:'#12786F', Negotiation:'#6A4C93', 'Closed Won':'#2E7D32', 'Closed Lost':'#C81E10' };
 
   el.innerHTML = `<ul class="scenario-list">${filtered.map(s => {
     const versionCount = savedScenarios.filter(x => x.baseId === s.baseId).length;
