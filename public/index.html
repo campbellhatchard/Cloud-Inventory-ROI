@@ -1214,7 +1214,7 @@
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="3.12.0";</script>
+<script>const APP_VERSION="3.12.1";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
 <script src="input-format.js"></script>
@@ -2271,7 +2271,8 @@ async function selectCustomerFromSearch(customerId) {
   const input = document.getElementById('customerSearchInput');
   try {
     /* Load that customer's most recent current scenario. */
-    const resp = await apiFetch('/api/scenarios' + (getUser() && getUser().role === 'admin' ? '?all=true' : ''));
+    const _me = (window.ciAuth && window.ciAuth.getUser) ? (window.ciAuth.getUser() || {}) : {};
+    const resp = await apiFetch('/api/scenarios' + (_me.role === 'admin' ? '?all=true' : ''));
     if (!resp || !resp.ok) { showToast('Could not load scenarios.'); return; }
     const list = await resp.json();
     const rows = Array.isArray(list) ? list : (list.scenarios || []);

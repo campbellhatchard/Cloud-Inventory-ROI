@@ -61,12 +61,15 @@
     } catch (e) { console.error('loadHandoff error:', e.message); renderGate('Could not load the handoff — check your connection.'); return false; }
   }
 
+  function currentUser() {
+    try { return (window.ciAuth && window.ciAuth.getUser) ? (window.ciAuth.getUser() || {}) : {}; }
+    catch (e) { return {}; }
+  }
   async function resolveCanWrite() {
-    /* A cheap probe: SEs/admins can write. We read the user role from the app. */
-    try {
-      const u = (typeof getUser === 'function') ? getUser() : null;
-      return !!u && (u.role === 'se' || u.role === 'admin');
-    } catch (e) { return false; }
+    /* SEs and admins can write; AEs are read + print. Read the role from the
+       app's auth cache (exposed as window.ciAuth.getUser). */
+    const u = currentUser();
+    return !!u && (u.role === 'se' || u.role === 'admin');
   }
 
   function mergeState(base, extra) {

@@ -7,6 +7,13 @@
 
 const VERSION_HISTORY = [
   {
+    version: '3.12.1', date: '2026', tag: 'Fixes',
+    title: 'Fix: Solution Engineers and admins can now edit Solution Fit',
+    changes: [
+      'Solution Fit was stuck read-only for everyone, including SEs and admins, because it could not read the signed-in user’s role. Fixed — SE and admin now have full edit access; AEs remain read + print.'
+    ]
+  },
+  {
     version: '3.12.0', date: '2026', tag: 'Features & fixes',
     title: 'Distinct AE/SE roles, admin full access, responsive, dictation, customer search',
     changes: [

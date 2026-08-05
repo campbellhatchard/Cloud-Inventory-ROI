@@ -1,4 +1,43 @@
-# Cloud Inventory ROI Builder v3.12.0
+# Cloud Inventory ROI Builder v3.12.1
+
+Render-ready deployment package for the Cloud Inventory ROI Builder.
+
+## Deployment target
+
+This package targets the production Render Blueprint resources:
+
+- `cloud-inventory-roi`
+- `cloud-inventory-roi-db`
+
+The included PowerShell toolkit deploys to GitHub branch `main` by default and relies on Render auto-deploy from commit.
+
+## Admin bootstrap
+
+If the database is brand new, the bootstrap admin values in `render.yaml` are:
+
+- Username: `admin`
+- Password: `CloudInventory2026!`
+- Email: `admin@cloudinventory.com`
+
+If the database already contains an admin user, the existing password may be retained depending on the current bootstrap logic.
+
+## Post-deployment checks
+
+Check health:
+
+```powershell
+.\03-Check-Render-Health.ps1
+```
+
+Test a prospect link:
+
+```powershell
+.\04-Test-Prospect-Link.ps1 -Link "https://cloud-inventory-roi.onrender.com/prospect.html?token=PASTE_TOKEN_HERE"
+```
+
+---
+
+# Cloud Inventory ROI Builder v3.12.1
 
 Render-ready release. Promoted from the validated v2.9.3 package (public prospect-link auth fix) with the dependency-free ROI engine test suite restored (`npm run test:engine`).
 
@@ -196,3 +235,7 @@ The risky structural phase, kept surgical and heavily tested.
 - Responsive layer (public/style.css): desktop / tablet (641–1024) / phone (≤640) tiers plus touch (pointer:coarse) tuning — larger tap targets, iOS-zoom-safe inputs, Solution Fit tabs scroll, tables/doc preview scroll, single-column stacking. Feature/viewport driven, not device sniffing.
 - Microphone dictation (public/dictation.js): Web Speech API mic button on text fields (three-whys + all Solution Fit textareas). Degrades gracefully where unsupported; needs HTTPS + mic permission.
 - Customer search on the calculator landing: type-ahead to find an existing customer and load their most recent scenario.
+
+## v3.12.1 — bug fix
+
+- Fixed Solution Fit being read-only for SE and admin users. Root cause: the module called a bare `getUser()` that is not global (the app exposes it as `window.ciAuth.getUser`), so role resolution always failed and defaulted to read-only. Now uses `window.ciAuth.getUser()` (matching the rest of the app); SE/admin edit, AE read+print. Same bare-getUser bug fixed in the new customer search.
