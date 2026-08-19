@@ -168,6 +168,14 @@ function loadFromObject(i) {
     (i.confidence || []).forEach(id => { fieldStates[id] = 'confirmed'; confirmedFields.add(id); });
   }
   if (i.industry && IND[i.industry]) document.getElementById('benchBadge').style.display = 'inline-flex';
+  /* Auto-expand the collapsed field-service group if this scenario actually
+     has field-service data, so a loaded MEP deal shows its entered values. */
+  const fsGroup = document.getElementById('fieldServiceGroup');
+  if (fsGroup) {
+    const hasFieldData = ['repeatVisitsYr','costPerTruckRoll','fieldTechs','revenuePerJob','fieldInventoryValue','fieldLeakagePct']
+      .some(id => { const v = i[id]; return v != null && Number(v) > 0; });
+    fsGroup.open = hasFieldData;
+  }
   recalc();
   renderConfidence();
   /* A freshly loaded scenario has no unsaved changes — clear the flag so the

@@ -58,6 +58,7 @@ body{font-family:var(--font);background:#F0F4F8;color:var(--gray-800);min-height
 .question:last-child{border-bottom:none;}
 .question.answered{background:#FAFFFE;}
 .q-text{font-size:14px;font-weight:500;color:var(--gray-800);margin-bottom:5px;line-height:1.45;}
+.q-context{font-size:12.5px;color:var(--gray-500,#64748B);line-height:1.5;margin:0 0 9px;padding-left:10px;border-left:2px solid var(--cyan-line,#B4E3EF);}
 .q-placeholder-hint{font-size:12px;color:var(--gray-400);margin-bottom:10px;}
 .q-input{width:100%;padding:10px 14px;font-size:14px;font-family:var(--font);border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);background:var(--white);color:var(--gray-800);transition:border-color .15s,box-shadow .15s;outline:none;}
 .q-input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,174,239,.12);}
@@ -414,6 +415,8 @@ function renderProspectQuestion(q) {
       </div>`;
   }
   const drv = driverForQuestion(q);
+  const ctxText = contextForQuestion(q);
+  const context = ctxText ? `<div class="q-context">${escapeHtml(ctxText)}</div>` : '';
   const helps = drv ? `<div class="q-helps">Helps assess: <strong>${escapeHtml(VALUE_DRIVERS[drv].label)}</strong></div>` : '';
   const unsure = (answer || '').trim().toLowerCase() === NOT_SURE_TOKEN;
   const shown = unsure ? '' : answer;
@@ -456,6 +459,7 @@ function renderProspectQuestion(q) {
   return `
     <div class="question ${isAnswered?'answered':''} ${unsure?'unsure':''}" id="wrap-${q.id}">
       <div class="q-text">${q.text}</div>
+      ${context}
       <div class="q-placeholder-hint">e.g. ${q.placeholder}</div>
       ${control}
       ${helps}
@@ -646,6 +650,36 @@ const FIELD_TO_DRIVER = (() => {
 
 function driverForQuestion(q) {
   return (q && q.sync && FIELD_TO_DRIVER[q.sync]) ? FIELD_TO_DRIVER[q.sync] : null;
+}
+
+/* Plain-language "why we ask" context, keyed by the value each question feeds
+   (its sync target). Written for the customer — what the number tells us about
+   their operation — not internal modelling language. Keyed by sync so it
+   applies across industries without editing every question. */
+const QUESTION_CONTEXT = {
+  userCount:        'This sizes how many people\u2019s time is affected \u2014 the bigger the team touching inventory, the more that small daily inefficiencies add up.',
+  laborWastePct:    'Time spent counting, re-keying, and reconciling is time not spent on higher-value work. This helps estimate how much of it could be given back.',
+  currentAccuracy:  'The gap between what your records say and what\u2019s actually on the shelf drives almost everything else \u2014 safety stock, write-offs, and missed orders.',
+  annualWriteOff:   'Stock lost to damage, expiry, or shrinkage is money already spent that produced nothing. This is often the most tangible number to a CFO.',
+  inventoryValue:   'How much cash is tied up in inventory sets the ceiling on how much working capital better accuracy could free.',
+  invTurnsCurrent:  'How quickly inventory turns shows whether you\u2019re holding more than you need \u2014 slower turns usually mean trapped cash.',
+  otifBaseline:     'On-time-in-full performance is what your customers feel. Even a few points of slippage can put real revenue at risk.',
+  otifTarget:       'The gap between where you are and where you want to be defines the size of the service-level opportunity.',
+  orderErrorPct:    'Every mis-picked or short order carries a cost \u2014 rework, returns, expedited reshipments, and eroded trust.',
+  costPerError:     'Putting a dollar figure on a single order error lets us translate error rates into real money.',
+  ordersPerYr:      'Order volume scales everything \u2014 a small per-order improvement multiplied across the year is often substantial.',
+  downtimeEventsYr: 'Production or service interruptions caused by parts not being where the record said are among the most expensive and preventable losses.',
+  expediteSpendYr:  'Rush freight and expediting fees are a direct symptom of not trusting inventory data \u2014 and a cost that usually shrinks with accuracy.',
+  costPerTruckRoll: 'A repeat visit for a missing part carries labor, vehicle, and opportunity cost \u2014 this quantifies what each one really costs.',
+  repeatVisitsYr:   'How often technicians return for a wrong or missing part shows how much first-visit success could improve.',
+  fieldInventoryValue:'Parts on trucks and in the field are easy to lose track of \u2014 this sizes how much value is exposed to leakage.',
+  revenuePerJob:    'When technicians spend less time hunting parts, they can complete more billable work \u2014 this helps value that recovered capacity.',
+  itCost:           'What you spend maintaining current tools and workarounds is part of the true cost of the status quo.',
+  discRate:         'Your finance team\u2019s hurdle rate lets any business case be judged on your own terms, not ours.'
+};
+function contextForQuestion(q) {
+  if (!q || !q.sync) return '';
+  return QUESTION_CONTEXT[q.sync] || '';
 }
 
 /* "Not sure" is recorded for the rep, but does not count as data. */

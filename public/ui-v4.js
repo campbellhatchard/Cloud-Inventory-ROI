@@ -245,9 +245,28 @@
     });
 
     // Panes are rendered lazily by the existing app code; re-run on change.
+    // But IGNORE mutations that are only inside live-updating result containers
+    // (roiGrid, execDoc, comparison, etc.) — those rebuild on every keystroke
+    // via recalc(), and re-running enhance() mid-type was disrupting focus on
+    // number inputs (e.g. "Revenue / job" appearing to reject entry).
+    var IGNORE_IDS = ['roiGrid', 'execDoc', 'compResult', 'turnsPanel', 'rampNote',
+                      'compareBody', 'sensitivityGrid', 'livebar'];
+    function isIgnorable(mutation) {
+      var n = mutation.target;
+      while (n && n !== main) {
+        if (n.id && IGNORE_IDS.indexOf(n.id) > -1) return true;
+        n = n.parentNode;
+      }
+      return false;
+    }
     var main = document.querySelector('.main-content');
     if (main && window.MutationObserver) {
-      new MutationObserver(scheduleEnhance).observe(main, { childList: true, subtree: true });
+      new MutationObserver(function (mutations) {
+        /* Only re-enhance if at least one mutation is outside the ignore set. */
+        for (var i = 0; i < mutations.length; i++) {
+          if (!isIgnorable(mutations[i])) { scheduleEnhance(); return; }
+        }
+      }).observe(main, { childList: true, subtree: true });
     }
   }
 

@@ -1,4 +1,4 @@
-# Cloud Inventory ROI Builder v4.3.0
+# Cloud Inventory ROI Builder v4.3.1
 
 Render-ready release. Promoted from the validated v2.9.3 package (public prospect-link auth fix) with the dependency-free ROI engine test suite restored (`npm run test:engine`).
 
@@ -392,3 +392,20 @@ Presentation-layer only. Implemented as a single additive block at the END of pu
 Not included (deliberately held): 1b input tiering and 1d top-chrome consolidation — 1d overlaps the sticky header shipped in v4.2.0 and should wait until that is verified live.
 
 Note: 11 pre-existing rules elsewhere in style.css use font-weight 800, which is not among the loaded Inter weights (400/500/600/700) and will fall back. Not changed here — flagged for a future cleanup.
+
+## v4.3.1 — calculator & PDF fixes, optional field-service, prospect context
+
+Bug fixes and two UX refinements. No migrations. ROI engine unchanged (22/22).
+
+- **Executive PDF (regression fix):** print.html uses IND/COMP (industry & competitor labels) but lost them when it stopped loading app.js in an earlier fix. IND and COMP are now in a shared public/industry-data.js loaded by both the calculator and the print page — one source of truth. Resolves "ReferenceError: IND is not defined".
+- **Number-field entry fix:** the v4 UI's MutationObserver watched the whole content area, so every keystroke (which rebuilds the results grid) triggered a full re-enhancement pass that disrupted input focus — most visibly on "Revenue / job". The observer now ignores mutations inside live result containers (roiGrid, execDoc, etc.).
+- **Clipped large-number fields:** 3/4-column rows plus the "$" affix squeezed inputs below their content width. Number inputs now have a readable minimum width and rows wrap instead of crushing.
+- **Field service drivers optional (A2):** now a collapsed disclosure, closed by default regardless of solution — not every MEP deal has a field-service component. Because each field lever multiplies its primary dollar input, a blank section contributes $0, so leaving it closed excludes it from the ROI. Loading a scenario with field-service data auto-expands it.
+- **Prospect question context:** each discovery question shows a plain-language "why we ask" note, keyed by what the question measures so it applies across industries. Customer-facing wording, not internal modelling language.
+
+Note: 11 pre-existing rules elsewhere in style.css use font-weight 800 (not among the loaded Inter weights 400/500/600/700) and will fall back — flagged for a future cleanup, not changed here.
+
+
+## Deployment package v4.3.1
+
+This package has been normalized for Render deployment from the repository root. `.node-version`, `.npmrc`, and `.github/workflows/ci.yml` are present at the package root, and `package.json` / `package-lock.json` are version-aligned to 4.3.1.

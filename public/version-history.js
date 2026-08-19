@@ -7,6 +7,17 @@
 
 const VERSION_HISTORY = [
   {
+    version: '4.3.1', date: '2026-08-05', tag: 'fixes',
+    title: 'Calculator & PDF fixes; field-service made optional; prospect question context',
+    changes: [
+      'Executive PDF fixed again: the print page lost access to the industry/competitor labels when it stopped loading the full calculator. That data now lives in a shared file both pages load.',
+      'Fixed number fields that appeared to reject entry (e.g. Revenue / job): the UI was re-processing the whole form on every keystroke and disrupting focus.',
+      'Fixed large-number fields that clipped their digits (subscription, field inventory value, cost per truck roll / order).',
+      'Field service value drivers are now a collapsed, optional section — not every deal needs them. Left blank, they are excluded from the ROI; loading a scenario that has field data expands it automatically.',
+      'Prospect discovery: each question now shows a plain-language note on why it is being asked.'
+    ]
+  },
+  {
     version: '4.3.0', date: '2026-08-05', tag: 'design',
     title: 'Calculator visual pass — results elevation & unified visual language',
     changes: [

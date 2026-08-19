@@ -485,7 +485,8 @@
             </div>
             <div id="accuracySuggestion" class="accuracy-suggestion" style="display:none;"></div>
 
-            <div class="field-group-label">Field service value drivers <span class="mep-tag">MEP</span></div>
+            <details class="driver-group" id="fieldServiceGroup">
+            <summary class="driver-group-summary">Field service value drivers <span class="mep-tag">MEP</span><span class="driver-group-hint">Optional — expand only if the prospect runs field service / van stock. Left blank, it is excluded from the ROI.</span></summary>
             <div class="field-row-3">
               <div class="field"><label title="Repeat/return visits per year caused by wrong or missing parts">Repeat visits / yr (#)</label>
                 <input type="number" id="repeatVisitsYr" placeholder="e.g. 1,200" oninput="recalc()" min="0" step="10"/></div>
@@ -518,6 +519,7 @@
               <div class="field"><label title="% of leakage recovered by field tracking (blank = industry avg)">Leakage recovery % <span class="metric-bench" id="b_leakage"></span></label>
                 <input type="number" id="m_leakage" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
             </div>
+            </details>
 
             <div class="field-group-label">Warehouse throughput &amp; order accuracy <span class="wms-tag">WMS</span></div>
             <div class="field-row-3">
@@ -1234,6 +1236,7 @@
 <script src="/roi-engine.js"></script>
 <script src="brand-palette.js"></script>
 <script src="currency.js"></script>
+<script src="industry-data.js"></script>
 <script src="app.js"></script>
 <script src="features.js"></script>
 <script src="narrative.js"></script>
@@ -1251,7 +1254,7 @@
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="4.3.0";</script>
+<script>const APP_VERSION="4.3.1";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
 <script src="input-format.js"></script>
