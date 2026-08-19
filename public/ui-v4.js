@@ -18,7 +18,10 @@
   'use strict';
 
   /* ── 1. Live KPI bar belongs to the modelling context ───── */
-  var LIVE_TABS = ['calc', 'exec', 'sensitivity', 'compare'];
+  /* Note: 'exec' is intentionally excluded. The Executive view has its own
+     scenario-aware KPI header that responds to the Conservative/Base/Aggressive
+     toggle; the global (unscaled) livebar would contradict it, so we hide it here. */
+  var LIVE_TABS = ['calc', 'sensitivity', 'compare'];
 
   function syncLivebar(name) {
     document.body.classList.toggle('livebar-off', LIVE_TABS.indexOf(name) === -1);

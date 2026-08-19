@@ -109,10 +109,6 @@ function showSaveVersionDialog(v, r, dataBlob, existing) {
           document.getElementById('saveVersionModal').remove();
           commitSave(window._pendingV, window._pendingData, '${existing.baseId}', note);
         ">Save as v${nextVersion}</button>
-        <button class="btn btn-ghost" onclick="
-          document.getElementById('saveVersionModal').remove();
-          commitSave(window._pendingV, window._pendingData, '${existing.baseId}', '');
-        ">Overwrite current</button>
         <button class="btn btn-ghost" onclick="document.getElementById('saveVersionModal').remove()">Cancel</button>
       </div>
     </div>`;

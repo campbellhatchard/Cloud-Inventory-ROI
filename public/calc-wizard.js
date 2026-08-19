@@ -214,20 +214,51 @@ function toggleGuidedMode(on) {
   try { sessionStorage.setItem('ci_guided_mode', _guidedOn ? '1' : '0'); } catch (e) {}
   body.classList.toggle('guided-mode', _guidedOn);
   const toggle = document.getElementById('guidedToggle');
-  if (toggle) toggle.setAttribute('aria-pressed', _guidedOn ? 'true' : 'false');
+  if (toggle) toggle.setAttribute('aria-checked', _guidedOn ? 'true' : 'false');
   const chk = document.getElementById('guidedToggleChk');
   if (chk) chk.checked = _guidedOn;
   if (_guidedOn) {
     /* If an Advanced disclosure collapsed the benchmarks, open it in guided
        mode so the step's content is visible. */
     _guidedIdx = 0;
+    stampSectionNumbers(true);
     showGuidedStep(0);
   } else {
     /* Restore: show all sections. */
     GUIDED_SEQUENCE.forEach(id => { const el = document.getElementById(id); if (el) el.classList.remove('guided-active'); });
     const nav = document.getElementById('guidedNav');
     if (nav) nav.style.display = 'none';
+    stampSectionNumbers(false);
   }
+}
+
+/* Number each section header ("1", "2", …) so the badges line up with the
+   numbered dots in the stepper. Injected only in guided mode; removed on exit.
+   Handles the varied header markup (.acc-title, .card-title) and the
+   header-less results grid. */
+const GUIDED_STEP_TITLES = ['Prospect details', 'Investment', 'Losses & OTIF', 'Benchmarks', 'Results'];
+function stampSectionNumbers(on) {
+  GUIDED_SEQUENCE.forEach((id, i) => {
+    const sec = document.getElementById(id);
+    if (!sec) return;
+    let badge = sec.querySelector(':scope > .guided-num, :scope .guided-num');
+    if (!on) { if (badge) badge.remove(); return; }
+    if (badge) { badge.textContent = i + 1; return; }
+    badge = document.createElement('span');
+    badge.className = 'guided-num';
+    badge.textContent = i + 1;
+    badge.setAttribute('aria-label', 'Step ' + (i + 1));
+    /* Preferred anchor: the visible title element, so the number sits inline
+       with the section name. Fall back to the section itself. */
+    const title = sec.querySelector('.acc-title') || sec.querySelector('.card-title');
+    if (title) {
+      title.insertBefore(badge, title.firstChild);
+    } else {
+      /* roiGrid has no header — stamp the section as a positioned parent. */
+      sec.classList.add('guided-num-host');
+      sec.insertBefore(badge, sec.firstChild);
+    }
+  });
 }
 
 function showGuidedStep(idx) {
@@ -283,7 +314,9 @@ function renderGuidedNav() {
     nav.id = 'guidedNav';
     nav.className = 'guided-nav';
     const body = document.getElementById('calcBody');
-    if (body) body.appendChild(nav);
+    /* Place at the TOP of the calculator body (sticky), so the rep sees
+       overall progress without scrolling to the bottom. */
+    if (body) body.insertBefore(nav, body.firstChild);
   }
   nav.style.display = 'flex';
   const total = GUIDED_SEQUENCE.length;
@@ -316,7 +349,7 @@ function initGuidedToggle() {
   const wrap = document.createElement('div');
   wrap.className = 'guided-toggle-wrap';
   wrap.innerHTML = `
-    <label class="guided-toggle" id="guidedToggle" role="switch" aria-pressed="false" title="Walk through the calculator one step at a time">
+    <label class="guided-toggle" id="guidedToggle" role="switch" aria-checked="false" title="Walk through the calculator one step at a time">
       <input type="checkbox" id="guidedToggleChk" onchange="toggleGuidedMode(this.checked)"/>
       <span class="gt-track"><span class="gt-thumb"></span></span>
       <span class="gt-label">Guided mode</span>
@@ -337,6 +370,8 @@ initCalcWizard = function () {
 
 if (typeof window !== 'undefined') {
   window.toggleGuidedMode = toggleGuidedMode;
+  window.isGuidedOn = isGuidedOn;
+  window.stampSectionNumbers = stampSectionNumbers;
   window.guidedNext = guidedNext;
   window.guidedBack = guidedBack;
   window.guidedGoTo = guidedGoTo;

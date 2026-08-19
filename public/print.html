@@ -238,8 +238,12 @@ body{font-family:var(--font);background:#EAECEF;color:var(--gray-800);font-size:
   <div class="doc"><div id="out"></div></div>
 </div>
 
-<script src="app.js"></script>
-<script src="features.js"></script>
+<!-- print.html renders a self-contained PDF preview. It needs only the shared
+     ROI engine (calcROI) and the narrative helpers (build*, THREE_WHYS_LIBRARY);
+     all rendering/formatting helpers are defined inline below. It deliberately
+     does NOT load app.js or features.js — those are the full calculator, which
+     runs top-level DOM/recalc code that throws on this page. -->
+<script src="/roi-engine.js"></script>
 <script src="narrative.js"></script>
 <script>
 const MODES={conservative:{lbl:'Conservative (70%)',scale:.7},base:{lbl:'Base case (100%)',scale:1},aggressive:{lbl:'Aggressive (130%)',scale:1.3}};
@@ -560,6 +564,15 @@ function init(){
   }
   try{
     baseVals=JSON.parse(decodeURIComponent(escape(atob(hash.replace('#data=','')))));
+    /* A ramp value below ~8% is a corruption artifact from the old
+       double-division bug (e.g. 0.004 or 0.01 instead of 0.40 / 1.00).
+       Reversing arbitrary corruption depth is ambiguous, so fall back to the
+       sensible default rather than guessing. Legitimate ramps are always >= 8%. */
+    const healRamp=(val,dflt)=>{const d=(val==null||val==='')?dflt:Number(val);
+      return (!isFinite(d)||d<=0||d<0.08)?dflt:Math.min(1,d);};
+    baseVals.ramp1=healRamp(baseVals.ramp1,0.40);
+    baseVals.ramp2=healRamp(baseVals.ramp2,0.75);
+    baseVals.ramp3=healRamp(baseVals.ramp3,1.00);
     document.getElementById('scenToggle').style.display='flex';
     if(typeof threeWhys!=='undefined'){threeWhys.act=baseVals.threeWhysAct||'';threeWhys.ci=baseVals.threeWhysCi||'';threeWhys.now=baseVals.threeWhysNow||'';}
     render(baseVals,'base');

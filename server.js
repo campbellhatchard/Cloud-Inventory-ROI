@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   server.js  —  Cloud Inventory ROI Builder  v4.0.0
+   server.js  —  Cloud Inventory ROI Builder  v2.9.2
    Database-backed multi-user edition — production hardened
 
    Security layers applied (Phase 10):
@@ -66,7 +66,7 @@ app.use(helmet({
       styleSrc:       ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc:        ["'self'", 'https://fonts.gstatic.com'],
       imgSrc:         ["'self'", 'data:'],           // data: for logo fallbacks
-      connectSrc:     ["'self'", 'https://api.anthropic.com'],
+      connectSrc:     ["'self'", 'https://api.anthropic.com', 'https://cdn.jsdelivr.net'], // jsdelivr: pptxgenjs assets
       frameSrc:       ["'none'"],
       objectSrc:      ["'none'"],
       upgradeInsecureRequests: PROD ? [] : null      // HTTPS-only in production
@@ -666,6 +666,78 @@ app.get('/api/business-case-shares', requireAuth, async (req, res) => {
     );
     res.json(rows);
   } catch (err) { res.status(500).json({ error: 'Failed to load shares.' }); }
+});
+
+/* ═══════════════════════════════════════════════════════════════════
+   SCENARIO SHARES — trackable, revocable links to a saved scenario.
+   Replaces the old index.html#share=<base64> link, which embedded the whole
+   scenario in the URL and so could be neither tracked nor revoked.
+   Views are counted server-side on fetch — no tracking pixels.
+   ═══════════════════════════════════════════════════════════════════ */
+
+app.post('/api/scenario-shares', requireAuth, async (req, res) => {
+  try {
+    const { scenarioId, company, title } = req.body || {};
+    if (!scenarioId) return res.status(400).json({ error: 'scenarioId required.' });
+    const { query } = db();
+    const token = crypto.randomBytes(32).toString('hex');
+    const { rows } = await query(
+      `INSERT INTO scenario_shares (token, scenario_id, owner_id, company, title)
+       VALUES ($1, $2, $3, $4, $5) RETURNING token`,
+      [token, scenarioId, req.user.id, company || '', title || '']
+    );
+    res.json({ ok: true, token: rows[0].token, shareUrl: `${APP_URL}/?share=${rows[0].token}` });
+  } catch (err) { res.status(500).json({ error: 'Failed to create share link.' }); }
+});
+
+app.get('/api/scenario-shares/:token', async (req, res) => {
+  try {
+    const token = String(req.params.token || '').trim();
+    if (!/^[a-f0-9]{64}$/.test(token)) return res.status(400).json({ error: 'Invalid token.' });
+    const { query } = db();
+    const { rows } = await query(
+      `SELECT sh.id, sh.is_active, sh.company, sh.title, s.data
+       FROM scenario_shares sh JOIN scenarios s ON s.id = sh.scenario_id
+       WHERE sh.token = $1`, [token]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Shared scenario not found.' });
+    if (!rows[0].is_active) return res.status(410).json({ error: 'This share link is no longer active.' });
+    query(`UPDATE scenario_shares
+           SET view_count = COALESCE(view_count,0) + 1,
+               first_viewed = COALESCE(first_viewed, NOW()),
+               last_viewed = NOW()
+           WHERE id = $1`, [rows[0].id]).catch(() => {});
+    res.set('Cache-Control', 'no-store');
+    res.json({ company: rows[0].company, title: rows[0].title, data: rows[0].data });
+  } catch (err) { res.status(500).json({ error: 'Failed to load shared scenario.' }); }
+});
+
+app.get('/api/scenario-shares', requireAuth, async (req, res) => {
+  try {
+    const { scenarioId } = req.query;
+    const { query } = db();
+    const { rows } = await query(
+      `SELECT id, token, scenario_id, company, title, is_active, view_count, first_viewed, last_viewed, created_at
+       FROM scenario_shares
+       WHERE owner_id = $1 ${scenarioId ? 'AND scenario_id = $2' : ''}
+       ORDER BY created_at DESC LIMIT 20`,
+      scenarioId ? [req.user.id, scenarioId] : [req.user.id]
+    );
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: 'Failed to load share links.' }); }
+});
+
+/* Revoke — the capability the old embedded-payload link could never offer. */
+app.post('/api/scenario-shares/:id/revoke', requireAuth, async (req, res) => {
+  try {
+    const { query } = db();
+    const { rowCount } = await query(
+      `UPDATE scenario_shares SET is_active = FALSE WHERE id = $1 AND owner_id = $2`,
+      [req.params.id, req.user.id]
+    );
+    if (!rowCount) return res.status(404).json({ error: 'Share link not found.' });
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: 'Failed to revoke share link.' }); }
 });
 
 /* ── Page routes ── */

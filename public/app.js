@@ -62,6 +62,7 @@ async function fetchScenarios() {
     updateSavedBadge();
     if (typeof renderListVersioned === 'function') renderListVersioned();
     else renderList();
+    if (typeof refreshCalcScenarioPicker === 'function') refreshCalcScenarioPicker();
   } catch(e) {
     console.error('fetchScenarios error:', e.message);
   } finally {
@@ -316,8 +317,8 @@ function getVals() {
     countPeople:         g('countPeople'),
     mCount:              metricPct('m_count', 'count'),
     implMonths, ramp1, ramp2, ramp3,
-    prospectLogoDataUrl: prospectLogoDataUrl,
-    confidence: [...confirmedFields]
+    prospectLogoDataUrl: (typeof prospectLogoDataUrl !== 'undefined') ? prospectLogoDataUrl : null,
+    confidence: (typeof confirmedFields !== 'undefined') ? [...confirmedFields] : []
   };
 }
 
@@ -487,6 +488,11 @@ function recalc() {
 
   if (typeof autoFlagConfidence === 'function') autoFlagConfidence();
   if (typeof renderConfidence  === 'function') renderConfidence();
+  /* roiGrid was just rebuilt via innerHTML, which drops the guided number
+     badge — restamp it if guided mode is active. */
+  if (typeof isGuidedOn === 'function' && isGuidedOn() && typeof stampSectionNumbers === 'function') {
+    stampSectionNumbers(true);
+  }
 }
 
 /* ════════════════════════════════════════
@@ -856,6 +862,12 @@ async function saveScenario() {
 
   const dataBlob = {
     ...v,
+    /* Three Whys are edited on the Exec view but aren't part of getVals(), so
+       capture them here — otherwise Save (incl. the Exec view's Save button)
+       would silently drop exec-view narrative edits. */
+    threeWhysAct: document.getElementById('why_act')?.value || '',
+    threeWhysCi:  document.getElementById('why_ci')?.value  || '',
+    threeWhysNow: document.getElementById('why_now')?.value || '',
     fieldStates:        typeof fieldStates !== 'undefined' ? { ...fieldStates } : {},
     annualBenefit:      r.annualBenefit,
     roi:                r.roi,
@@ -898,6 +910,8 @@ async function _doSave(v, dataBlob, baseId, note) {
     }
     const saved = await resp.json();
     showToast(`Saved v${saved.version} — "${saved.name}"`);
+    /* Only now — after a confirmed successful save — is the form clean. */
+    if (typeof clearCalcDirty === 'function') clearCalcDirty();
     trackEvent('scenario_saved', { company: v.company, version: saved.version });
     await fetchScenarios();
   } catch(e) {
@@ -920,6 +934,8 @@ async function loadScenario(id) {
     if (!inputs) { showToast('Scenario data not found.'); return; }
     if (typeof loadFromObject === 'function') loadFromObject(inputs);
     window._scenarioLoaded = true;
+    window._calcScenarioId = id;
+    if (typeof refreshCalcScenarioPicker === 'function') refreshCalcScenarioPicker();
     /* Remember which customer this scenario belongs to, so the Solution Fit
        tab can attach to it. */
     window.currentScenarioCustomerId = (scenario && scenario.customerId) || null;
@@ -1009,17 +1025,20 @@ function renderList() {
 
 async function generateShareURLFromScenario(id) {
   const s = savedScenarios.find(x => x.id === id);
-  let inputs = s?.inputs;
-  if (!inputs) {
-    const resp = await apiFetch('/api/scenarios/' + id);
-    if (!resp || !resp.ok) { showToast('Could not load scenario for sharing.'); return; }
-    const full = await resp.json();
-    inputs = full.data;
+  try {
+    const resp = await apiFetch('/api/scenario-shares', {
+      method: 'POST',
+      body: JSON.stringify({ scenarioId: id, company: s?.company || '', title: s?.name || '' })
+    });
+    if (!resp || !resp.ok) { showToast('Could not create share link.'); return; }
+    const { shareUrl } = await resp.json();
+    navigator.clipboard.writeText(shareUrl)
+      .then(() => showToast('🔗 Trackable share link copied — you\'ll see when it\'s opened.'))
+      .catch(() => showToast('Share link: ' + shareUrl));
+  } catch (e) {
+    console.error('share link error:', e.message);
+    showToast('Could not create share link — check your connection.');
   }
-  if (!inputs) { showToast('No data to share.'); return; }
-  const payload = btoa(unescape(encodeURIComponent(JSON.stringify(inputs))));
-  const url = window.location.origin + window.location.pathname + '#share=' + payload;
-  navigator.clipboard.writeText(url).then(() => showToast('🔗 Share link copied!'));
 }
 
 /* ════════════════════════════════════════
@@ -1129,8 +1148,11 @@ function clearForm() {
    renderConfidence, renderList) are called from index.html
    after all scripts have loaded.
    ════════════════════════════════════════ */
-document.getElementById('todayDate').textContent =
+const _todayEl = document.getElementById('todayDate');
+if (_todayEl) _todayEl.textContent =
   new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
 
 updateSavedBadge();
-recalc();
+/* recalc() is deferred to the post-load init in index.html: it calls getVals()
+   which reads prospectLogoDataUrl / confirmedFields declared in features.js
+   (loaded after app.js). Running it here caused a ReferenceError at load. */

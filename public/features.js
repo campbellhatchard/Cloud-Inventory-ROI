@@ -20,32 +20,68 @@
    Encodes scenario into URL hash so reps
    can paste a link; receiver auto-loads it.
    ───────────────────────────────────────── */
-function generateShareURL() {
-  const v = getVals();
-  // Strip large logos from share URL — base64 images >50KB will exceed browser URL limits
-  const payload = JSON.stringify({
-    ...v,
-    prospectLogoDataUrl: (v.prospectLogoDataUrl && v.prospectLogoDataUrl.length > 50000)
-      ? null
-      : v.prospectLogoDataUrl
-  });
-  const encoded = btoa(unescape(encodeURIComponent(payload)));
-  const url = window.location.origin + window.location.pathname + '#share=' + encoded;
-  navigator.clipboard.writeText(url).then(() => {
-    showToast('🔗 Share link copied to clipboard!');
-  }).catch(() => {
-    showShareModal(url);
-  });
-  trackEvent('share_url_generated', { company: v.company, industry: v.industry });
+async function generateShareURL() {
+  /* Trackable share links point at a saved scenario, so the server can count
+     views and honour revocation. A link built from unsaved calculator state
+     would have to carry the data in the URL, which is untrackable and
+     un-revokable — so we ask the rep to save first. */
+  const id = window._calcScenarioId;
+  if (!id) {
+    showToast('Save this scenario first — share links are tracked against a saved scenario.');
+    return;
+  }
+  try {
+    const v = getVals();
+    const resp = await apiFetch('/api/scenario-shares', {
+      method: 'POST',
+      body: JSON.stringify({ scenarioId: id, company: v.company || '', title: v.name || '' })
+    });
+    if (!resp || !resp.ok) { showToast('Could not create share link.'); return; }
+    const { shareUrl } = await resp.json();
+    navigator.clipboard.writeText(shareUrl)
+      .then(() => showToast('🔗 Trackable share link copied — you\'ll see when it\'s opened.'))
+      .catch(() => showShareModal(shareUrl));
+    trackEvent('share_url_generated', { company: v.company, industry: v.industry });
+  } catch (e) {
+    console.error('share link error:', e.message);
+    showToast('Could not create share link — check your connection.');
+  }
 }
-
 function showShareModal(url) {
   const modal = document.getElementById('shareModal');
   document.getElementById('shareUrlInput').value = url;
   modal.classList.add('open');
 }
 
-function checkShareURL() {
+async function checkShareURL() {
+  /* New: tokenized, trackable link — /?share=<token>. The scenario is fetched
+     from the server, which counts the view and honours revocation. */
+  const params = new URLSearchParams(window.location.search || '');
+  const token = params.get('share');
+  if (token) {
+    try {
+      const resp = await apiFetch('/api/scenario-shares/' + encodeURIComponent(token));
+      if (resp && resp.ok) {
+        const { data } = await resp.json();
+        if (data) {
+          loadFromObject(data);
+          history.replaceState(null, '', window.location.pathname);
+          showToast('📋 Shared scenario loaded!');
+          return;
+        }
+      } else if (resp && resp.status === 410) {
+        showToast('This share link is no longer active.');
+        history.replaceState(null, '', window.location.pathname);
+        return;
+      } else {
+        showToast('Could not open that share link.');
+        return;
+      }
+    } catch (e) { console.warn('share token load failed', e); showToast('Could not open that share link.'); return; }
+  }
+
+  /* Legacy: links already sent as #share=<base64 payload>. Still honoured so
+     previously distributed links keep working, but these are not trackable. */
   const hash = window.location.hash;
   if (!hash.startsWith('#share=')) return;
   try {
@@ -87,9 +123,19 @@ function loadFromObject(i) {
   if (i.confidence) confirmedFields = new Set(i.confidence);
   if (i.dealStage) document.getElementById('dealStage') && (document.getElementById('dealStage').value = i.dealStage);
   if (i.execAudience) { const el = document.getElementById('execAudience'); if (el) el.value = i.execAudience; }
+  /* Restore Three Whys (saved from the Exec view) into both the textareas and
+     the in-memory object, so exec-view narrative edits survive a reload. */
+  const _tw = { act: i.threeWhysAct || '', ci: i.threeWhysCi || '', now: i.threeWhysNow || '' };
+  ['act','ci','now'].forEach(k => { const el = document.getElementById('why_'+k); if (el) el.value = _tw[k]; });
+  if (typeof threeWhys !== 'undefined') { threeWhys.act = _tw.act; threeWhys.ci = _tw.ci; threeWhys.now = _tw.now; }
   // Restore new fields
+  // NOTE: ramp1/ramp2/ramp3 are handled separately below — they are stored as
+  // decimals (0.40) but the input fields hold percents (40), so they need a
+  // ×100 conversion just like the multiplier fields. They must NOT be in this
+  // generic pass-through loop (that omission caused a double-division bug where
+  // reloading a scenario turned 40% into 0.4%, then 0.004%, etc.).
   ['annualWriteOff','otifBaseline','otifTarget','invTurnsCurrent','invTurnsBenchmark',
-   'implMonths','ramp1','ramp2','ramp3',
+   'implMonths',
    'laborWastePct','currentAccuracy',
    'ordersPerYr','costPerOrder','pickRateGainPct','m_throughput','orderErrorPct','costPerError','m_accuracy',
    'repeatVisitsYr','costPerTruckRoll','m_firstfix','fieldTechs','addedJobsPerDay','revenuePerJob','workingDaysYr','m_utilization','fieldInventoryValue','fieldLeakagePct','m_leakage',
@@ -98,6 +144,22 @@ function loadFromObject(i) {
     const el = document.getElementById(id);
     if (el && i[id] !== undefined) el.value = i[id] || '';
   });
+
+  /* Ramp: stored as a decimal (0–1), field shows percent (0–100).
+     normalizeRamp also self-heals scenarios corrupted by the old
+     double-division bug: any ramp saved as an implausibly small value
+     (< 8%, e.g. 0.004 or 0.01 instead of 0.40 / 1.00) falls back to the
+     sensible default. Reversing arbitrary corruption depth is ambiguous, so
+     a predictable default is safer than guessing the original. Legitimate
+     ramps are always >= 8%. Returns a percent (0–100) for the input field. */
+  const normalizeRamp = (val, dflt) => {
+    const d = (val === undefined || val === null || val === '') ? dflt : Number(val);
+    const healed = (!isFinite(d) || d <= 0 || d < 0.08) ? dflt : Math.min(1, d);
+    return Math.round(healed * 100);
+  };
+  set('ramp1', normalizeRamp(i.ramp1, 0.40));
+  set('ramp2', normalizeRamp(i.ramp2, 0.75));
+  set('ramp3', normalizeRamp(i.ramp3, 1.00));
   // Restore fieldStates (three-state confidence)
   if (i.fieldStates) { fieldStates = { ...i.fieldStates }; }
   else if (i.confidence) {
@@ -108,6 +170,9 @@ function loadFromObject(i) {
   if (i.industry && IND[i.industry]) document.getElementById('benchBadge').style.display = 'inline-flex';
   recalc();
   renderConfidence();
+  /* A freshly loaded scenario has no unsaved changes — clear the flag so the
+     unsaved-changes guard doesn't nag right after loading. */
+  if (typeof clearCalcDirty === 'function') clearCalcDirty();
 }
 
 /* ─────────────────────────────────────────

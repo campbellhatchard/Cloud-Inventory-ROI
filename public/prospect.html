@@ -117,6 +117,79 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(0,169,204,.18)
 :focus-visible{outline:2px solid #00A9CC;outline-offset:2px;border-radius:4px;}
 h1,h2,h3{letter-spacing:-.02em;text-wrap:pretty;}
 button{cursor:pointer;}
+/* ── Progress meta (percent · time left · milestone) ── */
+.progress-meta{color:rgba(255,255,255,.72);font-size:11px;margin-top:5px;min-height:14px;}
+
+/* ── "What your answers help assess" panel ── */
+.value-panel:empty{display:none;}
+.value-panel{background:var(--white,#fff);border-radius:var(--radius,12px);box-shadow:var(--shadow,0 1px 3px rgba(0,0,0,.08));padding:1.25rem 1.4rem;margin-bottom:1rem;}
+.vp-title{font-size:14px;font-weight:700;color:var(--navy,#1E2931);}
+.vp-sub{font-size:12px;color:var(--gray-500,#6B7A8D);margin-top:3px;line-height:1.5;}
+.vd-list{list-style:none;margin:1rem 0 0;padding:0;display:flex;flex-direction:column;gap:8px;}
+.vd-row{display:flex;align-items:flex-start;gap:10px;padding:9px 10px;border-radius:9px;background:#F7F9FB;border:1px solid transparent;}
+.vd-row.vd-done{background:#F2FBF6;border-color:#CDEBD9;}
+.vd-row.vd-part{background:#F5FAFD;border-color:#D3E7F2;}
+.vd-mark{flex-shrink:0;width:17px;text-align:center;font-size:12px;line-height:1.5;color:var(--gray-500,#6B7A8D);}
+.vd-done .vd-mark{color:#2E7D32;font-weight:700;}
+.vd-part .vd-mark{color:#0089A6;}
+.vd-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+.vd-label{font-size:12.5px;font-weight:600;color:var(--navy,#1E2931);}
+.vd-blurb{font-size:11.5px;color:var(--gray-500,#6B7A8D);line-height:1.45;}
+.vd-status{flex-shrink:0;font-size:10.5px;font-weight:600;color:var(--gray-500,#6B7A8D);white-space:nowrap;padding-top:2px;}
+.vd-done .vd-status{color:#2E7D32;}
+.vd-part .vd-status{color:#0089A6;}
+@media(max-width:560px){
+  .vd-row{flex-wrap:wrap;}
+  .vd-status{width:100%;padding-left:27px;padding-top:1px;}
+}
+
+/* ── Per-question value context + "not sure" ── */
+.q-helps{font-size:11px;color:var(--gray-500,#6B7A8D);margin-top:7px;}
+.q-helps strong{color:var(--navy,#1E2931);font-weight:600;}
+.q-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;flex-wrap:wrap;}
+.q-unsure{background:none;border:1px solid var(--gray-200,#E2E8F0);color:var(--gray-500,#6B7A8D);font-family:inherit;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;cursor:pointer;transition:all .15s;}
+.q-unsure:hover{border-color:var(--cyan,#00A9CC);color:var(--cyan,#00A9CC);}
+.q-unsure.is-on{background:#FFF7E8;border-color:#E6C378;color:#8A6410;}
+.question.unsure{background:#FFFCF5;}
+/* ── Percent questions: slider + precise box ── */
+.q-pct{display:flex;align-items:center;gap:14px;margin-top:2px;}
+.q-range{flex:1;min-width:0;-webkit-appearance:none;appearance:none;height:5px;border-radius:3px;background:var(--gray-200,#E2E8F0);outline:none;cursor:pointer;}
+.q-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:19px;height:19px;border-radius:50%;background:var(--cyan,#00A9CC);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.28);cursor:pointer;}
+.q-range::-moz-range-thumb{width:17px;height:17px;border-radius:50%;background:var(--cyan,#00A9CC);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.28);cursor:pointer;}
+.q-range:focus-visible{box-shadow:0 0 0 3px rgba(0,169,204,.25);}
+.q-pct-box{position:relative;flex-shrink:0;width:88px;}
+.q-input-sm{width:100%;padding-right:26px !important;text-align:right;}
+.q-affix{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--gray-500,#6B7A8D);pointer-events:none;}
+@media(max-width:560px){
+  .q-pct{gap:10px;}
+  .q-pct-box{width:74px;}
+}
+/* ── Review & confirm screen ── */
+.rv-head{background:var(--white,#fff);border-radius:var(--radius,12px);box-shadow:var(--shadow,0 1px 3px rgba(0,0,0,.08));padding:1.5rem 1.6rem;margin-bottom:1rem;}
+.rv-title{font-size:19px;font-weight:700;color:var(--navy,#1E2931);}
+.rv-sub{font-size:13px;color:var(--gray-500,#6B7A8D);line-height:1.6;margin-top:6px;}
+.rv-actions,.rv-foot{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:1rem;}
+.rv-foot{background:var(--white,#fff);border-radius:var(--radius,12px);box-shadow:var(--shadow,0 1px 3px rgba(0,0,0,.08));padding:1.25rem 1.6rem;margin-top:1rem;}
+.rv-back{background:none;border:1px solid var(--gray-200,#E2E8F0);color:var(--navy,#1E2931);font-family:inherit;font-size:13px;font-weight:600;padding:9px 16px;border-radius:8px;cursor:pointer;}
+.rv-back:hover{border-color:var(--cyan,#00A9CC);color:var(--cyan,#00A9CC);}
+.rv-sec{background:var(--white,#fff);border-radius:var(--radius,12px);box-shadow:var(--shadow,0 1px 3px rgba(0,0,0,.08));padding:1.1rem 1.4rem;margin-bottom:.75rem;}
+.rv-sec-title{font-size:13px;font-weight:700;color:var(--navy,#1E2931);margin-bottom:.6rem;}
+.rv-list{list-style:none;margin:0;padding:0;}
+.rv-row{display:flex;align-items:baseline;gap:12px;padding:9px 0;border-top:1px solid var(--gray-100,#F1F5F8);}
+.rv-row:first-child{border-top:none;}
+.rv-q{flex:1;min-width:0;font-size:12.5px;color:var(--gray-600,#4A5A6A);line-height:1.5;}
+.rv-a{flex-shrink:0;max-width:38%;font-size:13px;font-weight:700;color:var(--navy,#1E2931);text-align:right;overflow-wrap:anywhere;}
+.rv-unsure{color:#8A6410;font-weight:600;}
+.rv-blank{color:var(--gray-400,#6B7A8D);font-weight:500;font-style:italic;}
+.rv-edit{flex-shrink:0;background:none;border:none;color:var(--cyan,#00A9CC);font-family:inherit;font-size:11.5px;font-weight:600;cursor:pointer;padding:2px 4px;text-decoration:underline;}
+.question.rv-flash{box-shadow:0 0 0 3px rgba(0,169,204,.35);border-radius:8px;transition:box-shadow .3s;}
+@media(max-width:560px){
+  .rv-row{flex-wrap:wrap;gap:4px;}
+  .rv-a{max-width:100%;text-align:left;}
+}
+.p-to-top{position:fixed;bottom:22px;right:22px;width:46px;height:46px;border-radius:50%;border:1px solid var(--gray-200,#E2E8F0);background:#fff;color:var(--navy,#1E2931);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:95;box-shadow:0 4px 16px rgba(0,0,0,.16);transition:opacity .2s,transform .2s,visibility .2s;}
+.p-to-top:hover{transform:translateY(-2px);background:var(--cyan,#00A9CC);color:#fff;border-color:var(--cyan,#00A9CC);}
+.p-to-top-hidden{opacity:0;visibility:hidden;pointer-events:none;transform:translateY(8px);}
 </style>
 </head>
 <body>
@@ -134,6 +207,7 @@ button{cursor:pointer;}
   <div class="progress-inner">
     <div class="progress-label" id="progressLabel">Loading…</div>
     <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <div class="progress-meta" id="progressMeta"></div>
     <div class="autosave" id="autosaveIndicator" style="display:none;"></div>
   </div>
 </div>
@@ -271,7 +345,7 @@ function renderQuestionnaire() {
 
   // Count total
   totalQuestions = sections.reduce((s, sec) => s + sec.questions.length, 0);
-  answeredCount  = Object.keys(prospectAnswers).filter(k => !k.endsWith('_by') && prospectAnswers[k]).length;
+  answeredCount  = Object.keys(prospectAnswers).filter(k => !k.endsWith('_by') && isRealAnswer(prospectAnswers[k])).length;
 
   // Update header
   document.getElementById('headerTitle').textContent = `Discovery Questionnaire${company ? ' — ' + company : ''}`;
@@ -298,8 +372,10 @@ function renderQuestionnaire() {
       </div>
     </div>
 
+    <div class="value-panel" id="valuePanel"></div>
+
     ${sections.map((section, si) => {
-      const answeredInSection = section.questions.filter(q => prospectAnswers[q.id]).length;
+      const answeredInSection = section.questions.filter(q => isRealAnswer(prospectAnswers[q.id])).length;
       return `
       <div class="section-card" id="section-${si}">
         <div class="section-header">
@@ -320,7 +396,7 @@ function renderQuestionnaire() {
 
 function renderProspectQuestion(q) {
   const answer = prospectAnswers[q.id] || '';
-  const isAnswered = answer.trim().length > 0;
+  const isAnswered = isRealAnswer(answer);
   if (q.type === 'context') {
     return `
       <div class="question ${isAnswered?'answered':''}" id="wrap-${q.id}">
@@ -337,42 +413,155 @@ function renderProspectQuestion(q) {
         ${isAnswered ? `<div class="q-answered-badge">✓ Answered</div>` : ''}
       </div>`;
   }
-  return `
-    <div class="question ${isAnswered?'answered':''}" id="wrap-${q.id}">
-      <div class="q-text">${q.text}</div>
-      <div class="q-placeholder-hint">e.g. ${q.placeholder}</div>
-      <input
-        type="text"
-        class="q-input ${isAnswered?'has-answer':''}"
-        id="pq-${q.id}"
-        value="${escapeHtml(answer)}"
-        placeholder="Your answer…"
+  const drv = driverForQuestion(q);
+  const helps = drv ? `<div class="q-helps">Helps assess: <strong>${escapeHtml(VALUE_DRIVERS[drv].label)}</strong></div>` : '';
+  const unsure = (answer || '').trim().toLowerCase() === NOT_SURE_TOKEN;
+  const shown = unsure ? '' : answer;
+
+  /* Percent questions get a slider paired with a numeric box: the slider makes
+     the value tangible, the box keeps it precise. Number questions get live
+     thousands separators for legibility. Values are always STORED raw. */
+  let control;
+  if (q.type === 'percent') {
+    const nv = parseFloat(String(shown).replace(/[^0-9.]/g, ''));
+    const val = isFinite(nv) ? Math.max(0, Math.min(100, nv)) : '';
+    control = `
+      <div class="q-pct">
+        <input type="range" class="q-range" id="rg-${q.id}" min="0" max="100" step="1"
+          value="${val === '' ? 0 : val}" aria-label="${escapeHtml(q.text)}"
+          oninput="handlePctSlider('${q.id}', this.value)" />
+        <div class="q-pct-box">
+          <input type="text" inputmode="decimal" class="q-input q-input-sm ${isAnswered?'has-answer':''}"
+            id="pq-${q.id}" value="${escapeHtml(String(val))}" placeholder="—"
+            oninput="handlePctBox('${q.id}', this.value)" />
+          <span class="q-affix">%</span>
+        </div>
+      </div>`;
+  } else if (q.type === 'number') {
+    control = `
+      <input type="text" inputmode="decimal" class="q-input ${isAnswered?'has-answer':''}"
+        id="pq-${q.id}" value="${escapeHtml(formatNumDisplay(shown))}" placeholder="Your answer…"
+        oninput="handleNumAnswer('${q.id}', this.value)"
+        onfocus="this.parentElement.style.background='#FAFFFE'"
+        onblur="this.parentElement.style.background=''; this.value=formatNumDisplay(this.value);" />`;
+  } else {
+    control = `
+      <input type="text" class="q-input ${isAnswered?'has-answer':''}" id="pq-${q.id}"
+        value="${escapeHtml(shown)}" placeholder="Your answer…"
         oninput="handleAnswer('${q.id}', this.value)"
         onfocus="this.parentElement.style.background='#FAFFFE'"
-        onblur="this.parentElement.style.background=''"
-      />
-      ${isAnswered ? `<div class="q-answered-badge">✓ Answered</div>` : ''}
+        onblur="this.parentElement.style.background=''" />`;
+  }
+
+  return `
+    <div class="question ${isAnswered?'answered':''} ${unsure?'unsure':''}" id="wrap-${q.id}">
+      <div class="q-text">${q.text}</div>
+      <div class="q-placeholder-hint">e.g. ${q.placeholder}</div>
+      ${control}
+      ${helps}
+      <div class="q-foot">
+        <button type="button" class="q-unsure ${unsure?'is-on':''}" onclick="toggleNotSure('${q.id}')">
+          ${unsure ? '&#10003; Marked \u201cnot sure\u201d' : 'I\u2019m not sure'}
+        </button>
+        <span class="q-badge-slot">${isAnswered && !unsure ? '<span class="q-answered-badge">&#10003; Answered</span>' : ''}</span>
+      </div>
     </div>`;
+}
+
+/* Display-only thousands separators. Stored values stay raw so the rep-side
+   sync and ROI model never see formatting characters. */
+function formatNumDisplay(v) {
+  const raw = String(v == null ? '' : v).replace(/,/g, '').trim();
+  if (raw === '' || raw.toLowerCase() === NOT_SURE_TOKEN) return '';
+  const n = Number(raw);
+  if (!isFinite(n)) return raw;
+  const dec = raw.includes('.') ? raw.split('.')[1].length : 0;
+  if (Math.abs(n) < 1000) return raw;              // leave small values (e.g. 3.50) alone
+  return n.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: Math.max(dec, 0) });
+}
+function stripNum(v) { return String(v == null ? '' : v).replace(/,/g, '').trim(); }
+
+/* Number field: store raw, keep the caret usable while typing. */
+function handleNumAnswer(id, value) {
+  handleAnswer(id, stripNum(value));
+}
+
+/* Percent slider ↔ box, kept in sync; both store the raw number. */
+function handlePctSlider(id, value) {
+  const box = document.getElementById('pq-' + id);
+  if (box) box.value = value;
+  handleAnswer(id, String(value));
+}
+function handlePctBox(id, value) {
+  const raw = stripNum(value);
+  const n = parseFloat(raw.replace(/[^0-9.]/g, ''));
+  const rg = document.getElementById('rg-' + id);
+  if (rg && isFinite(n)) rg.value = Math.max(0, Math.min(100, n));
+  handleAnswer(id, raw);
+}
+
+/* "I'm not sure" records the gap for the rep instead of leaving a blank the
+   prospect feels stuck on. It is stored but not counted as data. */
+function toggleNotSure(id) {
+  const cur = (prospectAnswers[id] || '').trim().toLowerCase();
+  const turningOn = cur !== NOT_SURE_TOKEN;
+  const val = turningOn ? NOT_SURE_TOKEN : '';
+  prospectAnswers[id] = val;
+  prospectAnswers[id + '_by'] = val ? 'prospect' : '';
+  const input = document.getElementById('pq-' + id);
+  if (input) { input.value = ''; input.classList.remove('has-answer'); }
+  const rg = document.getElementById('rg-' + id);
+  if (rg && turningOn) rg.value = 0;
+  const wrap = document.getElementById('wrap-' + id);
+  if (wrap) {
+    wrap.classList.toggle('unsure', turningOn);
+    wrap.classList.remove('answered');
+    const btn = wrap.querySelector('.q-unsure');
+    if (btn) {
+      btn.classList.toggle('is-on', turningOn);
+      btn.innerHTML = turningOn ? '&#10003; Marked \u201cnot sure\u201d' : 'I\u2019m not sure';
+    }
+    const slot = wrap.querySelector('.q-badge-slot');
+    if (slot) slot.innerHTML = '';
+  }
+  updateSectionCounts();
+  updateProgress();
+  updateSaveButton();
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => pushAnswer(id, val, 'prospect'), 400);
 }
 
 function handleAnswer(id, value) {
   prospectAnswers[id] = value;
   prospectAnswers[id + '_by'] = value ? 'prospect' : '';
 
+  const real  = isRealAnswer(value);
   const input = document.getElementById('pq-' + id);
   const wrap  = document.getElementById('wrap-' + id);
-  if (input) input.classList.toggle('has-answer', value.trim().length > 0);
+  if (input) input.classList.toggle('has-answer', real);
   if (wrap) {
-    wrap.classList.toggle('answered', value.trim().length > 0);
-    // Update answered badge
-    const badge = wrap.querySelector('.q-answered-badge');
-    if (value.trim() && !badge) {
-      const b = document.createElement('div');
-      b.className = 'q-answered-badge';
-      b.textContent = '✓ Answered';
-      wrap.appendChild(b);
-    } else if (!value.trim() && badge) {
-      badge.remove();
+    wrap.classList.toggle('answered', real);
+    /* Typing a real answer supersedes a previous "not sure". */
+    if (real && wrap.classList.contains('unsure')) {
+      wrap.classList.remove('unsure');
+      const btn = wrap.querySelector('.q-unsure');
+      if (btn) { btn.classList.remove('is-on'); btn.innerHTML = 'I\u2019m not sure'; }
+    }
+    /* Badge lives in .q-badge-slot on standard questions; context questions
+       (textarea) have no footer, so fall back to appending to the wrapper. */
+    const slot = wrap.querySelector('.q-badge-slot');
+    if (slot) {
+      slot.innerHTML = real ? '<span class="q-answered-badge">&#10003; Answered</span>' : '';
+    } else {
+      const badge = wrap.querySelector('.q-answered-badge');
+      if (real && !badge) {
+        const b = document.createElement('div');
+        b.className = 'q-answered-badge';
+        b.innerHTML = '&#10003; Answered';
+        wrap.appendChild(b);
+      } else if (!real && badge) {
+        badge.remove();
+      }
     }
   }
 
@@ -391,21 +580,164 @@ function updateSectionCounts() {
   sections.forEach((section, si) => {
     const el = document.querySelector(`#section-${si} .section-count`);
     if (el) {
-      const answered = section.questions.filter(q => prospectAnswers[q.id]?.trim()).length;
+      const answered = section.questions.filter(q => isRealAnswer(prospectAnswers[q.id])).length;
       el.textContent = `${answered}/${section.questions.length}`;
     }
   });
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   VALUE DRIVERS — what the prospect's answers make it possible to assess.
+
+   Note on language: each question carries an internal `why` field written
+   for Cloud Inventory reps ("Count-labor lever", "Direct input for write-off
+   savings calculation"). That is deliberately NOT shown here — it is internal
+   modelling language. The copy below is written for the customer, describing
+   what the answers help THEM understand about their own operation.
+
+   Keys are the question `sync` targets, so this mapping stays in step with
+   the questions themselves.
+   ═══════════════════════════════════════════════════════════════════ */
+const VALUE_DRIVERS = {
+  labour: {
+    label: 'Team time & productivity',
+    blurb: 'How much of your team\u2019s day goes to manual counting, data entry, and chasing discrepancies.',
+    fields: ['userCount','laborWastePct','countDaysYr','countPeople','fieldTechs',
+             'addedJobsPerDay','pickRateGainPct','repeatVisitsYr','costPerTruckRoll','costPerOrder']
+  },
+  accuracy: {
+    label: 'Inventory accuracy & losses',
+    blurb: 'The gap between recorded and actual stock, and what it costs in write-offs and shrinkage.',
+    fields: ['currentAccuracy','annualWriteOff','fieldLeakagePct']
+  },
+  workingCapital: {
+    label: 'Working capital tied up',
+    blurb: 'How much cash sits in inventory, and how quickly it turns.',
+    fields: ['inventoryValue','invTurnsCurrent','fieldInventoryValue']
+  },
+  service: {
+    label: 'Delivery & customer commitments',
+    blurb: 'Order accuracy and on-time-in-full performance, and the revenue exposed when they slip.',
+    fields: ['otifBaseline','otifTarget','orderErrorPct','costPerError','ordersPerYr','revenue','revenuePerJob']
+  },
+  uptime: {
+    label: 'Downtime & expediting',
+    blurb: 'Production or service interruptions caused by parts not being where the record says.',
+    fields: ['downtimeEventsYr','downtimeHrsPerEvent','downtimeCostPerHr','expediteSpendYr']
+  },
+  systems: {
+    label: 'Systems & support cost',
+    blurb: 'What you spend maintaining the current tools and workarounds.',
+    fields: ['itCost']
+  },
+  finance: {
+    label: 'Your financial yardstick',
+    blurb: 'The hurdle rate your finance team uses, so any case is judged on your own terms.',
+    fields: ['discRate']
+  }
+};
+
+/* sync field → driver key (built once) */
+const FIELD_TO_DRIVER = (() => {
+  const m = {};
+  Object.keys(VALUE_DRIVERS).forEach(k => VALUE_DRIVERS[k].fields.forEach(f => { m[f] = k; }));
+  return m;
+})();
+
+function driverForQuestion(q) {
+  return (q && q.sync && FIELD_TO_DRIVER[q.sync]) ? FIELD_TO_DRIVER[q.sync] : null;
+}
+
+/* "Not sure" is recorded for the rep, but does not count as data. */
+var NOT_SURE_TOKEN = 'not sure';
+function isRealAnswer(val) {
+  const v = (val || '').trim();
+  return v.length > 0 && v.toLowerCase() !== NOT_SURE_TOKEN;
+}
+
+/* Per-driver progress: how many of its questions this questionnaire asks,
+   and how many the prospect has genuinely answered. */
+function computeDriverProgress() {
+  const sections = getProspectQuestions(sessionData?.industry || 'default');
+  const out = {};
+  Object.keys(VALUE_DRIVERS).forEach(k => { out[k] = { total: 0, answered: 0 }; });
+  sections.forEach(sec => sec.questions.forEach(q => {
+    const d = driverForQuestion(q);
+    if (!d) return;
+    out[d].total++;
+    if (isRealAnswer(prospectAnswers[q.id])) out[d].answered++;
+  }));
+  return out;
+}
+
+function renderValuePanel() {
+  const host = document.getElementById('valuePanel');
+  if (!host) return;
+  const prog = computeDriverProgress();
+  const active = Object.keys(VALUE_DRIVERS).filter(k => prog[k].total > 0);
+  if (!active.length) { host.innerHTML = ''; return; }
+
+  const unlocked = active.filter(k => prog[k].answered > 0).length;
+  const rows = active.map(k => {
+    const d = VALUE_DRIVERS[k], p = prog[k];
+    const done = p.answered >= p.total && p.total > 0;
+    const started = p.answered > 0;
+    const remaining = Math.max(0, p.total - p.answered);
+    const state = done ? 'vd-done' : started ? 'vd-part' : 'vd-todo';
+    const mark = done ? '&#10003;' : started ? '&#9679;' : '&#9675;';
+    const status = done
+      ? 'Complete'
+      : started
+        ? `${remaining} more to complete`
+        : `${p.total} question${p.total !== 1 ? 's' : ''}`;
+    return `<li class="vd-row ${state}">
+        <span class="vd-mark" aria-hidden="true">${mark}</span>
+        <span class="vd-body">
+          <span class="vd-label">${escapeHtml(d.label)}</span>
+          <span class="vd-blurb">${escapeHtml(d.blurb)}</span>
+        </span>
+        <span class="vd-status">${status}</span>
+      </li>`;
+  }).join('');
+
+  host.innerHTML = `
+    <div class="vp-head">
+      <div>
+        <div class="vp-title">What your answers help assess</div>
+        <div class="vp-sub">${unlocked} of ${active.length} areas covered so far. Each area below becomes clearer as you answer \u2014 partial answers still help.</div>
+      </div>
+    </div>
+    <ul class="vd-list">${rows}</ul>`;
+}
+
+/* Rough reading/answering time left, to set expectations and cut abandonment. */
+function estimateMinutesLeft(remaining) {
+  const mins = Math.ceil((remaining * 20) / 60); // ~20s per question
+  if (remaining <= 0) return '';
+  return mins <= 1 ? 'about a minute left' : `about ${mins} minutes left`;
+}
+
 function updateProgress() {
   const sections = getProspectQuestions(sessionData?.industry || 'default');
   const total = sections.reduce((s, sec) => s + sec.questions.length, 0);
-  const answered = Object.keys(prospectAnswers).filter(k => !k.endsWith('_by') && prospectAnswers[k]?.trim()).length;
+  const answered = Object.keys(prospectAnswers)
+    .filter(k => !k.endsWith('_by') && isRealAnswer(prospectAnswers[k])).length;
   const pct = total > 0 ? Math.round((answered / total) * 100) : 0;
   const fill = document.getElementById('progressFill');
   const label = document.getElementById('progressLabel');
+  const meta = document.getElementById('progressMeta');
   if (fill) fill.style.width = pct + '%';
-  if (label) label.textContent = `${answered} of ${total} questions answered (${pct}%)`;
+  if (label) label.textContent = `${answered} of ${total} answered`;
+  if (meta) {
+    const left = estimateMinutesLeft(total - answered);
+    const milestone =
+      pct >= 100 ? 'All questions answered \u2014 thank you.' :
+      pct >= 75  ? 'Nearly there \u2014 this is already a strong picture.' :
+      pct >= 40  ? 'Good progress \u2014 enough to see the main patterns.' :
+      pct >= 15  ? 'Off to a good start.' : '';
+    meta.textContent = [pct + '%', left, milestone].filter(Boolean).join(' \u00b7 ');
+  }
+  renderValuePanel();
 }
 
 function updateSaveButton() {
@@ -463,10 +795,86 @@ async function autoSave() {
   }
 }
 
-async function submitAnswers() {
+/* Submit now goes through a review step first, so the prospect sees exactly
+   what they are sending and can correct it. Confirming completes the submit. */
+function submitAnswers() { renderReview(); }
+
+function renderReview() {
+  const sections = getProspectQuestions(sessionData?.industry || 'default');
+  const total = sections.reduce((s, sec) => s + sec.questions.length, 0);
+  const answered = Object.keys(prospectAnswers)
+    .filter(k => !k.endsWith('_by') && isRealAnswer(prospectAnswers[k])).length;
+  const unsureCount = Object.keys(prospectAnswers)
+    .filter(k => !k.endsWith('_by') && (prospectAnswers[k] || '').trim().toLowerCase() === NOT_SURE_TOKEN).length;
+  const blank = Math.max(0, total - answered - unsureCount);
+
+  const blocks = sections.map(sec => {
+    const rows = sec.questions.map(q => {
+      const raw = (prospectAnswers[q.id] || '').trim();
+      const unsure = raw.toLowerCase() === NOT_SURE_TOKEN;
+      const real = isRealAnswer(raw);
+      let val;
+      if (unsure)      val = '<span class="rv-unsure">Not sure</span>';
+      else if (!real)  val = '<span class="rv-blank">Not answered</span>';
+      else             val = escapeHtml(q.type === 'percent' ? raw + '%' : (q.type === 'number' ? formatNumDisplay(raw) : raw));
+      return `<li class="rv-row">
+          <span class="rv-q">${escapeHtml(q.text)}</span>
+          <span class="rv-a">${val}</span>
+          <button type="button" class="rv-edit" onclick="editAnswer('${q.id}')">Edit</button>
+        </li>`;
+    }).join('');
+    return `<div class="rv-sec">
+        <div class="rv-sec-title">${getSectionIcon(sec.section)} ${escapeHtml(sec.section)}</div>
+        <ul class="rv-list">${rows}</ul>
+      </div>`;
+  }).join('');
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="rv-head">
+      <div class="rv-title">Review your answers</div>
+      <div class="rv-sub">
+        Please check these over before sending. ${answered} answered${unsureCount ? `, ${unsureCount} marked \u201cnot sure\u201d` : ''}${blank ? `, ${blank} left blank` : ''}.
+        Blank and \u201cnot sure\u201d answers are fine \u2014 they tell your Cloud Inventory contact where to help.
+      </div>
+      <div class="rv-actions">
+        <button class="save-btn" onclick="confirmSubmit()">Confirm and send</button>
+        <button class="rv-back" onclick="backToForm()">Back to questions</button>
+      </div>
+    </div>
+    ${blocks}
+    <div class="rv-foot">
+      <button class="save-btn" onclick="confirmSubmit()">Confirm and send</button>
+      <button class="rv-back" onclick="backToForm()">Back to questions</button>
+    </div>
+    <div style="height:60px;"></div>`;
+  window.scrollTo({ top: 0, behavior: 'auto' });
+}
+
+function backToForm() {
+  renderQuestionnaire();
+  window.scrollTo({ top: 0, behavior: 'auto' });
+}
+
+/* Jump from the review list straight to the question that needs changing. */
+function editAnswer(id) {
+  renderQuestionnaire();
+  setTimeout(() => {
+    const wrap = document.getElementById('wrap-' + id);
+    const field = document.getElementById('pq-' + id);
+    if (wrap) {
+      wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      wrap.classList.add('rv-flash');
+      setTimeout(() => wrap.classList.remove('rv-flash'), 1600);
+    }
+    if (field) field.focus({ preventScroll: true });
+  }, 60);
+}
+
+async function confirmSubmit() {
   /* All answers are already in the DB via per-keystroke pushAnswer() calls.
      This just shows the success state.                                      */
-  const answered = Object.keys(prospectAnswers).filter(k => !k.endsWith('_by') && prospectAnswers[k]?.trim()).length;
+  const answered = Object.keys(prospectAnswers)
+    .filter(k => !k.endsWith('_by') && isRealAnswer(prospectAnswers[k])).length;
 
   document.getElementById('mainContent').innerHTML = `
     <div class="complete-card">
@@ -483,6 +891,8 @@ async function submitAnswers() {
 
   document.getElementById('progressLabel').textContent = `${answered} answers submitted ✓`;
   document.getElementById('progressFill').style.width = '100%';
+  const meta = document.getElementById('progressMeta');
+  if (meta) meta.textContent = 'Submitted — thank you.';
   document.getElementById('saveBtn').disabled = true;
   document.getElementById('saveBtn').textContent = 'Submitted ✓';
 }
@@ -516,6 +926,18 @@ function escapeHtml(str) {
 }
 
 document.addEventListener('DOMContentLoaded', init);
+</script>
+<button class="p-to-top p-to-top-hidden" id="pToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to top" aria-label="Back to top">
+  <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 13V4M4 7l4-4 4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</button>
+<script>
+(function(){
+  var btn=document.getElementById('pToTop');if(!btn)return;
+  var ticking=false;
+  function update(){ticking=false;var y=window.scrollY||document.documentElement.scrollTop||0;btn.classList.toggle('p-to-top-hidden',y<400);}
+  window.addEventListener('scroll',function(){if(!ticking){ticking=true;requestAnimationFrame(update);}},{passive:true});
+  update();
+})();
 </script>
 </body>
 </html>

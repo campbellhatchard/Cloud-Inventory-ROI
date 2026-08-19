@@ -61,6 +61,9 @@
 
   /* ── logout ── */
   async function logout() {
+    /* Route through the same unsaved-changes gate as tab switching. */
+    if (typeof window.confirmDiscardChanges === 'function' && !window.confirmDiscardChanges()) return;
+    if (typeof window.clearCalcDirty === 'function') window.clearCalcDirty();
     try {
       await apiFetch('/api/auth/logout', { method: 'POST' });
     } catch(e) {}

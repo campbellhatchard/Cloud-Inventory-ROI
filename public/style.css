@@ -1225,13 +1225,18 @@ kbd{background:var(--gray-100);border:1px solid var(--gray-300);border-radius:5p
 @keyframes gd-fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
 
 /* Guided nav bar */
-.guided-nav{flex-direction:column;gap:14px;margin-top:20px;padding:16px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:12px;}
+.guided-nav{flex-direction:column;gap:14px;margin:0 0 20px;padding:16px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:12px;position:sticky;top:64px;z-index:40;box-shadow:0 2px 10px rgba(0,0,0,.06);}
 .gd-progress{display:flex;align-items:center;justify-content:center;gap:0;}
 .gd-dot{width:30px;height:30px;border-radius:50%;border:2px solid var(--gray-300);background:#fff;color:var(--gray-500);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;}
 .gd-dot.gd-cur{border-color:var(--cyan);background:var(--cyan);color:#fff;transform:scale(1.1);}
 .gd-dot.gd-done{border-color:var(--green);background:var(--green);color:#fff;}
 .gd-dot.gd-todo{border-color:var(--gray-300);}
 .gd-line{flex:1;height:2px;background:var(--gray-200);min-width:16px;max-width:56px;}
+/* Numbered badge stamped onto each section header in guided mode. */
+.guided-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;
+  background:var(--cyan);color:#fff;font-size:12px;font-weight:700;margin-right:9px;flex-shrink:0;vertical-align:middle;}
+.guided-num-host{position:relative;}
+.guided-num-host > .guided-num{position:absolute;top:-11px;left:0;box-shadow:0 1px 4px rgba(0,0,0,.2);}
 .gd-controls{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);flex-wrap:wrap;}
 .gd-step-label{font-size:var(--fs-sm);font-weight:600;color:var(--navy);}
 .gd-btns{display:flex;gap:var(--sp-2);margin-left:auto;}
@@ -1701,3 +1706,50 @@ kbd{background:var(--gray-100);border:1px solid var(--gray-300);border-radius:5p
    broke out of the attribute and emitted stray attributes into the DOM. */
 .exec-audience-select{font-size:var(--fs-sm);font-family:var(--font);padding:8px 32px 8px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);background:var(--white);color:var(--gray-800);appearance:none;-webkit-appearance:none;cursor:pointer;outline:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%236B7A8D' d='M5 6L0 0h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;}
 .exec-audience-select:focus{border-color:var(--cyan);box-shadow:var(--ring);}
+
+/* ══ Global back-to-top button ══
+   Independent of the calc-only Save/Exec fab-row. Sits bottom-left so it
+   never overlaps those, is available on every tab, and fades in on scroll. */
+.fab-to-top{position:fixed;bottom:24px;left:24px;width:46px;height:46px;border-radius:50%;
+  border:1px solid var(--gray-200);background:var(--white);color:var(--navy);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;z-index:95;
+  box-shadow:0 4px 16px rgba(0,0,0,.16);transition:opacity .2s,transform .2s,visibility .2s;}
+.fab-to-top:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.22);background:var(--cyan);color:#fff;border-color:var(--cyan);}
+.fab-to-top-hidden{opacity:0;visibility:hidden;pointer-events:none;transform:translateY(8px);}
+@media(max-width:640px){
+  .fab-to-top{bottom:16px;left:16px;width:42px;height:42px;}
+}
+/* On the sidebar-visible desktop layout, nudge it clear of the sidebar edge. */
+@media(min-width:1025px){
+  .fab-to-top{left:calc(var(--sidebar-w) + 20px);}
+}
+
+/* ══ Calculator scenario picker ══
+   Lets a rep move between a customer's scenarios, and reach saved versions,
+   without leaving the calculator. */
+.calc-scen-pick{display:inline-flex;align-items:center;gap:var(--sp-2);margin-right:var(--sp-2);}
+.calc-scen-pick .csp-label{font-size:var(--fs-xs);font-weight:600;color:var(--gray-600);white-space:nowrap;}
+.calc-scen-pick select{font-family:inherit;font-size:var(--fs-sm);padding:5px 9px;border:1px solid var(--gray-200);
+  border-radius:var(--radius-sm,7px);background:var(--white);color:var(--navy);max-width:230px;cursor:pointer;}
+.calc-scen-pick select:hover{border-color:var(--cyan);}
+.calc-scen-pick select:focus-visible{outline:2px solid var(--cyan);outline-offset:1px;}
+@media(max-width:900px){
+  .calc-scen-pick{width:100%;margin-right:0;}
+  .calc-scen-pick select{flex:1;max-width:none;}
+}
+
+/* ══ Sticky calculator action header ══
+   Keeps the primary actions (Save, Executive view, Share, Email, scenario
+   picker) reachable from anywhere on the calculator without scrolling to the
+   bottom. Scoped to the calculator pane only. */
+#tab-calc > .page-header{
+  position:sticky;top:0;z-index:45;
+  background:var(--white,#fff);
+  margin-left:-2rem;margin-right:-2rem;padding:14px 2rem 12px;
+  margin-bottom:18px;border-bottom:1px solid var(--gray-100);
+  box-shadow:0 2px 8px rgba(0,0,0,.04);
+}
+#tab-calc > .page-header .btn-row{align-items:center;}
+@media(max-width:900px){
+  #tab-calc > .page-header{margin-left:-1rem;margin-right:-1rem;padding-left:1rem;padding-right:1rem;}
+}

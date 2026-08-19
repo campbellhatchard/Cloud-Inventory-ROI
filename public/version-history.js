@@ -7,6 +7,34 @@
 
 const VERSION_HISTORY = [
   {
+    version: '4.2.0', date: '2026-08-05', tag: 'feature',
+    title: 'Prospect experience, scenario navigation, guided mode & share tracking',
+    changes: [
+      'Prospect discovery page redesigned: live progress with time-remaining, a "what your answers help assess" panel, per-question value context, "I\'m not sure" option, sliders for percentages, live number formatting, and a review-and-confirm step before submitting.',
+      'Calculator: pick a different scenario for the current customer from a dropdown without leaving the page, and open saved version history right from the calculator.',
+      'All share links are now trackable and revocable (scenario share links join the business-case and discovery links that were already tracked).',
+      'Guided mode: progress stepper moved to the top and made sticky, sections numbered to match the stepper, and the guided-toggle screen-reader state fixed.',
+      'Primary actions (Save, Executive view) added to a sticky calculator header so they are reachable without scrolling; global back-to-top button.',
+      'Unsaved-changes protection unified across tab switch, scenario switch, logout, and browser close/refresh/back.',
+      'Fixes: executive PDF download, a load-order crash, ramp % save/reload, the misleading Overwrite button, Chrome autofill on customer search, and the executive scenario-range ROI.'
+    ]
+  },
+  {
+    version: '4.1.0', date: '2026-08-05', tag: 'fixes',
+    title: 'Stability fixes + easier navigation on top of the v4 UI',
+    changes: [
+      'Back to top: a floating button now appears on any long page once you scroll down, and switching tabs returns you to the top automatically. Added to the prospect discovery page too.',
+      'Fixed the executive PDF download (Could not load scenario) — the print page now loads the ROI engine and no longer depends on the full calculator; corrupted ramp values are healed on render.',
+      'Fixed a load-order crash (prospectLogoDataUrl is not defined) that could break the calculator on load.',
+      'Fixed the Discovery Switch button (now opens the customer picker correctly from any tab).',
+      'Three Whys edited on the Executive view now save with the scenario and reload correctly.',
+      'Save no longer offers a misleading Overwrite that still incremented the version; ramp % saves/reloads correctly; the customer search no longer autofills your username.',
+      'Executive view scenario range (Conservative/Base/Aggressive) now clearly drives the on-screen ROI.',
+      'PowerPoint export loads reliably from CDN (no more MIME/CSP console errors).',
+      'Workflow reordered to Calculator → Discovery so customer details are captured first.'
+    ]
+  },
+  {
     version: '4.0.0',
     date: '2026-08-05',
     tag: 'ux',

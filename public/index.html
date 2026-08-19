@@ -35,13 +35,13 @@
 <nav class="sidebar" id="sidebar">
   <div class="sidebar-spacer"></div>
   <div class="sidebar-section-label">Deal workflow</div>
-  <button class="nav-item" onclick="switchTab('disc')" id="nav-disc">
-    <span class="nav-step">1</span>
-    Discovery guide
-  </button>
   <button class="nav-item active" onclick="switchTab('calc')" id="nav-calc">
-    <span class="nav-step">2</span>
+    <span class="nav-step">1</span>
     Calculator
+  </button>
+  <button class="nav-item" onclick="switchTab('disc')" id="nav-disc">
+    <span class="nav-step">2</span>
+    Discovery guide
   </button>
   <button class="nav-item" onclick="switchTab('exec')" id="nav-exec">
     <span class="nav-step">3</span>
@@ -120,7 +120,20 @@
   <div class="page-header">
     <div><div class="page-title">ROI Calculator</div><div class="page-subtitle">Enter prospect details — industry defaults apply automatically.</div></div>
     <div class="btn-row" style="margin-top:0;">
+      <div class="calc-scen-pick" id="calcScenarioPick" style="display:none;">
+        <label class="csp-label" for="calcScenarioSelect">Scenario</label>
+        <select id="calcScenarioSelect" onchange="onCalcScenarioPick(this.value)" title="Switch to another scenario for this customer"></select>
+        <button class="btn btn-ghost btn-sm" id="calcVersionsBtn" onclick="openCurrentVersionHistory()" style="display:none;" title="View saved versions of this scenario"></button>
+      </div>
       <button class="btn btn-ghost btn-sm" id="calcSwitchCustomerBtn" onclick="showCustomerGate()" title="Switch customer" style="display:none;">⌂ Switch customer</button>
+      <button class="btn btn-primary btn-sm" onclick="saveScenario()" title="Save this scenario">
+        <svg viewBox="0 0 16 16" fill="none" width="13" height="13"><path d="M13 15H3a1 1 0 01-1-1V2a1 1 0 011-1h7.5L14 4.5V14a1 1 0 01-1 1z" stroke="currentColor" stroke-width="1.5"/><path d="M10 1v4H5V1M5 9h6M5 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Save
+      </button>
+      <button class="btn btn-cta btn-sm" onclick="switchTab('exec')" title="Go to the executive presentation to review and print">
+        <svg viewBox="0 0 16 16" fill="none" width="13" height="13"><rect x="2" y="1" width="12" height="14" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Executive view
+      </button>
       <button class="btn btn-ghost btn-sm" onclick="generateShareURL()" title="Copy shareable link">🔗 Share</button>
       <button class="btn btn-ghost btn-sm" onclick="generateEmail()">✉️ Email</button>
     </div>
@@ -148,7 +161,7 @@
           <div class="cg-card-title">Existing customer</div>
           <div class="cg-card-desc">Continue a business case you've already started.</div>
           <div class="cg-search-wrap">
-            <input type="text" id="cgSearch" placeholder="Search customers…" oninput="cgRenderList(this.value)" autocomplete="off"/>
+            <input type="text" id="cgSearch" placeholder="Search customers…" oninput="cgRenderList(this.value)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="cg-customer-search" role="searchbox" aria-label="Search customers"/>
           </div>
           <div id="cgList" class="cg-list"><div class="cg-empty">Loading…</div></div>
         </div>
@@ -165,7 +178,7 @@
   <div class="customer-search" id="customerSearchBar">
     <label for="customerSearchInput">Find an existing customer</label>
     <div class="cs-input-wrap">
-      <input type="text" id="customerSearchInput" placeholder="Search customers by name…" autocomplete="off" oninput="onCustomerSearch(this.value)" onfocus="onCustomerSearch(this.value)">
+      <input type="text" id="customerSearchInput" placeholder="Search customers by name…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="cust-search-field" role="searchbox" aria-label="Find an existing customer" oninput="onCustomerSearch(this.value)" onfocus="onCustomerSearch(this.value)">
       <div id="customerSearchResults" class="cs-results" style="display:none;"></div>
     </div>
     <span class="cs-hint">or start a new one below</span>
@@ -1229,12 +1242,16 @@
 <script src="versioning.js"></script>
 <!-- PptxGenJS: load local copy if present, else fall back to jsDelivr CDN.
      onerror on the local tag triggers the CDN tag.  -->
-<script src="pptxgen.bundle.js" onerror="this.onerror=null;var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';document.head.appendChild(s);"></script>
+<!-- pptxgenjs for PowerPoint export. Loaded from jsDelivr npm (minified, no
+     sourcemap request, so no CSP connect-src violation). No local copy exists
+     in public/, so the prior local-first script tag returned the SPA HTML
+     fallback (a text/html MIME error) before falling back to the CDN. -->
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.min.js"></script>
 <script src="pptx-export.js"></script>
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="4.0.0";</script>
+<script>const APP_VERSION="4.2.0";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
 <script src="input-format.js"></script>
@@ -1366,14 +1383,13 @@ document.getElementById('industry')?.addEventListener('change', applyDefaultsAnd
 
 const _origSwitchTab = switchTab;
 window.switchTab = function(name) {
-  /* Unsaved-changes guard: if leaving the calculator with unsaved edits,
-     confirm before navigating away. */
-  if (typeof _calcDirty !== 'undefined' && _calcDirty && name !== 'calc') {
-    const calcVisible = document.getElementById('calcBody');
-    if (calcVisible && calcVisible.style.display !== 'none') {
-      if (!confirmDiscardChanges()) return;
-      clearCalcDirty();
-    }
+  /* Unsaved-changes guard — routes through the single confirmDiscardChanges()
+     source of truth (same check used by logout and browser-close). Only guard
+     when actually leaving the calculator for a different tab. */
+  if (name !== 'calc' && typeof confirmDiscardChanges === 'function' &&
+      typeof hasUnsavedChanges === 'function' && hasUnsavedChanges()) {
+    if (!confirmDiscardChanges()) return;
+    if (typeof clearCalcDirty === 'function') clearCalcDirty();
   }
   _origSwitchTab(name);
   if (name === 'calc' && typeof initCalcTab === 'function') initCalcTab();
@@ -1395,8 +1411,115 @@ window.switchTab = function(name) {
   if (name === 'profile') initProfileTab();
   const fab = document.getElementById('fabRow');
   if (fab) fab.style.display = name === 'calc' ? 'flex' : 'none';
+  /* Switching tabs should land at the top of the new tab, not wherever the
+     previous tab was scrolled. Also re-evaluates the back-to-top button. */
+  window.scrollTo({ top: 0, behavior: 'auto' });
+  const toTop = document.getElementById('fabToTop');
+  if (toTop) {
+    toTop.classList.add('fab-to-top-hidden');
+    /* The impact map has its own scroller-aware back-to-top; avoid two buttons. */
+    toTop.style.display = (name === 'impact') ? 'none' : '';
+  }
 };
 window.saveScenario = function() { if (typeof saveScenarioWithVersion === 'function') saveScenarioWithVersion(false); };
+
+/* ── Calculator scenario picker + version history ────────────────────
+   Lets a rep move between that customer's scenarios, and reach saved
+   versions, without leaving the calculator. */
+window._calcScenarioId = window._calcScenarioId || null;
+
+function refreshCalcScenarioPicker() {
+  const wrap = document.getElementById('calcScenarioPick');
+  const sel  = document.getElementById('calcScenarioSelect');
+  const vbtn = document.getElementById('calcVersionsBtn');
+  if (!wrap || !sel) return;
+  const company = (document.getElementById('companyName')?.value || '').trim();
+  const all = (typeof savedScenarios !== 'undefined' && Array.isArray(savedScenarios)) ? savedScenarios : [];
+  /* Current versions only — the dropdown lists scenarios, not versions. */
+  const mine = all.filter(s => s && s.company === company && s.isCurrent !== false);
+  if (!company || mine.length === 0) { wrap.style.display = 'none'; return; }
+
+  mine.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+  const cur = window._calcScenarioId;
+  sel.innerHTML = mine.map(s => {
+    const v = s.version ? ` (v${s.version})` : '';
+    return `<option value="${s.id}"${s.id === cur ? ' selected' : ''}>${escapeHtmlAttr(s.name || 'Untitled')}${v}</option>`;
+  }).join('');
+  if (!mine.some(s => s.id === cur)) sel.value = mine[0] ? mine[0].id : '';
+  wrap.style.display = 'inline-flex';
+
+  /* Version history: count rows sharing this baseId — same derivation the
+     Saved list uses, so the two never disagree. */
+  const active = mine.find(s => s.id === (sel.value || cur));
+  const count = active ? all.filter(x => x.baseId === active.baseId).length : 1;
+  if (vbtn) {
+    if (active && count > 1) {
+      vbtn.style.display = '';
+      vbtn.textContent = `🕘 ${count} versions`;
+      vbtn.dataset.baseId = active.baseId || active.id;
+    } else {
+      vbtn.style.display = 'none';
+    }
+  }
+}
+
+function escapeHtmlAttr(s) {
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* Switching scenarios discards unsaved calculator edits, so route through
+   the same guard used by tab switching and logout. */
+async function onCalcScenarioPick(id) {
+  const sel = document.getElementById('calcScenarioSelect');
+  if (!id) return;
+  if (id === window._calcScenarioId) return;
+  if (typeof confirmDiscardChanges === 'function' && !confirmDiscardChanges()) {
+    if (sel && window._calcScenarioId) sel.value = window._calcScenarioId;  // revert
+    return;
+  }
+  if (typeof loadScenario === 'function') await loadScenario(id);
+  refreshCalcScenarioPicker();
+}
+
+function openCurrentVersionHistory() {
+  const vbtn = document.getElementById('calcVersionsBtn');
+  const baseId = vbtn && vbtn.dataset ? vbtn.dataset.baseId : null;
+  const target = baseId || window._calcScenarioId;
+  if (!target) { if (typeof showToast === 'function') showToast('Save this scenario first to see its versions.'); return; }
+  if (typeof showVersionHistory === 'function') showVersionHistory(target);
+  else if (typeof showToast === 'function') showToast('Version history is unavailable.');
+}
+window.refreshCalcScenarioPicker = refreshCalcScenarioPicker;
+window.onCalcScenarioPick = onCalcScenarioPick;
+window.openCurrentVersionHistory = openCurrentVersionHistory;
+
+/* ── Global back-to-top button ──────────────────────────────────────
+   The whole app scrolls on the window (main-content has no own overflow),
+   so one window-scoped button works on every tab. It fades in once the
+   user has scrolled past a threshold and returns them to the top. */
+function scrollPageToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  /* Some tabs render into a scrollable inner container; reset those too. */
+  document.querySelectorAll('.pane.active [data-scroll], .main-content').forEach(el => {
+    if (el.scrollTop > 0) el.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+}
+(function initBackToTop() {
+  const btn = document.getElementById('fabToTop');
+  if (!btn) return;
+  const SHOW_AFTER = 400; // px
+  let ticking = false;
+  const update = () => {
+    ticking = false;
+    const y = window.scrollY || document.documentElement.scrollTop || 0;
+    btn.classList.toggle('fab-to-top-hidden', y < SHOW_AFTER);
+  };
+  window.addEventListener('scroll', () => {
+    if (!ticking) { ticking = true; requestAnimationFrame(update); }
+  }, { passive: true });
+  update();
+})();
 
 /* ─────────────────────────────────────────
    ADMIN TAB
@@ -2260,6 +2383,9 @@ async function saveSharing(scenarioId) {
   } catch(e) { errEl.textContent = 'Network error. Please try again.'; errEl.style.display='block'; }
 }
 if (typeof checkShareURL === 'function') checkShareURL();
+/* recalc() moved here from app.js top-level: it depends on features.js globals
+   (prospectLogoDataUrl, confirmedFields) that only exist after all scripts load. */
+if (typeof recalc === 'function') recalc();
 /* loadDiscoverySession is async — restores active session token and answers from DB */
 if (typeof loadDiscoverySession === 'function') loadDiscoverySession();
 if (typeof renderConfidence === 'function') renderConfidence();
@@ -2354,6 +2480,12 @@ recalc();
 const _fabEl = document.getElementById('fabRow'); if (_fabEl) _fabEl.style.display = 'flex';
 </script>
 <!-- FAB quick actions -->
+<!-- Global back-to-top button: appears on any tab once the page is scrolled
+     down, so the user never has to scroll all the way back manually. -->
+<button class="fab-to-top fab-to-top-hidden" id="fabToTop" onclick="scrollPageToTop()" title="Back to top" aria-label="Back to top">
+  <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 13V4M4 7l4-4 4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</button>
+
 <div class="fab-row" id="fabRow" style="display:none;">
   <button class="fab fab-secondary" onclick="saveScenario()" title="Save scenario" style="position:relative;">
     💾
