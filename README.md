@@ -1,26 +1,34 @@
-# Cloud Inventory ROI v4.4.0
+# Cloud Inventory ROI Builder v4.4.1
 
 Render-ready deployment package for the Cloud Inventory ROI Builder.
 
 ## Deployment
 
-Use the accompanying PowerShell toolkit. It deploys from a temporary Git clone and pushes to GitHub `main`, which triggers Render through the Blueprint auto-deploy configuration.
+This package is intended to be committed at the root of the GitHub repository used by Render. The repository root should contain:
 
-Default target:
+- `render.yaml`
+- `package.json`
+- `package-lock.json`
+- `.node-version`
+- `.npmrc`
+- `server.js`
+- `src/`
+- `public/`
+- `migrations/`
 
-- Repository: `https://github.com/campbellhatchard/Cloud-Inventory-ROI.git`
-- Branch: `main`
-- Render service: `cloud-inventory-roi`
-- Render database: `cloud-inventory-roi-db`
+Render will run:
+
+```bash
+npm ci --omit=dev --no-audit --no-fund
+node server.js
+```
 
 ## Health check
 
-After Render deploys, expected `/health` response:
+After deployment:
 
-```json
-{"status":"ok","version":"4.4.0","database":"connected","phase":"production"}
+```text
+https://cloud-inventory-roi.onrender.com/health
 ```
 
-## Admin bootstrap
-
-The Render Blueprint includes the bootstrap admin values. If the production database already contains an admin user, existing credentials may be preserved by the bootstrap logic.
+Expected version: `4.4.1`.

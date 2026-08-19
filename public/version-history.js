@@ -7,6 +7,14 @@
 
 const VERSION_HISTORY = [
   {
+    version: '4.4.1', date: '2026-08-05', tag: 'fixes',
+    title: 'Reverted sticky calculator header; robust Executive PDF fix',
+    changes: [
+      'Removed the sticky calculator header — it overlapped the customer-selection screen and the layered sticky positioning was too fragile. The header scrolls normally again.',
+      'Executive PDF fixed properly: the industry/competitor data and narrative library are now reliably shared with the print page, and the print page degrades gracefully instead of failing if any is missing.'
+    ]
+  },
+  {
     version: '4.4.0', date: '2026-08-05', tag: 'design',
     title: 'Calculator chrome consolidation + sticky-header fix (Phase 1b/1d)',
     changes: [

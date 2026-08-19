@@ -361,9 +361,11 @@ function paybackTimeline(r,v){
 /* ════════ MAIN RENDERER ════════ */
 function render(v,mode){
   const{scale}=MODES[mode],sv=scaleV(v,scale),r=calcROI(sv);
-  const ind=sv.industry&&IND[sv.industry]?IND[sv.industry].label:'—';
+  const _IND=(typeof IND!=='undefined')?IND:(window.IND||{});
+  const _COMP=(typeof COMP!=='undefined')?COMP:(window.COMP||{});
+  const ind=sv.industry&&_IND[sv.industry]?_IND[sv.industry].label:'—';
   const today=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
-  const comp=sv.competitor?COMP[sv.competitor]:null;
+  const comp=sv.competitor?_COMP[sv.competitor]:null;
   const aud=sv.execAudience||'mixed';
   const audCfg=(typeof AUDIENCE_CONFIG!=='undefined')?AUDIENCE_CONFIG[aud]:null;
   const ps=r.paybackFromSigning===null?'—':r.paybackFromSigning>=60?'60+ mo':r.paybackFromSigning.toFixed(1)+' mo';

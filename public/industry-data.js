@@ -35,3 +35,8 @@ const COMP = {
     pain:['High ongoing customization cost','Limited field operation flexibility','Mobile UX often retrofitted','Vendor lock-in'],
     adv:['No-code config — adapt in hours','Single platform for warehouse and field','API-first for any ERP','Cloud-native SaaS'] }
 };
+
+/* Explicitly expose on window so cross-<script> access is reliable regardless
+   of strict-mode context (top-level const does not always become a global
+   property). print.html depends on these. */
+if (typeof window !== 'undefined') { window.IND = IND; window.COMP = COMP; }

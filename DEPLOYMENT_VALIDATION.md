@@ -1,54 +1,61 @@
-# Cloud Inventory ROI v4.4.0 Deployment Validation
+# Cloud Inventory ROI v4.4.1 — Deployment Validation
 
-Generated: 2026-08-19
+## Package reviewed
 
-## Source package
+Input: `cloud-inventory-roi-v4_4_1.zip`
+Output: `cloud-inventory-roi-v4.4.1-render-ready.zip`
 
-Uploaded build: `cloud-inventory-roi-v4_4_0.zip`
+## Deployment target
 
-## Corrections applied
+This package targets the existing production Render resources defined in `render.yaml`:
 
-- Moved `.node-version` to the package root.
-- Moved `.github/workflows/ci.yml` to the package root.
-- Removed the leftover nested `cloud-inventory-roi-v4_0_0/` folder.
-- Aligned `package-lock.json` root metadata to `4.4.0`.
-- Added `.npmrc` to force the public npm registry.
+- Web service: `cloud-inventory-roi`
+- PostgreSQL database: `cloud-inventory-roi-db`
+- Build command: `npm ci --omit=dev --no-audit --no-fund`
+- Start command: `node server.js`
+- Health check: `/health`
+- Node version: `22.22.0`
 
-No application logic was changed during packaging.
+## Packaging corrections applied
 
-## Validation results
+No application logic was changed. The following packaging-only corrections were applied:
 
-- ZIP integrity: passed.
+1. Moved `.node-version` to the package root.
+2. Moved `.github/workflows/ci.yml` to the package root.
+3. Removed the leftover nested `cloud-inventory-roi-v4_0_0/` folder.
+4. Aligned `package-lock.json` root version from `2.9.3` to `4.4.1`.
+5. Added `.npmrc` to force `https://registry.npmjs.org/`.
+
+## Validation performed
+
+- ZIP integrity check: passed.
 - Required Render root files: passed.
 - `render.yaml` structure: passed.
 - `package.json` / `package-lock.json` version alignment: passed.
 - `.node-version` at package root: passed.
 - `.github/workflows/ci.yml` at package root: passed.
-- JavaScript syntax checks: passed.
+- Public npm registry hygiene: passed.
+- JavaScript syntax checks across `server.js`, `src/`, `public/`, and `test/`: passed.
+- Inline HTML script syntax checks: passed.
 - ROI engine test suite: 22 passed, 0 failed.
-- Route test loader: passed; database integration tests skipped because `DATABASE_URL` is not set in the sandbox.
-- Discovery public-link auth fix: present.
+- Route test loader: passed; DB integration tests skipped because `DATABASE_URL` is not set in the sandbox.
+- Discovery public-link auth fix: still present.
 - Migrations present through `015_scenario_shares.sql`.
-- `node_modules` excluded from final ZIP.
+- Final ZIP excludes `node_modules`.
 
-## Deployment target
+## Runtime caveat
 
-This package targets the existing production Render Blueprint resource names:
+A full live `npm ci` was not run in the sandbox. The deployment toolkit runs `npm ci --omit=dev --no-audit --no-fund` locally before pushing to GitHub.
 
-- Web service: `cloud-inventory-roi`
-- PostgreSQL database: `cloud-inventory-roi-db`
+## Post-deployment validation
 
-Expected production health response after deploy:
+After Render deploys, expected health response:
 
 ```json
 {
   "status": "ok",
-  "version": "4.4.0",
+  "version": "4.4.1",
   "database": "connected",
   "phase": "production"
 }
 ```
-
-## Notes
-
-The PowerShell deployment toolkit validates the package in a temporary directory, runs `npm ci --omit=dev --no-audit --no-fund`, then deploys through a temporary Git clone to avoid OneDrive file-lock issues.

@@ -492,3 +492,9 @@ function buildNarrativeSections(v, r) {
 
   return { headlineSection, whysSection, roiSection, timelineSection, criteriaSection, nextSection };
 }
+
+/* Expose data objects on window for cross-<script> access (print.html). */
+if (typeof window !== 'undefined') {
+  if (typeof THREE_WHYS_LIBRARY !== 'undefined') window.THREE_WHYS_LIBRARY = THREE_WHYS_LIBRARY;
+  if (typeof AUDIENCE_CONFIG !== 'undefined') window.AUDIENCE_CONFIG = AUDIENCE_CONFIG;
+}
