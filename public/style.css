@@ -1753,3 +1753,94 @@ kbd{background:var(--gray-100);border:1px solid var(--gray-300);border-radius:5p
 @media(max-width:900px){
   #tab-calc > .page-header{margin-left:-1rem;margin-right:-1rem;padding-left:1rem;padding-right:1rem;}
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   PHASE 1 — "Modern SaaS" visual pass  (v4.3.0)
+   Additive layer, intentionally last in the file so it composes over the
+   existing rules and can be removed wholesale to revert.
+
+   1a — results elevation: the headline number reads as the answer.
+   1c — visual language: one elevation system, disciplined accent colour,
+        tighter label rhythm with more air between logical groups.
+   Uses only existing tokens — no new palette.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── 1a. Results: hero + supporting ─────────────────────────────────
+   The live bar previously gave four metrics equal weight, so nothing read
+   as "the answer". Annual benefit now dominates; the rest support it. */
+.livebar{
+  grid-template-columns:1.55fr 1fr 1fr 1fr;
+  background:linear-gradient(180deg,var(--navy-mid) 0%,var(--navy) 100%);
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+.lb-cell{padding:8px 26px;border-right:1px solid rgba(255,255,255,.06);}
+.lb-cell:first-child{padding-left:30px;}
+.lb-label{
+  font-size:9.5px;letter-spacing:.09em;color:rgba(255,255,255,.42);margin-bottom:1px;
+}
+.lb-cell:first-child .lb-label{color:rgba(255,255,255,.62);}
+.lb-value{font-size:var(--fs-md);letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
+/* Hero metric */
+.lb-cell:first-child .lb-value{font-size:var(--fs-xl);letter-spacing:-.03em;font-weight:700;}
+/* Value changes should register without shouting. */
+.lb-value.updated{transform:none;animation:lb-bump .32s ease;}
+@keyframes lb-bump{
+  0%{transform:translateY(2px);opacity:.55;}
+  100%{transform:translateY(0);opacity:1;}
+}
+
+/* Results grid at the foot of the calculator: same hero logic, so the top
+   bar and the detailed grid tell a consistent story. */
+#roiGrid .result-card{border-radius:var(--radius-lg);padding:17px 19px;box-shadow:var(--shadow-sm);}
+#roiGrid .result-card:hover{transform:translateY(-1px);box-shadow:var(--shadow-md);}
+#roiGrid .r-value{font-variant-numeric:tabular-nums;}
+#roiGrid .result-card.r-hero{grid-column:span 2;}
+#roiGrid .result-card.r-hero .r-value{font-size:var(--fs-2xl);letter-spacing:-.03em;}
+@media(max-width:720px){
+  #roiGrid .result-card.r-hero{grid-column:span 1;}
+  #roiGrid .result-card.r-hero .r-value{font-size:var(--fs-xl);}
+}
+
+/* ── 1c. One elevation system ───────────────────────────────────────
+   Cards and accordions previously each carried their own border + shadow,
+   which compounded when nested. Flatten the nesting, keep one elevation. */
+.card,.accordion{box-shadow:var(--shadow-sm);border-color:var(--gray-200);}
+.card{border-radius:var(--radius-lg);}
+/* A card inside an accordion is a grouping, not a second surface. */
+.accordion .card{
+  box-shadow:none;border-color:var(--gray-100);background:var(--gray-50);
+  border-radius:var(--radius-md);padding:16px 18px;
+}
+.accordion .card .card{background:var(--white);}
+
+/* ── 1c. Type & rhythm ──────────────────────────────────────────────
+   Labels sit closer to their input; logical groups get more air. The eye
+   should group by proximity, not by hunting for borders. */
+.field{margin-bottom:var(--sp-4);}
+.field label{margin-bottom:5px;font-size:var(--fs-sm);color:var(--gray-700);}
+.field input,.field select,.field textarea{
+  padding:10px 13px;border-radius:var(--radius-sm);border-width:1px;
+  font-variant-numeric:tabular-nums;
+}
+.two-col{gap:var(--sp-4) var(--sp-5);}
+.card-title{
+  font-size:var(--fs-xs);letter-spacing:.08em;color:var(--gray-600);
+  margin-bottom:var(--sp-4);padding-bottom:var(--sp-2);
+  border-bottom:1px solid var(--gray-100);
+}
+.accordion .card .card-title{border-bottom:none;padding-bottom:0;margin-bottom:var(--sp-3);}
+
+/* ── 1c. Accent discipline ──────────────────────────────────────────
+   Cyan should mean "interactive or important", so the focus state is the
+   strongest accent moment on the form. */
+.field input:focus,.field select:focus,.field textarea:focus{
+  border-color:var(--cyan);
+  box-shadow:0 0 0 3px rgba(0,169,204,.16);
+}
+.field input:hover:not(:focus),.field select:hover:not(:focus),.field textarea:hover:not(:focus){
+  border-color:var(--gray-300);
+}
+.acc-head{padding:16px 20px;}
+.acc-head:hover{background:var(--gray-50);}
+.acc-title{font-size:var(--fs-base);font-weight:600;color:var(--navy);}
+.acc-sub{color:var(--gray-500);}

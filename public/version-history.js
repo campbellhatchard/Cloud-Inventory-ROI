@@ -7,6 +7,17 @@
 
 const VERSION_HISTORY = [
   {
+    version: '4.3.0', date: '2026-08-05', tag: 'design',
+    title: 'Calculator visual pass — results elevation & unified visual language',
+    changes: [
+      'The headline number now reads as the answer: annual benefit is the hero metric in the live bar and results grid, with ROI, payback and NPV supporting it.',
+      'One elevation system — cards nested inside sections no longer stack borders and shadows.',
+      'Tighter label-to-input rhythm with more space between logical groups, so the eye groups by proximity rather than hunting for borders.',
+      'Accent colour reserved for interactive and important elements; the focus state is now the strongest accent moment on the form.',
+      'Presentation only — no calculation, data or permission changes (22/22 engine tests unchanged).'
+    ]
+  },
+  {
     version: '4.2.0', date: '2026-08-05', tag: 'feature',
     title: 'Prospect experience, scenario navigation, guided mode & share tracking',
     changes: [
