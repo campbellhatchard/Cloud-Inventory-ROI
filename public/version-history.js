@@ -7,6 +7,16 @@
 
 const VERSION_HISTORY = [
   {
+    version: '4.4.0', date: '2026-08-05', tag: 'design',
+    title: 'Calculator chrome consolidation + sticky-header fix (Phase 1b/1d)',
+    changes: [
+      'Fixed the sticky calculator header sliding up and disappearing behind the KPI bar when scrolling — the header and workflow strip now stay pinned just below it.',
+      'Consolidated the top of the calculator into one cohesive toolbar: the action header and the workflow steps now read as a single band instead of separate stacked layers.',
+      'Input tiering: the five inputs that drive most of the ROI (revenue, users, labor cost, inventory value, IT cost) now read as primary; the fine-tuning percentage knobs are visually quieted.',
+      'NEEDS A LIVE LOOK: the sticky positioning is height-sensitive; please verify on staging before relying on it.'
+    ]
+  },
+  {
     version: '4.3.1', date: '2026-08-05', tag: 'fixes',
     title: 'Calculator & PDF fixes; field-service made optional; prospect question context',
     changes: [

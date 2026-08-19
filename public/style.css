@@ -1225,7 +1225,8 @@ kbd{background:var(--gray-100);border:1px solid var(--gray-300);border-radius:5p
 @keyframes gd-fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
 
 /* Guided nav bar */
-.guided-nav{flex-direction:column;gap:14px;margin:0 0 20px;padding:16px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:12px;position:sticky;top:64px;z-index:40;box-shadow:0 2px 10px rgba(0,0,0,.06);}
+.guided-nav{flex-direction:column;gap:14px;margin:0 0 20px;padding:16px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:12px;position:sticky;top:calc(var(--topbar-h) + var(--livebar-h) + 8px);z-index:40;box-shadow:0 2px 10px rgba(0,0,0,.06);}
+body.livebar-off .guided-nav{top:8px;}
 .gd-progress{display:flex;align-items:center;justify-content:center;gap:0;}
 .gd-dot{width:30px;height:30px;border-radius:50%;border:2px solid var(--gray-300);background:#fff;color:var(--gray-500);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;}
 .gd-dot.gd-cur{border-color:var(--cyan);background:var(--cyan);color:#fff;transform:scale(1.1);}
@@ -1878,3 +1879,77 @@ kbd{background:var(--gray-100);border:1px solid var(--gray-300);border-radius:5p
 .driver-group-hint{flex-basis:100%;font-size:11px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray-500);padding-left:13px;line-height:1.4;}
 .driver-group > .field-row-2,.driver-group > .field-row-3,.driver-group > .field-row-4,.driver-group > .field-note-inline{padding-left:16px;padding-right:16px;}
 .driver-group > .field-row-2:last-child,.driver-group > .field-row-3:last-child,.driver-group > .field-row-4:last-child{padding-bottom:16px;}
+
+/* ── Phase 1b: input tiering ─────────────────────────────────────────
+   The ~5 fields that drive most of the ROI (revenue, users, labor cost,
+   inventory value, IT cost) read as primary. The fine-tuning recovery
+   knobs (the "Industry avg" percent overrides) are quieted so they don't
+   compete with the drivers. Purely visual — no behaviour change. */
+
+/* Primary drivers: more presence, a hair more space, stronger label. */
+.field-primary > label{
+  font-size:var(--fs-base);font-weight:600;color:var(--navy);
+}
+.field-primary input{
+  padding:12px 14px;font-size:var(--fs-md);font-weight:500;
+  border-color:var(--gray-300);
+}
+.field-primary input:focus{border-color:var(--cyan);}
+.field-primary .affix-wrap{border-color:var(--gray-300);}
+.field-primary .affix-wrap input{font-size:var(--fs-md);font-weight:500;}
+/* A touch more breathing room around the primary block. */
+.two-col-primary{gap:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-2);}
+
+/* Fine-tuning knobs: present but visually secondary. Targeted by the
+   "Industry avg" placeholder they all share, so no markup edits needed. */
+input[placeholder="Industry avg"]{
+  font-size:var(--fs-sm);color:var(--gray-600);background:var(--gray-50);
+}
+input[placeholder="Industry avg"]::placeholder{color:var(--gray-400);font-style:italic;}
+input[placeholder="Industry avg"]:focus{background:var(--white);}
+/* The metric-benchmark badge that rides alongside them, also quieted. */
+.metric-bench{font-size:10px;color:var(--gray-400);font-weight:500;}
+
+/* ── Phase 1d: consolidate top chrome into one band ──────────────────
+   The calculator stacked a sticky action header, then a separate
+   floating "workflow steps" card, then (sometimes) a benchmark banner —
+   three competing layers. This unifies the header + workflow steps into
+   one continuous sticky toolbar, so there's a single band of chrome.
+   Additive/visual only; DOM order unchanged, so it reverts cleanly. */
+
+/* The action header loses its bottom shadow/border — the workflow strip
+   below it now closes the band. It sticks BELOW the fixed livebar (which
+   occupies topbar-h .. topbar-h + livebar-h), not at the very top, or it
+   would slide under the livebar on scroll. */
+#tab-calc > .page-header{
+  box-shadow:none;border-bottom:none;padding-bottom:10px;margin-bottom:0;
+  top:calc(var(--topbar-h) + var(--livebar-h));
+}
+/* When the livebar is hidden (livebar-off), the header sticks to the top. */
+body.livebar-off #tab-calc > .page-header{top:0;}
+
+/* Workflow steps: no longer a floating card. It becomes the lower half of
+   the sticky header band — flush, same background, sticky just beneath the
+   header. Offset = livebar bottom + header height (~50px). */
+#tab-calc .workflow-steps{
+  position:sticky;top:calc(var(--topbar-h) + var(--livebar-h) + 50px);z-index:44;
+  margin:0 -2rem 18px;padding:8px 2rem;
+  background:var(--white);
+  border:none;border-bottom:1px solid var(--gray-100);
+  border-radius:0;box-shadow:0 2px 8px rgba(30,41,49,.04);
+}
+body.livebar-off #tab-calc .workflow-steps{top:50px;}
+@media(max-width:900px){
+  #tab-calc .workflow-steps{margin-left:-1rem;margin-right:-1rem;padding-left:1rem;padding-right:1rem;top:auto;position:static;box-shadow:none;}
+}
+/* Guided mode already hides workflow-steps; when hidden, the header keeps
+   its own closing border so the band still reads as finished. */
+.guided-mode #tab-calc > .page-header{border-bottom:1px solid var(--gray-100);box-shadow:0 2px 8px rgba(30,41,49,.04);}
+
+/* Benchmark banner, when shown, sits inside the band rather than adding a
+   third floating layer. */
+#tab-calc .benchmark-banner{margin:0 0 12px;border-radius:var(--radius-sm);}
+
+/* The step chips themselves: flatter, more toolbar-like, less button-like. */
+#tab-calc .workflow-steps .ws-step{background:transparent;border:none;}
+#tab-calc .workflow-steps .ws-step.ws-active{background:var(--cyan-pale);}
