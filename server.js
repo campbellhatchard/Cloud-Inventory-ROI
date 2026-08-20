@@ -441,9 +441,11 @@ const { requireAuth } = require('./src/middleware/auth');
 app.post('/api/enhance', requireAuth, aiLimiter, async (req, res) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set.' });
-  const { model, max_tokens, messages } = req.body;
+  const { model, max_tokens, messages, system } = req.body;
   if (!messages || !Array.isArray(messages)) return res.status(400).json({ error: 'messages array required.' });
-  const body = JSON.stringify({ model: model || ANTHROPIC_MODEL, max_tokens: max_tokens || 1000, messages });
+  const payload = { model: model || ANTHROPIC_MODEL, max_tokens: max_tokens || 1000, messages };
+  if (typeof system === 'string' && system.trim()) payload.system = system;
+  const body = JSON.stringify(payload);
   let baseUrl;
   try { baseUrl = new URL(ANTHROPIC_BASE_URL); } catch(e) { return res.status(500).json({ error: 'Bad ANTHROPIC_BASE_URL.' }); }
   try {

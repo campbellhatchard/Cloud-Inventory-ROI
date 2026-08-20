@@ -300,20 +300,8 @@ function getVals() {
 /* ════════════════════════════════════════
    Formatters
    ════════════════════════════════════════ */
-function fmt(n) {
-  if (typeof moneyAbbrev === 'function') return moneyAbbrev(n);
-  if (n===null||n===undefined||isNaN(n)) return '—';
-  const abs=Math.abs(Math.round(n));
-  if (abs>=1000000) return (n<0?'-$':'$')+(abs/1000000).toFixed(1).replace(/\.0$/,'')+'M';
-  if (abs>=10000)   return (n<0?'-$':'$')+Math.round(abs/1000)+'K';
-  return (n<0?'-$':'$')+abs.toLocaleString();
-}
-function fmtFull(n) {
-  if (typeof moneyFull === 'function') return moneyFull(n);
-  if (n===null||isNaN(n)) return '—';
-  return (n<0?'-$':'$')+Math.abs(Math.round(n)).toLocaleString();
-}
-function fmtPct(n) { return Math.round(n)+'%'; }
+/* fmt, fmtFull, fmtPct now live in format-utils.js (loaded before app.js),
+   shared with narrative.js and the PDF print page. */
 function rClass(n) { if (!n&&n!==0) return 'r-neu'; return n>0?'r-pos':n<0?'r-neg':'r-neu'; }
 function lbClass(n) { return n>=0?'pos':'neg'; }
 

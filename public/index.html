@@ -161,7 +161,7 @@
           <div class="cg-card-title">Existing customer</div>
           <div class="cg-card-desc">Continue a business case you've already started.</div>
           <div class="cg-search-wrap">
-            <input type="text" id="cgSearch" placeholder="Search customers…" oninput="cgRenderList(this.value)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="cg-customer-search" role="searchbox" aria-label="Search customers"/>
+            <input type="text" id="cgSearch" placeholder="Search customers…" oninput="cgRenderList(this.value)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="cg-customer-search-x7" role="searchbox" aria-label="Search customers" readonly onfocus="this.removeAttribute('readonly')"/>
           </div>
           <div id="cgList" class="cg-list"><div class="cg-empty">Loading…</div></div>
         </div>
@@ -178,7 +178,7 @@
   <div class="customer-search" id="customerSearchBar">
     <label for="customerSearchInput">Find an existing customer</label>
     <div class="cs-input-wrap">
-      <input type="text" id="customerSearchInput" placeholder="Search customers by name…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="cust-search-field" role="searchbox" aria-label="Find an existing customer" oninput="onCustomerSearch(this.value)" onfocus="onCustomerSearch(this.value)">
+      <input type="text" id="customerSearchInput" placeholder="Search customers by name…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="cust-search-field-x7" role="searchbox" aria-label="Find an existing customer" readonly onfocus="this.removeAttribute('readonly');onCustomerSearch(this.value)" oninput="onCustomerSearch(this.value)">
       <div id="customerSearchResults" class="cs-results" style="display:none;"></div>
     </div>
     <span class="cs-hint">or start a new one below</span>
@@ -1236,6 +1236,7 @@
 <script src="/roi-engine.js"></script>
 <script src="brand-palette.js"></script>
 <script src="currency.js"></script>
+<script src="format-utils.js"></script>
 <script src="industry-data.js"></script>
 <script src="app.js"></script>
 <script src="features.js"></script>
@@ -1254,9 +1255,10 @@
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="4.4.1";</script>
+<script>const APP_VERSION="4.5.0";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
+<script src="assistant.js"></script>
 <script src="input-format.js"></script>
 <script src="exec-infographics.js"></script>
 <script src="benchmark-provenance.js"></script>

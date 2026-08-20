@@ -7,6 +7,25 @@
 
 const VERSION_HISTORY = [
   {
+    version: '4.5.0', date: '2026-08-05', tag: 'feature',
+    title: 'In-app AI assistant (Pass 1)',
+    changes: [
+      'A floating "Ask" button opens a chat panel available on every screen inside the app.',
+      'Answers questions about fields, calculations, how to use the app, and what the discovery questions mean.',
+      'Grounded in the app\u2019s own content (ROI methodology, field definitions, key terms, workflow). Draws on general knowledge where helpful, with a clear disclaimer when going beyond the app\u2019s docs.',
+      'Multi-turn conversation with suggested starter questions. API key stays server-side — reuses the existing secure proxy.',
+      'Only available to logged-in reps and SEs, not on the prospect-facing discovery page.'
+    ]
+  },
+  {
+    version: '4.4.2', date: '2026-08-05', tag: 'fixes',
+    title: 'Executive PDF actually fixed (root cause); stronger autofill block',
+    changes: [
+      'Executive PDF: found the real cause — the print page uses money/percent formatters that lived in the calculator file it no longer loads, so it failed before it could render. Those formatters now live in a shared file both pages load. Verified the PDF renders end to end.',
+      'Customer search no longer inherits your login username: applied the readonly-until-focus technique Chrome actually respects.'
+    ]
+  },
+  {
     version: '4.4.1', date: '2026-08-05', tag: 'fixes',
     title: 'Reverted sticky calculator header; robust Executive PDF fix',
     changes: [
