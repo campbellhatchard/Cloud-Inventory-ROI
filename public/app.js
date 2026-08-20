@@ -99,6 +99,7 @@ function switchTab(name) {
   if (name === 'sensitivity') renderSensitivity();
   if (name === 'analytics')   renderAnalytics();
   if (name === 'admin')       adminUnlocked && renderAdminEditor();
+  if (name === 'disc' && typeof clearDiscNotif === 'function') clearDiscNotif();
   if (window.innerWidth <= 900) closeSidebar();
   trackEvent('tab_view', { tab: name });
 }
@@ -257,6 +258,14 @@ function getVals() {
     modelVersion: 27,
     laborWastePct:       g('laborWastePct') / 100,  // measured productivity waste (Option B)
     currentAccuracy:     g('currentAccuracy'),        // measured inventory accuracy % (Option A)
+    /* ── Field inventory levers (opt-in) ── */
+    hasFieldInventory:   window._hasFieldInventory || false,
+    fieldInvValue:       g('fieldInvValue'),
+    fieldLeakageRate:    g('fieldLeakageRate'),
+    mFieldLeakage:       0.30,                        // default 30% recovery — no override UI yet
+    fieldLocations:      g('fieldLocations'),
+    fieldReconcileCost:  g('fieldReconcileCost'),
+    fieldReconcilePerYr: g('fieldReconcilePerYr') || 1,
     /* ── v2.6 WMS levers ── */
     ordersPerYr:         g('ordersPerYr'),
     costPerOrder:        g('costPerOrder'),
@@ -882,6 +891,11 @@ async function loadScenario(id) {
     window._scenarioLoaded = true;
     window._calcScenarioId = id;
     if (typeof refreshCalcScenarioPicker === 'function') refreshCalcScenarioPicker();
+    /* Load the field inventory flag for this customer */
+    if (typeof loadFieldInventoryFlag === 'function') {
+      const cid = full.customer_id || (full.data && full.data.customerId) || null;
+      loadFieldInventoryFlag(cid);
+    }
     /* Remember which customer this scenario belongs to, so the Solution Fit
        tab can attach to it. */
     window.currentScenarioCustomerId = (scenario && scenario.customerId) || null;

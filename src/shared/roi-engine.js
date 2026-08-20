@@ -33,9 +33,13 @@
       'otifTarget','mOtif','otifRisk','itCost','mIt','discRate','invest','otc','implMonths',
       'laborWastePct','downtimeEventsYr','downtimeHrsPerEvent','downtimeCostPerHr','mDowntime',
       'expediteSpendYr','mExpedite','countDaysYr','countPeople','mCount','ordersPerYr','costPerOrder',
-      'pickRateGainPct','mThroughput','orderErrorPct','costPerError','mAccuracy'];
+      'pickRateGainPct','mThroughput','orderErrorPct','costPerError','mAccuracy',
+      'fieldInvValue','fieldLeakageRate','mFieldLeakage',
+      'fieldLocations','fieldReconcileCost','fieldReconcilePerYr'];
     const _v = Object.assign({}, v);
     for (const k of _num) { const n = parseFloat(_v[k]); _v[k] = (isNaN(n) || n < 0) ? 0 : n; }
+    /* hasFieldInventory is a boolean — must not be parseFloat-ed */
+    _v.hasFieldInventory = !!v.hasFieldInventory;
     if (_v.ramp1 === undefined) _v.ramp1 = v.ramp1; // preserve undefined-ramp default logic below
     if (_v.ramp2 === undefined) _v.ramp2 = v.ramp2;
     if (_v.ramp3 === undefined) _v.ramp3 = v.ramp3;
@@ -125,8 +129,34 @@
 
   const wmsLeverSav = throughputSav + accuracySav;
 
-  /* ── Full annualised benefit (at steady-state, post-ramp) ── */
-  const annualBenefit = laborSav + shrinkSav + carrySavCorrected + turnsSav + otifSav + itSav + newLeverSav + wmsLeverSav;
+  /* ── Field inventory levers (opt-in; only when hasFieldInventory=true) ──
+     Three distinct value drivers for stock held outside a fixed warehouse:
+
+     1. Leakage / shrinkage — materials lost, misappropriated, or unaccounted
+        at contractor sites, job locations, or van/truck stock. Same pattern
+        as warehouse shrinkage but applied to field inventory value × leakage
+        rate × recovery %.
+
+     2. Carrying cost on excess field stock — buffer stock held at distributed
+        locations because records are not trusted. fieldInventoryValue ×
+        carryRate × (1 - invTurnsBenchmark/fieldTurns) × recovery %.
+        Simplified: we apply the standard carryRate to the field inventory
+        value × the same mCarrying recovery %.
+
+     3. Count / reconciliation labor — periodic manual counting at remote
+        sites. locations × costPerReconcile × reconciliationsPerYr.           */
+  const fiLeakageSav = (v.hasFieldInventory && v.fieldInvValue && v.fieldLeakageRate)
+    ? (v.fieldInvValue * (v.fieldLeakageRate / 100)) * (v.mFieldLeakage || 0.30)
+    : 0;
+  const fiCarrySav = (v.hasFieldInventory && v.fieldInvValue)
+    ? v.fieldInvValue * (v.carryRate || 0.25) * (v.mCarrying || 0)
+    : 0;
+  const fiCountSav = (v.hasFieldInventory && v.fieldLocations && v.fieldReconcileCost)
+    ? v.fieldLocations * v.fieldReconcileCost * (v.fieldReconcilePerYr || 1)
+    : 0;
+  const fieldInvSav = fiLeakageSav + fiCarrySav + fiCountSav;
+
+  const annualBenefit = laborSav + shrinkSav + carrySavCorrected + turnsSav + otifSav + itSav + newLeverSav + wmsLeverSav + fieldInvSav;
 
   /* ── Ramp-up & implementation timeline ──
      implMonths: months from contract signing to go-live (0 benefit)
@@ -214,6 +244,7 @@
     carrySav: carrySavCorrected, turnsSav, capitalFreed, otifSav, itSav,
     downtimeSav, expediteSav, countSav, newLeverSav,
     throughputSav, accuracySav, wmsLeverSav,
+    fiLeakageSav, fiCarrySav, fiCountSav, fieldInvSav,
     overlapAdj, annualCarryCost,
     annualBenefit, year1Benefit, year1Factor,
     totalInvestY1, netY1, roi,

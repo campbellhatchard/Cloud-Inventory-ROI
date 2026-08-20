@@ -1,7 +1,7 @@
 {
   "name": "cloud-inventory-roi-builder",
-  "version": "4.7.0",
-  "description": "Cloud Inventory ROI Business Case Builder \u2014 database-backed multi-user edition",
+  "version": "4.9.1",
+  "description": "Cloud Inventory ROI Business Case Builder — database-backed multi-user edition",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

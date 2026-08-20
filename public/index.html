@@ -42,6 +42,7 @@
   <button class="nav-item" onclick="switchTab('disc')" id="nav-disc">
     <span class="nav-step">2</span>
     Discovery guide
+    <span class="nav-notif" id="discNotifBadge" style="display:none;"></span>
   </button>
   <button class="nav-item" onclick="switchTab('exec')" id="nav-exec">
     <span class="nav-step">3</span>
@@ -279,6 +280,20 @@
               </select>
             </div>
           </div>
+          <!-- Field inventory toggle -->
+          <div class="fi-toggle-row" id="fiToggleRow">
+            <label class="fi-toggle-label" for="hasFieldInventory">
+              <span class="fi-toggle-icon">📦</span>
+              <span class="fi-toggle-text">
+                <strong>Field inventory</strong>
+                <span class="fi-toggle-sub">Prospect holds inventory outside the warehouse — trucks, vans, contractor sites, or job locations</span>
+              </span>
+            </label>
+            <button type="button" class="fi-toggle-btn" id="hasFieldInventory" role="switch"
+              aria-checked="false" onclick="toggleFieldInventory()" title="Toggle field inventory value drivers">
+              <span class="fi-toggle-thumb"></span>
+            </button>
+          </div>
           <div class="two-col two-col-primary">
             <div class="field field-primary"><label title="Used for OTIF value-at-risk">Annual revenue ($)</label><input type="number" id="revenue" placeholder="e.g. 50,000,000" oninput="recalc()"/></div>
             <div class="field field-primary"><label title="Warehouse, field, and office users">Inventory users</label><input type="number" id="userCount" placeholder="e.g. 50" oninput="recalc()"/></div>
@@ -288,6 +303,28 @@
             <div class="field field-primary"><label title="Total inventory on hand at any time">Annual inventory value ($)</label><input type="number" id="inventoryValue" placeholder="e.g. 10,000,000" oninput="recalc()"/></div>
           </div>
           <div class="field field-primary"><label title="Annual licenses, maintenance, support">Current IT / legacy cost / yr ($)</label><input type="number" id="itCost" placeholder="e.g. 150,000" oninput="recalc()"/></div>
+
+          <!-- Field inventory value drivers (shown only when toggle is on) -->
+          <div class="driver-group" id="fieldInventorySection" style="display:none;">
+            <div class="driver-group-summary" style="cursor:default;">
+              <span class="mep-tag" style="background:var(--cyan);color:#fff;">Field inventory</span>
+              <span class="driver-group-hint">These drivers apply to stock held outside the main warehouse. Leave blank to exclude from ROI.</span>
+            </div>
+            <div class="field-row-2">
+              <div class="field"><label title="Total value of inventory held at field locations (trucks, vans, job sites, contractor stores)">Field inventory value ($)</label>
+                <input type="number" id="fieldInvValue" placeholder="e.g. 2,000,000" oninput="recalc()" min="0" step="10000"/></div>
+              <div class="field"><label title="Estimated % of field inventory lost, unaccounted for, or written off per year">Field leakage / shrinkage rate (%)</label>
+                <input type="number" id="fieldLeakageRate" placeholder="e.g. 4" oninput="recalc()" min="0" max="100" step="0.5"/></div>
+            </div>
+            <div class="field-row-3">
+              <div class="field"><label title="Number of distinct field locations (job sites, contractor depots, vehicle routes)">Field locations (#)</label>
+                <input type="number" id="fieldLocations" placeholder="e.g. 12" oninput="recalc()" min="0" step="1"/></div>
+              <div class="field"><label title="Cost to reconcile / count one field location (labor + travel)">Cost to reconcile / location ($)</label>
+                <input type="number" id="fieldReconcileCost" placeholder="e.g. 500" oninput="recalc()" min="0" step="50"/></div>
+              <div class="field"><label title="How many times per year each location is reconciled">Reconciliations / location / yr (#)</label>
+                <input type="number" id="fieldReconcilePerYr" placeholder="e.g. 4" oninput="recalc()" min="0" step="1"/></div>
+            </div>
+          </div>
 
           <!-- Prospect logo upload -->
           <div style="margin-top:12px;">
@@ -1218,7 +1255,7 @@
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="4.7.0";</script>
+<script>const APP_VERSION="4.9.1";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
 <script src="assistant.js"></script>
@@ -1390,6 +1427,84 @@ window.switchTab = function(name) {
   }
 };
 window.saveScenario = function() { if (typeof saveScenarioWithVersion === 'function') saveScenarioWithVersion(false); };
+
+/* ── Discovery submission notification badge ───────────────────────
+   Polls for unread submitted sessions and shows a dot on the
+   Discovery nav item. Clears when the rep opens the Discovery tab. */
+function updateDiscNotifBadge(count) {
+  const badge = document.getElementById('discNotifBadge');
+  if (!badge) return;
+  if (count > 0) {
+    badge.textContent = count > 9 ? '9+' : String(count);
+    badge.style.display = 'inline-flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+async function pollDiscNotif() {
+  try {
+    const r = await apiFetch('/api/discovery/unread-count');
+    if (r && r.ok) {
+      const d = await r.json();
+      updateDiscNotifBadge(d.count || 0);
+    }
+  } catch (e) { /* silent — badge is non-critical */ }
+}
+
+async function clearDiscNotif() {
+  updateDiscNotifBadge(0);
+  try { await apiFetch('/api/discovery/mark-viewed', { method: 'POST' }); }
+  catch (e) { /* silent */ }
+}
+
+/* Poll on load and every 2 minutes while the app is open */
+pollDiscNotif();
+setInterval(pollDiscNotif, 2 * 60 * 1000);
+window.clearDiscNotif = clearDiscNotif;
+
+/* ── Field inventory toggle ────────────────────────────────────────
+   Reads/writes has_field_inventory on the customer record (Option A).
+   Stored on window._hasFieldInventory for getVals() to read. */
+window._hasFieldInventory = false;
+window._currentCustomerId = null;
+
+function toggleFieldInventory() {
+  const newVal = !window._hasFieldInventory;
+  window._hasFieldInventory = newVal;
+  applyFieldInventoryState(newVal);
+  markCalcDirty && markCalcDirty();
+  recalc && recalc();
+  /* Persist to customer record if we have one */
+  if (window._currentCustomerId) {
+    apiFetch('/api/customers/' + window._currentCustomerId + '/field-inventory', {
+      method: 'PATCH',
+      body: JSON.stringify({ hasFieldInventory: newVal })
+    }).catch(e => console.warn('field-inventory flag save failed:', e.message));
+  }
+}
+
+function applyFieldInventoryState(on) {
+  const btn = document.getElementById('hasFieldInventory');
+  const sec = document.getElementById('fieldInventorySection');
+  if (btn) btn.setAttribute('aria-checked', on ? 'true' : 'false');
+  if (sec) sec.style.display = on ? '' : 'none';
+}
+
+async function loadFieldInventoryFlag(customerId) {
+  if (!customerId) { window._hasFieldInventory = false; applyFieldInventoryState(false); return; }
+  window._currentCustomerId = customerId;
+  try {
+    const r = await apiFetch('/api/customers/' + customerId + '/field-inventory');
+    if (r && r.ok) {
+      const d = await r.json();
+      window._hasFieldInventory = !!d.hasFieldInventory;
+      applyFieldInventoryState(window._hasFieldInventory);
+    }
+  } catch(e) { /* silently leave as false */ }
+}
+window.toggleFieldInventory = toggleFieldInventory;
+window.loadFieldInventoryFlag = loadFieldInventoryFlag;
 
 /* ── Calculator scenario picker + version history ────────────────────
    Lets a rep move between that customer's scenarios, and reach saved

@@ -7,6 +7,76 @@
 
 const VERSION_HISTORY = [
   {
+    version: '4.9.1', date: '2026-08-05', tag: 'feature',
+    title: 'Solution Fit redesigned',
+    changes: [
+      'Readiness bar now appears at the top of every tab so you can see handoff status without switching to the Readiness tab.',
+      'Tabs are now pill-style with counts: Gaps shows how many gaps are captured, Readiness shows how many items are still missing.',
+      'A navy top bar shows the customer name, deal stage, and auto-save state at all times.',
+      'Context tab uses collapsible accordion sections (Opportunity, Architecture, Contacts) each showing fill count and completion status.',
+      'Process cards on the Demo and Fit tab show colored status badges (green for demonstrated / full fit, amber for partial, red for gap) so you can scan coverage at a glance. A stats bar shows in-scope, demonstrated, and gap counts.',
+      'Gap cards are color-coded by priority (red border for Must Have, amber for Should Have) and the gap register header shows unresolved and must-have counts.',
+      'Integration tab uses a cleaner table with compact inputs and moves the mobility drivers into a two-column grid.',
+      'Field labels are now uppercase 11.5px secondary color throughout, consistent with the rest of the app.'
+    ]
+  },
+  {
+    version: '4.9.0', date: '2026-08-05', tag: 'feature',
+    title: 'Discovery submission notifications',
+    changes: [
+      'Reps now receive an email when a prospect clicks Confirm and send on the discovery questionnaire. The email includes the company name, answer count, and a link directly to the Discovery tab.',
+      'A notification badge appears on the Discovery nav item when a prospect has submitted. It clears automatically when the rep opens the tab.',
+      'The Discovery tab now shows a green Submitted badge with the submission timestamp, or the open count and not yet submitted if the prospect has opened but not completed.',
+      'Migration 018 required: adds submitted_at, answer_count, and last_disc_viewed to discovery_sessions.',
+      'Requires SENDGRID_API_KEY and FROM_EMAIL environment variables on Render. Without them, email details are logged to the server console instead of sent.'
+    ]
+  },
+  {
+    version: '4.8.2', date: '2026-08-05', tag: 'fixes',
+    title: 'Discovery answers now apply to the calculator correctly',
+    changes: [
+      'Fixed: discovery answers were loading from the wrong session. The auto-load now scopes to the currently loaded scenario, not the most recently updated session across all customers.',
+      'Fixed: discovery answers were silently skipped when a calculator field already had a value from a saved scenario. Prospect-verified answers now always overwrite. Rep answers fill empty fields.',
+      'Fixed: the prospect-verified / rep-confirmed provenance chips were not being restored when a scenario loaded. fieldStates are now always updated from discovery answers regardless of whether the field value is written.',
+      'Both the auto-load on session restore and the manual Apply button now trigger confidence chip re-render and recalc.'
+    ]
+  },
+  {
+    version: '4.8.1', date: '2026-08-05', tag: 'feature',
+    title: 'Share links always show the latest scenario version',
+    changes: [
+      'Scenario share links and business case share links now always resolve to the latest saved version of a scenario. Previously they pointed at the specific version that existed when the link was created.',
+      'Saving a new version after sharing is now safe — the prospect\'s link updates automatically. The original version data is never deleted.',
+      'Migration 017 required: adds scenario_base_id to both share tables and back-fills existing share rows.'
+    ]
+  },
+  {
+    version: '4.8.0', date: '2026-08-05', tag: 'feature',
+    title: 'Field inventory value drivers (opt-in per customer)',
+    changes: [
+      'A Field inventory toggle in Prospect Details lets reps flag whether a prospect holds inventory outside the warehouse (trucks, vans, contractor sites, job locations). Default is off.',
+      'When turned on: a Field inventory section appears in the calculator with three ROI levers (leakage/shrinkage, carrying cost on field stock, and reconciliation labor). These are separate from the main warehouse levers.',
+      'The flag is stored on the customer record and persists across all scenarios for that customer.',
+      'If the rep has enabled field inventory, the prospect discovery link automatically includes a field inventory question section (6 questions covering locations, value, leakage rate, and reconciliation burden). If the flag is off, no field inventory questions appear.',
+      'Migration 016 required (adds has_field_inventory to customers and discovery_sessions tables).'
+    ]
+  },
+  {
+    version: '4.7.2', date: '2026-08-05', tag: 'fixes',
+    title: 'Ask button no longer covers the save/PDF buttons',
+    changes: [
+      'The Ask assistant button was sitting directly on top of the floating Save and Executive PDF buttons at bottom-right. It is now raised to 140px from the bottom, clearing the two-button fab-row with room to spare.'
+    ]
+  },
+  {
+    version: '4.7.1', date: '2026-08-05', tag: 'fixes',
+    title: 'Prospect assistant: close button + field-sensitive help fixed',
+    changes: [
+      'Close button is now clearly visible and tappable on mobile. On narrow screens it shows a Close label alongside the X. Tap target increased to 44px minimum.',
+      'Field-sensitive help now works with the new tabbed section layout. The IntersectionObserver now re-observes question elements each time a section loads, and reads the correct section title class.'
+    ]
+  },
+  {
     version: '4.7.0', date: '2026-08-05', tag: 'feature',
     title: 'Prospect page redesigned: section-at-a-time layout',
     changes: [

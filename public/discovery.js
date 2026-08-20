@@ -466,16 +466,46 @@ function getDiscoveryQuestions(industry) {
   /* Drop solution-specific sections that don't apply to this industry. */
   const filteredBase = base.filter(section => isSectionRelevant(section.section, ind));
   /* VE core first (strategic framing), then the relevant quantitative
-     industry set, then the qualitative industry-context questions. */
+     industry set, then the qualitative industry-context questions.
+     Field inventory is injected by getProspectQuestions when the flag is set. */
   return [VE_CORE_QUESTIONS, ...filteredBase, ctx];
 }
 
 /* Prospect-facing set excludes internal-only questions. */
-function getProspectQuestions(industry) {
-  return getDiscoveryQuestions(industry).map(section => ({
+/* Field inventory questions — only injected when hasFieldInventory=true.
+   Exported separately so the prospect page can conditionally include it. */
+const FIELD_INVENTORY_QUESTIONS = {
+  section: 'Field inventory',
+  isFieldInventory: true,
+  questions: [
+    { id:'fi1', text:'How many locations hold inventory outside your main warehouse \u2014 trucks, vans, contractor sites, or job sites?',
+      why:'Sizes the count-labor lever: locations \xd7 reconciliation cost.', placeholder:'e.g. 12', type:'number', sync:'fieldLocations' },
+    { id:'fi2', text:'What is the approximate total value of inventory held at those field locations?',
+      why:'Primary input for the carrying-cost and leakage levers.', placeholder:'e.g. 2,000,000', type:'number', sync:'fieldInvValue' },
+    { id:'fi3', text:'How often do you reconcile or count field inventory at each location, and roughly how long does it take?',
+      why:'Drives the reconciliation-labor saving calculation.', placeholder:'e.g. quarterly, half a day each', type:'context' },
+    { id:'fi4', text:'What percentage of field inventory do you estimate goes unaccounted for each year \u2014 lost, consumed without record, or simply missing?',
+      why:'Direct input for the leakage / shrinkage lever.', placeholder:'e.g. 4%', type:'percent', sync:'fieldLeakageRate' },
+    { id:'fi5', text:'Have you had situations where field stock ran out unexpectedly, requiring emergency orders or project delays?',
+      why:'Surfaces the cost-of-stockout angle \u2014 useful context for the narrative even if not directly quantified.', placeholder:'e.g. Yes, 3\u20134 times last year', type:'context' },
+    { id:'fi6', text:'What systems or processes do you use today to track what is at each field location?',
+      why:'Reveals the status-quo gap \u2014 spreadsheets / verbal / nothing tells a strong before/after story.', placeholder:'e.g. spreadsheets updated weekly', type:'context' },
+  ]
+};
+
+function getProspectQuestions(industry, options) {
+  var hasFieldInventory = options && options.hasFieldInventory;
+  var base = getDiscoveryQuestions(industry).map(section => ({
     ...section,
     questions: section.questions.filter(q => !q.internal)
   })).filter(section => section.questions.length > 0);
+  /* Inject field inventory section before the final context section
+     when the flag is set. */
+  if (hasFieldInventory) {
+    var lastIdx = base.length - 1;
+    base = [...base.slice(0, lastIdx), FIELD_INVENTORY_QUESTIONS, base[lastIdx]];
+  }
+  return base;
 }
 
 /* ─────────────────────────────────────────
@@ -518,7 +548,7 @@ async function resetDiscoveryForScenario(scenarioId) {
           const s = sessions[0]; // most recent active session for this scenario
           discoverySessionToken = s.token;
           discoveryDbSessionId  = s.id;
-          discoveryEngagement   = { openCount: s.open_count || 0, firstOpened: s.first_opened, lastOpened: s.last_opened };
+          discoveryEngagement   = { openCount: s.open_count || 0, firstOpened: s.first_opened, lastOpened: s.last_opened, submittedAt: s.submitted_at, answerCount: s.answer_count };
           (s.answers || []).forEach(a => { discoveryAnswers[a.questionId] = a.answer; });
         }
       }
@@ -719,12 +749,20 @@ async function importProspectAnswers() {
    ───────────────────────────────────────── */
 async function loadDiscoverySession() {
   try {
-    const resp = await apiFetch('/api/discovery/sessions');
+    /* Scope to the currently loaded scenario so we never bleed answers
+       from one customer into another. Fall back to unfiltered (most-recent)
+       only when no scenario is loaded yet. */
+    const scenarioId = discoveryScenarioId
+      || (typeof window !== 'undefined' && window._calcScenarioId)
+      || null;
+    const url = '/api/discovery/sessions'
+      + (scenarioId ? '?scenarioId=' + encodeURIComponent(scenarioId) : '');
+    const resp = await apiFetch(url);
     if (!resp || !resp.ok) return;
     const sessions = await resp.json();
     if (!sessions.length) return;
 
-    /* Use the most recently updated active session */
+    /* Use the most recently updated active session for this scenario */
     const session = sessions[0];
     discoverySessionToken = session.token;
     discoveryDbSessionId  = session.id;
@@ -732,25 +770,47 @@ async function loadDiscoverySession() {
     /* Populate answer cache from DB answers */
     discoveryAnswers = answersToCache(session.answers || []);
 
-    /* Trigger any calc field syncing for restored answers */
-    Object.entries(discoveryAnswers).forEach(([k, v]) => {
-      if (!k.endsWith('_by') && v) {
-        const enteredBy = discoveryAnswers[k + '_by'] || 'rep';
-        const industry  = document.getElementById('industry')?.value || 'default';
-        const qs = getDiscoveryQuestions(industry);
-        const q  = qs.flatMap(s => s.questions).find(q => q.id === k);
-        if (q?.sync) {
-          const num = parseFloat(String(v).replace(/[^0-9.]/g, ''));
-          const el  = document.getElementById(q.sync);
-          if (el && !isNaN(num) && num > 0 && !el.value) {
-            el.value = num;
-            if (typeof fieldStates !== 'undefined') fieldStates[q.sync] = enteredBy === 'prospect' ? 'confirmed_prospect' : 'estimated';
-          }
-        }
+    /* Apply discovery answers to calculator fields.
+       Rules:
+       - ALWAYS restore fieldState / provenance (so confidence chips
+         show correctly even when the field already has a saved value).
+       - Only overwrite the DOM field value if:
+           (a) the field is empty, OR
+           (b) the answer came from the prospect (prospect-verified
+               answers take precedence over saved scenario values). */
+    const industry = (document.getElementById('industry') || {}).value || 'default';
+    const allQs = getDiscoveryQuestions(industry).flatMap(function(s){ return s.questions; });
+
+    Object.keys(discoveryAnswers).forEach(function(k) {
+      if (k.endsWith('_by')) return;
+      const v = discoveryAnswers[k];
+      if (!v) return;
+      const enteredBy = discoveryAnswers[k + '_by'] || 'rep';
+      const q = allQs.find(function(q){ return q.id === k; });
+      if (!q || !q.sync) return;
+
+      const num = parseFloat(String(v).replace(/[^0-9.]/g, ''));
+      if (isNaN(num) || num <= 0) return;
+
+      /* Always restore provenance so confidence chips are correct */
+      if (typeof fieldStates !== 'undefined') {
+        fieldStates[q.sync] = enteredBy === 'prospect' ? 'confirmed_prospect' : 'estimated';
+      }
+      if (typeof confirmedFields !== 'undefined' && enteredBy === 'prospect') {
+        confirmedFields.add(q.sync);
+      }
+
+      /* Write field value: prospect answers override; rep answers fill empty fields */
+      const el = document.getElementById(q.sync);
+      if (el && (enteredBy === 'prospect' || !el.value)) {
+        el.value = num;
       }
     });
 
     if (typeof renderCalcIndustryQuestions === 'function') renderCalcIndustryQuestions();
+    if (typeof autoFlagConfidence === 'function') autoFlagConfidence();
+    if (typeof renderConfidence === 'function') renderConfidence();
+    if (typeof recalc === 'function') recalc();
 
   } catch(e) {
     console.error('loadDiscoverySession error:', e.message);
@@ -804,9 +864,11 @@ function renderDiscoveryTab() {
         </div>
         <div class="disc-prospect-note">This link belongs to <strong>${activeCompany}</strong>. Prospect answers are saved in real time. Click "Check submitted answers" to pull the latest.</div>
         ${discoveryEngagement ? `<div class="disc-engagement">
-          ${discoveryEngagement.openCount > 0
-            ? `👁 Opened <strong>${discoveryEngagement.openCount}</strong> time${discoveryEngagement.openCount!==1?'s':''}${discoveryEngagement.lastOpened ? ' · last ' + new Date(discoveryEngagement.lastOpened).toLocaleString() : ''}`
-            : '⏳ Not opened by the prospect yet'}
+          ${discoveryEngagement.submittedAt
+            ? `<span class="disc-submitted-badge">&#10003; Submitted</span> ${discoveryEngagement.answerCount} answer${discoveryEngagement.answerCount!==1?'s':''} &middot; ${new Date(discoveryEngagement.submittedAt).toLocaleString()}`
+            : discoveryEngagement.openCount > 0
+              ? `&#128065; Opened <strong>${discoveryEngagement.openCount}</strong> time${discoveryEngagement.openCount!==1?'s':''}${discoveryEngagement.lastOpened ? ' &middot; last ' + new Date(discoveryEngagement.lastOpened).toLocaleString() : ''} &middot; not yet submitted`
+              : '&#9203; Not yet opened by the prospect'}
         </div>` : ''}
       </div>`;
   } else {
@@ -892,23 +954,35 @@ function handleDiscInput(id, value, enteredBy) {
 }
 
 function applyDiscoveryToCalc() {
-  const industry = document.getElementById('industry')?.value || 'default';
+  const industry = (document.getElementById('industry') || {}).value || 'default';
   const qs = getDiscoveryQuestions(industry);
   let applied = 0;
-  qs.flatMap(s => s.questions).forEach(q => {
-    const answer = discoveryAnswers[q.id];
+  qs.flatMap(function(s){ return s.questions; }).forEach(function(q) {
+    const answer    = discoveryAnswers[q.id];
+    const enteredBy = discoveryAnswers[q.id + '_by'] || 'rep';
     if (answer && q.sync) {
       let num = parseFloat(String(answer).replace(/[^0-9.]/g, ''));
       if (!isNaN(num) && num > 0) {
-        /* Convert hours/week to % of a 40-hour week for labor-waste sync */
         if (q.syncConv === 'hoursPerWeek') num = Math.min(100, Math.round((num / 40) * 100));
         const el = document.getElementById(q.sync);
-        if (el) { el.value = num; applied++; }
+        if (el) {
+          el.value = num;
+          applied++;
+          /* Restore provenance so confidence chips update correctly */
+          if (typeof fieldStates !== 'undefined') {
+            fieldStates[q.sync] = enteredBy === 'prospect' ? 'confirmed_prospect' : 'estimated';
+          }
+          if (typeof confirmedFields !== 'undefined' && enteredBy === 'prospect') {
+            confirmedFields.add(q.sync);
+          }
+        }
       }
     }
   });
   if (typeof recalc === 'function') recalc();
-  if (typeof showToast === 'function') showToast(`Applied ${applied} answers to calculator.`);
+  if (typeof autoFlagConfidence === 'function') autoFlagConfidence();
+  if (typeof renderConfidence === 'function') renderConfidence();
+  if (typeof showToast === 'function') showToast('Applied ' + applied + ' answers to calculator.');
   if (typeof switchTab === 'function') switchTab('calc');
 }
 

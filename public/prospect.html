@@ -382,7 +382,7 @@ var _currentSectionIdx = 0;
 function renderQuestionnaire(targetSection) {
   var industry = sessionData.industry || 'default';
   var company  = sessionData.company  || 'your organisation';
-  var sections = getProspectQuestions(industry);
+  var sections = getProspectQuestions(industry, { hasFieldInventory: sessionData && !!sessionData.has_field_inventory });
   totalQuestions = sections.reduce(function(s, sec){ return s + sec.questions.length; }, 0);
   answeredCount  = Object.keys(prospectAnswers)
     .filter(function(k){ return !k.endsWith('_by') && isRealAnswer(prospectAnswers[k]); }).length;
@@ -412,7 +412,7 @@ function renderSecNav(sections) {
 }
 
 function jumpToSection(idx) {
-  var sections = getProspectQuestions(sessionData.industry || 'default');
+  var sections = getProspectQuestions(sessionData.industry || 'default', { hasFieldInventory: sessionData && !!sessionData.has_field_inventory });
   _currentSectionIdx = Math.max(0, Math.min(idx, sections.length - 1));
   showSection(sections, _currentSectionIdx);
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -451,6 +451,9 @@ function showSection(sections, idx) {
     + '<div style="height:60px;"></div>';
   renderSecNav(sections);
   updateSaveButton();
+  /* Re-observe question wraps for the prospect assistant's field-sensitive
+     context — must run after innerHTML is set since elements are new. */
+  if (typeof window._passtReObserve === 'function') window._passtReObserve();
 }
 
 function renderWelcomeCard() {
@@ -659,7 +662,7 @@ function updateSectionCounts() {
      Update just the count badge for the currently visible section. */
   var el = document.getElementById('sectionCount');
   if (!el) return;
-  var sections = getProspectQuestions(sessionData && sessionData.industry || 'default');
+  var sections = getProspectQuestions(sessionData && sessionData.industry || 'default', { hasFieldInventory: sessionData && !!sessionData.has_field_inventory });
   var sec = sections[_currentSectionIdx];
   if (!sec) return;
   var answered = sec.questions.filter(function(q){ return isRealAnswer(prospectAnswers[q.id]); }).length;
@@ -770,7 +773,7 @@ function isRealAnswer(val) {
 /* Per-driver progress: how many of its questions this questionnaire asks,
    and how many the prospect has genuinely answered. */
 function computeDriverProgress() {
-  const sections = getProspectQuestions(sessionData?.industry || 'default');
+  const sections = getProspectQuestions((sessionData && sessionData.industry) || 'default', { hasFieldInventory: sessionData && !!sessionData.has_field_inventory });
   const out = {};
   Object.keys(VALUE_DRIVERS).forEach(k => { out[k] = { total: 0, answered: 0 }; });
   sections.forEach(sec => sec.questions.forEach(q => {
@@ -830,7 +833,7 @@ function estimateMinutesLeft(remaining) {
 }
 
 function updateProgress() {
-  const sections = getProspectQuestions(sessionData?.industry || 'default');
+  const sections = getProspectQuestions((sessionData && sessionData.industry) || 'default', { hasFieldInventory: sessionData && !!sessionData.has_field_inventory });
   const total = sections.reduce((s, sec) => s + sec.questions.length, 0);
   const answered = Object.keys(prospectAnswers)
     .filter(k => !k.endsWith('_by') && isRealAnswer(prospectAnswers[k])).length;
@@ -912,7 +915,7 @@ async function autoSave() {
 function submitAnswers() { renderReview(); }
 
 function renderReview() {
-  const sections = getProspectQuestions(sessionData?.industry || 'default');
+  const sections = getProspectQuestions((sessionData && sessionData.industry) || 'default', { hasFieldInventory: sessionData && !!sessionData.has_field_inventory });
   const total = sections.reduce((s, sec) => s + sec.questions.length, 0);
   const answered = Object.keys(prospectAnswers)
     .filter(k => !k.endsWith('_by') && isRealAnswer(prospectAnswers[k])).length;
@@ -969,7 +972,7 @@ function backToForm() {
 
 function editAnswer(id) {
   /* Find which section the question is in, then jump there */
-  var sections = getProspectQuestions(sessionData.industry || 'default');
+  var sections = getProspectQuestions(sessionData.industry || 'default', { hasFieldInventory: sessionData && !!sessionData.has_field_inventory });
   var targetSection = _currentSectionIdx;
   sections.forEach(function(sec, i) {
     if (sec.questions.some(function(q){ return q.id === id; })) targetSection = i;
@@ -988,15 +991,25 @@ function editAnswer(id) {
 }
 
 async function confirmSubmit() {
-  /* All answers are already in the DB via per-keystroke pushAnswer() calls.
-     This just shows the success state.                                      */
   const answered = Object.keys(prospectAnswers)
     .filter(k => !k.endsWith('_by') && isRealAnswer(prospectAnswers[k])).length;
 
+  /* Tell the server the prospect has confirmed submission — this stamps
+     submitted_at on the session and emails the rep. Fire-and-forget:
+     the thank-you screen shows regardless of whether the call succeeds. */
+  try {
+    await fetch('/api/discovery/sessions/' + encodeURIComponent(sessionData.token) + '/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (e) {
+    console.warn('submit endpoint error (non-blocking):', e.message);
+  }
+
   document.getElementById('mainContent').innerHTML = `
     <div class="complete-card">
-      <div class="complete-icon">🎉</div>
-      <div class="complete-title">Thank you — answers submitted!</div>
+      <div class="complete-icon">&#127881;</div>
+      <div class="complete-title">Thank you &#8212; answers submitted!</div>
       <div class="complete-sub">
         Your ${answered} responses have been saved and are ready for your Cloud Inventory contact to review.
         <br/><br/>
@@ -1006,12 +1019,12 @@ async function confirmSubmit() {
       </div>
     </div>`;
 
-  document.getElementById('progressLabel').textContent = `${answered} answers submitted ✓`;
+  document.getElementById('progressLabel').textContent = answered + ' answers submitted \u2713';
   document.getElementById('progressFill').style.width = '100%';
   const meta = document.getElementById('progressMeta');
-  if (meta) meta.textContent = 'Submitted — thank you.';
+  if (meta) meta.textContent = 'Submitted \u2014 thank you.';
   document.getElementById('saveBtn').disabled = true;
-  document.getElementById('saveBtn').textContent = 'Submitted ✓';
+  document.getElementById('saveBtn').textContent = 'Submitted \u2713';
 }
 
 function getSectionIcon(title) {
@@ -1081,8 +1094,14 @@ document.addEventListener('DOMContentLoaded', init);
   background:linear-gradient(180deg,var(--navy-mid),var(--navy));color:#fff;flex-shrink:0;}
 .asst-title{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px;}
 .asst-dot{width:8px;height:8px;border-radius:50%;background:#4ADE80;box-shadow:0 0 0 3px rgba(74,222,128,.25);}
-.asst-close{background:none;border:none;color:rgba(255,255,255,.8);font-size:24px;line-height:1;cursor:pointer;padding:0 4px;}
-.asst-close:hover{color:#fff;}
+.asst-close{background:none;border:none;color:rgba(255,255,255,.8);font-size:26px;line-height:1;cursor:pointer;padding:8px 10px;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:6px;}
+.asst-close:hover{color:#fff;background:rgba(255,255,255,.1);}
+.asst-close-x{font-size:26px;line-height:1;}
+.asst-close-label{display:none;font-size:13px;font-weight:600;}
+@media(max-width:600px){
+  .asst-close{font-size:22px;padding:10px 14px;}
+  .asst-close-label{display:inline;}
+}
 
 .asst-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;background:var(--gray-50);}
 .asst-msg{display:flex;}

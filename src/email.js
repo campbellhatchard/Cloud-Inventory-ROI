@@ -257,8 +257,49 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   4. Discovery submission notification
+   Sent to the rep when a prospect clicks "Confirm and send".
+   ══════════════════════════════════════════════════════════════════ */
+async function sendDiscoverySubmitted(toEmail, repName, company, answerCount, discUrl) {
+  const html = `<!DOCTYPE html><html><head>${baseStyle}</head><body>
+    <div class="wrap">
+      <div class="header">${logo()}<div class="header-sub">ROI Business Case Builder</div></div>
+      <div class="accent"></div>
+      <div class="body">
+        <h2>Your prospect has submitted their answers</h2>
+        <p>Hi <strong>${escapeHtml(repName)}</strong>,</p>
+        <p><strong>${escapeHtml(company)}</strong> has just completed and submitted their discovery questionnaire — <strong>${answerCount} answer${answerCount !== 1 ? 's' : ''}</strong> recorded.</p>
+        <p>Their responses are ready in the app. Click below to review the answers and apply them to the calculator.</p>
+        <div style="text-align:center;">
+          <a class="btn" href="${discUrl}">Review answers in the app</a>
+        </div>
+        <p class="note">This notification was sent because you generated the discovery link for ${escapeHtml(company)}. The answers are applied to the calculator from the Discovery tab.</p>
+      </div>
+      <div class="footer">Cloud Inventory &middot; Nextworld Company &middot; Internal tool</div>
+    </div>
+  </body></html>`;
+
+  const text = `Hi ${repName},
+
+${company} has submitted their discovery questionnaire — ${answerCount} answer${answerCount !== 1 ? 's' : ''} recorded.
+
+Review their answers and apply them to the calculator:
+${discUrl}
+
+— Cloud Inventory`;
+
+  return send({
+    to:      toEmail,
+    subject: `${company} submitted their discovery answers (${answerCount} responses)`,
+    html,
+    text
+  });
+}
+
 module.exports = {
   sendPasswordReset,
   sendWelcomeWithTempPassword,
-  sendPurgeConfirmation
+  sendPurgeConfirmation,
+  sendDiscoverySubmitted
 };

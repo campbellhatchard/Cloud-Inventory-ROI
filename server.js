@@ -497,6 +497,7 @@ app.get('/api/discovery/sessions', requireAuth, async (req, res) => {
       `SELECT ds.id, ds.token, ds.scenario_id, ds.industry, ds.company,
               ds.is_active, ds.expires_at, ds.created_at, ds.updated_at,
               ds.open_count, ds.first_opened, ds.last_opened,
+              ds.submitted_at, ds.answer_count,
               COALESCE(
                 json_agg(json_build_object('questionId', da.question_id, 'answer', da.answer, 'enteredBy', da.entered_by) ORDER BY da.question_id)
                 FILTER (WHERE da.id IS NOT NULL), '[]'::json
@@ -517,14 +518,55 @@ app.post('/api/discovery/sessions', requireAuth, async (req, res) => {
     const { scenarioId, industry, company } = req.body;
     const token = crypto.randomBytes(32).toString('hex');
     const { query } = db();
+    /* Read has_field_inventory from the customer record so the prospect link
+       carries it without a live JOIN on every page load. */
+    let hasFieldInventory = false;
+    if (scenarioId) {
+      const { rows: scRows } = await query(
+        `SELECT c.has_field_inventory FROM scenarios s
+         JOIN customers c ON c.id = s.customer_id
+         WHERE s.id = $1`, [scenarioId]
+      );
+      if (scRows.length) hasFieldInventory = !!scRows[0].has_field_inventory;
+    }
     const { rows } = await query(
-      `INSERT INTO discovery_sessions (scenario_id, owner_id, token, industry, company) VALUES ($1, $2, $3, $4, $5) RETURNING id, token, created_at`,
-      [scenarioId || null, req.user.id, token, industry || 'default', company || '']
+      `INSERT INTO discovery_sessions (scenario_id, owner_id, token, industry, company, has_field_inventory)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, token, created_at`,
+      [scenarioId || null, req.user.id, token, industry || 'default', company || '', hasFieldInventory]
     );
     const { log, ACTIONS } = require('./src/audit');
     await log({ userId: req.user.id, action: ACTIONS.DISCOVERY_LINK_GENERATED, entityType: 'discovery_session', entityId: rows[0].id, ipAddress: req.ip });
     res.json({ ok: true, token: rows[0].token, sessionId: rows[0].id, prospectUrl: `${APP_URL}/prospect.html?token=${rows[0].token}` });
   } catch(err) { res.status(500).json({ error: 'Failed to create discovery session.' }); }
+});
+
+/* ── Customer field-inventory flag ──────────────────────────────────
+   GET  /api/customers/:id/field-inventory  — read the flag
+   PATCH /api/customers/:id/field-inventory  — set true/false        */
+app.get('/api/customers/:id/field-inventory', requireAuth, async (req, res) => {
+  try {
+    const { query } = db();
+    const { rows } = await query(
+      `SELECT has_field_inventory FROM customers WHERE id = $1 AND owner_id = $2`,
+      [req.params.id, req.user.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Customer not found.' });
+    res.json({ hasFieldInventory: rows[0].has_field_inventory });
+  } catch(err) { res.status(500).json({ error: 'Failed to read flag.' }); }
+});
+
+app.patch('/api/customers/:id/field-inventory', requireAuth, async (req, res) => {
+  try {
+    const val = !!req.body.hasFieldInventory;
+    const { query } = db();
+    const { rowCount } = await query(
+      `UPDATE customers SET has_field_inventory = $1, updated_at = NOW()
+       WHERE id = $2 AND owner_id = $3`,
+      [val, req.params.id, req.user.id]
+    );
+    if (!rowCount) return res.status(404).json({ error: 'Customer not found.' });
+    res.json({ ok: true, hasFieldInventory: val });
+  } catch(err) { res.status(500).json({ error: 'Failed to update flag.' }); }
 });
 
 app.get('/api/discovery/sessions/:token', async (req, res) => {
@@ -541,6 +583,7 @@ app.get('/api/discovery/sessions/:token', async (req, res) => {
     const { query } = db();
     const { rows } = await query(
       `SELECT ds.id, ds.token, ds.industry, ds.company, ds.is_active, ds.expires_at,
+              ds.has_field_inventory,
               COALESCE(json_agg(json_build_object('questionId', da.question_id, 'answer', da.answer, 'enteredBy', da.entered_by) ORDER BY da.question_id) FILTER (WHERE da.id IS NOT NULL), '[]'::json) AS answers
        FROM discovery_sessions ds LEFT JOIN discovery_answers da ON da.session_id = ds.id WHERE ds.token = $1 GROUP BY ds.id`, [token]
     );
@@ -587,6 +630,121 @@ app.put('/api/discovery/sessions/:token/answers', async (req, res) => {
   } catch(err) { res.status(500).json({ error: 'Failed to save answer.' }); }
 });
 
+/* ── Prospect submits their discovery answers ───────────────────────
+   Called by confirmSubmit() on the prospect page after the review step.
+   Stamps submitted_at, emails the rep, logs the audit event.
+   Fire-and-forget on email — submission always succeeds even if email fails. */
+app.post('/api/discovery/sessions/:token/submit', async (req, res) => {
+  try {
+    const token = String(req.params.token || '').trim();
+    if (!isValidDiscoveryToken(token)) {
+      return res.status(403).json({ error: 'Invalid or expired session.' });
+    }
+    const { query } = db();
+
+    /* Count real answers and stamp submitted_at */
+    const { rows } = await query(
+      `UPDATE discovery_sessions ds
+       SET submitted_at = COALESCE(ds.submitted_at, NOW()),
+           answer_count = (
+             SELECT COUNT(*) FROM discovery_answers da
+             WHERE da.session_id = ds.id
+               AND da.answer IS NOT NULL AND da.answer <> ''
+           )
+       WHERE ds.token = $1 AND ds.is_active = TRUE
+       RETURNING ds.id, ds.submitted_at, ds.answer_count,
+                 ds.company, ds.owner_id,
+                 (ds.submitted_at IS NULL) AS first_submission`,
+      [token]
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({ error: 'Session not found or inactive.' });
+    }
+
+    const s = rows[0];
+    res.json({ ok: true, submittedAt: s.submitted_at, answerCount: s.answer_count });
+
+    /* ── Async: email the rep (never blocks the response) ── */
+    if (s.first_submission !== false) {
+      try {
+        const { rows: userRows } = await query(
+          `SELECT u.email, u.username FROM users u WHERE u.id = $1`, [s.owner_id]
+        );
+        if (userRows.length) {
+          const rep     = userRows[0];
+          const discUrl = `${APP_URL}/?tab=disc`;
+          const { sendDiscoverySubmitted } = require('./src/email');
+          await sendDiscoverySubmitted(
+            rep.email,
+            rep.username,
+            s.company || 'Your prospect',
+            s.answer_count,
+            discUrl
+          );
+        }
+      } catch (emailErr) {
+        console.error('[discovery submit] email failed:', emailErr.message);
+      }
+
+      /* Audit log */
+      try {
+        const { log, ACTIONS } = require('./src/audit');
+        await log({
+          userId:     s.owner_id,
+          action:     ACTIONS.DISCOVERY_ANSWERS_SUBMIT,
+          entityType: 'discovery_session',
+          entityId:   s.id,
+          detail:     { company: s.company, answerCount: s.answer_count }
+        });
+      } catch (auditErr) {
+        console.error('[discovery submit] audit log failed:', auditErr.message);
+      }
+    }
+  } catch (err) {
+    console.error('[discovery submit] error:', err.message);
+    res.status(500).json({ error: 'Failed to record submission.' });
+  }
+});
+
+/* ── Unread submission count (for nav badge) ────────────────────────
+   Returns the count of sessions that have been submitted but the rep
+   hasn't opened the Discovery tab since submission. "Unread" is
+   approximated as submitted_at > last time the rep loaded the disc tab,
+   which we track via a lightweight last_disc_viewed timestamp on the
+   session itself. Simple and avoids a separate read-receipts table. */
+app.get('/api/discovery/unread-count', requireAuth, async (req, res) => {
+  try {
+    const { query } = db();
+    const { rows } = await query(
+      `SELECT COUNT(*) AS count FROM discovery_sessions
+       WHERE owner_id = $1
+         AND submitted_at IS NOT NULL
+         AND is_active = TRUE
+         AND (last_disc_viewed IS NULL OR submitted_at > last_disc_viewed)`,
+      [req.user.id]
+    );
+    res.json({ count: parseInt(rows[0].count, 10) });
+  } catch (err) {
+    res.status(500).json({ count: 0 });
+  }
+});
+
+/* ── Mark Discovery tab viewed (clears badge) ─────────────────────── */
+app.post('/api/discovery/mark-viewed', requireAuth, async (req, res) => {
+  try {
+    const { query } = db();
+    await query(
+      `UPDATE discovery_sessions SET last_disc_viewed = NOW()
+       WHERE owner_id = $1 AND submitted_at IS NOT NULL AND is_active = TRUE`,
+      [req.user.id]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false });
+  }
+});
+
 app.put('/api/discovery/sessions/:token/rotate', requireAuth, async (req, res) => {
   try {
     const { query } = db();
@@ -624,10 +782,16 @@ app.post('/api/business-case-shares', requireAuth, async (req, res) => {
     if (!scenarioId) return res.status(400).json({ error: 'scenarioId required.' });
     const { query } = db();
     const token = crypto.randomBytes(32).toString('hex');
+    /* Look up base_id so the business case link always shows the latest version. */
+    const { rows: sRows } = await query(
+      `SELECT base_id FROM scenarios WHERE id = $1`, [scenarioId]
+    );
+    if (!sRows.length) return res.status(404).json({ error: 'Scenario not found.' });
+    const baseId = sRows[0].base_id;
     const { rows } = await query(
-      `INSERT INTO business_case_shares (token, scenario_id, owner_id, company, title)
-       VALUES ($1, $2, $3, $4, $5) RETURNING id, token, created_at`,
-      [token, scenarioId, req.user.id, company || '', title || '']
+      `INSERT INTO business_case_shares (token, scenario_id, scenario_base_id, owner_id, company, title)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, token, created_at`,
+      [token, scenarioId, baseId, req.user.id, company || '', title || '']
     );
     res.json({ ok: true, token: rows[0].token, shareUrl: `${APP_URL}/business-case.html?token=${rows[0].token}` });
   } catch (err) { res.status(500).json({ error: 'Failed to create business-case share.' }); }
@@ -640,7 +804,8 @@ app.get('/api/business-case-shares/:token', async (req, res) => {
     const { query } = db();
     const { rows } = await query(
       `SELECT b.id, b.is_active, b.company, b.title, s.data
-       FROM business_case_shares b JOIN scenarios s ON s.id = b.scenario_id
+       FROM business_case_shares b
+       JOIN scenarios s ON s.base_id = b.scenario_base_id AND s.is_current = TRUE
        WHERE b.token = $1`, [token]
     );
     if (!rows.length) return res.status(404).json({ error: 'Business case not found.' });
@@ -683,10 +848,16 @@ app.post('/api/scenario-shares', requireAuth, async (req, res) => {
     if (!scenarioId) return res.status(400).json({ error: 'scenarioId required.' });
     const { query } = db();
     const token = crypto.randomBytes(32).toString('hex');
+    /* Look up the base_id so the link always resolves to the latest version. */
+    const { rows: sRows } = await query(
+      `SELECT base_id FROM scenarios WHERE id = $1`, [scenarioId]
+    );
+    if (!sRows.length) return res.status(404).json({ error: 'Scenario not found.' });
+    const baseId = sRows[0].base_id;
     const { rows } = await query(
-      `INSERT INTO scenario_shares (token, scenario_id, owner_id, company, title)
-       VALUES ($1, $2, $3, $4, $5) RETURNING token`,
-      [token, scenarioId, req.user.id, company || '', title || '']
+      `INSERT INTO scenario_shares (token, scenario_id, scenario_base_id, owner_id, company, title)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING token`,
+      [token, scenarioId, baseId, req.user.id, company || '', title || '']
     );
     res.json({ ok: true, token: rows[0].token, shareUrl: `${APP_URL}/?share=${rows[0].token}` });
   } catch (err) { res.status(500).json({ error: 'Failed to create share link.' }); }
@@ -699,7 +870,8 @@ app.get('/api/scenario-shares/:token', async (req, res) => {
     const { query } = db();
     const { rows } = await query(
       `SELECT sh.id, sh.is_active, sh.company, sh.title, s.data
-       FROM scenario_shares sh JOIN scenarios s ON s.id = sh.scenario_id
+       FROM scenario_shares sh
+       JOIN scenarios s ON s.base_id = sh.scenario_base_id AND s.is_current = TRUE
        WHERE sh.token = $1`, [token]
     );
     if (!rows.length) return res.status(404).json({ error: 'Shared scenario not found.' });

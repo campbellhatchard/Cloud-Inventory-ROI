@@ -133,26 +133,37 @@
         /* question wrap has id="wrap-<questionId>" */
         if (el.id && el.id.startsWith('wrap-')) {
           visibleQuestionId = el.id.replace('wrap-', '');
+          /* Also pull the section title from the nearest sec-card-title */
+          var card = el.closest && el.closest('.sec-card');
+          var t = card && card.querySelector('.sec-card-title');
+          if (t) visibleSectionTitle = t.textContent || null;
         }
-        /* section title */
-        var title = el.querySelector && el.querySelector('.section-title-text');
-        if (title) visibleSectionTitle = title.textContent || null;
       });
-    }, { threshold: 0.5 });
-    /* Observe question wraps and section headers as they exist now and
-       after re-render (re-called on renderQuestionnaire). */
+    }, { threshold: 0.3 });
+
+    /* observeAll: called after each section renders.
+       In the tabbed layout wrap-* elements are replaced on every
+       section switch, so we must re-observe each time. */
     function observeAll() {
-      document.querySelectorAll('[id^="wrap-"], .section-block').forEach(function (el) {
+      document.querySelectorAll('[id^="wrap-"]').forEach(function (el) {
         observer.observe(el);
       });
     }
     observeAll();
-    /* Re-observe after the questionnaire re-renders. */
+
+    /* Watch mainContent for child changes (section switches in tabbed layout)
+       and re-observe newly rendered question wraps. */
     if (window.MutationObserver) {
-      var mc = new MutationObserver(observeAll);
+      var mc = new MutationObserver(function() {
+        observeAll();
+      });
       var host = document.getElementById('mainContent');
       if (host) mc.observe(host, { childList: true, subtree: false });
     }
+
+    /* Expose globally so showSection() in prospect.html can trigger it
+       immediately after a section renders, before scroll starts. */
+    window._passtReObserve = observeAll;
   }
 
   function getContext() {
@@ -232,7 +243,7 @@
     panel.innerHTML =
       '<div class="asst-head">' +
         '<div class="asst-title"><span class="asst-dot"></span>Questionnaire help</div>' +
-        '<button class="asst-close" aria-label="Close">&times;</button>' +
+        '<button class="asst-close passt-close" aria-label="Close"><span class="asst-close-x">&times;</span><span class="asst-close-label">Close</span></button>' +
       '</div>' +
       '<div class="asst-body" id="passtBody"></div>' +
       '<div class="asst-persist" id="passtPersist"></div>' +

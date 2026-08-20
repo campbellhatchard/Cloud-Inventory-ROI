@@ -221,28 +221,16 @@
   function renderApp() {
     const app = $('sfApp');
     const r = computeReadiness();
-    /* Tab labels with gap count badge */
-    const gapCount = S.gaps.length;
-    const missingCount = r.miss ? r.miss.length : 0;
-    const tabs = [
-      { k:'context',     l:'Context' },
-      { k:'checklist',   l:'Demo &amp; Fit' },
-      { k:'gaps',        l:'Gaps',        badge: gapCount || null },
-      { k:'integration', l:'Integration' },
-      { k:'handoff',     l:'Readiness',   badge: missingCount || null, badgeCls:'sf-tab-badge-warn' }
-    ];
     app.innerHTML = `
-      <div class="sf-topbar">
-        <div class="sf-topbar-left">
-          <span class="sf-ctx-name">${esc(customerName || S.opportunity.customer || 'Customer')}</span>
-          ${S.opportunity.stage ? `<span class="sf-stage-pill">${esc(S.opportunity.stage)}</span>` : ''}
-          ${!canWrite ? '<span class="sf-ro-badge">Read-only</span>' : ''}
-        </div>
-        <div class="sf-topbar-right" id="sfSaveStateMini"></div>
+      <div class="sf-context-bar">
+        <span class="sf-ctx-name">🏢 ${esc(customerName || S.opportunity.customer || 'Customer')}</span>
+        ${!canWrite ? '<span class="sf-ro-badge">Read + print (Solution Engineer edits)</span>' : ''}
+        <span class="sf-readiness" id="sfReadinessMini"></span>
       </div>
-      <div class="sf-readiness-bar" id="sfReadinessBar"></div>
       <div class="sf-tabs">
-        ${tabs.map(t=>`<button class="sf-tab ${activeTab===t.k?'active':''}" data-sftab="${t.k}">${t.l}${t.badge?`<span class="sf-tab-badge ${t.badgeCls||''}">${t.badge}</span>`:''}</button>`).join('')}
+        ${['context|Context','checklist|Demo &amp; Fit','gaps|Gaps','integration|Integration','handoff|Readiness'].map(t=>{
+          const [k,l]=t.split('|'); return `<button class="sf-tab ${activeTab===k?'active':''}" data-sftab="${k}">${l}</button>`;
+        }).join('')}
       </div>
       <div class="sf-panes">
         <div class="sf-pane" data-sfpane="context">${renderContext()}</div>
@@ -254,75 +242,18 @@
     wireTabs();
     wireBindings();
     showActivePane();
-    renderReadinessBar(r.score, r.status, r.miss);
-    setSaveState('');
+    renderReadinessBar(r.score, r.status);
     if (!canWrite) disableInputs();
   }
 
-  function renderReadinessBar(score, status, miss) {
-    const el = $('sfReadinessBar');
+  function renderReadinessBar(score, status) {
+    const el = $('sfReadinessMini');
     if (!el) return;
-    const pct = score || 0;
-    const label = status==='ready' ? 'Ready to hand off'
-                : status==='conditional' ? 'Conditional — some items still open'
-                : 'Not ready — key fields missing';
-    const barColor = status==='ready' ? 'var(--green)' : status==='conditional' ? '#D97706' : 'var(--red)';
-    const blocker = miss && miss.length
-      ? `<span class="sf-rbar-blocker">${miss.length} item${miss.length!==1?'s':''} to resolve</span>`
-      : '';
-    el.innerHTML = `
-      <div class="sf-rbar-inner">
-        <div class="sf-rbar-track"><div class="sf-rbar-fill" style="width:${pct}%;background:${barColor};"></div></div>
-        <div class="sf-rbar-info">
-          <span class="sf-rbar-pct" style="color:${barColor}">${pct}%</span>
-          <span class="sf-rbar-label">${esc(label)}</span>
-          ${blocker}
-        </div>
-      </div>`;
-    /* Also mirror save state label here */
-    const sm = $('sfSaveStateMini');
-    if (sm) setSaveState(_lastSaveState || '');
-  }
-
-  let _lastSaveState = '';
-  function setSaveState(state) {
-    _lastSaveState = state;
-    /* Update the page-header savestate element */
-    const el = $('sfSaveState');
-    /* Also update the mini bar */
-    const mini = $('sfSaveStateMini');
-    const html = !canWrite ? '<span class="sf-ro">Read-only</span>'
-      : state==='saving' ? '<span class="sf-saving">Saving…</span>'
-      : state==='saved'  ? '<span class="sf-saved">✓ Saved</span>'
-      : state==='error'  ? '<span class="sf-err">⚠ Save failed</span>' : '';
-    if (el) el.innerHTML = html;
-    if (mini) mini.innerHTML = html;
+    const cls = status==='ready'?'sf-r-ready':status==='conditional'?'sf-r-cond':'sf-r-block';
+    el.innerHTML = `<span class="sf-r-chip ${cls}">${score}% ${status==='ready'?'Ready':status==='conditional'?'Conditional':'Not ready'}</span>`;
   }
 
   /* ── Tab 1: Context (opportunity / architecture / partner) ──────── */
-  /* Section accordion helper — tracks open state in openSections set */
-  const _openSections = new Set(['opp','arch','partner']);
-  function sfSection(id, icon, title, filledOf, content) {
-    const open = _openSections.has(id);
-    const pct = filledOf ? filledOf[0] + '/' + filledOf[1] : null;
-    const complete = filledOf && filledOf[0] === filledOf[1] && filledOf[1] > 0;
-    const statusCls = complete ? 'sf-sec-status-done' : (filledOf && filledOf[0] > 0 ? 'sf-sec-status-part' : '');
-    return `<div class="sf-section ${open?'sf-section-open':''}" id="sfsec-${id}">
-      <button class="sf-section-head" data-sftoggle="${id}" type="button">
-        <span class="sf-section-icon sf-icon-${icon}">${sfIcon(icon)}</span>
-        <span class="sf-section-title">${esc(title)}</span>
-        ${pct ? `<span class="sf-sec-status ${statusCls}">${complete?'✓ Complete':pct+' filled'}</span>` : ''}
-        <span class="sf-section-chevron">${open?'▲':'▼'}</span>
-      </button>
-      <div class="sf-section-body">${open ? content : ''}</div>
-    </div>`;
-  }
-  function sfIcon(t) {
-    return t==='opp'?'🎯':t==='arch'?'🔗':t==='partner'?'🤝':'📋';
-  }
-  function countFilled(paths) {
-    return paths.filter(p => { const v = val(S,p); return v && String(v).trim(); }).length;
-  }
   function renderContext() {
     const o=S.opportunity, a=S.architecture, p=S.partner;
     const f = (label, path, ph='') => `<div class="sf-field"><label>${esc(label)}</label><input data-sfbind="${path}" value="${esc(val(S,path))}" placeholder="${esc(ph)}"></div>`;
@@ -358,195 +289,135 @@
       <button class="btn btn-danger btn-sm" data-sfcustdel="${i}" title="Remove">×</button>
     </div>`).join('');
 
-    const oppFilled = countFilled(['opportunity.customer','opportunity.solutionEngineer','opportunity.stage','opportunity.goLive','opportunity.problem','opportunity.outcome']);
-    const archFilled = countFilled(['architecture.relationship','architecture.erp','architecture.integrationMethod','architecture.integrationOwner']);
-    const partFilled = countFilled(['partner.involved','partner.company','partner.contactName']);
-
-    const oppBody = `
-      <div class="sf-row3">
-        ${sel('Stage','opportunity.stage',['Discovery','Technical validation','Proposal','Closed'])}
-        ${f('Target go-live','opportunity.goLive','e.g. Q1 2027')}
-        ${f('Estimated users','opportunity.users','e.g. 45')}
-      </div>
-      ${productsField}
-      <div class="sf-row2">
+    return `
+      <div class="sf-card"><h3>Opportunity</h3>
+        <div class="sf-row2">${f('Customer / prospect','opportunity.customer')}${seField}</div>
+        <div class="sf-row2">${sel('Stage','opportunity.stage',['Discovery','Technical validation','Proposal','Closed'])}${f('Target go-live','opportunity.goLive','e.g. Q1 2027')}</div>
+        ${productsField}
+        <div class="sf-row2">${f('Estimated users','opportunity.users')}<div></div></div>
         ${ta('Business problem','opportunity.problem','What is the customer trying to solve?')}
         ${ta('Desired outcome','opportunity.outcome','What does success look like?')}
+        <div class="sf-row2">${ownerBlock('Business owner','businessOwner')}${ownerBlock('Technical owner','technicalOwner')}</div>
       </div>
-      <div class="sf-row2" style="margin-top:4px;">
-        ${seField}
-        <div></div>
-      </div>
-      <div class="sf-subsection-label">Contacts</div>
-      <div class="sf-row2">${ownerBlock('Business owner','businessOwner')}${ownerBlock('Technical owner','technicalOwner')}</div>`;
-
-    const archBody = `
-      ${sel('Deployment relationship','architecture.relationship',['','Standalone','Integrated to system of record','Hybrid'])}
-      <div id="sfIntFields" class="${a.relationship==='Standalone'?'sf-hidden':''}">
-        <div class="sf-row2">${f('ERP / system of record','architecture.erp')}${f('Version','architecture.version')}</div>
-        <div class="sf-row2">
-          ${sel('Primary integration method','architecture.integrationMethod',['','Cloud Inventory REST API','SOAP / web service','File','Middleware / iPaaS','Connector','Other'])}
-          ${sel('Integration delivery owner','architecture.integrationOwner',['','Cloud Inventory','Customer','Partner','Shared'])}
+      <div class="sf-card"><h3>System of record &amp; solution relationship</h3>
+        ${sel('Deployment relationship','architecture.relationship',['','Standalone','Integrated to system of record','Hybrid'])}
+        <div id="sfIntFields" class="${a.relationship==='Standalone'?'sf-hidden':''}">
+          <div class="sf-row2">${f('ERP / system of record','architecture.erp')}${f('Version','architecture.version')}</div>
+          <div class="sf-row2">${sel('Primary integration method','architecture.integrationMethod',['','Standalone','Cloud Inventory REST API','SOAP / web service','File','Middleware / iPaaS','Connector','Other'])}${sel('Integration delivery owner','architecture.integrationOwner',['','Cloud Inventory','Customer','Partner','Shared'])}</div>
+          ${ta('Integration notes','architecture.integrationNotes')}
         </div>
-        ${ta('Integration notes','architecture.integrationNotes','Frequency, volumes, error handling…')}
+        <div id="sfStandaloneNote" class="sf-note ${a.relationship==='Standalone'?'':'sf-hidden'}">Standalone deployment — no system-of-record integration in scope.</div>
+        <div class="sf-subsection">
+          ${sel('Known customizations to the system of record?','architecture.hasCustomizations',['','No','Yes'])}
+          <div id="sfCustomizations" class="${a.hasCustomizations==='Yes'?'':'sf-hidden'}">
+            <div class="sf-custom-head"><span>Module</span><span>Customization</span><span>Impact</span><span></span></div>
+            <div id="sfCustomRows">${customRows || '<div class="sf-muted" style="padding:4px 0;">No customizations added yet.</div>'}</div>
+            <button class="btn btn-ghost btn-sm" data-sfaction="addCustomization">＋ Add another</button>
+          </div>
+        </div>
       </div>
-      <div id="sfStandaloneNote" class="sf-note ${a.relationship==='Standalone'?'':'sf-hidden'}">Standalone — no system-of-record integration in scope.</div>
-      <div class="sf-subsection-label" style="margin-top:14px;">Known customizations</div>
-      ${sel('System of record has known customizations?','architecture.hasCustomizations',['','No','Yes'])}
-      <div id="sfCustomizations" class="${a.hasCustomizations==='Yes'?'':'sf-hidden'}">
-        <div class="sf-custom-head"><span>Module</span><span>What was customized</span><span>Impact</span><span></span></div>
-        <div id="sfCustomRows">${customRows || '<div class="sf-muted" style="padding:4px 0;">No customizations added yet.</div>'}</div>
-        <button class="btn btn-ghost btn-sm" data-sfaction="addCustomization" style="margin-top:6px;">＋ Add customization</button>
+      <div class="sf-card"><h3>Partner involvement</h3>
+        ${sel('Partner involved?','partner.involved',['','No','Yes'])}
+        <div id="sfPartnerFields" class="${p.involved==='Yes'?'':'sf-hidden'}">
+          <div class="sf-row2">${f('Partner company','partner.company')}${f('Role','partner.role','e.g. ERP / integration partner')}</div>
+          <div class="sf-row2">${f('Contact name','partner.contactName')}${f('Email','partner.email')}</div>
+        </div>
       </div>`;
-
-    const partnerBody = `
-      ${sel('Partner involved?','partner.involved',['','No','Yes'])}
-      <div id="sfPartnerFields" class="${p.involved==='Yes'?'':'sf-hidden'}">
-        <div class="sf-row2">${f('Partner company','partner.company')}${f('Role','partner.role','e.g. ERP / integration partner')}</div>
-        <div class="sf-row2">${f('Contact name','partner.contactName')}${f('Email','partner.email')}</div>
-      </div>`;
-
-    return sfSection('opp','opp','Opportunity',[oppFilled,6],oppBody)
-         + sfSection('arch','arch','System of record & architecture',[archFilled,4],archBody)
-         + sfSection('partner','partner','Partner involvement',[partFilled,3],partnerBody);
   }
 
   /* ── Tab 2: Demo & Fit checklist ────────────────────────────────── */
-  function fitBadge(fit) {
-    var map = {'Full fit':'sf-badge-green','Partial fit':'sf-badge-amber','Gap':'sf-badge-red','Unknown':'sf-badge-gray','Not reviewed':'sf-badge-gray','Not applicable':'sf-badge-gray'};
-    var lbl = {'Full fit':'Full fit','Partial fit':'Partial','Gap':'Gap','Unknown':'Unknown','Not reviewed':'Not reviewed','Not applicable':'N/A'};
-    return '<span class="sf-proc-badge ' + (map[fit]||'sf-badge-gray') + '">' + esc(lbl[fit]||fit) + '</span>';
-  }
-  function demoBadge(status) {
-    if (status==='Demonstrated') return '<span class="sf-proc-badge sf-badge-green">&#10003; Demo’d</span>';
-    if (status==='Not applicable') return '<span class="sf-proc-badge sf-badge-gray">N/A</span>';
-    if (status==='Not reviewed') return '';
-    return '<span class="sf-proc-badge sf-badge-amber">' + esc(status) + '</span>';
-  }
   function renderChecklist() {
-    var selected = S.processes.filter(function(p){return p.selected;}).length;
-    var demoed   = S.processes.filter(function(p){return p.selected && p.demoStatus==='Demonstrated';}).length;
-    var gaps     = S.processes.filter(function(p){return p.selected && (p.fit==='Gap'||p.fit==='Partial fit');}).length;
-    return '<div class="sf-checklist-head">'
-      + '<div class="sf-checklist-stats">'
-      + '<div class="sf-cstat"><span class="sf-cstat-n">' + selected + '</span><span class="sf-cstat-l">In scope</span></div>'
-      + '<div class="sf-cstat"><span class="sf-cstat-n sf-cstat-green">' + demoed + '</span><span class="sf-cstat-l">Demonstrated</span></div>'
-      + '<div class="sf-cstat"><span class="sf-cstat-n ' + (gaps?'sf-cstat-red':'') + '">' + gaps + '</span><span class="sf-cstat-l">Gaps / partial</span></div>'
-      + '</div>'
-      + '<button class="btn btn-accent btn-sm sf-add-process" data-sfaction="addProcess">&#xff0b; Add process</button>'
-      + '</div>'
-      + '<div class="sf-process-grid">' + S.processes.map(function(p,i){return renderProcessCard(p,i);}).join('') + '</div>';
+    return `<div class="sf-card">
+      <div class="sf-card-head"><h3>Business processes</h3><button class="btn btn-accent btn-sm sf-add-process" data-sfaction="addProcess">＋ Add process</button></div>
+      <div class="sf-process-grid">${S.processes.map((p,i)=>renderProcessCard(p,i)).join('')}</div>
+    </div>`;
   }
-  function renderProcessCard(p,i) {
-    var showNote = p.fit==='Partial fit'||p.fit==='Gap'||p.fit==='Unknown'||p.demoStatus==='Discussed only'||p.demoStatus==='Not demonstrated';
-    var hasBadges = p.selected && (p.demoStatus!=='Not reviewed' || p.fit!=='Not reviewed');
-    return '<div class="sf-proc ' + (p.selected?'sel':'') + '" data-sfproc="' + i + '">'
-      + '<div class="sf-proc-top">'
-      + '<label class="sf-proc-head"><input type="checkbox" data-sfpsel="' + i + '" ' + (p.selected?'checked':'') + '><span class="sf-proc-name">' + esc(p.name) + '</span></label>'
-      + (hasBadges ? '<div class="sf-proc-badges">' + demoBadge(p.demoStatus) + fitBadge(p.fit) + '</div>' : '')
-      + '</div>'
-      + (p.selected ? '<div class="sf-proc-detail">'
-        + '<div class="sf-row2">'
-        + '<div class="sf-field"><label>Demo status</label><select data-sfpdemo="' + i + '">' + ['Not reviewed','Demonstrated','Discussed only','Not demonstrated','Not applicable'].map(function(x){return '<option ' + (p.demoStatus===x?'selected':'') + '>' + esc(x) + '</option>';}).join('') + '</select></div>'
-        + '<div class="sf-field"><label>Fit assessment</label><select data-sfpfit="' + i + '">' + ['Not reviewed','Full fit','Partial fit','Gap','Unknown'].map(function(x){return '<option ' + (p.fit===x?'selected':'') + '>' + esc(x) + '</option>';}).join('') + '</select></div>'
-        + '</div>'
-        + (showNote ? '<div class="sf-field"><label>Note for handoff</label><textarea data-dictate data-sfpnote="' + i + '" placeholder="Evidence, exception, or workaround for Services.">' + esc(p.notes) + '</textarea></div>' : '')
-        + '</div>' : '')
-      + '</div>';
+  function renderProcessCard(p,i){
+    const showNote = p.fit==='Partial fit'||p.fit==='Gap'||p.fit==='Unknown'||p.demoStatus==='Discussed only'||p.demoStatus==='Not demonstrated';
+    return `<div class="sf-proc ${p.selected?'sel':''}" data-sfproc="${i}">
+      <label class="sf-proc-head"><input type="checkbox" data-sfpsel="${i}" ${p.selected?'checked':''}><span>${esc(p.name)}</span><small>${p.id}</small></label>
+      ${p.selected?`
+        <div class="sf-row2">
+          <div class="sf-field"><label>Demo status</label><select data-sfpdemo="${i}">${['Not reviewed','Demonstrated','Discussed only','Not demonstrated','Not applicable'].map(x=>`<option ${p.demoStatus===x?'selected':''}>${x}</option>`).join('')}</select></div>
+          <div class="sf-field"><label>Fit</label><select data-sfpfit="${i}">${['Not reviewed','Full fit','Partial fit','Gap','Unknown'].map(x=>`<option ${p.fit===x?'selected':''}>${x}</option>`).join('')}</select></div>
+        </div>
+        <div class="sf-demo-flag ${p.demoStatus==='Demonstrated'?'yes':'no'}">${p.demoStatus==='Demonstrated'?'✓ Demonstrated':'! Demo evidence not confirmed'}</div>
+        ${showNote?`<div class="sf-field"><label>Short note</label><textarea data-dictate data-sfpnote="${i}" placeholder="Evidence or exception for handoff.">${esc(p.notes)}</textarea></div>`:''}
+      `:''}
+    </div>`;
   }
 
   /* ── Tab 3: Gap register ────────────────────────────────────────── */
   function nextGapId(){ const max=Math.max(0,...S.gaps.map(g=>Number((g.id||'').replace(/\D/g,''))||0)); return `GAP-${String(max+1).padStart(3,'0')}`; }
   function newGap(v={}){ return {id:nextGapId(),process:'',demoEvidence:'Yes',need:'',classification:'UNKNOWN',priority:'Should Have',goLive:'Unknown',currentProcess:'',standardBehavior:'',gapDescription:'',businessRationale:'',acceptance:'',dependencies:'',assumptions:'',openQuestions:'',...v}; }
   function renderGaps(){
-    var mustCount = S.gaps.filter(function(g){return g.priority==='Must Have';}).length;
-    var unknownCount = S.gaps.filter(function(g){return g.classification==='UNKNOWN';}).length;
-    return '<div class="sf-gap-header">'
-      + '<h3 class="sf-gap-title">Gap register</h3>'
-      + (S.gaps.length ? '<div class="sf-gap-counts">'
-        + (mustCount ? '<span class="sf-gap-count sf-gc-must">&#9679; ' + mustCount + ' Must have</span>' : '')
-        + (unknownCount ? '<span class="sf-gap-count sf-gc-unknown">&#9673; ' + unknownCount + ' Unclassified</span>' : '')
-        + '</div>' : '')
-      + '<button class="btn btn-primary btn-sm" data-sfaction="addGap">+ Capture gap</button>'
-      + '</div>'
-      + '<div id="sfGapList">' + (S.gaps.length ? S.gaps.map(function(g){return renderGapCard(g);}).join('') : '<div class="sf-empty-state"><p>No gaps captured. If all selected processes are demonstrated and full fit, that is a valid outcome.</p></div>') + '</div>';
+    return `<div class="sf-card">
+      <div class="sf-card-head"><h3>Gap register</h3><button class="btn btn-primary btn-sm" data-sfaction="addGap">+ Capture gap</button></div>
+      <div id="sfGapList">${S.gaps.length?S.gaps.map((g)=>renderGapCard(g)).join(''):'<p class="sf-muted">No gaps captured. If all selected processes are demonstrated and Full fit, that is a valid outcome.</p>'}</div>
+    </div>`;
   }
   function renderGapCard(g){
-    var idx=S.gaps.indexOf(g), deep=materialGap(g), open=openGapId===g.id;
-    var priCls = g.priority==='Must Have' ? 'sf-gap-must' : g.priority==='Should Have' ? 'sf-gap-should' : 'sf-gap-could';
-    var classCls = g.classification==='UNKNOWN'?'sf-pill warn':g.classification==='OUT OF SCOPE'?'sf-pill bad':'sf-pill blue';
-    var priLabel = g.priority==='Must Have' ? '<span class="sf-gap-pri sf-gp-must">Must have</span>'
-                 : g.priority==='Should Have' ? '<span class="sf-gap-pri sf-gp-should">Should have</span>'
-                 : '<span class="sf-gap-pri sf-gp-could">Could have</span>';
-    return '<div class="sf-gap ' + priCls + '" data-sfgap="' + g.id + '">'
-      + '<div class="sf-gap-sum">'
-      + '<span class="sf-gap-id">' + esc(g.id) + '</span>'
-      + '<span class="' + classCls + '">' + esc(g.classification) + '</span>'
-      + priLabel
-      + '<span class="sf-gap-need">' + esc(g.need||'Requirement not entered') + '</span>'
-      + '<div class="sf-gap-actions">'
-      + '<button class="btn btn-ghost btn-sm" data-sfgaptoggle="' + g.id + '">' + (open?'Close':'Details') + '</button>'
-      + '<button class="btn btn-danger btn-sm" data-sfgapdel="' + idx + '" title="Delete gap">&#215;</button>'
-      + '</div></div>'
-      + '<div class="sf-gap-detail ' + (open?'open':'') + '">'
-      + (deep?'<div class="sf-callout">Material gap — capture the business rule, evidence, acceptance criteria, and dependencies. Do not design the solution here.</div>':'')
-      + '<div class="sf-row3">'
-      + '<div class="sf-field"><label>Process</label><select data-sfgfield="process" data-sfgid="' + g.id + '">' + S.processes.map(function(p){return '<option ' + (p.name===g.process?'selected':'') + '>' + esc(p.name) + '</option>';}).join('') + '</select></div>'
-      + '<div class="sf-field"><label>Demo evidence</label><select data-sfgfield="demoEvidence" data-sfgid="' + g.id + '">' + ['Yes','Partially','No','Not applicable'].map(function(x){return '<option ' + (g.demoEvidence===x?'selected':'') + '>' + x + '</option>';}).join('') + '</select></div>'
-      + '<div class="sf-field"><label>Classification</label><select data-sfgfield="classification" data-sfgid="' + g.id + '">' + CLASSIFICATIONS.map(function(x){return '<option ' + (x===g.classification?'selected':'') + '>' + x + '</option>';}).join('') + '</select></div>'
-      + '</div>'
-      + '<div class="sf-field"><label>Customer need / outcome</label><textarea data-dictate data-sfgfield="need" data-sfgid="' + g.id + '">' + esc(g.need) + '</textarea></div>'
-      + '<div class="sf-row2">'
-      + '<div class="sf-field"><label>Current process (as-is)</label><textarea data-dictate data-sfgfield="currentProcess" data-sfgid="' + g.id + '">' + esc(g.currentProcess) + '</textarea></div>'
-      + '<div class="sf-field"><label>Standard behavior demonstrated</label><textarea data-dictate data-sfgfield="standardBehavior" data-sfgid="' + g.id + '">' + esc(g.standardBehavior) + '</textarea></div>'
-      + '</div>'
-      + '<div class="sf-field"><label>Precise gap / difference</label><textarea data-dictate data-sfgfield="gapDescription" data-sfgid="' + g.id + '">' + esc(g.gapDescription) + '</textarea></div>'
-      + '<div class="sf-row2">'
-      + '<div class="sf-field"><label>Priority</label><select data-sfgfield="priority" data-sfgid="' + g.id + '">' + ['Must Have','Should Have','Could Have'].map(function(x){return '<option ' + (g.priority===x?'selected':'') + '>' + x + '</option>';}).join('') + '</select></div>'
-      + '<div class="sf-field"><label>Required for go-live?</label><select data-sfgfield="goLive" data-sfgid="' + g.id + '">' + ['Unknown','Yes','No'].map(function(x){return '<option ' + (g.goLive===x?'selected':'') + '>' + x + '</option>';}).join('') + '</select></div>'
-      + '</div>'
-      + '<div class="sf-field"><label>Acceptance criteria</label><textarea data-dictate data-sfgfield="acceptance" data-sfgid="' + g.id + '">' + esc(g.acceptance) + '</textarea></div>'
-      + '<div class="sf-row2">'
-      + '<div class="sf-field"><label>Dependencies / assumptions</label><textarea data-dictate data-sfgfield="dependencies" data-sfgid="' + g.id + '">' + esc(g.dependencies) + '</textarea></div>'
-      + '<div class="sf-field"><label>Open questions</label><textarea data-dictate data-sfgfield="openQuestions" data-sfgid="' + g.id + '">' + esc(g.openQuestions) + '</textarea></div>'
-      + '</div>'
-      + '</div></div>';
+    const idx=S.gaps.indexOf(g), deep=materialGap(g), open=openGapId===g.id;
+    return `<div class="sf-gap ${g.priority==='Must Have'?'must':''}" data-sfgap="${g.id}">
+      <div class="sf-gap-sum">
+        <span class="sf-gap-id">${esc(g.id)}</span>
+        <span class="sf-pill ${g.classification==='UNKNOWN'?'warn':g.classification==='OUT OF SCOPE'?'bad':'blue'}">${esc(g.classification)}</span>
+        <span class="sf-gap-need">${esc(g.need||'Requirement not entered')}</span>
+        <span>${esc(g.priority)}</span>
+        <button class="btn btn-ghost btn-sm" data-sfgaptoggle="${g.id}">${open?'Close':'Details'}</button>
+        <button class="btn btn-danger btn-sm" data-sfgapdel="${idx}">×</button>
+      </div>
+      <div class="sf-gap-detail ${open?'open':''}">
+        ${deep?'<div class="sf-callout">Material gap — capture the business rule, evidence, acceptance, and dependencies (do not design the solution).</div>':''}
+        <div class="sf-row3">
+          <div class="sf-field"><label>Process</label><select data-sfgfield="process" data-sfgid="${g.id}">${S.processes.map(p=>`<option ${p.name===g.process?'selected':''}>${esc(p.name)}</option>`).join('')}</select></div>
+          <div class="sf-field"><label>Demo evidence</label><select data-sfgfield="demoEvidence" data-sfgid="${g.id}">${['Yes','Partially','No','Not applicable'].map(x=>`<option ${g.demoEvidence===x?'selected':''}>${x}</option>`).join('')}</select></div>
+          <div class="sf-field"><label>Classification</label><select data-sfgfield="classification" data-sfgid="${g.id}">${CLASSIFICATIONS.map(x=>`<option ${x===g.classification?'selected':''}>${x}</option>`).join('')}</select></div>
+        </div>
+        <div class="sf-field"><label>Customer need / outcome</label><textarea data-dictate data-sfgfield="need" data-sfgid="${g.id}">${esc(g.need)}</textarea></div>
+        <div class="sf-row2">
+          <div class="sf-field"><label>Current process</label><textarea data-dictate data-sfgfield="currentProcess" data-sfgid="${g.id}">${esc(g.currentProcess)}</textarea></div>
+          <div class="sf-field"><label>Standard behavior demonstrated</label><textarea data-dictate data-sfgfield="standardBehavior" data-sfgid="${g.id}">${esc(g.standardBehavior)}</textarea></div>
+        </div>
+        <div class="sf-field"><label>Precise gap / difference</label><textarea data-dictate data-sfgfield="gapDescription" data-sfgid="${g.id}">${esc(g.gapDescription)}</textarea></div>
+        <div class="sf-row2">
+          <div class="sf-field"><label>Priority</label><select data-sfgfield="priority" data-sfgid="${g.id}">${['Must Have','Should Have','Could Have'].map(x=>`<option ${g.priority===x?'selected':''}>${x}</option>`).join('')}</select></div>
+          <div class="sf-field"><label>Required for go-live?</label><select data-sfgfield="goLive" data-sfgid="${g.id}">${['Unknown','Yes','No'].map(x=>`<option ${g.goLive===x?'selected':''}>${x}</option>`).join('')}</select></div>
+        </div>
+        <div class="sf-field"><label>Acceptance criteria</label><textarea data-dictate data-sfgfield="acceptance" data-sfgid="${g.id}">${esc(g.acceptance)}</textarea></div>
+        <div class="sf-field"><label>Dependencies / assumptions</label><textarea data-dictate data-sfgfield="dependencies" data-sfgid="${g.id}">${esc(g.dependencies)}</textarea></div>
+        <div class="sf-field"><label>Open questions</label><textarea data-dictate data-sfgfield="openQuestions" data-sfgid="${g.id}">${esc(g.openQuestions)}</textarea></div>
+      </div>
+    </div>`;
   }
 
   /* ── Tab 4: Integration & drivers ───────────────────────────────── */
-  function nextIntId(){ var max=Math.max(0,...S.interfaces.map(function(i){return Number((i.id||'').replace(/\D/g,''))||0;})); return 'INT-'+String(max+1).padStart(3,'0'); }
+  function nextIntId(){ const max=Math.max(0,...S.interfaces.map(i=>Number((i.id||'').replace(/\D/g,''))||0)); return `INT-${String(max+1).padStart(3,'0')}`; }
   function renderIntegration(){
-    var sel=function(label,path,opts){return '<div class="sf-field"><label>'+esc(label)+'</label><select data-sfbind="'+path+'">'+opts.map(function(x){return '<option '+(val(S,path)===x?'selected':'')+'>'+esc(x)+'</option>';}).join('')+'</select></div>';};
-    var f=function(label,path,ph){ph=ph||'';return '<div class="sf-field"><label>'+esc(label)+'</label><input data-sfbind="'+path+'" value="'+esc(val(S,path))+'" placeholder="'+esc(ph)+'"></div>';};
-    var hasInterfaces = S.interfaces.length > 0;
-    return '<div class="sf-card">'
-      + '<div class="sf-card-head"><h3>Additional interfaces</h3><button class="btn btn-ghost btn-sm" data-sfaction="addInterface">+ Add interface</button></div>'
-      + '<div class="sf-table-wrap">'
-      + (hasInterfaces
-        ? '<table class="sf-table"><thead><tr><th style="width:70px">ID</th><th>Source</th><th>Target</th><th>Object / purpose</th><th style="width:140px">Method</th><th style="width:120px">Owner</th><th style="width:36px"></th></tr></thead>'
-          + '<tbody id="sfIntBody">' + S.interfaces.map(function(it,idx){return renderIntRow(it,idx);}).join('') + '</tbody></table>'
-        : '<div class="sf-empty-state" id="sfIntBody"><p>No additional interfaces recorded. The primary integration is captured in Context &rarr; Architecture.</p></div>')
-      + '</div></div>'
-      + '<div class="sf-card"><h3>Mobility, outputs &amp; constraints</h3>'
-      + '<div class="sf-drivers-grid">'
-      + sel('Offline required?','drivers.offline',['Unknown','Yes','No'])
-      + f('Offline duration','drivers.offlineDuration','e.g. up to 10 hours')
-      + f('Devices','drivers.devices','e.g. Zebra Android handhelds, iOS')
-      + sel('Custom outputs / labels?','drivers.customOutput',['Unknown','Yes','No'])
-      + sel('Volume concern?','drivers.volumeConcern',['Unknown','Yes','No'])
-      + f('Volume detail','drivers.volume','e.g. ~4,500 picks / day')
-      + '</div></div>';
+    const d=S.drivers;
+    const sel=(label,path,opts)=>`<div class="sf-field"><label>${esc(label)}</label><select data-sfbind="${path}">${opts.map(x=>`<option ${val(S,path)===x?'selected':''}>${esc(x)}</option>`).join('')}</select></div>`;
+    const f=(label,path,ph='')=>`<div class="sf-field"><label>${esc(label)}</label><input data-sfbind="${path}" value="${esc(val(S,path))}" placeholder="${esc(ph)}"></div>`;
+    return `<div class="sf-card">
+      <div class="sf-card-head"><h3>Additional interfaces</h3><button class="btn btn-ghost btn-sm" data-sfaction="addInterface">+ Add interface</button></div>
+      <div class="sf-table-wrap"><table class="sf-table"><thead><tr><th>ID</th><th>Source</th><th>Target</th><th>Object</th><th>Method</th><th>Owner</th><th></th></tr></thead>
+      <tbody id="sfIntBody">${S.interfaces.length?S.interfaces.map((it,idx)=>renderIntRow(it,idx)).join(''):'<tr><td colspan="7" class="sf-muted">No additional interfaces recorded.</td></tr>'}</tbody></table></div>
+    </div>
+    <div class="sf-card"><h3>Mobility, outputs &amp; constraints</h3>
+      <div class="sf-row2">${sel('Offline required?','drivers.offline',['Unknown','Yes','No'])}${f('Offline duration','drivers.offlineDuration','e.g. up to 10 hours')}</div>
+      <div class="sf-row2">${f('Devices','drivers.devices','e.g. Zebra Android handhelds')}${sel('Custom outputs / labels?','drivers.customOutput',['Unknown','Yes','No'])}</div>
+      <div class="sf-row2">${sel('Volume concern?','drivers.volumeConcern',['Unknown','Yes','No'])}${f('Volume','drivers.volume','e.g. ~4,500/day')}</div>
+    </div>`;
   }
   function renderIntRow(it,idx){
-    return '<tr data-sfint="'+idx+'">'
-      + '<td><span class="sf-int-id">'+esc(it.id)+'</span></td>'
-      + '<td><input class="sf-table-input" data-sfifield="source" value="'+esc(it.source)+'" placeholder="Source system"></td>'
-      + '<td><input class="sf-table-input" data-sfifield="target" value="'+esc(it.target)+'" placeholder="Target system"></td>'
-      + '<td><input class="sf-table-input" data-sfifield="object" value="'+esc(it.object)+'" placeholder="What is being exchanged?"></td>'
-      + '<td><select class="sf-table-input" data-sfifield="method">'+['REST API','SOAP / web service','File','Database','Middleware / iPaaS','Connector','Other','TBD'].map(function(x){return '<option '+(x===it.method?'selected':'')+'>'+x+'</option>';}).join('')+'</select></td>'
-      + '<td><select class="sf-table-input" data-sfifield="owner">'+['Cloud Inventory','Customer','Partner','Shared','TBD'].map(function(x){return '<option '+(x===it.owner?'selected':'')+'>'+x+'</option>';}).join('')+'</select></td>'
-      + '<td><button class="btn btn-danger btn-sm" data-sfintdel="'+idx+'" title="Delete">&#215;</button></td>'
-      + '</tr>';
+    return `<tr data-sfint="${idx}">
+      <td><b>${esc(it.id)}</b></td>
+      <td><input data-sfifield="source" value="${esc(it.source)}"></td>
+      <td><input data-sfifield="target" value="${esc(it.target)}"></td>
+      <td><input data-sfifield="object" value="${esc(it.object)}"></td>
+      <td><select data-sfifield="method">${['REST API','SOAP / web service','File','Database','Middleware / iPaaS','Connector','Other','TBD'].map(x=>`<option ${x===it.method?'selected':''}>${x}</option>`).join('')}</select></td>
+      <td><select data-sfifield="owner">${['Cloud Inventory','Customer','Partner','Shared','TBD'].map(x=>`<option ${x===it.owner?'selected':''}>${x}</option>`).join('')}</select></td>
+      <td><button class="btn btn-danger btn-sm" data-sfintdel="${idx}">×</button></td>
+    </tr>`;
   }
 
   /* ── Tab 5: Readiness + handoff documents ───────────────────────── */
@@ -730,19 +601,6 @@
   function showActivePane(){ document.querySelectorAll('.sf-pane').forEach(p=>p.style.display = p.dataset.sfpane===activeTab?'block':'none'); }
 
   function wireBindings(){
-    /* Section accordions (context tab) */
-    document.querySelectorAll('[data-sftoggle]').forEach(function(el) {
-      el.addEventListener('click', function() {
-        var id = el.dataset.sftoggle;
-        var sec = document.getElementById('sfsec-' + id);
-        if (!sec) return;
-        var isOpen = _openSections.has(id);
-        if (isOpen) { _openSections.delete(id); } else { _openSections.add(id); }
-        /* Re-render context pane to reflect open state */
-        var pane = document.querySelector('[data-sfpane="context"]');
-        if (pane) { pane.innerHTML = renderContext(); wireBindings(); if (!canWrite) disableInputs(); }
-      });
-    });
     /* data-sfbind text/select/textarea → state path */
     document.querySelectorAll('[data-sfbind]').forEach(el=>{
       el.addEventListener('input', ()=>{ setVal(S, el.dataset.sfbind, el.value); onEdit(el.dataset.sfbind); });
