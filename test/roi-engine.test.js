@@ -48,17 +48,6 @@ function run() {
   check('throughputSav correct at v26', approx(w26.throughputSav, 250000*3.5*0.20*0.30));
   check('accuracySav correct at v26', approx(w26.accuracySav, 250000*0.02*120*0.35));
 
-  const f = { ...BASE, repeatVisitsYr:1200, costPerTruckRoll:300, mFirstFix:0.35,
-              fieldTechs:40, addedJobsPerDay:0.5, revenuePerJob:250, workingDaysYr:240, mUtilization:0.20,
-              fieldInventoryValue:2000000, fieldLeakagePct:0.04, mLeakage:0.30 };
-  const f26 = calcROI({ ...f, modelVersion:26 });
-  const f27 = calcROI({ ...f, modelVersion:27 });
-  check('Field levers = 0 at v26', f26.fieldLeverSav === 0);
-  check('truckRollSav correct at v27', approx(f27.truckRollSav, 1200*300*0.35));
-  check('techRevenueSav correct at v27', approx(f27.techRevenueSav, 40*0.5*250*240*0.20));
-  check('fieldCostSav excludes revenue', approx(f27.fieldCostSav, f27.truckRollSav + f27.fieldLeakageSav));
-  check('fieldRevenueSav = techRevenueSav', f27.fieldRevenueSav === f27.techRevenueSav);
-
   const legacy = calcROI({ ...BASE, modelVersion:24 });
   const modern = calcROI({ ...BASE, modelVersion:27 });
   check('no-new-lever inputs identical across versions', approx(legacy.annualBenefit, modern.annualBenefit, 2));

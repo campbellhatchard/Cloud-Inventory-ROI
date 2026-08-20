@@ -138,7 +138,6 @@ function loadFromObject(i) {
    'implMonths',
    'laborWastePct','currentAccuracy',
    'ordersPerYr','costPerOrder','pickRateGainPct','m_throughput','orderErrorPct','costPerError','m_accuracy',
-   'repeatVisitsYr','costPerTruckRoll','m_firstfix','fieldTechs','addedJobsPerDay','revenuePerJob','workingDaysYr','m_utilization','fieldInventoryValue','fieldLeakagePct','m_leakage',
    'downtimeEventsYr','downtimeHrsPerEvent','downtimeCostPerHr','m_downtime',
    'expediteSpendYr','m_expedite','countDaysYr','countPeople','m_count'].forEach(id => {
     const el = document.getElementById(id);
@@ -170,12 +169,7 @@ function loadFromObject(i) {
   if (i.industry && IND[i.industry]) document.getElementById('benchBadge').style.display = 'inline-flex';
   /* Auto-expand the collapsed field-service group if this scenario actually
      has field-service data, so a loaded MEP deal shows its entered values. */
-  const fsGroup = document.getElementById('fieldServiceGroup');
-  if (fsGroup) {
-    const hasFieldData = ['repeatVisitsYr','costPerTruckRoll','fieldTechs','revenuePerJob','fieldInventoryValue','fieldLeakagePct']
-      .some(id => { const v = i[id]; return v != null && Number(v) > 0; });
-    fsGroup.open = hasFieldData;
-  }
+
   recalc();
   renderConfidence();
   /* A freshly loaded scenario has no unsaved changes — clear the flag so the

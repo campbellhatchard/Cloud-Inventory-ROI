@@ -7,6 +7,45 @@
 
 const VERSION_HISTORY = [
   {
+    version: '4.7.0', date: '2026-08-05', tag: 'feature',
+    title: 'Prospect page redesigned: section-at-a-time layout',
+    changes: [
+      'The prospect discovery page now shows one section at a time instead of all 32 questions on a single scrolling page (~8,000-10,000px). Each section is 3-5 questions and fits comfortably on one screen.',
+      'A section navigator in the sticky header shows all sections with completion status (numbered, dot for partial, checkmark for complete). The prospect can jump to any section freely at any time.',
+      'Back and Next buttons navigate sequentially. The final section shows Review and submit.',
+      'Context lines (why we ask each question) are now collapsed behind a Why are we asking? toggle to keep each question compact.',
+      'All data capture, auto-save, and review logic is unchanged.'
+    ]
+  },
+  {
+    version: '4.6.4', date: '2026-08-05', tag: 'breaking',
+    title: 'Field service (MEP) removed from calculator and discovery',
+    changes: [
+      'Removed the Field Service Value Drivers section entirely from the calculator.',
+      'Removed the three field service ROI levers (truck-roll savings, technician revenue, field leakage) from the engine. Existing scenarios that had field service data will show a lower ROI reflecting only the retained WMS levers.',
+      'Removed the MEP option from the solution selector.',
+      'Removed field service questions from the prospect discovery questionnaire across all industries.',
+      'ROI engine now runs 17 tests (was 22 — the 5 field-service-specific tests were removed alongside the feature).'
+    ]
+  },
+  {
+    version: '4.6.3', date: '2026-08-05', tag: 'feature',
+    title: 'Value-engineering core questions reduced to 4',
+    changes: [
+      'The Value-engineering core (must-ask) section on the prospect discovery link is reduced from 10 questions to 4: why now, who feels the pain, who else is impacted, and how success will be measured.',
+      'The 6 removed questions (corporate initiatives, board commitment, opportunity cost, cost of inaction, prior attempts, executive sponsor) are no longer shown to prospects.',
+      'The 4 internal-only rep-assessment questions (decision process, budget, blockers, business case format) are unchanged.',
+      'No impact on ROI calculations — all removed questions had no sync targets.'
+    ]
+  },
+  {
+    version: '4.6.2', date: '2026-08-05', tag: 'fixes',
+    title: 'Prospect assistant CSS fix',
+    changes: [
+      'Fixed the prospect questionnaire assistant rendering as raw unstyled text. prospect.html has its own self-contained style block with no access to style.css, so the assistant CSS is now inlined directly into prospect.html.'
+    ]
+  },
+  {
     version: '4.6.1', date: '2026-08-05', tag: 'feature',
     title: 'Persistent assistant suggestion chips',
     changes: [

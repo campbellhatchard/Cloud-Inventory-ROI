@@ -58,7 +58,11 @@ body{font-family:var(--font);background:#F0F4F8;color:var(--gray-800);min-height
 .question:last-child{border-bottom:none;}
 .question.answered{background:#FAFFFE;}
 .q-text{font-size:14px;font-weight:500;color:var(--gray-800);margin-bottom:5px;line-height:1.45;}
-.q-context{font-size:12.5px;color:var(--gray-500,#64748B);line-height:1.5;margin:0 0 9px;padding-left:10px;border-left:2px solid var(--cyan-line,#B4E3EF);}
+/* ── Collapsible "Why are we asking?" ── */
+.q-why{margin:5px 0 8px;}
+.q-why-toggle{font-size:11.5px;color:var(--cyan,#00A9CC);cursor:pointer;list-style:none;font-weight:600;}
+.q-why-toggle::-webkit-details-marker{display:none;}
+.q-context{font-size:12.5px;color:var(--gray-500,#64748B);line-height:1.5;margin:6px 0 0;padding-left:10px;border-left:2px solid var(--cyan-line,#B4E3EF);}
 .q-placeholder-hint{font-size:12px;color:var(--gray-400);margin-bottom:10px;}
 .q-input{width:100%;padding:10px 14px;font-size:14px;font-family:var(--font);border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);background:var(--white);color:var(--gray-800);transition:border-color .15s,box-shadow .15s;outline:none;}
 .q-input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,174,239,.12);}
@@ -118,8 +122,38 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(0,169,204,.18)
 :focus-visible{outline:2px solid #00A9CC;outline-offset:2px;border-radius:4px;}
 h1,h2,h3{letter-spacing:-.02em;text-wrap:pretty;}
 button{cursor:pointer;}
-/* ── Progress meta (percent · time left · milestone) ── */
-.progress-meta{color:rgba(255,255,255,.72);font-size:11px;margin-top:5px;min-height:14px;}
+/* ── Progress header top row ── */
+.ph-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+.ph-meta{font-size:11px;color:rgba(255,255,255,.62);}
+
+/* ── Section navigator pills ── */
+.sec-nav{display:flex;gap:5px;flex-wrap:wrap;padding:10px 0 4px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.sec-nav::-webkit-scrollbar{display:none;}
+.sn-pill{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border:1.5px solid rgba(255,255,255,.18);border-radius:20px;background:rgba(255,255,255,.07);color:rgba(255,255,255,.7);font-family:inherit;font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s;}
+.sn-pill:hover{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.35);color:#fff;}
+.sn-pill.sn-active{background:var(--cyan,#00A9CC);border-color:var(--cyan,#00A9CC);color:#fff;}
+.sn-pill.sn-done{background:rgba(74,222,128,.18);border-color:rgba(74,222,128,.4);color:rgba(255,255,255,.9);}
+.sn-pill.sn-part{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.3);color:#fff;}
+.sn-mark{font-size:11px;min-width:14px;text-align:center;}
+.sn-label{max-width:120px;overflow:hidden;text-overflow:ellipsis;}
+@media(max-width:600px){.sn-label{max-width:80px;}}
+
+/* ── Section card (the active section) ── */
+.sec-card{background:var(--white,#fff);border-radius:var(--radius,12px);box-shadow:0 1px 4px rgba(0,0,0,.08);overflow:hidden;margin-bottom:16px;}
+.sec-card-head{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--gray-100,#F1F5F8);background:var(--gray-50,#F7F9FB);}
+.sec-card-icon{font-size:20px;flex-shrink:0;}
+.sec-card-meta{flex:1;min-width:0;}
+.sec-card-title{font-size:15px;font-weight:700;color:var(--navy,#1E2931);}
+.sec-card-count{font-size:12px;color:var(--gray-500,#6B7A8D);margin-top:2px;}
+.sec-body{padding:20px;}
+
+/* ── Back / Next navigation buttons ── */
+.sec-nav-btns{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px;}
+.snb-back{background:none;border:1.5px solid var(--gray-200,#E2E8F0);color:var(--gray-600,#4A5A6A);font-family:inherit;font-size:13.5px;font-weight:600;padding:10px 20px;border-radius:8px;cursor:pointer;transition:all .15s;}
+.snb-back:hover{border-color:var(--cyan,#00A9CC);color:var(--cyan,#00A9CC);}
+.snb-next{background:var(--cyan,#00A9CC);color:#fff;border:none;font-family:inherit;font-size:13.5px;font-weight:700;padding:10px 24px;border-radius:8px;cursor:pointer;box-shadow:0 2px 8px rgba(0,169,204,.28);transition:all .15s;}
+.snb-next:hover{background:var(--cyan-dark,#0089A6);transform:translateY(-1px);}
+.snb-submit{font-size:13.5px;padding:10px 24px !important;}
 
 /* ── "What your answers help assess" panel ── */
 .value-panel:empty{display:none;}
@@ -206,9 +240,12 @@ button{cursor:pointer;}
 
 <div class="progress-wrap">
   <div class="progress-inner">
-    <div class="progress-label" id="progressLabel">Loading…</div>
+    <div class="ph-top">
+      <div class="progress-label" id="progressLabel">Loading…</div>
+      <div class="ph-meta" id="progressMeta"></div>
+    </div>
     <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
-    <div class="progress-meta" id="progressMeta"></div>
+    <div class="sec-nav" id="secNav"></div>
     <div class="autosave" id="autosaveIndicator" style="display:none;"></div>
   </div>
 </div>
@@ -337,62 +374,96 @@ function showError(title, msg) {
   document.getElementById('progressLabel').textContent = 'Link error';
 }
 
-function renderQuestionnaire() {
-  const industry = sessionData.industry || 'default';
-  const company  = sessionData.company || 'your organisation';
+/* ── Section-at-a-time layout (replaces single-scroll) ──────────────
+   One section visible at a time. The section navigator shows all
+   sections with completion status; the prospect can jump freely.     */
+var _currentSectionIdx = 0;
 
-  // Get questions for this industry
-  const sections = getProspectQuestions(industry);
-
-  // Count total
-  totalQuestions = sections.reduce((s, sec) => s + sec.questions.length, 0);
-  answeredCount  = Object.keys(prospectAnswers).filter(k => !k.endsWith('_by') && isRealAnswer(prospectAnswers[k])).length;
-
-  // Update header
-  document.getElementById('headerTitle').textContent = `Discovery Questionnaire${company ? ' — ' + company : ''}`;
+function renderQuestionnaire(targetSection) {
+  var industry = sessionData.industry || 'default';
+  var company  = sessionData.company  || 'your organisation';
+  var sections = getProspectQuestions(industry);
+  totalQuestions = sections.reduce(function(s, sec){ return s + sec.questions.length; }, 0);
+  answeredCount  = Object.keys(prospectAnswers)
+    .filter(function(k){ return !k.endsWith('_by') && isRealAnswer(prospectAnswers[k]); }).length;
+  document.getElementById('headerTitle').textContent =
+    'Discovery Questionnaire' + (company ? ' \u2014 ' + company : '');
   updateProgress();
+  renderSecNav(sections);
+  showSection(sections, targetSection != null ? targetSection : _currentSectionIdx);
+}
 
-  const industryLabel = getIndustryLabel(industry);
-  const priorAnswers = Object.keys(prospectAnswers).filter(k => !k.endsWith('_by') && prospectAnswers[k]?.trim()).length;
-  const resumeCue = priorAnswers > 0
-    ? `<div class="resume-cue">👋 <strong>Welcome back!</strong> We've kept your ${priorAnswers} previous answer${priorAnswers!==1?'s':''} — pick up right where you left off.</div>`
+function renderSecNav(sections) {
+  var nav = document.getElementById('secNav');
+  if (!nav) return;
+  nav.innerHTML = sections.map(function(sec, i) {
+    var answered = sec.questions.filter(function(q){ return isRealAnswer(prospectAnswers[q.id]); }).length;
+    var total    = sec.questions.length;
+    var done     = answered === total && total > 0;
+    var started  = answered > 0 && !done;
+    var cls      = done ? 'sn-done' : started ? 'sn-part' : '';
+    var mark     = done ? '\u2713' : started ? '\u25cf' : String(i + 1);
+    return '<button class="sn-pill ' + cls + (i === _currentSectionIdx ? ' sn-active' : '') + '"'
+      + ' onclick="jumpToSection(' + i + ')" title="' + escapeHtml(sec.section) + '">'
+      + '<span class="sn-mark">' + mark + '</span>'
+      + '<span class="sn-label">' + escapeHtml(sec.section) + '</span>'
+      + '</button>';
+  }).join('');
+}
+
+function jumpToSection(idx) {
+  var sections = getProspectQuestions(sessionData.industry || 'default');
+  _currentSectionIdx = Math.max(0, Math.min(idx, sections.length - 1));
+  showSection(sections, _currentSectionIdx);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function showSection(sections, idx) {
+  _currentSectionIdx = idx;
+  var sec     = sections[idx];
+  var isLast  = idx === sections.length - 1;
+  var isFirst = idx === 0;
+  var answered = sec.questions.filter(function(q){ return isRealAnswer(prospectAnswers[q.id]); }).length;
+  var resumeCue = (answeredCount > 0 && isFirst)
+    ? '<div class="resume-cue"><strong>Welcome back!</strong> We\u2019ve kept your ' + answeredCount
+      + ' previous answer' + (answeredCount !== 1 ? 's' : '') + ' \u2014 pick up where you left off.</div>'
     : '';
-
-  document.getElementById('mainContent').innerHTML = `
-    ${resumeCue}
-    <div class="welcome-card">
-      <div class="welcome-co">Welcome${company ? ', ' + company : ''}</div>
-      <div class="welcome-sub">
-        Thank you for taking the time to complete this questionnaire. Your answers will help Cloud Inventory build an accurate and relevant business case tailored to your ${industryLabel} operations.
-        <br/><br/>
-        Please answer as many questions as you can. You can save your progress at any time using the button below and return later. Your answers are automatically saved as you type.
-      </div>
-      <div class="welcome-privacy">
-        <span class="welcome-privacy-icon">🔒</span>
-        <span><strong>Your data stays with you.</strong> This form collects operational data only to help size a potential solution. No financial analysis or ROI calculations are shared with you at this stage. Your responses are shared only with your Cloud Inventory contact.</span>
-      </div>
-    </div>
-
-    <div class="value-panel" id="valuePanel"></div>
-
-    ${sections.map((section, si) => {
-      const answeredInSection = section.questions.filter(q => isRealAnswer(prospectAnswers[q.id])).length;
-      return `
-      <div class="section-card" id="section-${si}">
-        <div class="section-header">
-          <span class="section-icon">${getSectionIcon(section.section)}</span>
-          <span class="section-title-text">${section.section}</span>
-          <span class="section-count">${answeredInSection}/${section.questions.length}</span>
-        </div>
-        <div class="section-body">
-          ${section.questions.map(q => renderProspectQuestion(q)).join('')}
-        </div>
-      </div>`;
-    }).join('')}
-
-    <div style="height:80px;"></div>`;
-
+  var questions = sec.questions.map(function(q){ return renderProspectQuestion(q); }).join('');
+  document.getElementById('mainContent').innerHTML =
+    (isFirst ? resumeCue + renderWelcomeCard() : '')
+    + '<div class="sec-card" id="sec-card-' + idx + '">'
+    + '<div class="sec-card-head">'
+    + '<span class="sec-card-icon">' + getSectionIcon(sec.section) + '</span>'
+    + '<div class="sec-card-meta">'
+    + '<div class="sec-card-title">' + escapeHtml(sec.section) + '</div>'
+    + '<div class="sec-card-count" id="sectionCount">' + answered + ' of ' + sec.questions.length + ' answered</div>'
+    + '</div></div>'
+    + '<div class="sec-body">' + questions + '</div>'
+    + '</div>'
+    + '<div class="sec-nav-btns">'
+    + (!isFirst
+        ? '<button class="snb-back" onclick="jumpToSection(' + (idx - 1) + ')">&#8592; Back</button>'
+        : '<span></span>')
+    + (isLast
+        ? '<button class="save-btn snb-submit" onclick="submitAnswers()">Review &amp; submit</button>'
+        : '<button class="snb-next" onclick="jumpToSection(' + (idx + 1) + ')">Next &#8594;</button>')
+    + '</div>'
+    + '<div style="height:60px;"></div>';
+  renderSecNav(sections);
   updateSaveButton();
+}
+
+function renderWelcomeCard() {
+  var company = sessionData.company || 'your organisation';
+  var label   = getIndustryLabel(sessionData.industry || 'default');
+  return '<div class="welcome-card">'
+    + '<div class="welcome-co">Welcome' + (company ? ', ' + escapeHtml(company) : '') + '</div>'
+    + '<div class="welcome-sub">Thank you for completing this questionnaire. Your answers help Cloud Inventory build a relevant business case for your '
+    + escapeHtml(label) + ' operations.<br/><br/>'
+    + 'Use the section tabs above to navigate. You can jump to any section at any time \u2014 answers save automatically as you type.</div>'
+    + '<div class="welcome-privacy"><span class="welcome-privacy-icon">&#128274;</span>'
+    + '<span><strong>Your data stays private.</strong> Responses are shared only with your Cloud Inventory contact.</span></div>'
+    + '</div>';
 }
 
 function renderProspectQuestion(q) {
@@ -414,10 +485,14 @@ function renderProspectQuestion(q) {
         ${isAnswered ? `<div class="q-answered-badge">✓ Answered</div>` : ''}
       </div>`;
   }
-  const drv = driverForQuestion(q);
-  const ctxText = contextForQuestion(q);
-  const context = ctxText ? `<div class="q-context">${escapeHtml(ctxText)}</div>` : '';
-  const helps = drv ? `<div class="q-helps">Helps assess: <strong>${escapeHtml(VALUE_DRIVERS[drv].label)}</strong></div>` : '';
+  var drv = driverForQuestion(q);
+  var ctxText = contextForQuestion(q);
+  var context = ctxText
+    ? '<details class="q-why"><summary class="q-why-toggle">Why are we asking?</summary><div class="q-context">' + escapeHtml(ctxText) + '</div></details>'
+    : '';
+  var helps = drv
+    ? '<div class="q-helps">Helps assess: <strong>' + escapeHtml(VALUE_DRIVERS[drv].label) + '</strong></div>'
+    : '';
   const unsure = (answer || '').trim().toLowerCase() === NOT_SURE_TOKEN;
   const shown = unsure ? '' : answer;
 
@@ -580,14 +655,17 @@ function handleAnswer(id, value) {
 }
 
 function updateSectionCounts() {
-  const sections = getProspectQuestions(sessionData?.industry || 'default');
-  sections.forEach((section, si) => {
-    const el = document.querySelector(`#section-${si} .section-count`);
-    if (el) {
-      const answered = section.questions.filter(q => isRealAnswer(prospectAnswers[q.id])).length;
-      el.textContent = `${answered}/${section.questions.length}`;
-    }
-  });
+  /* In the tabbed layout only one section is shown at a time.
+     Update just the count badge for the currently visible section. */
+  var el = document.getElementById('sectionCount');
+  if (!el) return;
+  var sections = getProspectQuestions(sessionData && sessionData.industry || 'default');
+  var sec = sections[_currentSectionIdx];
+  if (!sec) return;
+  var answered = sec.questions.filter(function(q){ return isRealAnswer(prospectAnswers[q.id]); }).length;
+  el.textContent = answered + ' of ' + sec.questions.length + ' answered';
+  /* Also refresh the navigator pills to show updated completion dots */
+  renderSecNav(sections);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -885,20 +963,25 @@ function renderReview() {
 }
 
 function backToForm() {
-  renderQuestionnaire();
+  renderQuestionnaire(_currentSectionIdx);
   window.scrollTo({ top: 0, behavior: 'auto' });
 }
 
-/* Jump from the review list straight to the question that needs changing. */
 function editAnswer(id) {
-  renderQuestionnaire();
-  setTimeout(() => {
-    const wrap = document.getElementById('wrap-' + id);
-    const field = document.getElementById('pq-' + id);
+  /* Find which section the question is in, then jump there */
+  var sections = getProspectQuestions(sessionData.industry || 'default');
+  var targetSection = _currentSectionIdx;
+  sections.forEach(function(sec, i) {
+    if (sec.questions.some(function(q){ return q.id === id; })) targetSection = i;
+  });
+  renderQuestionnaire(targetSection);
+  setTimeout(function() {
+    var wrap  = document.getElementById('wrap-' + id);
+    var field = document.getElementById('pq-'  + id);
     if (wrap) {
       wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
       wrap.classList.add('rv-flash');
-      setTimeout(() => wrap.classList.remove('rv-flash'), 1600);
+      setTimeout(function(){ wrap.classList.remove('rv-flash'); }, 1600);
     }
     if (field) field.focus({ preventScroll: true });
   }, 60);
@@ -974,10 +1057,81 @@ document.addEventListener('DOMContentLoaded', init);
 })();
 </script>
 <style>
-/* Prospect help button: bottom-left (back-to-top is bottom-right) */
+/* ── Full assistant CSS inlined — prospect.html has no access to style.css ── */
+/* ══ In-app assistant ("Ask") ══════════════════════════════════════
+   Floating button bottom-right (back-to-top is bottom-left, so no clash).
+   Opens a slide-up chat panel available on every screen. */
+.asst-fab{position:fixed;bottom:24px;right:24px;z-index:200;display:inline-flex;align-items:center;gap:8px;
+  padding:11px 18px 11px 15px;border-radius:26px;border:none;cursor:pointer;
+  background:var(--cyan);color:#fff;font-family:inherit;font-size:14px;font-weight:600;
+  box-shadow:0 4px 16px rgba(0,169,204,.38);transition:transform .15s,box-shadow .15s;}
+.asst-fab:hover{transform:translateY(-2px);box-shadow:0 8px 26px rgba(0,169,204,.5);}
+.asst-fab svg{flex-shrink:0;}
+@media(max-width:600px){.asst-fab span{display:none;}.asst-fab{padding:13px;border-radius:50%;}}
+
+.asst-panel{position:fixed;bottom:24px;right:24px;z-index:201;width:380px;max-width:calc(100vw - 32px);
+  height:560px;max-height:calc(100vh - 100px);background:var(--white);border-radius:16px;
+  box-shadow:0 16px 48px rgba(30,41,49,.28);display:flex;flex-direction:column;overflow:hidden;
+  opacity:0;visibility:hidden;transform:translateY(16px) scale(.98);transform-origin:bottom right;
+  transition:opacity .18s,transform .18s,visibility .18s;}
+.asst-panel.open{opacity:1;visibility:visible;transform:translateY(0) scale(1);}
+@media(max-width:600px){.asst-panel{width:100vw;height:100vh;max-height:100vh;bottom:0;right:0;border-radius:0;}}
+
+.asst-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;
+  background:linear-gradient(180deg,var(--navy-mid),var(--navy));color:#fff;flex-shrink:0;}
+.asst-title{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px;}
+.asst-dot{width:8px;height:8px;border-radius:50%;background:#4ADE80;box-shadow:0 0 0 3px rgba(74,222,128,.25);}
+.asst-close{background:none;border:none;color:rgba(255,255,255,.8);font-size:24px;line-height:1;cursor:pointer;padding:0 4px;}
+.asst-close:hover{color:#fff;}
+
+.asst-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;background:var(--gray-50);}
+.asst-msg{display:flex;}
+.asst-msg.asst-user{justify-content:flex-end;}
+.asst-bubble{max-width:85%;padding:10px 13px;border-radius:14px;font-size:13.5px;line-height:1.55;}
+.asst-bot .asst-bubble{background:var(--white);color:var(--gray-800);border:1px solid var(--gray-100);border-bottom-left-radius:4px;}
+.asst-user .asst-bubble{background:var(--cyan);color:#fff;border-bottom-right-radius:4px;}
+.asst-bubble p{margin:0 0 8px;}.asst-bubble p:last-child{margin-bottom:0;}
+.asst-bubble ul{margin:6px 0;padding-left:18px;}.asst-bubble li{margin:3px 0;}
+.asst-bubble strong{font-weight:600;}
+.asst-err{color:#B91C1C;}
+
+.asst-chips{display:flex;flex-direction:column;gap:7px;align-items:flex-start;}
+.asst-chip{background:var(--white);border:1px solid var(--gray-200);color:var(--cyan);border-radius:16px;
+  padding:7px 13px;font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer;text-align:left;transition:all .12s;}
+.asst-chip:hover{border-color:var(--cyan);background:var(--cyan-pale);}
+
+.asst-input{display:flex;gap:8px;padding:12px;border-top:1px solid var(--gray-100);background:var(--white);flex-shrink:0;align-items:flex-end;}
+.asst-input textarea{flex:1;resize:none;border:1px solid var(--gray-200);border-radius:10px;padding:9px 12px;
+  font-family:inherit;font-size:13.5px;line-height:1.4;max-height:120px;outline:none;}
+.asst-input textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,169,204,.14);}
+.asst-input button{background:var(--cyan);color:#fff;border:none;border-radius:10px;padding:9px 16px;
+  font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;flex-shrink:0;}
+.asst-input button:disabled{opacity:.5;cursor:default;}
+
+.asst-foot{padding:8px 12px;font-size:10.5px;color:var(--gray-400);text-align:center;background:var(--white);border-top:1px solid var(--gray-50);flex-shrink:0;line-height:1.4;}
+
+.asst-typing{display:inline-flex;gap:4px;padding:2px 0;}
+.asst-typing i{width:6px;height:6px;border-radius:50%;background:var(--gray-400);animation:asst-blink 1.2s infinite both;}
+.asst-typing i:nth-child(2){animation-delay:.2s;}.asst-typing i:nth-child(3){animation-delay:.4s;}
+@keyframes asst-blink{0%,80%,100%{opacity:.3;}40%{opacity:1;}}
+
+/* ── Persistent assistant chips ──────────────────────────────────────
+   Always-visible shortcut row pinned above the input. Smaller and
+   quieter than the welcome chips so they don't compete with the
+   conversation, but always one click away. */
+.asst-persist{display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px 4px;
+  border-top:1px solid var(--gray-100);background:var(--white);}
+.asst-persist:empty{display:none;}
+.asst-chip-sm{font-size:11.5px;padding:5px 10px;border-radius:14px;
+  background:var(--gray-50);border:1px solid var(--gray-200);
+  color:var(--gray-600);font-family:inherit;font-weight:500;cursor:pointer;
+  white-space:nowrap;transition:all .12s;}
+.asst-chip-sm:hover{border-color:var(--cyan);color:var(--cyan);background:var(--white);}
+
+/* Prospect assistant: bottom-left (back-to-top is bottom-right) */
 .passt-fab{bottom:22px;left:22px;}
-.passt-panel{bottom:22px;left:22px;transform-origin:bottom left;}
-@media(max-width:600px){.passt-panel{left:0;right:0;border-radius:0;}}
+.passt-panel{bottom:22px;left:22px;right:auto;transform-origin:bottom left;}
+@media(max-width:600px){.passt-panel{left:0;right:0;border-radius:0;transform-origin:bottom center;}}
 </style>
 <script src="prospect-assistant.js"></script>
 </body>

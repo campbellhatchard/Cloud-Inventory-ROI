@@ -1,4 +1,4 @@
-# Cloud Inventory ROI Builder v4.6.0
+# Cloud Inventory ROI Builder v4.6.4
 
 Render-ready release. Promoted from the validated v2.9.3 package (public prospect-link auth fix) with the dependency-free ROI engine test suite restored (`npm run test:engine`).
 
@@ -470,3 +470,15 @@ A separate "Help" button (bottom-left, opposite the back-to-top button) on the p
 **Security:** uses a separate `/api/prospect-assist` endpoint (not `/api/enhance`, which requires a session). The endpoint validates the discovery token, enforces the scoped system prompt server-side (client cannot override), and shares the same rate limiter. API key never reaches the browser.
 
 **Session guarantee (both assistants):** history is a module-scoped array initialised to `[]` at page load. No localStorage, no sessionStorage, no cookies. Every page load starts a completely clean session. Verified by checking for storage API calls (not just mentions in comments).
+
+## v4.6.4 — field service (MEP) removed
+
+Breaking change for any scenario that previously used field service inputs. No migrations.
+
+**Removed completely:**
+- Field Service Value Drivers collapsible section from the calculator (repeatVisitsYr, costPerTruckRoll, mFirstFix, fieldTechs, addedJobsPerDay, revenuePerJob, workingDaysYr, mUtilization, fieldInventoryValue, fieldLeakagePct, mLeakage)
+- The three ROI levers: truck-roll savings, technician revenue growth, field leakage savings
+- MEP option from the solution selector
+- Field service sections from the prospect discovery questionnaire (all industries)
+
+**Engine impact:** annualBenefit no longer includes fieldLeverSav. Existing saved scenarios with field service data will recalculate lower when next saved. Test suite is now 17 tests (5 field-service tests removed alongside the feature).

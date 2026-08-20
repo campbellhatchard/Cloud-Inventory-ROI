@@ -33,9 +33,7 @@
       'otifTarget','mOtif','otifRisk','itCost','mIt','discRate','invest','otc','implMonths',
       'laborWastePct','downtimeEventsYr','downtimeHrsPerEvent','downtimeCostPerHr','mDowntime',
       'expediteSpendYr','mExpedite','countDaysYr','countPeople','mCount','ordersPerYr','costPerOrder',
-      'pickRateGainPct','mThroughput','orderErrorPct','costPerError','mAccuracy','repeatVisitsYr',
-      'costPerTruckRoll','mFirstFix','fieldTechs','addedJobsPerDay','revenuePerJob','workingDaysYr',
-      'mUtilization','fieldInventoryValue','fieldLeakagePct','mLeakage'];
+      'pickRateGainPct','mThroughput','orderErrorPct','costPerError','mAccuracy'];
     const _v = Object.assign({}, v);
     for (const k of _num) { const n = parseFloat(_v[k]); _v[k] = (isNaN(n) || n < 0) ? 0 : n; }
     if (_v.ramp1 === undefined) _v.ramp1 = v.ramp1; // preserve undefined-ramp default logic below
@@ -127,36 +125,8 @@
 
   const wmsLeverSav = throughputSav + accuracySav;
 
-  /* ── 12. First-time-fix / truck-roll avoidance (v2.7 / Field Inventory) ──
-     Fewer repeat visits from wrong/missing parts: repeat visits avoided
-     × fully-loaded cost per truck roll × recovery %.                     */
-  const truckRollSav = (v.modelVersion >= 27)
-    ? (v.repeatVisitsYr || 0) * (v.costPerTruckRoll || 0) * (v.mFirstFix || 0)
-    : 0;
-
-  /* ── 13. Revenue per technician (v2.7 / Field Inventory) ──
-     REVENUE GROWTH (not a cost saving): more billable jobs/day when techs
-     stop hunting parts. techs × added jobs/day × rev/job × working days
-     × realization %. Tracked separately from cost savings for honesty.   */
-  const techRevenueSav = (v.modelVersion >= 27)
-    ? (v.fieldTechs || 0) * (v.addedJobsPerDay || 0) * (v.revenuePerJob || 0) * (v.workingDaysYr || 0) * (v.mUtilization || 0)
-    : 0;
-
-  /* ── 14. Field parts leakage / high-value asset loss (v2.7 / Field Inventory) ──
-     Van-stock and field parts lost, walked off, or expired — distinct
-     from warehouse shrink. field inventory value × leakage rate × recovery %. */
-  const fieldLeakageSav = (v.modelVersion >= 27)
-    ? (v.fieldInventoryValue || 0) * (v.fieldLeakagePct || 0) * (v.mLeakage || 0)
-    : 0;
-
-  /* Field cost savings (excludes the revenue-growth lever) + revenue growth
-     tracked separately so the methodology doc can present them honestly.   */
-  const fieldCostSav   = truckRollSav + fieldLeakageSav;
-  const fieldRevenueSav = techRevenueSav;
-  const fieldLeverSav  = fieldCostSav + fieldRevenueSav;
-
   /* ── Full annualised benefit (at steady-state, post-ramp) ── */
-  const annualBenefit = laborSav + shrinkSav + carrySavCorrected + turnsSav + otifSav + itSav + newLeverSav + wmsLeverSav + fieldLeverSav;
+  const annualBenefit = laborSav + shrinkSav + carrySavCorrected + turnsSav + otifSav + itSav + newLeverSav + wmsLeverSav;
 
   /* ── Ramp-up & implementation timeline ──
      implMonths: months from contract signing to go-live (0 benefit)
@@ -244,8 +214,6 @@
     carrySav: carrySavCorrected, turnsSav, capitalFreed, otifSav, itSav,
     downtimeSav, expediteSav, countSav, newLeverSav,
     throughputSav, accuracySav, wmsLeverSav,
-    truckRollSav, techRevenueSav, fieldLeakageSav,
-    fieldCostSav, fieldRevenueSav, fieldLeverSav,
     overlapAdj, annualCarryCost,
     annualBenefit, year1Benefit, year1Factor,
     totalInvestY1, netY1, roi,

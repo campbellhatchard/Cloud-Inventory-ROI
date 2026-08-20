@@ -257,18 +257,6 @@ function getVals() {
     modelVersion: 27,
     laborWastePct:       g('laborWastePct') / 100,  // measured productivity waste (Option B)
     currentAccuracy:     g('currentAccuracy'),        // measured inventory accuracy % (Option A)
-    /* ── v2.7 Field Inventory levers ── */
-    repeatVisitsYr:      g('repeatVisitsYr'),
-    costPerTruckRoll:    g('costPerTruckRoll'),
-    mFirstFix:           metricPct('m_firstfix', 'firstFix'),
-    fieldTechs:          g('fieldTechs'),
-    addedJobsPerDay:     g('addedJobsPerDay'),
-    revenuePerJob:       g('revenuePerJob'),
-    workingDaysYr:       g('workingDaysYr') || 0,
-    mUtilization:        metricPct('m_utilization', 'utilization'),
-    fieldInventoryValue: g('fieldInventoryValue'),
-    fieldLeakagePct:     g('fieldLeakagePct') / 100,
-    mLeakage:            metricPct('m_leakage', 'leakage'),
     /* ── v2.6 WMS levers ── */
     ordersPerYr:         g('ordersPerYr'),
     costPerOrder:        g('costPerOrder'),
@@ -1081,8 +1069,7 @@ function clearForm() {
    'downtimeEventsYr','downtimeHrsPerEvent','downtimeCostPerHr','m_downtime',
    'expediteSpendYr','m_expedite','countDaysYr','countPeople','m_count',
    'laborWastePct','currentAccuracy',
-   'ordersPerYr','costPerOrder','pickRateGainPct','m_throughput','orderErrorPct','costPerError','m_accuracy',
-   'repeatVisitsYr','costPerTruckRoll','m_firstfix','fieldTechs','addedJobsPerDay','revenuePerJob','workingDaysYr','m_utilization','fieldInventoryValue','fieldLeakagePct','m_leakage'].forEach(id => {
+   'ordersPerYr','costPerOrder','pickRateGainPct','m_throughput','orderErrorPct','costPerError','m_accuracy'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   const defaults={laborCost:55000,invest:80000,discRate:10,

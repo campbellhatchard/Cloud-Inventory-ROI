@@ -54,15 +54,6 @@ const DISC_QUESTIONS = {
       { id:'dqw4', text:'What is your current order error or mis-ship rate?', why:'Accuracy lever: error rate %.', sync:'orderErrorPct', type:'percent', placeholder:'e.g. 2' },
       { id:'dqw5', text:'What is the fully-loaded cost of one order error (return + re-ship + chargeback)?', why:'Accuracy lever: cost per error.', sync:'costPerError', type:'number', placeholder:'e.g. 120' },
     ]},
-    { section: 'Field service value drivers', questions: [
-      { id:'dqf1', text:'How many repeat or return visits per year are caused by technicians not having the right part?', why:'First-fix lever: repeat visits avoided per year.', sync:'repeatVisitsYr', type:'number', placeholder:'e.g. 1200' },
-      { id:'dqf2', text:'What is the fully-loaded cost of one truck roll (labor, vehicle, fuel)?', why:'First-fix lever: cost per truck roll.', sync:'costPerTruckRoll', type:'number', placeholder:'e.g. 300' },
-      { id:'dqf3', text:'How many field technicians do you have?', why:'Revenue-per-tech lever: technician count.', sync:'fieldTechs', type:'number', placeholder:'e.g. 40' },
-      { id:'dqf4', text:'How many additional billable jobs per day could each technician complete with time saved?', why:'Revenue-per-tech lever: added jobs/day.', sync:'addedJobsPerDay', type:'number', placeholder:'e.g. 0.5' },
-      { id:'dqf5', text:'What is your average revenue per billable job?', why:'Revenue-per-tech lever: revenue per job.', sync:'revenuePerJob', type:'number', placeholder:'e.g. 250' },
-      { id:'dqf6', text:'What is the value of inventory held in the field / on trucks?', why:'Field leakage lever: field inventory value.', sync:'fieldInventoryValue', type:'number', placeholder:'e.g. 2000000' },
-      { id:'dqf7', text:'What is your current field/van-stock leakage rate (lost, walked-off, or expired parts)?', why:'Field leakage lever: leakage rate %.', sync:'fieldLeakagePct', type:'percent', placeholder:'e.g. 4' },
-    ]},
   ],
   telecom: [
     { section: 'Field Operations & Labor', questions: [
@@ -100,15 +91,6 @@ const DISC_QUESTIONS = {
       { id:'dqw3', text:'What pick-rate or throughput improvement do you expect from mobile-first workflows?', why:'Throughput lever: pick-rate gain %.', sync:'pickRateGainPct', type:'percent', placeholder:'e.g. 20' },
       { id:'dqw4', text:'What is your current order error or mis-ship rate?', why:'Accuracy lever: error rate %.', sync:'orderErrorPct', type:'percent', placeholder:'e.g. 2' },
       { id:'dqw5', text:'What is the fully-loaded cost of one order error (return + re-ship + chargeback)?', why:'Accuracy lever: cost per error.', sync:'costPerError', type:'number', placeholder:'e.g. 120' },
-    ]},
-    { section: 'Field service value drivers', questions: [
-      { id:'dqf1', text:'How many repeat or return visits per year are caused by technicians not having the right part?', why:'First-fix lever: repeat visits avoided per year.', sync:'repeatVisitsYr', type:'number', placeholder:'e.g. 1200' },
-      { id:'dqf2', text:'What is the fully-loaded cost of one truck roll (labor, vehicle, fuel)?', why:'First-fix lever: cost per truck roll.', sync:'costPerTruckRoll', type:'number', placeholder:'e.g. 300' },
-      { id:'dqf3', text:'How many field technicians do you have?', why:'Revenue-per-tech lever: technician count.', sync:'fieldTechs', type:'number', placeholder:'e.g. 40' },
-      { id:'dqf4', text:'How many additional billable jobs per day could each technician complete with time saved?', why:'Revenue-per-tech lever: added jobs/day.', sync:'addedJobsPerDay', type:'number', placeholder:'e.g. 0.5' },
-      { id:'dqf5', text:'What is your average revenue per billable job?', why:'Revenue-per-tech lever: revenue per job.', sync:'revenuePerJob', type:'number', placeholder:'e.g. 250' },
-      { id:'dqf6', text:'What is the value of inventory held in the field / on trucks?', why:'Field leakage lever: field inventory value.', sync:'fieldInventoryValue', type:'number', placeholder:'e.g. 2000000' },
-      { id:'dqf7', text:'What is your current field/van-stock leakage rate (lost, walked-off, or expired parts)?', why:'Field leakage lever: leakage rate %.', sync:'fieldLeakagePct', type:'percent', placeholder:'e.g. 4' },
     ]},
   ],
   mfg: [
@@ -149,15 +131,6 @@ const DISC_QUESTIONS = {
       { id:'dqw4', text:'What is your current order error or mis-ship rate?', why:'Accuracy lever: error rate %.', sync:'orderErrorPct', type:'percent', placeholder:'e.g. 2' },
       { id:'dqw5', text:'What is the fully-loaded cost of one order error (return + re-ship + chargeback)?', why:'Accuracy lever: cost per error.', sync:'costPerError', type:'number', placeholder:'e.g. 120' },
     ]},
-    { section: 'Field service value drivers', questions: [
-      { id:'dqf1', text:'How many repeat or return visits per year are caused by technicians not having the right part?', why:'First-fix lever: repeat visits avoided per year.', sync:'repeatVisitsYr', type:'number', placeholder:'e.g. 1200' },
-      { id:'dqf2', text:'What is the fully-loaded cost of one truck roll (labor, vehicle, fuel)?', why:'First-fix lever: cost per truck roll.', sync:'costPerTruckRoll', type:'number', placeholder:'e.g. 300' },
-      { id:'dqf3', text:'How many field technicians do you have?', why:'Revenue-per-tech lever: technician count.', sync:'fieldTechs', type:'number', placeholder:'e.g. 40' },
-      { id:'dqf4', text:'How many additional billable jobs per day could each technician complete with time saved?', why:'Revenue-per-tech lever: added jobs/day.', sync:'addedJobsPerDay', type:'number', placeholder:'e.g. 0.5' },
-      { id:'dqf5', text:'What is your average revenue per billable job?', why:'Revenue-per-tech lever: revenue per job.', sync:'revenuePerJob', type:'number', placeholder:'e.g. 250' },
-      { id:'dqf6', text:'What is the value of inventory held in the field / on trucks?', why:'Field leakage lever: field inventory value.', sync:'fieldInventoryValue', type:'number', placeholder:'e.g. 2000000' },
-      { id:'dqf7', text:'What is your current field/van-stock leakage rate (lost, walked-off, or expired parts)?', why:'Field leakage lever: leakage rate %.', sync:'fieldLeakagePct', type:'percent', placeholder:'e.g. 4' },
-    ]},
   ],
   construction: [
     { section: 'Site & Labor Management', questions: [
@@ -196,15 +169,6 @@ const DISC_QUESTIONS = {
       { id:'dqw4', text:'What is your current order error or mis-ship rate?', why:'Accuracy lever: error rate %.', sync:'orderErrorPct', type:'percent', placeholder:'e.g. 2' },
       { id:'dqw5', text:'What is the fully-loaded cost of one order error (return + re-ship + chargeback)?', why:'Accuracy lever: cost per error.', sync:'costPerError', type:'number', placeholder:'e.g. 120' },
     ]},
-    { section: 'Field service value drivers', questions: [
-      { id:'dqf1', text:'How many repeat or return visits per year are caused by technicians not having the right part?', why:'First-fix lever: repeat visits avoided per year.', sync:'repeatVisitsYr', type:'number', placeholder:'e.g. 1200' },
-      { id:'dqf2', text:'What is the fully-loaded cost of one truck roll (labor, vehicle, fuel)?', why:'First-fix lever: cost per truck roll.', sync:'costPerTruckRoll', type:'number', placeholder:'e.g. 300' },
-      { id:'dqf3', text:'How many field technicians do you have?', why:'Revenue-per-tech lever: technician count.', sync:'fieldTechs', type:'number', placeholder:'e.g. 40' },
-      { id:'dqf4', text:'How many additional billable jobs per day could each technician complete with time saved?', why:'Revenue-per-tech lever: added jobs/day.', sync:'addedJobsPerDay', type:'number', placeholder:'e.g. 0.5' },
-      { id:'dqf5', text:'What is your average revenue per billable job?', why:'Revenue-per-tech lever: revenue per job.', sync:'revenuePerJob', type:'number', placeholder:'e.g. 250' },
-      { id:'dqf6', text:'What is the value of inventory held in the field / on trucks?', why:'Field leakage lever: field inventory value.', sync:'fieldInventoryValue', type:'number', placeholder:'e.g. 2000000' },
-      { id:'dqf7', text:'What is your current field/van-stock leakage rate (lost, walked-off, or expired parts)?', why:'Field leakage lever: leakage rate %.', sync:'fieldLeakagePct', type:'percent', placeholder:'e.g. 4' },
-    ]},
   ],
   oil: [
     { section: 'Field Operations & Maintenance Labor', questions: [
@@ -241,15 +205,6 @@ const DISC_QUESTIONS = {
       { id:'dqw3', text:'What pick-rate or throughput improvement do you expect from mobile-first workflows?', why:'Throughput lever: pick-rate gain %.', sync:'pickRateGainPct', type:'percent', placeholder:'e.g. 20' },
       { id:'dqw4', text:'What is your current order error or mis-ship rate?', why:'Accuracy lever: error rate %.', sync:'orderErrorPct', type:'percent', placeholder:'e.g. 2' },
       { id:'dqw5', text:'What is the fully-loaded cost of one order error (return + re-ship + chargeback)?', why:'Accuracy lever: cost per error.', sync:'costPerError', type:'number', placeholder:'e.g. 120' },
-    ]},
-    { section: 'Field service value drivers', questions: [
-      { id:'dqf1', text:'How many repeat or return visits per year are caused by technicians not having the right part?', why:'First-fix lever: repeat visits avoided per year.', sync:'repeatVisitsYr', type:'number', placeholder:'e.g. 1200' },
-      { id:'dqf2', text:'What is the fully-loaded cost of one truck roll (labor, vehicle, fuel)?', why:'First-fix lever: cost per truck roll.', sync:'costPerTruckRoll', type:'number', placeholder:'e.g. 300' },
-      { id:'dqf3', text:'How many field technicians do you have?', why:'Revenue-per-tech lever: technician count.', sync:'fieldTechs', type:'number', placeholder:'e.g. 40' },
-      { id:'dqf4', text:'How many additional billable jobs per day could each technician complete with time saved?', why:'Revenue-per-tech lever: added jobs/day.', sync:'addedJobsPerDay', type:'number', placeholder:'e.g. 0.5' },
-      { id:'dqf5', text:'What is your average revenue per billable job?', why:'Revenue-per-tech lever: revenue per job.', sync:'revenuePerJob', type:'number', placeholder:'e.g. 250' },
-      { id:'dqf6', text:'What is the value of inventory held in the field / on trucks?', why:'Field leakage lever: field inventory value.', sync:'fieldInventoryValue', type:'number', placeholder:'e.g. 2000000' },
-      { id:'dqf7', text:'What is your current field/van-stock leakage rate (lost, walked-off, or expired parts)?', why:'Field leakage lever: leakage rate %.', sync:'fieldLeakagePct', type:'percent', placeholder:'e.g. 4' },
     ]},
   ],
   distribution: [
@@ -288,15 +243,6 @@ const DISC_QUESTIONS = {
       { id:'dqw3', text:'What pick-rate or throughput improvement do you expect from mobile-first workflows?', why:'Throughput lever: pick-rate gain %.', sync:'pickRateGainPct', type:'percent', placeholder:'e.g. 20' },
       { id:'dqw4', text:'What is your current order error or mis-ship rate?', why:'Accuracy lever: error rate %.', sync:'orderErrorPct', type:'percent', placeholder:'e.g. 2' },
       { id:'dqw5', text:'What is the fully-loaded cost of one order error (return + re-ship + chargeback)?', why:'Accuracy lever: cost per error.', sync:'costPerError', type:'number', placeholder:'e.g. 120' },
-    ]},
-    { section: 'Field service value drivers', questions: [
-      { id:'dqf1', text:'How many repeat or return visits per year are caused by technicians not having the right part?', why:'First-fix lever: repeat visits avoided per year.', sync:'repeatVisitsYr', type:'number', placeholder:'e.g. 1200' },
-      { id:'dqf2', text:'What is the fully-loaded cost of one truck roll (labor, vehicle, fuel)?', why:'First-fix lever: cost per truck roll.', sync:'costPerTruckRoll', type:'number', placeholder:'e.g. 300' },
-      { id:'dqf3', text:'How many field technicians do you have?', why:'Revenue-per-tech lever: technician count.', sync:'fieldTechs', type:'number', placeholder:'e.g. 40' },
-      { id:'dqf4', text:'How many additional billable jobs per day could each technician complete with time saved?', why:'Revenue-per-tech lever: added jobs/day.', sync:'addedJobsPerDay', type:'number', placeholder:'e.g. 0.5' },
-      { id:'dqf5', text:'What is your average revenue per billable job?', why:'Revenue-per-tech lever: revenue per job.', sync:'revenuePerJob', type:'number', placeholder:'e.g. 250' },
-      { id:'dqf6', text:'What is the value of inventory held in the field / on trucks?', why:'Field leakage lever: field inventory value.', sync:'fieldInventoryValue', type:'number', placeholder:'e.g. 2000000' },
-      { id:'dqf7', text:'What is your current field/van-stock leakage rate (lost, walked-off, or expired parts)?', why:'Field leakage lever: leakage rate %.', sync:'fieldLeakagePct', type:'percent', placeholder:'e.g. 4' },
     ]},
   ],
   food: [
@@ -337,15 +283,6 @@ const DISC_QUESTIONS = {
       { id:'dqw4', text:'What is your current order error or mis-ship rate?', why:'Accuracy lever: error rate %.', sync:'orderErrorPct', type:'percent', placeholder:'e.g. 2' },
       { id:'dqw5', text:'What is the fully-loaded cost of one order error (return + re-ship + chargeback)?', why:'Accuracy lever: cost per error.', sync:'costPerError', type:'number', placeholder:'e.g. 120' },
     ]},
-    { section: 'Field service value drivers', questions: [
-      { id:'dqf1', text:'How many repeat or return visits per year are caused by technicians not having the right part?', why:'First-fix lever: repeat visits avoided per year.', sync:'repeatVisitsYr', type:'number', placeholder:'e.g. 1200' },
-      { id:'dqf2', text:'What is the fully-loaded cost of one truck roll (labor, vehicle, fuel)?', why:'First-fix lever: cost per truck roll.', sync:'costPerTruckRoll', type:'number', placeholder:'e.g. 300' },
-      { id:'dqf3', text:'How many field technicians do you have?', why:'Revenue-per-tech lever: technician count.', sync:'fieldTechs', type:'number', placeholder:'e.g. 40' },
-      { id:'dqf4', text:'How many additional billable jobs per day could each technician complete with time saved?', why:'Revenue-per-tech lever: added jobs/day.', sync:'addedJobsPerDay', type:'number', placeholder:'e.g. 0.5' },
-      { id:'dqf5', text:'What is your average revenue per billable job?', why:'Revenue-per-tech lever: revenue per job.', sync:'revenuePerJob', type:'number', placeholder:'e.g. 250' },
-      { id:'dqf6', text:'What is the value of inventory held in the field / on trucks?', why:'Field leakage lever: field inventory value.', sync:'fieldInventoryValue', type:'number', placeholder:'e.g. 2000000' },
-      { id:'dqf7', text:'What is your current field/van-stock leakage rate (lost, walked-off, or expired parts)?', why:'Field leakage lever: leakage rate %.', sync:'fieldLeakagePct', type:'percent', placeholder:'e.g. 4' },
-    ]},
   ],
   retail: [
     { section: 'Store Operations & Labor', questions: [
@@ -384,15 +321,6 @@ const DISC_QUESTIONS = {
       { id:'dqw4', text:'What is your current order error or mis-ship rate?', why:'Accuracy lever: error rate %.', sync:'orderErrorPct', type:'percent', placeholder:'e.g. 2' },
       { id:'dqw5', text:'What is the fully-loaded cost of one order error (return + re-ship + chargeback)?', why:'Accuracy lever: cost per error.', sync:'costPerError', type:'number', placeholder:'e.g. 120' },
     ]},
-    { section: 'Field service value drivers', questions: [
-      { id:'dqf1', text:'How many repeat or return visits per year are caused by technicians not having the right part?', why:'First-fix lever: repeat visits avoided per year.', sync:'repeatVisitsYr', type:'number', placeholder:'e.g. 1200' },
-      { id:'dqf2', text:'What is the fully-loaded cost of one truck roll (labor, vehicle, fuel)?', why:'First-fix lever: cost per truck roll.', sync:'costPerTruckRoll', type:'number', placeholder:'e.g. 300' },
-      { id:'dqf3', text:'How many field technicians do you have?', why:'Revenue-per-tech lever: technician count.', sync:'fieldTechs', type:'number', placeholder:'e.g. 40' },
-      { id:'dqf4', text:'How many additional billable jobs per day could each technician complete with time saved?', why:'Revenue-per-tech lever: added jobs/day.', sync:'addedJobsPerDay', type:'number', placeholder:'e.g. 0.5' },
-      { id:'dqf5', text:'What is your average revenue per billable job?', why:'Revenue-per-tech lever: revenue per job.', sync:'revenuePerJob', type:'number', placeholder:'e.g. 250' },
-      { id:'dqf6', text:'What is the value of inventory held in the field / on trucks?', why:'Field leakage lever: field inventory value.', sync:'fieldInventoryValue', type:'number', placeholder:'e.g. 2000000' },
-      { id:'dqf7', text:'What is your current field/van-stock leakage rate (lost, walked-off, or expired parts)?', why:'Field leakage lever: leakage rate %.', sync:'fieldLeakagePct', type:'percent', placeholder:'e.g. 4' },
-    ]},
   ],
   mining: [
     { section: 'Maintenance & Operations Labor', questions: [
@@ -430,15 +358,6 @@ const DISC_QUESTIONS = {
       { id:'dqw4', text:'What is your current order error or mis-ship rate?', why:'Accuracy lever: error rate %.', sync:'orderErrorPct', type:'percent', placeholder:'e.g. 2' },
       { id:'dqw5', text:'What is the fully-loaded cost of one order error (return + re-ship + chargeback)?', why:'Accuracy lever: cost per error.', sync:'costPerError', type:'number', placeholder:'e.g. 120' },
     ]},
-    { section: 'Field service value drivers', questions: [
-      { id:'dqf1', text:'How many repeat or return visits per year are caused by technicians not having the right part?', why:'First-fix lever: repeat visits avoided per year.', sync:'repeatVisitsYr', type:'number', placeholder:'e.g. 1200' },
-      { id:'dqf2', text:'What is the fully-loaded cost of one truck roll (labor, vehicle, fuel)?', why:'First-fix lever: cost per truck roll.', sync:'costPerTruckRoll', type:'number', placeholder:'e.g. 300' },
-      { id:'dqf3', text:'How many field technicians do you have?', why:'Revenue-per-tech lever: technician count.', sync:'fieldTechs', type:'number', placeholder:'e.g. 40' },
-      { id:'dqf4', text:'How many additional billable jobs per day could each technician complete with time saved?', why:'Revenue-per-tech lever: added jobs/day.', sync:'addedJobsPerDay', type:'number', placeholder:'e.g. 0.5' },
-      { id:'dqf5', text:'What is your average revenue per billable job?', why:'Revenue-per-tech lever: revenue per job.', sync:'revenuePerJob', type:'number', placeholder:'e.g. 250' },
-      { id:'dqf6', text:'What is the value of inventory held in the field / on trucks?', why:'Field leakage lever: field inventory value.', sync:'fieldInventoryValue', type:'number', placeholder:'e.g. 2000000' },
-      { id:'dqf7', text:'What is your current field/van-stock leakage rate (lost, walked-off, or expired parts)?', why:'Field leakage lever: leakage rate %.', sync:'fieldLeakagePct', type:'percent', placeholder:'e.g. 4' },
-    ]},
   ],
 };
 
@@ -455,28 +374,20 @@ const DISC_QUESTIONS = {
    ═══════════════════════════════════════════════════════════════════ */
 
 /* Value-engineering strategic core — the "must-ask" set, shown for EVERY
-   industry. 14 questions across the value-engineering arc. */
+   industry. Reduced to the 4 essential prospect-facing questions. */
 const VE_CORE_QUESTIONS = {
   section: 'Value-engineering core (must-ask)',
   isVeCore: true,
   questions: [
-    /* Business context & priorities */
-    { id:'ve1', text:'What are the top 2–3 corporate initiatives this year that this problem touches?', why:'Anchors the business case to executive priorities.', type:'context' },
-    { id:'ve2', text:'Why is solving this a priority now, versus 6–12 months ago?', why:'Identifies the compelling event driving urgency.', type:'context' },
-    { id:'ve3', text:'Is this tied to any board-level, investor, or regulatory commitment?', why:'Surfaces top-down pressure and executive visibility.', type:'context' },
-    /* Impact & consequence */
+    /* The 4 essential must-ask questions */
+    { id:'ve2', text:'Why is solving this a priority now, versus 6\u201312 months ago?', why:'Identifies the compelling event driving urgency.', type:'context' },
     { id:'ve4', text:'Who in the organization feels this pain most acutely today?', why:'Begins the stakeholder and impact map.', type:'context' },
-    { id:'ve5', text:'What has this problem prevented you from doing — growth, expansion, service levels?', why:'Frames opportunity cost, not just hard savings.', type:'context' },
-    { id:'ve6', text:'What happens if nothing changes over the next 12–18 months?', why:'Establishes the cost of inaction.', type:'context' },
-    { id:'ve7', text:'Have you tried to solve this before? What happened?', why:'Reveals prior failures and objections to pre-empt.', type:'context' },
-    /* Stakeholders & decision */
-    { id:'ve8', text:'Who is the executive sponsor, and what outcome are they accountable for?', why:'Identifies the economic buyer. Feeds the stakeholder map.', type:'context' },
     { id:'ve9', text:'Who else is impacted across operations, finance, IT, and field teams?', why:'Maps the full set of stakeholders. Feeds the stakeholder map.', type:'context' },
+    { id:'ve13', text:'How will you measure success post-implementation?', why:'Defines value-realization metrics for the business case.', type:'context' },
+    /* Internal-only (rep assessment, not shown to prospects) */
     { id:'ve10', text:'Who could block or slow this decision, and why?', why:'Identifies detractors early (internal assessment).', type:'context', internal:true },
     { id:'ve11', text:'What is your decision process and typical timeline for an investment like this?', why:'Drives the mutual action plan timeline.', type:'context', internal:true },
     { id:'ve12', text:'What does the budget or funding picture look like for this initiative?', why:'Qualifies budget authority and availability (internal).', type:'context', internal:true },
-    /* Success & value realization */
-    { id:'ve13', text:'How will you measure success at 6 and 12 months post-implementation?', why:'Defines value-realization metrics for the business case.', type:'context' },
     { id:'ve14', text:'Who needs to see the business case, and in what format?', why:'Shapes deliverables and the exec-readout plan.', type:'context', internal:true },
   ]
 };
@@ -538,9 +449,6 @@ const INDUSTRY_CONTEXT = {
    only for industries where the value driver actually applies. Filtering
    here keeps the underlying data intact and the logic centralized.        */
 const SECTION_INDUSTRY_RELEVANCE = {
-  /* Field service value drivers: field-heavy verticals. Medical Devices (retail
-     key) included — consignment / trunk stock at clinician sites is field work. */
-  'Field service value drivers': ['telecom', 'construction', 'oil', 'mining', 'retail', 'default'],
   /* Warehouse throughput & order accuracy: DC/warehouse-heavy verticals. */
   'Warehouse throughput & order accuracy': ['distribution', 'mfg', 'retail', 'food', 'default'],
 };

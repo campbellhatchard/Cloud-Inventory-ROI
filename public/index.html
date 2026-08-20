@@ -255,7 +255,6 @@
               <select id="solution" onchange="applySolutionEmphasis()">
                 <option value="all">All / Platform</option>
                 <option value="wms">Warehouse Operations (WMS)</option>
-                <option value="mep">Field Inventory (MEP)</option>
                 <option value="mfgmat">Manufacturing Materials</option>
               </select>
             </div>
@@ -484,42 +483,6 @@
                 <input type="number" id="currentAccuracy" placeholder="e.g. 92" oninput="recalc()" min="0" max="100" step="0.1"/></div>
             </div>
             <div id="accuracySuggestion" class="accuracy-suggestion" style="display:none;"></div>
-
-            <details class="driver-group" id="fieldServiceGroup">
-            <summary class="driver-group-summary">Field service value drivers <span class="mep-tag">MEP</span><span class="driver-group-hint">Optional — expand only if the prospect runs field service / van stock. Left blank, it is excluded from the ROI.</span></summary>
-            <div class="field-row-3">
-              <div class="field"><label title="Repeat/return visits per year caused by wrong or missing parts">Repeat visits / yr (#)</label>
-                <input type="number" id="repeatVisitsYr" placeholder="e.g. 1,200" oninput="recalc()" min="0" step="10"/></div>
-              <div class="field"><label title="Fully-loaded cost of one truck roll: labor + vehicle + fuel">Cost per truck roll ($)</label>
-                <input type="number" id="costPerTruckRoll" placeholder="e.g. 300" oninput="recalc()" min="0" step="10"/></div>
-              <div class="field"><label title="% of repeat visits eliminated by right-part-on-truck (blank = industry avg)">First-fix recovery % <span class="metric-bench" id="b_firstfix"></span></label>
-                <input type="number" id="m_firstfix" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
-            </div>
-            <div class="field-note-inline">Revenue growth (shown separately from cost savings):</div>
-            <div class="field-row-4">
-              <div class="field"><label title="Number of field technicians">Field techs (#)</label>
-                <input type="number" id="fieldTechs" placeholder="e.g. 40" oninput="recalc()" min="0" step="1"/></div>
-              <div class="field"><label title="Additional billable jobs per tech per day from time saved">Added jobs / day (#)</label>
-                <input type="number" id="addedJobsPerDay" placeholder="e.g. 0.5" oninput="recalc()" min="0" step="0.1"/></div>
-              <div class="field"><label title="Average revenue per billable job">Revenue / job ($)</label>
-                <input type="number" id="revenuePerJob" placeholder="e.g. 250" oninput="recalc()" min="0" step="10"/></div>
-              <div class="field"><label title="Working days per year">Working days / yr (#)</label>
-                <input type="number" id="workingDaysYr" placeholder="e.g. 240" oninput="recalc()" min="0" max="365" step="1"/></div>
-            </div>
-            <div class="field-row-2">
-              <div class="field"><label title="% of the theoretical utilization gain actually realized (blank = industry avg)">Utilization realization % <span class="metric-bench" id="b_utilization"></span></label>
-                <input type="number" id="m_utilization" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
-              <div class="field"></div>
-            </div>
-            <div class="field-row-3">
-              <div class="field"><label title="Value of inventory held in the field / on trucks">Field inventory value ($)</label>
-                <input type="number" id="fieldInventoryValue" placeholder="e.g. 2,000,000" oninput="recalc()" min="0" step="10000"/></div>
-              <div class="field"><label title="Current field/van-stock leakage rate %">Field leakage rate (%)</label>
-                <input type="number" id="fieldLeakagePct" placeholder="e.g. 4" oninput="recalc()" min="0" max="100" step="0.1"/></div>
-              <div class="field"><label title="% of leakage recovered by field tracking (blank = industry avg)">Leakage recovery % <span class="metric-bench" id="b_leakage"></span></label>
-                <input type="number" id="m_leakage" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
-            </div>
-            </details>
 
             <div class="field-group-label">Warehouse throughput &amp; order accuracy <span class="wms-tag">WMS</span></div>
             <div class="field-row-3">
@@ -1255,7 +1218,7 @@
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="4.6.1";</script>
+<script>const APP_VERSION="4.7.0";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
 <script src="assistant.js"></script>
