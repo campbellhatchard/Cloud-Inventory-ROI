@@ -1,106 +1,72 @@
-# Cloud Inventory ROI v4.5.0 Deployment Validation
+# Cloud Inventory ROI v4.6.1 Deployment Validation
 
-## Package corrections applied
+Generated: 2026-08-20
 
-- Moved `.node-version` to the package root.
-- Moved `.github/workflows/ci.yml` to the package root when present.
+## Source
+
+Uploaded package: `cloud-inventory-roi-v4_6_1.zip`
+
+## Packaging corrections applied
+
+- Moved `.node-version` from the leftover nested `cloud-inventory-roi-v4_0_0/` folder to the package root.
+- Moved `.github/workflows/ci.yml` from the leftover nested `cloud-inventory-roi-v4_0_0/` folder to the package root.
 - Removed the leftover nested `cloud-inventory-roi-v4_0_0/` folder.
-- Aligned `package.json` and `package-lock.json` to version `4.5.0`.
-- Added `.npmrc` to force `https://registry.npmjs.org/` and avoid inherited/private npm registry configuration.
-- Removed `node_modules` and any `.git` metadata from the deployment package.
+- Aligned `package-lock.json` version values from `2.9.3` to `4.6.1`.
+- Added root `.npmrc` with the public npm registry.
+- Confirmed `node_modules/` and `.git/` are not included in the final deployment ZIP.
 
-No application logic was changed during packaging.
+No application logic was changed.
 
-## Validation checks
+## Validation checks completed
 
-- PASS: ZIP integrity
-- PASS: Required Render root files
-- PASS: render.yaml structure
-- PASS: package.json / package-lock.json alignment
-- PASS: .node-version at package root
-- PASS: .github/workflows/ci.yml at package root
-- PASS: public npm registry hygiene
-- PASS: JavaScript syntax checks
-- PASS: Inline HTML script syntax checks
-- PASS: ROI engine tests
-- PASS: Route test loader
-- PASS: Discovery public-link auth fix
-- PASS: No node_modules included
+| Check | Result |
+|---|---:|
+| ZIP integrity of uploaded package | Passed |
+| Required Render root files present | Passed |
+| `render.yaml` production structure | Passed |
+| `package.json` version = `4.6.1` | Passed |
+| `package-lock.json` version/root version = `4.6.1` | Passed |
+| `.node-version` at root = `22.22.0` | Passed |
+| `.github/workflows/ci.yml` at root | Passed |
+| Public npm registry hygiene | Passed |
+| JavaScript syntax checks | Passed |
+| Inline HTML script syntax checks | Passed |
+| ROI engine tests | 22 passed, 0 failed |
+| Route test loader | Passed; DB integration skipped because `DATABASE_URL` is not set in sandbox |
+| Discovery public-link auth fix | Present |
+| Migrations present through `015_scenario_shares.sql` | Passed |
 
-## Details
+## Render target
 
-- `package.json` version: `4.5.0`
-- `package-lock.json` version: `4.5.0`
-- `.node-version`: `22.22.0`
-- JavaScript files checked: `52`
-- Inline HTML script blocks checked: `10`
-- Migrations present through: `015_scenario_shares.sql`
+This package is production-targeted:
 
-### Render checks
+- Web service: `cloud-inventory-roi`
+- Database: `cloud-inventory-roi-db`
+- Build command: `npm ci --omit=dev --no-audit --no-fund`
+- Start command: `node server.js`
+- Health check: `/health`
+- Node: `22.22.0`
 
-- PASS: runtime: node
-- PASS: buildCommand uses npm ci
-- PASS: startCommand node server.js
-- PASS: healthCheckPath /health
-- PASS: autoDeployTrigger commit
-- PASS: maxShutdownDelaySeconds 15
-- PASS: DATABASE_URL fromDatabase
-- PASS: NODE_VERSION 22.22.0
-
-### Discovery checks
-
-- PASS: analytics router does not globally apply router.use(requireAuth)
-- PASS: public discovery route exists
-- PASS: prospect page supports ?token=
-
-### ROI engine test output
+## Migration files
 
 ```text
-ROI engine tests:
-  ✓ OVERLAP_DEDUCTION is 0.15
-  ✓ laborSav = users×labor×mLabor
-  ✓ shrinkSav = base×mShrinkage
-  ✓ carrySav applies 15% overlap
-  ✓ otifSav uses target-baseline gap
-  ✓ itSav = itCost×mIt
-  ✓ annualBenefit positive
-  ✓ laborWastePct scales labor
-  ✓ labor waste ignored pre-v25
-  ✓ v2.5 levers = 0 at v24
-  ✓ downtimeSav correct at v25
-  ✓ expediteSav correct at v25
-  ✓ WMS levers = 0 at v25
-  ✓ throughputSav correct at v26
-  ✓ accuracySav correct at v26
-  ✓ Field levers = 0 at v26
-  ✓ truckRollSav correct at v27
-  ✓ techRevenueSav correct at v27
-  ✓ fieldCostSav excludes revenue
-  ✓ fieldRevenueSav = techRevenueSav
-  ✓ no-new-lever inputs identical across versions
-  ✓ empty input safe (benefit >= 0, no NaN)
-
-🟢 22 passed, 0 failed
+001_initial_schema.sql
+002_seed_data.sql
+003_repair_bootstrap_admin.sql
+004_fix_admin_first_login.sql
+005_maps_stakeholders.sql
+006_add_solution.sql
+007_analytics_benchmarks.sql
+008_engagement_tracking.sql
+009_outcome_tracking.sql
+010_error_log.sql
+011_customers.sql
+012_handoffs.sql
+013_se_role.sql
+014_update_help_content.sql
+015_scenario_shares.sql
 ```
 
+## Sandbox limitation
 
-### Route test output
-
-```text
-TAP version 13
-# Subtest: HTTP API integration
-ok 1 - HTTP API integration # SKIP DATABASE_URL not set — integration tests skipped
-  ---
-  duration_ms: 0.443367
-  type: 'suite'
-  ...
-1..1
-# tests 0
-# suites 1
-# pass 0
-# fail 0
-# cancelled 0
-# skipped 0
-# todo 0
-# duration_ms 59.674744
-```
+A full live `npm ci` was not completed in the sandbox environment. The deployment toolkit runs `npm ci --omit=dev --no-audit --no-fund` locally before cloning, committing, or pushing to GitHub.

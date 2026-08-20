@@ -1,4 +1,4 @@
-# Cloud Inventory ROI Builder v4.5.0
+# Cloud Inventory ROI Builder v4.6.0
 
 Render-ready release. Promoted from the validated v2.9.3 package (public prospect-link auth fix) with the dependency-free ROI engine test suite restored (`npm run test:engine`).
 
@@ -445,3 +445,28 @@ A floating "Ask" button (bottom-right, opposite the back-to-top button) opens a 
 **Requires:** ANTHROPIC_API_KEY set on the server (same key the Three-Whys enhancer uses — no new config).
 
 Pass 2 (context-awareness: the assistant knows which field/tab is active) is parked until Pass 1 answer quality is confirmed on staging.
+
+## v4.6.0 — AI assistant Pass 2 + prospect questionnaire assistant
+
+No migrations. Engine unchanged (22/22).
+
+### Internal assistant — Pass 2 (context-awareness)
+The assistant now builds a context snapshot at send time:
+- **Active tab**: knows whether the rep is on the Calculator, Executive, Discovery, Sensitivity, etc.
+- **Last focused field**: tracks `focusin` events on calculator inputs. If the rep clicks a field then opens the assistant and asks "what does this mean?", it resolves to that field automatically. 40 fields mapped by id to human labels.
+- **Scenario/company**: reads the current company name and scenario name from the DOM.
+- **Guided mode**: notes if guided mode is active.
+
+The context is injected into the system prompt fresh on every send, so it always reflects the current state, not the state when the panel was opened.
+
+### Prospect questionnaire assistant (new)
+A separate "Help" button (bottom-left, opposite the back-to-top button) on the prospect discovery page opens a scoped assistant. It:
+- Explains questionnaire terms (OTIF, inventory turns, shrinkage, carrying cost, etc.)
+- Tells prospects where to find a number (which team, which system)
+- Explains why a question is being asked
+- Knows which section/question is currently on screen (IntersectionObserver)
+- Refuses to discuss Cloud Inventory products, pricing, or the ROI model
+
+**Security:** uses a separate `/api/prospect-assist` endpoint (not `/api/enhance`, which requires a session). The endpoint validates the discovery token, enforces the scoped system prompt server-side (client cannot override), and shares the same rate limiter. API key never reaches the browser.
+
+**Session guarantee (both assistants):** history is a module-scoped array initialised to `[]` at page load. No localStorage, no sessionStorage, no cookies. Every page load starts a completely clean session. Verified by checking for storage API calls (not just mentions in comments).

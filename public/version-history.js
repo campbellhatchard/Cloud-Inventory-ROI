@@ -7,6 +7,25 @@
 
 const VERSION_HISTORY = [
   {
+    version: '4.6.1', date: '2026-08-05', tag: 'feature',
+    title: 'Persistent assistant suggestion chips',
+    changes: [
+      'Both assistants now show two always-visible shortcut chips pinned above the input — they stay in place throughout the conversation so common questions are always one click away.',
+      'Internal: "What does this field mean?" and "How do I share this with a prospect?"',
+      'Prospect: \u201cWhat if I don\u2019t know the exact number?\u201d and \u201cWhere do I find this number?\u201d'
+    ]
+  },
+  {
+    version: '4.6.0', date: '2026-08-05', tag: 'feature',
+    title: 'AI assistant Pass 2: context-aware + prospect questionnaire assistant',
+    changes: [
+      'The internal assistant now knows which tab is active, which field was most recently focused, and the current scenario and company name. Ask "what does this field mean?" right after clicking a field and it resolves automatically.',
+      'A separate Help assistant is now available on the prospect discovery page. It is scoped strictly to the questionnaire: it explains terms, helps prospects find numbers, and explains why questions are being asked. It knows nothing about the sales process or internal ROI model.',
+      'Session guarantee: both assistants hold conversation history in memory only. Nothing is written to localStorage, sessionStorage, or cookies. Every page load starts a clean session.',
+      'The prospect assistant uses a separate server endpoint authenticated by the discovery link token. The system prompt is enforced server-side so prospects cannot override the scope restrictions.'
+    ]
+  },
+  {
     version: '4.5.0', date: '2026-08-05', tag: 'feature',
     title: 'In-app AI assistant (Pass 1)',
     changes: [

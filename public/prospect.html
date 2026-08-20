@@ -973,5 +973,12 @@ document.addEventListener('DOMContentLoaded', init);
   update();
 })();
 </script>
+<style>
+/* Prospect help button: bottom-left (back-to-top is bottom-right) */
+.passt-fab{bottom:22px;left:22px;}
+.passt-panel{bottom:22px;left:22px;transform-origin:bottom left;}
+@media(max-width:600px){.passt-panel{left:0;right:0;border-radius:0;}}
+</style>
+<script src="prospect-assistant.js"></script>
 </body>
 </html>

@@ -742,7 +742,57 @@ app.post('/api/scenario-shares/:id/revoke', requireAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Failed to revoke share link.' }); }
 });
 
-/* ── Page routes ── */
+/* ── Prospect-scoped AI endpoint ────────────────────────────────────
+   The /api/enhance proxy requires a session (requireAuth). Prospects on
+   the discovery link have a discovery token but no session — so they
+   need a separate, tightly-scoped endpoint. The system prompt is built
+   server-side to ensure it cannot be overridden by the client. */
+app.post('/api/prospect-assist', aiLimiter, async (req, res) => {
+  try {
+    const { token, messages } = req.body || {};
+    if (!token || !messages || !Array.isArray(messages)) {
+      return res.status(400).json({ error: 'token and messages required.' });
+    }
+    /* Validate discovery token so only real prospect links can call this. */
+    if (!isValidDiscoveryToken(token)) {
+      return res.status(403).json({ error: 'Invalid or expired session.' });
+    }
+    /* Hard-coded system prompt — client cannot override it. */
+    const system = [
+      'You are a helpful assistant on a business operations questionnaire page.',
+      'A prospect is completing questions about their inventory and operations.',
+      'ONLY answer questions about the questionnaire: what terms mean, what a good',
+      'answer looks like, or where to find a number. Do NOT discuss Cloud Inventory',
+      'products, pricing, ROI calculations, or the sales process. Do NOT benchmark',
+      'or advise on what numbers "should" be. If asked anything outside this scope,',
+      'say politely that you can only help with the questionnaire and suggest they',
+      'contact their Cloud Inventory representative. Be concise and friendly.'
+    ].join(' ');
+    const payload = {
+      model: ANTHROPIC_MODEL,
+      max_tokens: 500,
+      system,
+      messages: messages.slice(-8)
+    };
+    const aiResp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await aiResp.json();
+    if (!aiResp.ok) return res.status(502).json({ error: 'AI service error.' });
+    res.json(data);
+  } catch (err) {
+    console.error('prospect-assist error:', err.message);
+    res.status(500).json({ error: 'Assistant unavailable.' });
+  }
+});
+
+
 app.get('/login.html',           (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'login.html')));
 app.get('/change-password.html', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'change-password.html')));
 app.get('/reset-password.html',  (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'reset-password.html')));
