@@ -1,40 +1,47 @@
-# Cloud Inventory ROI v4.9.1 Deployment Validation
+# Cloud Inventory ROI v4.9.2 Deployment Validation
 
-Source upload: `cloud-inventory-roi-v4_9_1.zip`  
-Validated package: `cloud-inventory-roi-v4.9.1-render-ready.zip`
+## Purpose
 
-## Packaging corrections applied
+Hotfix package for the Render startup failure in `017_share_links_follow_latest.sql`.
 
-- Moved `.node-version` to the package root.
-- Moved `.github/workflows/ci.yml` to the package root.
-- Removed leftover nested `cloud-inventory-roi-v4_0_0/` folder.
-- Aligned `package.json` and `package-lock.json` to `4.9.1`.
-- Added `.npmrc` to force the public npm registry.
-- Removed `node_modules` / Git metadata from the final deployment ZIP.
+Render failed with:
 
-No application logic was changed.
+```text
+insert or update on table "business_case_shares" violates foreign key constraint "business_case_shares_scenario_base_id_fkey"
+```
 
-## Validation checks
+## Root cause
 
-- ZIP integrity: passed.
-- Required Render root files: passed.
-- `render.yaml` structure: passed.
-- `package.json` / `package-lock.json` alignment: passed.
-- `.node-version` at package root: passed.
-- `.github/workflows/ci.yml` at package root: passed.
-- Public npm registry hygiene: passed.
-- JavaScript syntax checks: passed (53 files).
-- Inline HTML script syntax checks: passed (10 inline scripts).
-- ROI engine tests: 17 passed, 0 failed.
-- Route test loader: passed; DB integration skipped because `DATABASE_URL` is not set in sandbox.
-- Discovery public-link auth fix: still present.
-- Migrations present through `018_discovery_submission.sql`.
-- No `node_modules` included in final ZIP.
+The original migration added `scenario_base_id` with a foreign key to `scenarios(id)`, but the application stores `scenarios.base_id` in that column. `base_id` is a version-group key and is not guaranteed to also exist as a row ID in `scenarios.id` for historical data.
 
-## Sandbox caveat
+## Fix included
 
-A full live `npm ci --omit=dev --no-audit --no-fund` timed out in this sandbox environment. The PowerShell toolkit runs that same command locally before replacing the GitHub repository contents or pushing to GitHub.
+`migrations/017_share_links_follow_latest.sql` now:
 
-## Render target
+- Adds `scenario_base_id` as `UUID` without a foreign key to `scenarios(id)`.
+- Defensively drops the incorrect FK constraints if present.
+- Backfills `scenario_base_id` from `scenarios.base_id` by joining via the original `scenario_id`.
+- Preserves the indexes used by share-link lookups.
+- Keeps the filename as `017_share_links_follow_latest.sql` so the pending migration can run correctly after the failed deployment.
 
-This package targets the existing production Render resources defined in `render.yaml`: `cloud-inventory-roi` and `cloud-inventory-roi-db`.
+## Validation completed
+
+- ZIP root structure valid for Render/GitHub.
+- Required files present: `render.yaml`, `package.json`, `package-lock.json`, `.node-version`, `.npmrc`, `server.js`, `src/`, `public/`, `migrations/`.
+- `package.json`, `package-lock.json`, and lockfile root package aligned to `4.9.2`.
+- JavaScript syntax checks passed.
+- ROI engine tests passed.
+- Route test loader passed; DB integration skipped where `DATABASE_URL` is not set.
+- Discovery public-link auth fix remains present.
+- Migration 017 no longer defines `scenario_base_id` as a foreign key to `scenarios(id)`.
+
+## Expected Render behavior
+
+Since `016_field_inventory.sql` was already applied during the failed deploy, the next deployment should report two pending migrations:
+
+```text
+017_share_links_follow_latest.sql
+018_discovery_submission.sql
+```
+
+Then startup should complete and `/health` should return version `4.9.2` with database connected.

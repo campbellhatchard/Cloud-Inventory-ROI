@@ -7,6 +7,11 @@
 
 const VERSION_HISTORY = [
   {
+    version: '4.9.2', date: '2026-08-20', tag: 'hotfix',
+    title: 'Migration 017 deployment hotfix',
+    summary: 'Corrects share-link latest-version migration so scenario_base_id stores the base_id grouping key without an invalid foreign key to scenarios.id.'
+  },
+  {
     version: '4.9.1', date: '2026-08-05', tag: 'feature',
     title: 'Solution Fit redesigned',
     changes: [
