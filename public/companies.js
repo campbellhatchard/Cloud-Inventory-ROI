@@ -136,11 +136,14 @@ function promptScenarioForCompany(company, onContinue) {
       </div>
     </div>`;
   } else {
+    const user    = window.ciAuth ? window.ciAuth.getUser() : {};
+    const isAdmin = user.role === 'admin';
     const rows = matches.map(s => {
       const roi = (s.roi !== undefined && s.roi !== null) ? Math.round(s.roi) + '% ROI' : '';
       const ben = (s.annualBenefit) ? '$' + (Math.abs(s.annualBenefit) >= 1e6
         ? (s.annualBenefit/1e6).toFixed(1) + 'M' : Math.round(s.annualBenefit/1e3) + 'K') + '/yr' : '';
-      const meta = [s.version ? 'v' + s.version : '', ben, roi].filter(Boolean).join(' · ');
+      const rep = (isAdmin && s.ownerUsername) ? s.ownerUsername : '';
+      const meta = [s.version ? 'v' + s.version : '', ben, roi, rep ? '(' + rep + ')' : ''].filter(Boolean).join(' · ');
       return `<label class="scenario-pick-row">
         <input type="radio" name="scenPick" value="${s.id}"/>
         <div><div class="scenario-pick-name">${escapeHtml(s.name)}</div>

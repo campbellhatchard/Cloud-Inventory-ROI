@@ -316,13 +316,16 @@
               <div class="field"><label title="Estimated % of field inventory lost, unaccounted for, or written off per year">Field leakage / shrinkage rate (%)</label>
                 <input type="number" id="fieldLeakageRate" placeholder="e.g. 4" oninput="recalc()" min="0" max="100" step="0.5"/></div>
             </div>
-            <div class="field-row-3">
+            <div class="field-row-2">
               <div class="field"><label title="Number of distinct field locations (job sites, contractor depots, vehicle routes)">Field locations (#)</label>
                 <input type="number" id="fieldLocations" placeholder="e.g. 12" oninput="recalc()" min="0" step="1"/></div>
-              <div class="field"><label title="Cost to reconcile / count one field location (labor + travel)">Cost to reconcile / location ($)</label>
-                <input type="number" id="fieldReconcileCost" placeholder="e.g. 500" oninput="recalc()" min="0" step="50"/></div>
               <div class="field"><label title="How many times per year each location is reconciled">Reconciliations / location / yr (#)</label>
                 <input type="number" id="fieldReconcilePerYr" placeholder="e.g. 4" oninput="recalc()" min="0" step="1"/></div>
+            </div>
+            <div class="field-row-2">
+              <div class="field"><label title="Cost to reconcile / count one field location (labor + travel)">Cost to reconcile / location ($)</label>
+                <input type="number" id="fieldReconcileCost" placeholder="e.g. 500" oninput="recalc()" min="0" step="50"/></div>
+              <div class="field"></div>
             </div>
           </div>
 
@@ -522,25 +525,27 @@
             <div id="accuracySuggestion" class="accuracy-suggestion" style="display:none;"></div>
 
             <div class="field-group-label">Warehouse throughput &amp; order accuracy <span class="wms-tag">WMS</span></div>
-            <div class="field-row-3">
+            <div class="field-row-2">
               <div class="field"><label title="Total orders or order-lines shipped per year">Orders / lines per yr (#)</label>
                 <input type="number" id="ordersPerYr" placeholder="e.g. 250,000" oninput="recalc()" min="0" step="1000"/></div>
               <div class="field"><label title="Fully-loaded labor cost to process one order/line today">Cost per order ($)</label>
                 <input type="number" id="costPerOrder" placeholder="e.g. 3.50" oninput="recalc()" min="0" step="0.10"/></div>
+            </div>
+            <div class="field-row-2">
               <div class="field"><label title="Expected pick-rate / throughput improvement %">Pick-rate gain (%)</label>
                 <input type="number" id="pickRateGainPct" placeholder="e.g. 20" oninput="recalc()" min="0" max="100" step="1"/></div>
+              <div class="field"><label title="Percentage of throughput gain realized as savings (blank = industry avg)">Throughput recovery % <span class="metric-bench" id="b_throughput"></span></label>
+                <input type="number" id="m_throughput" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
             </div>
-            <div class="field-row-3">
+            <div class="field-row-2">
               <div class="field"><label title="Current order error / mis-ship rate %">Order error rate (%)</label>
                 <input type="number" id="orderErrorPct" placeholder="e.g. 2" oninput="recalc()" min="0" max="100" step="0.1"/></div>
               <div class="field"><label title="Fully-loaded cost of one error: return processing + re-ship freight + chargeback">Cost per error ($)</label>
                 <input type="number" id="costPerError" placeholder="e.g. 120" oninput="recalc()" min="0" step="5"/></div>
-              <div class="field"><label title="% of error cost recovered by better accuracy (blank = industry avg)">Recovery % <span class="metric-bench" id="b_accuracy"></span></label>
-                <input type="number" id="m_accuracy" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
             </div>
             <div class="field-row-2">
-              <div class="field"><label title="% of throughput gain realized as savings (blank = industry avg)">Throughput recovery % <span class="metric-bench" id="b_throughput"></span></label>
-                <input type="number" id="m_throughput" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
+              <div class="field"><label title="% of error cost recovered by better accuracy (blank = industry avg)">Error recovery % <span class="metric-bench" id="b_accuracy"></span></label>
+                <input type="number" id="m_accuracy" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
               <div class="field"></div>
             </div>
 
@@ -550,8 +555,13 @@
                 <input type="number" id="downtimeEventsYr" placeholder="e.g. 120" oninput="recalc()" min="0" step="1"/></div>
               <div class="field"><label title="Average hours of lost/slowed production per event">Avg hours / event (#)</label>
                 <input type="number" id="downtimeHrsPerEvent" placeholder="e.g. 0.75" oninput="recalc()" min="0" step="0.25"/></div>
+              <div class="field"><label title="Percentage of downtime cost recovered by accuracy improvement (blank = industry avg)">Downtime recovery % <span class="metric-bench" id="b_downtime"></span></label>
+                <input type="number" id="m_downtime" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
+            </div>
+            <div class="field-row-2">
               <div class="field"><label title="Fully-loaded cost of one hour of lost production (labor + margin + overhead)">Cost / downtime hour ($)</label>
                 <input type="number" id="downtimeCostPerHr" placeholder="e.g. 5,000" oninput="recalc()" min="0" step="100"/></div>
+              <div class="field"></div>
             </div>
 
             <div class="field-group-label">Expedite / emergency procurement</div>
@@ -570,12 +580,6 @@
                 <input type="number" id="countPeople" placeholder="e.g. 6" oninput="recalc()" min="0" step="1"/></div>
               <div class="field"><label title="Percentage of counting labor eliminated by real-time accuracy (blank = industry avg)">Recovery % <span class="metric-bench" id="b_count"></span></label>
                 <input type="number" id="m_count" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
-            </div>
-
-            <div class="field-row-2">
-              <div class="field"><label title="Percentage of downtime cost recovered by accuracy improvement (blank = industry avg)">Downtime recovery % <span class="metric-bench" id="b_downtime"></span></label>
-                <input type="number" id="m_downtime" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
-              <div class="field"></div>
             </div>
 
           </div>
@@ -1255,7 +1259,7 @@
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="4.9.2";</script>
+<script>const APP_VERSION="4.9.5";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
 <script src="assistant.js"></script>

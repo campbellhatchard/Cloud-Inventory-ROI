@@ -87,7 +87,7 @@ function pptTitle(slide, text) {
    MAIN EXPORT FUNCTION
    ═══════════════════════════════════════════════════════════════════ */
 async function exportToPowerPoint() {
-  if (typeof PptxGenJS === 'undefined') {
+  if (typeof pptxgen === 'undefined') {
     showToast('PowerPoint library not loaded — check your connection and refresh.');
     return;
   }
@@ -102,7 +102,7 @@ async function exportToPowerPoint() {
     const company = v.company && v.company !== 'Prospect' ? v.company : 'Your Company';
     const roiMultiple = r.totalInvestY1 > 0 ? (r.year1Benefit / r.totalInvestY1) : 0;
 
-    const pptx = new PptxGenJS();
+    const pptx = new pptxgen();
     pptx.defineLayout({ name: 'CI', width: PPT.W, height: PPT.H });
     pptx.layout = 'CI';
     pptx.author  = v.rep || 'Cloud Inventory';

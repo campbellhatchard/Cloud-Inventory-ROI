@@ -24,7 +24,12 @@ async function fetchScenarios() {
   if (_scenariosLoading) return;
   _scenariosLoading = true;
   try {
-    const resp = await apiFetch('/api/scenarios');
+    /* Admins see all users' scenarios so the customer → scenario lookup
+       works across the whole team, not just their own deals. */
+    const user    = window.ciAuth ? window.ciAuth.getUser() : {};
+    const isAdmin = user.role === 'admin';
+    const url     = isAdmin ? '/api/scenarios?all=true' : '/api/scenarios';
+    const resp = await apiFetch(url);
     if (!resp || !resp.ok) return;
     const rows = await resp.json();
     /* Normalise DB row shape to match the legacy shape used by features.js */

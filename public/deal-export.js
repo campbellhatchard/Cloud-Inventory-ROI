@@ -16,7 +16,7 @@
 
 /* ── Small shared helpers ── */
 function deChk(lib) {
-  if (typeof PptxGenJS === 'undefined') {
+  if (typeof pptxgen === 'undefined') {
     showToast('PowerPoint library not loaded — refresh and try again.');
     return false;
   }
@@ -136,7 +136,7 @@ async function pptActionPlan(variant) {
       : { rep: 'Cloud Inventory', prospect: 'Customer', joint: 'Joint' };
     const phases = ['Evaluate','Validate','Business Case','Legal & Procurement','Launch'];
 
-    const pptx = new PptxGenJS();
+    const pptx = new pptxgen();
     pptx.defineLayout({ name: 'CI', width: PPT.W, height: PPT.H });
     pptx.layout = 'CI';
     pptx.title = m.title;
@@ -260,7 +260,7 @@ async function pptStakeholderMap() {
     const roleLabels = { champion:'Champion', economic_buyer:'Economic Buyer', technical_buyer:'Technical Buyer', influencer:'Influencer', blocker:'Blocker', end_user:'End User' };
     const roleColor = (r) => (typeof STAKE_ROLES !== 'undefined' && STAKE_ROLES[r]) ? STAKE_ROLES[r].color.replace('#','') : '5A6570';
 
-    const pptx = new PptxGenJS();
+    const pptx = new pptxgen();
     pptx.defineLayout({ name: 'CI', width: PPT.W, height: PPT.H });
     pptx.layout = 'CI';
     pptx.title = 'Stakeholder Map — ' + company;
@@ -634,7 +634,7 @@ async function roiMethodologyPPT() {
     const v = m.v, r = m.r, M = m.M;
     const company = (v.company && v.company !== 'Prospect') ? v.company : 'Your Company';
 
-    const pptx = new PptxGenJS();
+    const pptx = new pptxgen();
     pptx.defineLayout({ name:'CI', width:PPT.W, height:PPT.H }); pptx.layout='CI';
     pptx.title = 'ROI Methodology — ' + company;
 

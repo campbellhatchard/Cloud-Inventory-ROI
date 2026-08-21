@@ -7,6 +7,31 @@
 
 const VERSION_HISTORY = [
   {
+    version: '4.9.5', date: '2026-08-21', tag: 'fixes',
+    title: 'Admins can now see all reps\' scenarios when selecting a customer',
+    changes: [
+      'Fixed: when an admin selected a customer in the calculator, it showed "no saved scenarios" even when reps had created many. The scenario list was filtered to the current user only.',
+      'Admins now load all scenarios across all reps on page load (GET /api/scenarios?all=true). The server already supported this — the client was not requesting it.',
+      'When an admin selects a customer that has scenarios from multiple reps, the scenario picker shows the rep name next to each scenario so it is clear who built it.'
+    ]
+  },
+  {
+    version: '4.9.4', date: '2026-08-05', tag: 'fixes',
+    title: 'PowerPoint export fixed',
+    changes: [
+      'Fixed: PowerPoint export always showed "library not loaded" error. pptxgenjs v3 renamed its global export from PptxGenJS to pptxgen (lowercase). The guard check and all constructor calls in pptx-export.js and deal-export.js have been updated to match.'
+    ]
+  },
+  {
+    version: '4.9.3', date: '2026-08-05', tag: 'fixes',
+    title: 'Calculator dollar fields widened to accommodate 10-digit entries',
+    changes: [
+      'Dollar amount fields that were squeezed into 3-column grids (cost per order, cost per error, cost per downtime hour, field reconciliation cost) have been moved to 2-column rows so they always have enough room for large figures.',
+      'Minimum column width for 3 and 4-column grids increased from 150px to 180px.',
+      'All 11 dollar input fields verified to be in standalone or 2-column layouts.'
+    ]
+  },
+  {
     version: '4.9.2', date: '2026-08-20', tag: 'hotfix',
     title: 'Migration 017 deployment hotfix',
     summary: 'Corrects share-link latest-version migration so scenario_base_id stores the base_id grouping key without an invalid foreign key to scenarios.id.'

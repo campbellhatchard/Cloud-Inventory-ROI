@@ -2006,13 +2006,19 @@ body.livebar-off .guided-nav{top:calc(var(--topbar-h) + 8px);}
    the affix "$" box plus min-width:0 let the input shrink below its
    content. Give number inputs a readable floor and let rows wrap rather
    than crush columns. */
-.field-row-3,.field-row-4{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));}
+.field-row-3,.field-row-4{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));}
 .field input[type="number"]{min-width:0;}
 .affix-wrap input[type="number"]{text-align:left;}
-/* Never let a number input render narrower than a handful of digits. */
+/* Never let a number input render narrower than enough for 10 digits */
 .field-row-3 .field,.field-row-4 .field{min-width:0;}
 .field-row-3 .affix-wrap,.field-row-4 .affix-wrap,
-.field-row-3 .field input,.field-row-4 .field input{min-width:130px;}
+.field-row-3 .field input,.field-row-4 .field input{min-width:160px;}
+/* Dollar fields that can hold up to 10 digits — always full width */
+#revenue,#inventoryValue,#laborCost,#itCost,#invest,#otc,
+#annualWriteOff,#expediteSpendYr,#downtimeCostPerHr,
+#fieldInvValue,#fieldReconcileCost,#costPerOrder,#costPerError{
+  min-width:0;width:100%;
+}
 @media(max-width:640px){
   .field-row-3 .affix-wrap,.field-row-4 .affix-wrap,
   .field-row-3 .field input,.field-row-4 .field input{min-width:0;}
