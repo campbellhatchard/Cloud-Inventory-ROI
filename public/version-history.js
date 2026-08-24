@@ -7,6 +7,11 @@
 
 const VERSION_HISTORY = [
   {
+    version: '5.4.1', date: '2026-08-24', tag: 'hotfix',
+    title: 'Server startup hotfix',
+    summary: 'Hoists requireAuth before admin routes so Render startup does not fail with a temporal dead zone ReferenceError.'
+  },
+  {
     version: '5.4.0', date: '2026-08-22', tag: 'feature',
     title: 'Two new AI features: free-text discovery figure extraction, natural-language deal data queries',
     changes: [

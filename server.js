@@ -180,7 +180,7 @@ app.use('/api', require('./src/routes/analytics'));  // analytics + custom bench
    De-duplicated company names across scenarios, action plans and
    stakeholders for the current user, each with usage counts.
    Case-insensitive grouping; canonical spelling = most recent use.  */
-const { requireAuth: _reqAuthCompanies } = require('./src/middleware/auth');
+const { requireAuth, requireAuth: _reqAuthCompanies } = require('./src/middleware/auth');
 app.get('/api/companies', _reqAuthCompanies, async (req, res) => {
   try {
     const { rows } = await db().query(
@@ -718,8 +718,6 @@ app.get('/api/enhance/health', (req, res) => {
 });
 
 /* ── AI Enhance proxy — requires auth ── */
-const { requireAuth } = require('./src/middleware/auth');
-
 app.post('/api/enhance', requireAuth, aiLimiter, async (req, res) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set.' });
