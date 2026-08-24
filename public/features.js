@@ -604,6 +604,55 @@ cloudinventory.com`;
   trackEvent('email_generated', { company: v.company });
 }
 
+/* AI personalize: rewrite the tone/framing of the template for the
+   selected audience and any recorded debrief notes, while keeping
+   every number in the email exactly as computed — never letting the
+   model touch the figures themselves. */
+async function aiPersonalizeEmail() {
+  const btn = document.getElementById('aiPersonalizeEmailBtn');
+  const bodyEl = document.getElementById('emailBody');
+  if (!btn || !bodyEl) return;
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = '✨ Personalizing…';
+
+  try {
+    const v = getVals();
+    const r = calcROI(v);
+    const audience = (document.getElementById('execAudience') || {}).value || 'mixed';
+    const audienceLabel = { cfo:'CFO', coo:'VP Operations / COO', ceo:'CEO / Executive Sponsor', cio:'CIO / IT', mixed:'a mixed executive audience' }[audience] || 'a mixed executive audience';
+    const debriefNotes = (document.getElementById('debriefNotes') || {}).value || '';
+    const currentBody = bodyEl.value;
+
+    const prompt = `Rewrite this sales follow-up email to sound natural and personalized for ${audienceLabel}, while keeping every number, dollar figure, and percentage EXACTLY as written — do not change, round, or recalculate any figure. Keep it professional but less templated. ${debriefNotes ? 'The rep noted this from their last conversation with the prospect, weave it in naturally where relevant: "' + debriefNotes.replace(/"/g,"'").slice(0,300) + '"' : ''}
+
+Current email:
+${currentBody}
+
+Return ONLY the rewritten email body — no preamble, no explanation, no markdown formatting, no subject line.`;
+
+    const resp = await apiFetch('/api/enhance', {
+      method: 'POST',
+      body: JSON.stringify({ max_tokens: 1200, messages: [{ role: 'user', content: prompt }] })
+    });
+    if (!resp || !resp.ok) throw new Error('AI request failed');
+    const data = await resp.json();
+    const text = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('').trim();
+    if (!text) throw new Error('Empty response');
+
+    bodyEl.value = text;
+    showToast('✨ Email personalized — review before sending.');
+    trackEvent('email_ai_personalized', { company: v.company, audience });
+  } catch(e) {
+    console.error('aiPersonalizeEmail error:', e.message);
+    showToast('Could not personalize — the original template is still in the box.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = orig;
+  }
+}
+window.aiPersonalizeEmail = aiPersonalizeEmail;
+
 function copyEmail() {
   const subject = document.getElementById('emailSubject').value;
   const body = document.getElementById('emailBody').value;
@@ -804,6 +853,10 @@ function trackEvent(event, data = {}) {
 async function renderAnalytics() {
   const el = document.getElementById('analyticsPanel');
   if (!el) return;
+  /* Show the natural-language deal query box for admins only */
+  const currentUser = window.ciAuth ? window.ciAuth.getUser() : {};
+  const queryCard = document.getElementById('dealQueryCard');
+  if (queryCard) queryCard.style.display = currentUser.role === 'admin' ? 'block' : 'none';
   /* Team-wide events from the server (admin-gated). Falls back to empty
      if the current user isn't an admin or the call fails. */
   let serverSummary = null;
@@ -886,7 +939,158 @@ async function renderAnalytics() {
           <span class="activity-time">${new Date(e.created_at).toLocaleString()}</span>
         </div>`).join('')}
     </div>` : (serverSummary ? '' : '<p style="color:#6B7A8D;font-size:13px;margin-top:1rem;">Team-wide activity is visible to admins.</p>')}`;
+
+  /* ── Resonance / learning loop section (admin only) ── */
+  const user = window.ciAuth ? window.ciAuth.getUser() : {};
+  if (user.role === 'admin') {
+    const resonanceSection = document.createElement('div');
+    resonanceSection.style.marginTop = '2rem';
+    resonanceSection.innerHTML = `
+      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+        <span>📋 Driver resonance — what lands with prospects</span>
+        <button class="btn btn-ghost btn-sm" onclick="loadResonanceSummary()">↻ Refresh</button>
+      </div>
+      <p style="font-size:13px;color:var(--gray-600);margin-bottom:14px;">
+        Based on post-meeting debrief data from the Executive View. Shows which ROI drivers reps mark as resonating vs questioned, by industry and outcome.
+      </p>
+      <div id="resonanceSummaryPanel"><div class="empty-state"><p>Click Refresh to load driver resonance data.</p></div></div>`;
+    el.appendChild(resonanceSection);
+    loadResonanceSummary();
+  }
 }
+
+/* ─────────────────────────────────────────
+   RESONANCE SUMMARY (admin Analytics tab)
+   ───────────────────────────────────────── */
+const DRIVER_LABELS = {
+  labor:'Labor savings', shrinkage:'Shrinkage / write-off',
+  carrying:'Carrying cost', turns:'Inventory turns',
+  otif:'OTIF / order accuracy', downtime:'Downtime reduction',
+  expedite:'Expedite spend', field_inv:'Field inventory',
+  it:'IT displacement', counting:'Cycle count labour'
+};
+
+async function loadResonanceSummary() {
+  const el = document.getElementById('resonanceSummaryPanel');
+  if (!el) return;
+  el.innerHTML = '<div class="empty-state"><p>Loading\u2026</p></div>';
+  try {
+    const resp = await apiFetch('/api/scenarios/resonance/summary');
+    if (!resp || !resp.ok) {
+      el.innerHTML = '<div class="empty-state"><p>No debrief data yet. Reps can log driver resonance from the Executive View after meetings.</p></div>';
+      return;
+    }
+    const rows = await resp.json();
+    if (!rows.length) {
+      el.innerHTML = '<div class="empty-state"><p>No debrief data yet. Reps can log driver resonance from the Executive View after meetings.</p></div>';
+      return;
+    }
+
+    /* Aggregate: driver → total resonance count */
+    const totals = {};
+    rows.forEach(r => {
+      totals[r.driver] = (totals[r.driver] || 0) + Number(r.resonance_count);
+    });
+    const sorted = Object.entries(totals).sort((a,b) => b[1]-a[1]);
+    const max = sorted[0] ? sorted[0][1] : 1;
+
+    /* By industry */
+    const byInd = {};
+    rows.forEach(r => {
+      if (!byInd[r.industry]) byInd[r.industry] = {};
+      byInd[r.industry][r.driver] = (byInd[r.industry][r.driver] || 0) + Number(r.resonance_count);
+    });
+
+    const barHtml = sorted.map(([driver, count]) => {
+      const pct = Math.round(count / max * 100);
+      const label = DRIVER_LABELS[driver] || driver;
+      return `<div class="res-bar-row">
+        <div class="res-bar-label">${label}</div>
+        <div class="res-bar-track"><div class="res-bar-fill" style="width:${pct}%"></div></div>
+        <div class="res-bar-count">${count}</div>
+      </div>`;
+    }).join('');
+
+    const indHtml = Object.entries(byInd).map(([ind, drivers]) => {
+      const indLabel = (typeof IND !== 'undefined' && IND[ind]) ? IND[ind].label : ind || 'General';
+      const topDrivers = Object.entries(drivers).sort((a,b)=>b[1]-a[1]).slice(0,3)
+        .map(([d,c]) => `<span class="res-ind-driver">${DRIVER_LABELS[d]||d} (${c})</span>`).join('');
+      return `<div class="res-ind-row"><span class="res-ind-label">${escapeHtml(indLabel)}</span>${topDrivers}</div>`;
+    }).join('');
+
+    el.innerHTML = `
+      <div id="resonanceAiSummary" class="res-ai-summary">
+        <div class="res-ai-loading">✨ Summarizing patterns\u2026</div>
+      </div>
+      <div class="res-grid">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;">Top resonating drivers (all deals)</div>
+          <div class="res-bars">${barHtml}</div>
+        </div>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;">By industry (top 3 drivers)</div>
+          <div>${indHtml || '<p class="sf-muted">Not enough data by industry yet.</p>'}</div>
+        </div>
+      </div>`;
+
+    /* Load the AI narrative summary separately — chart above is already
+       usable; this fills in a moment later without blocking the page. */
+    loadResonanceAiSummary();
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state"><p>Failed to load.</p></div>';
+  }
+}
+window.loadResonanceSummary = loadResonanceSummary;
+
+async function loadResonanceAiSummary() {
+  const el = document.getElementById('resonanceAiSummary');
+  if (!el) return;
+  try {
+    const resp = await apiFetch('/api/scenarios/resonance/summary/ai');
+    if (!resp || !resp.ok) { el.style.display = 'none'; return; }
+    const { summary } = await resp.json();
+    if (!summary) { el.style.display = 'none'; return; }
+    el.innerHTML = `<div class="res-ai-icon">✨</div><div class="res-ai-text">${escapeHtml(summary)}</div>`;
+  } catch(e) {
+    el.style.display = 'none';  /* AI summary is a bonus — never show an error for it */
+  }
+}
+window.loadResonanceAiSummary = loadResonanceAiSummary;
+
+/* Natural-language deal data question — Admin Analytics only.
+   Two-step server flow: AI picks from a fixed query catalog (never writes
+   SQL), server runs the exact query, AI phrases the result. */
+async function askDealQuestion() {
+  const input = document.getElementById('dealQueryInput');
+  const answerEl = document.getElementById('dealQueryAnswer');
+  if (!input || !answerEl) return;
+  const question = input.value.trim();
+  if (!question) return;
+
+  answerEl.style.display = 'block';
+  answerEl.className = 'deal-query-loading';
+  answerEl.innerHTML = '✨ Checking your deal data\u2026';
+
+  try {
+    const resp = await apiFetch('/api/analytics/ask', {
+      method: 'POST',
+      body: JSON.stringify({ question })
+    });
+    if (!resp || !resp.ok) throw new Error('request failed');
+    const data = await resp.json();
+
+    answerEl.className = 'deal-query-answer';
+    const queriesNote = (data.queriesUsed && data.queriesUsed.length)
+      ? `<div class="deal-query-source">Based on: ${data.queriesUsed.join(', ')}</div>`
+      : '';
+    answerEl.innerHTML = `<div class="deal-query-icon">✨</div><div><div class="deal-query-text">${escapeHtml(data.answer || 'No answer returned.')}</div>${queriesNote}</div>`;
+  } catch(e) {
+    console.error('askDealQuestion error:', e.message);
+    answerEl.className = 'deal-query-answer';
+    answerEl.innerHTML = '<div class="deal-query-text">Could not process that question right now. Try again in a moment.</div>';
+  }
+}
+window.askDealQuestion = askDealQuestion;
 
 /* ─────────────────────────────────────────
    MODAL HELPERS (shared)

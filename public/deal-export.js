@@ -792,3 +792,276 @@ function showBusinessCaseShareModal(url, company) {
   const existing = document.getElementById('bcShareModal'); if (existing) existing.remove();
   document.body.appendChild(modal);
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Champion enablement pack
+   A 3-slide internal deck the champion takes to their own committee
+   + an Objection FAQ for the 8 questions CFOs always ask.
+   ═══════════════════════════════════════════════════════════════════ */
+
+async function buildChampionPack() {
+  if (!deChk('library')) return;
+  const btn = document.getElementById('championPackBtn');
+  const orig = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Building pack…'; }
+
+  try {
+    const v = (typeof getVals === 'function') ? getVals() : {};
+    const r = (typeof calcROI === 'function') ? calcROI(v) : {};
+    const company = (v.company && v.company !== 'Prospect') ? v.company : 'Your Prospect';
+    const ind = (typeof IND !== 'undefined' && IND[v.industry]) ? IND[v.industry].label : 'your industry';
+
+    const pptx = new pptxgen();
+    pptx.defineLayout({ name:'CI', width:PPT.W, height:PPT.H }); pptx.layout='CI';
+    pptx.title = 'Internal Business Case — ' + company;
+
+    /* ── Slide 1: The problem statement (in their words) ── */
+    const s1 = pptx.addSlide(); s1.background = { color: PPT.NAVY };
+    s1.addImage({path:PPT.LOGO, x:0.4, y:0.25, w:1.0, h:1.0*349/1000, transparency:0});
+    s1.addText('The case for Cloud Inventory', {
+      x:0.5, y:1.0, w:9.0, h:0.5, fontSize:28, bold:true, color:'#FFFFFF', fontFace:PPT.FONT
+    });
+    s1.addText(company + ' — internal business case', {
+      x:0.5, y:1.55, w:9.0, h:0.3, fontSize:13, color:'rgba(255,255,255,0.65)', fontFace:PPT.FONT
+    });
+    /* Problem statement */
+    const problems = [
+      v.annualWriteOff > 0 ? `${fmtMoney(v.annualWriteOff)}/yr in inventory write-offs` : null,
+      v.otifBaseline > 0 ? `${v.otifBaseline}% OTIF — ${v.otifTarget ? 'target ' + v.otifTarget + '%' : 'below target'}` : null,
+      v.expediteSpendYr > 0 ? `${fmtMoney(v.expediteSpendYr)}/yr in expedite spend` : null,
+      v.downtimeEventsYr > 0 ? `${v.downtimeEventsYr} downtime events/year` : null,
+    ].filter(Boolean).slice(0,3);
+    if (problems.length) {
+      s1.addText('Current situation:', {x:0.5, y:2.3, w:9, h:0.3, fontSize:12, bold:true, color:'#FFFFFF', fontFace:PPT.FONT});
+      problems.forEach((p,i) => {
+        s1.addText('• ' + p, {x:0.7, y:2.7 + i*0.35, w:8.6, h:0.3, fontSize:11.5, color:'rgba(255,255,255,0.85)', fontFace:PPT.FONT});
+      });
+    }
+    s1.addText('Prepared by your Cloud Inventory rep for internal use', {
+      x:0.5, y:PPT.H - 0.35, w:9, h:0.25, fontSize:8, color:'rgba(255,255,255,0.35)', fontFace:PPT.FONT
+    });
+
+    /* ── Slide 2: The financial case ── */
+    const s2 = pptx.addSlide(); s2.background = { color: PPT.GRAY_BG };
+    pptChrome(s2, 2);
+    pptTitle(s2, 'The financial case');
+    const consR = calcROI({...v, mLabor:v.mLabor*0.7, mShrinkage:v.mShrinkage*0.7, mCarrying:v.mCarrying*0.7, mOtif:v.mOtif*0.7, mIt:v.mIt*0.7});
+    const metrics = [
+      ['Conservative benefit', fmtMoney(consR.annualBenefit) + '/yr'],
+      ['Base case benefit',    fmtMoney(r.annualBenefit) + '/yr'],
+      ['Year 1 ROI',          fmtPct(r.roi)],
+      ['Payback from signing', r.payback ? r.payback.toFixed(1) + ' months' : '—'],
+      ['3-yr NPV',            fmtMoney(r.npv3)],
+      ['Annual investment',   fmtMoney(v.invest) + '/yr'],
+    ];
+    s2.addTable(
+      [
+        [{text:'Metric',options:{bold:true,color:PPT.WHITE,fill:{color:PPT.NAVY},fontSize:10}},
+         {text:'Value',options:{bold:true,color:PPT.WHITE,fill:{color:PPT.NAVY},fontSize:10}}],
+        ...metrics.map(([k,v2]) => [{text:k,options:{fontSize:10,color:PPT.DARK_TXT}},{text:v2,options:{fontSize:10,bold:true,color:PPT.CYAN}}])
+      ],
+      {x:0.5, y:0.9, w:9, colW:[4.5,4.5], border:{pt:0.5,color:PPT.GRAY_LT}, autoPage:false}
+    );
+    s2.addText('Conservative case scales all recovery assumptions to 70%. Investment cost is fixed.',
+      {x:0.5, y:PPT.H-0.45, w:9, h:0.2, fontSize:8, color:PPT.GRAY_TXT, italic:true, fontFace:PPT.FONT});
+
+    /* ── Slide 3: Objection FAQ ── */
+    const s3 = pptx.addSlide(); s3.background = { color: PPT.GRAY_BG };
+    pptChrome(s3, 3);
+    pptTitle(s3, 'Questions your colleagues will ask');
+    const faqs = [
+      ['"Are these numbers real?"',
+       `${typeof discoveryAnswers!=='undefined' && Object.keys(discoveryAnswers).filter(k=>!k.endsWith('_by')&&discoveryAnswers[k]).length > 0 ? 'Most figures came from our own data — submitted through Cloud Inventory\'s discovery process, not vendor estimates.' : 'Core inputs are based on our operational data. Conservative scenario applies 70% of stated recovery rates.'}`],
+      ['How does this compare to doing nothing?',
+       r.annualBenefit > 0 ? `Every month we delay costs us approximately ${fmtMoney(r.annualBenefit/12)} in recoverable value.` : 'Every month without the system, current losses continue unremediated.'],
+      ['What if the ROI doesn\'t materialise?',
+       'Conservative case still delivers positive ROI. Implementation is phased — if Month 1 targets aren\'t met, we catch it early.'],
+      ['How long until we see results?',
+       `Go-live in ${v.implMonths || 3} months. Efficiency ramp over ${3} months post go-live. Payback from contract signing: ${r.payback ? r.payback.toFixed(1) + ' months' : 'TBD'}.`],
+      ['What\'s the risk if we change our mind?',
+       'Cloud Inventory is a SaaS subscription — no large upfront capital. Exit is a subscription cancellation, not a write-off.'],
+    ];
+    let yPos = 0.85;
+    faqs.forEach(([q, a]) => {
+      s3.addText(q, {x:0.5, y:yPos, w:9, h:0.28, fontSize:10, bold:true, color:PPT.NAVY, fontFace:PPT.FONT});
+      s3.addText(a, {x:0.7, y:yPos+0.28, w:8.6, h:0.35, fontSize:9.5, color:PPT.GRAY_TXT, fontFace:PPT.FONT});
+      yPos += 0.7;
+    });
+
+    const safe = company.replace(/[^a-zA-Z0-9 \-_]/g,'').trim().replace(/\s+/g,'-') || 'Champion';
+    await pptx.writeFile({ fileName: `Champion-Pack-${safe}-${new Date().toISOString().split('T')[0]}.pptx` });
+    if (typeof showToast === 'function') showToast('Champion pack downloaded!');
+    if (typeof trackEvent === 'function') trackEvent('champion_pack_exported', { company });
+  } catch(err) {
+    console.error('Champion pack error:', err);
+    if (typeof showToast === 'function') showToast('Export failed: ' + (err.message || 'unknown error'));
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = orig || 'Champion pack'; }
+  }
+}
+window.buildChampionPack = buildChampionPack;
+
+function fmtMoney(n) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  const abs = Math.abs(n);
+  const s = typeof CURR_SYMBOLS !== 'undefined' ? (CURR_SYMBOLS.USD || '$') : '$';
+  if (abs >= 1e6) return (n < 0 ? '-' : '') + s + (abs/1e6).toFixed(1) + 'M';
+  if (abs >= 1e3) return (n < 0 ? '-' : '') + s + Math.round(abs).toLocaleString();
+  return (n < 0 ? '-' : '') + s + Math.round(abs);
+}
+function fmtPct(n) { return (n === null || n === undefined || isNaN(n)) ? '—' : Math.round(n) + '%'; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Role-specific one-pager PPT export
+   One slide, audience-specific emphasis, no jargon.
+   ═══════════════════════════════════════════════════════════════════ */
+
+async function exportOnePager() {
+  if (!deChk('library')) return;
+  const btn = document.getElementById('onePagerBtn');
+  const orig = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Building…'; }
+
+  try {
+    const v = (typeof getVals === 'function') ? getVals() : {};
+    const r = (typeof calcROI === 'function') ? calcROI(v) : {};
+    const audience = v.execAudience || 'mixed';
+    const company = (v.company && v.company !== 'Prospect') ? v.company : 'Your Prospect';
+    const ind = (typeof IND !== 'undefined' && IND[v.industry]) ? IND[v.industry].label : 'your industry';
+
+    /* Audience config */
+    const AUD = {
+      cfo: {
+        label:'CFO', icon:'💰',
+        headline: 'Financial case for Cloud Inventory',
+        focus: ['Payback period', 'Year 1 ROI', '3-yr NPV', 'Capital freed by turns improvement'],
+        color: '#0089A6',
+        emphasis: [
+          ['Conservative annual benefit', fmtMoney(r.annualBenefit * 0.7)],
+          ['Base case annual benefit',    fmtMoney(r.annualBenefit)],
+          ['Year 1 ROI',                 fmtPct(r.roi)],
+          ['Payback from signing',        r.payback ? r.payback.toFixed(1) + ' months' : '—'],
+          ['3-year NPV',                 fmtMoney(r.npv3)],
+          ['Annual subscription',        fmtMoney(v.invest) + '/yr'],
+          ['One-time implementation',    fmtMoney(v.otc)],
+        ],
+        note: 'Conservative case scales all efficiency recovery assumptions to 70%. Investment cost is fixed in all scenarios.'
+      },
+      coo: {
+        label:'VP Operations', icon:'⚙️',
+        headline: 'Operational case for Cloud Inventory',
+        focus: ['Labor savings', 'OTIF improvement', 'Shrinkage reduction', 'Downtime avoided'],
+        color: '#2E7D32',
+        emphasis: [
+          ['Annual labor savings',       fmtMoney(r.laborSav)],
+          ['Shrinkage / write-off reduction', fmtMoney(r.shrinkSav)],
+          ['OTIF improvement value',     fmtMoney(r.otifSav)],
+          ['Expedite spend reduction',   fmtMoney(r.expediteSav || 0)],
+          ['Downtime avoided',           fmtMoney(r.downtimeSav || 0)],
+          ['Total annual benefit',       fmtMoney(r.annualBenefit)],
+        ],
+        note: 'Focus: labor redeployment (not headcount reduction), accuracy improvement, and OTIF compliance.'
+      },
+      ceo: {
+        label:'CEO / Executive Sponsor', icon:'🎯',
+        headline: 'Strategic case for Cloud Inventory',
+        focus: ['Total value', 'Competitive position', 'Risk reduction', 'Speed to value'],
+        color: '#45688A',
+        emphasis: [
+          ['Annual recurring value',     fmtMoney(r.annualBenefit)],
+          ['5-year NPV',                 fmtMoney(r.npv5)],
+          ['Speed to go-live',           (v.implMonths || 3) + ' months'],
+          ['Payback from signing',        r.payback ? r.payback.toFixed(1) + ' months' : '—'],
+          ['Working capital freed',       fmtMoney(r.capitalFreed || 0)],
+          ['Year 1 ROI',                 fmtPct(r.roi)],
+        ],
+        note: 'Cloud Inventory is deployed 5–10× faster than SAP or Oracle WMS alternatives, with a fraction of the implementation risk.'
+      },
+      cio: {
+        label:'CIO / IT', icon:'💻',
+        headline: 'Technical case for Cloud Inventory',
+        focus: ['Integration', 'IT cost displacement', 'Security', 'Architecture'],
+        color: '#6A4C93',
+        emphasis: [
+          ['Annual IT cost displaced',   fmtMoney(r.itSav)],
+          ['Integration approach',       'ERP-agnostic REST API'],
+          ['Deployment model',           'Cloud SaaS — no on-premise infrastructure'],
+          ['Mobile platform',            'iOS and Android — no RF gun refresh'],
+          ['Go-live timeline',           (v.implMonths || 3) + ' months'],
+          ['Total annual benefit',       fmtMoney(r.annualBenefit)],
+        ],
+        note: 'Cloud Inventory integrates with any ERP via REST API. No ABAP, no Oracle middleware, no proprietary connectors.'
+      },
+      mixed: {
+        label:'Executive', icon:'👥',
+        headline: 'Business case for Cloud Inventory',
+        focus: ['ROI', 'Payback', 'Benefit breakdown', 'Next steps'],
+        color: '#1E2931',
+        emphasis: [
+          ['Annual benefit',             fmtMoney(r.annualBenefit)],
+          ['Year 1 ROI',                 fmtPct(r.roi)],
+          ['Payback from signing',        r.payback ? r.payback.toFixed(1) + ' months' : '—'],
+          ['3-year NPV',                 fmtMoney(r.npv3)],
+          ['Annual investment',          fmtMoney(v.invest) + '/yr'],
+          ['Go-live timeline',           (v.implMonths || 3) + ' months'],
+        ],
+        note: 'Analysis uses ' + company + ' operational data where available, supplemented by ' + ind + ' benchmarks.'
+      }
+    };
+
+    const aud = AUD[audience] || AUD.mixed;
+    const pptx = new pptxgen();
+    pptx.defineLayout({ name:'CI', width:PPT.W, height:PPT.H }); pptx.layout = 'CI';
+    pptx.title = aud.label + ' One-Pager — ' + company;
+
+    const s = pptx.addSlide(); s.background = { color: PPT.GRAY_BG };
+
+    /* Left column: brand + headline + key metrics */
+    s.addShape('rect', {x:0, y:0, w:4.2, h:PPT.H, fill:{color:aud.color}});
+    s.addImage({path:PPT.LOGO, x:0.3, y:0.25, w:1.0, h:1.0*349/1000});
+    s.addText(aud.icon + ' ' + aud.label, {x:0.3, y:1.0, w:3.6, h:0.4, fontSize:13, bold:true, color:'rgba(255,255,255,0.7)', fontFace:PPT.FONT});
+    s.addText(aud.headline, {x:0.3, y:1.45, w:3.6, h:0.7, fontSize:18, bold:true, color:'#FFFFFF', fontFace:PPT.FONT, wrap:true});
+    s.addText(company, {x:0.3, y:2.2, w:3.6, h:0.3, fontSize:12, color:'rgba(255,255,255,0.7)', fontFace:PPT.FONT});
+
+    /* Key metrics table in left column */
+    aud.emphasis.forEach(([k,v2], i) => {
+      const y = 2.75 + i * 0.52;
+      if (y > 6.8) return;
+      s.addText(k, {x:0.3, y, w:3.6, h:0.22, fontSize:9, color:'rgba(255,255,255,0.65)', fontFace:PPT.FONT});
+      s.addText(v2, {x:0.3, y:y+0.22, w:3.6, h:0.26, fontSize:13, bold:true, color:'#FFFFFF', fontFace:PPT.FONT});
+    });
+
+    /* Right column: narrative */
+    pptTitle(s, company + ' — Cloud Inventory', 4.5);
+    s.addText('What this analysis covers:', {x:4.5, y:1.0, w:5.2, h:0.3, fontSize:11, bold:true, color:PPT.NAVY, fontFace:PPT.FONT});
+    aud.focus.forEach((f, i) => {
+      s.addText('• ' + f, {x:4.7, y:1.35 + i*0.3, w:4.9, h:0.28, fontSize:10.5, color:PPT.GRAY_TXT, fontFace:PPT.FONT});
+    });
+
+    /* Cost of inaction box */
+    const ab = r.annualBenefit || 0;
+    if (ab > 0) {
+      const yBox = 2.7;
+      s.addShape('roundRect', {x:4.5, y:yBox, w:5.2, h:1.1, fill:{color:'#FFF0EB'}, line:{color:'#C24A1E', pt:1}, rectRadius:0.08});
+      s.addText('Cost of delayed decision', {x:4.7, y:yBox+0.08, w:4.8, h:0.3, fontSize:10, bold:true, color:'#C24A1E', fontFace:PPT.FONT});
+      s.addText(fmtMoney(ab/12) + ' per month  ·  ' + fmtMoney(ab/2) + ' per 6-month delay', {
+        x:4.7, y:yBox+0.42, w:4.8, h:0.5, fontSize:11, color:'#C24A1E', fontFace:PPT.FONT, wrap:true
+      });
+    }
+
+    /* Footnote */
+    s.addText(aud.note, {x:4.5, y:PPT.H-0.55, w:5.2, h:0.4, fontSize:8, color:PPT.GRAY_TXT, italic:true, fontFace:PPT.FONT, wrap:true});
+    s.addText('Cloud Inventory  ·  cloudinventory.com', {x:4.5, y:PPT.H-0.22, w:5.2, h:0.2, fontSize:7.5, color:PPT.GRAY_TXT, fontFace:PPT.FONT});
+
+    const safe = (aud.label + '-' + company).replace(/[^a-zA-Z0-9 \-_]/g,'').replace(/\s+/g,'-');
+    await pptx.writeFile({ fileName: `One-Pager-${safe}-${new Date().toISOString().split('T')[0]}.pptx` });
+    if (typeof showToast === 'function') showToast(aud.icon + ' ' + aud.label + ' one-pager downloaded!');
+    if (typeof trackEvent === 'function') trackEvent('one_pager_exported', { audience, company });
+  } catch(err) {
+    console.error('One-pager error:', err);
+    if (typeof showToast === 'function') showToast('Export failed: ' + (err.message || 'unknown'));
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = orig || 'One-pager'; }
+  }
+}
+window.exportOnePager = exportOnePager;

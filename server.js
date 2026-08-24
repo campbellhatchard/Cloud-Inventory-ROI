@@ -292,9 +292,291 @@ async function validatePurgeToken(rawToken) {
   return rows[0] || null;
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   ADMIN — DATA EXPORT
+   GET /api/admin/export/:entity  — download CSV for one entity
+   Entities: scenarios | customers | discovery | users
+   ══════════════════════════════════════════════════════════════════ */
+app.get('/api/admin/export/:entity', requireAuth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only.' });
+  const { query } = db();
+  const entity = req.params.entity;
+
+  const EXPORTS = {
+    scenarios: {
+      filename: 'scenarios.csv',
+      sql: `SELECT s.id, s.name, s.company, u.username AS rep, s.version,
+              s.is_current, s.deal_stage, s.industry,
+              (s.data->>'annualBenefit')::numeric AS annual_benefit,
+              (s.data->>'roi')::numeric AS roi,
+              (s.data->>'npv5')::numeric AS npv5,
+              s.created_at, s.updated_at, s.deleted_at
+            FROM scenarios s
+            JOIN users u ON u.id = s.owner_id
+            ORDER BY s.company, s.name, s.version DESC`,
+      params: []
+    },
+    customers: {
+      filename: 'customers.csv',
+      sql: `SELECT c.id, c.name, u.username AS owner,
+              c.has_field_inventory,
+              COUNT(DISTINCT s.id) AS scenario_count,
+              c.created_at, c.updated_at, c.deleted_at
+            FROM customers c
+            JOIN users u ON u.id = c.owner_id
+            LEFT JOIN scenarios s ON s.customer_id = c.id AND s.deleted_at IS NULL
+            GROUP BY c.id, u.username
+            ORDER BY c.name`,
+      params: []
+    },
+    discovery: {
+      filename: 'discovery_sessions.csv',
+      sql: `SELECT ds.id, ds.company, ds.industry, u.username AS rep,
+              ds.is_active, ds.has_field_inventory,
+              ds.open_count, ds.submitted_at, ds.answer_count,
+              ds.created_at, ds.updated_at
+            FROM discovery_sessions ds
+            JOIN users u ON u.id = ds.owner_id
+            ORDER BY ds.company, ds.created_at DESC`,
+      params: []
+    },
+    users: {
+      filename: 'users.csv',
+      sql: `SELECT u.id, u.username, u.email, u.role, u.is_active,
+              u.created_at,
+              MAX(s.updated_at) AS last_scenario_saved,
+              COUNT(DISTINCT s.id) AS scenario_count
+            FROM users u
+            LEFT JOIN scenarios s ON s.owner_id = u.id AND s.deleted_at IS NULL AND s.is_current = TRUE
+            GROUP BY u.id
+            ORDER BY u.username`,
+      params: []
+    }
+  };
+
+  const cfg = EXPORTS[entity];
+  if (!cfg) return res.status(400).json({ error: 'Unknown export entity.' });
+
+  try {
+    const { rows } = await query(cfg.sql, cfg.params);
+    if (!rows.length) return res.status(204).end();
+
+    /* Build CSV */
+    const cols = Object.keys(rows[0]);
+    const escape = v => {
+      if (v === null || v === undefined) return '';
+      const s = String(v);
+      return s.includes(',') || s.includes('"') || s.includes('\n')
+        ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    const csv = [cols.join(',')]
+      .concat(rows.map(r => cols.map(c => escape(r[c])).join(',')))
+      .join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${cfg.filename}"`);
+    res.send(csv);
+  } catch (err) {
+    console.error('Export error:', err.message);
+    res.status(500).json({ error: 'Export failed.' });
+  }
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   ADMIN — TEST DATA CLEANUP
+   POST /api/admin/cleanup/preview  — show what would be deleted
+   POST /api/admin/cleanup/execute  — soft-delete everything matched
+   ══════════════════════════════════════════════════════════════════ */
+app.post('/api/admin/cleanup/preview', requireAuth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only.' });
+  try {
+    const search = String(req.body.company || '').trim();
+    if (!search) return res.status(400).json({ error: 'Company name required.' });
+    const pat = '%' + search.toLowerCase() + '%';
+    const { query } = db();
+
+    const [scen, disc, cust, handoff] = await Promise.all([
+      query(`SELECT s.id, s.name, s.company, u.username AS rep, s.version, s.is_current,
+               s.deleted_at IS NOT NULL AS already_deleted
+             FROM scenarios s JOIN users u ON u.id = s.owner_id
+             WHERE LOWER(s.company) LIKE $1
+             ORDER BY s.company, s.name, s.version DESC`, [pat]),
+      query(`SELECT ds.id, ds.company, u.username AS rep,
+               ds.submitted_at IS NOT NULL AS submitted, ds.answer_count,
+               NOT ds.is_active AS already_inactive
+             FROM discovery_sessions ds JOIN users u ON u.id = ds.owner_id
+             WHERE LOWER(ds.company) LIKE $1
+             ORDER BY ds.company, ds.created_at DESC`, [pat]),
+      query(`SELECT c.id, c.name, u.username AS owner,
+               c.deleted_at IS NOT NULL AS already_deleted,
+               COUNT(DISTINCT s.id) AS scenario_count
+             FROM customers c JOIN users u ON u.id = c.owner_id
+             LEFT JOIN scenarios s ON s.customer_id = c.id
+             WHERE LOWER(c.name) LIKE $1
+             GROUP BY c.id, u.username
+             ORDER BY c.name`, [pat]),
+      query(`SELECT h.id, c.name AS customer, u.username AS se
+             FROM handoffs h
+             JOIN customers c ON c.id = h.customer_id
+             JOIN users u ON u.id = h.owner_id
+             WHERE LOWER(c.name) LIKE $1 AND h.deleted_at IS NULL`, [pat])
+    ]);
+
+    res.json({
+      search,
+      scenarios:  scen.rows,
+      discovery:  disc.rows,
+      customers:  cust.rows,
+      handoffs:   handoff.rows,
+      summary: {
+        scenarios:  scen.rows.length,
+        discovery:  disc.rows.length,
+        customers:  cust.rows.length,
+        handoffs:   handoff.rows.length
+      }
+    });
+  } catch (err) {
+    console.error('Cleanup preview error:', err.message);
+    res.status(500).json({ error: 'Preview failed.' });
+  }
+});
+
+app.post('/api/admin/cleanup/execute', requireAuth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only.' });  try {
+    const search = String(req.body.company || '').trim();
+    if (!search) return res.status(400).json({ error: 'Company name required.' });
+    const pat = '%' + search.toLowerCase() + '%';
+    const { query } = db();
+    const now = new Date().toISOString();
+
+    /* Soft-delete scenarios */
+    const scen = await query(
+      `UPDATE scenarios SET deleted_at = $1
+       WHERE LOWER(company) LIKE $2 AND deleted_at IS NULL
+       RETURNING id`, [now, pat]
+    );
+
+    /* Deactivate discovery sessions */
+    const disc = await query(
+      `UPDATE discovery_sessions SET is_active = FALSE
+       WHERE LOWER(company) LIKE $1 AND is_active = TRUE
+       RETURNING id`, [pat]
+    );
+
+    /* Deactivate share links for matched scenarios — join on company name
+       so both old (scenario_id only) and new (scenario_base_id) rows are caught */
+    await query(
+      `UPDATE scenario_shares SET is_active = FALSE
+       WHERE is_active = TRUE AND scenario_id IN (
+         SELECT id FROM scenarios WHERE LOWER(company) LIKE $1
+       )`, [pat]
+    );
+    await query(
+      `UPDATE business_case_shares SET is_active = FALSE
+       WHERE is_active = TRUE AND scenario_id IN (
+         SELECT id FROM scenarios WHERE LOWER(company) LIKE $1
+       )`, [pat]
+    );
+
+    /* Soft-delete handoffs for matched customers */
+    await query(
+      `UPDATE handoffs SET deleted_at = $1
+       WHERE customer_id IN (
+         SELECT id FROM customers WHERE LOWER(name) LIKE $2
+       ) AND deleted_at IS NULL`, [now, pat]
+    );
+
+    /* Soft-delete customers */
+    const cust = await query(
+      `UPDATE customers SET deleted_at = $1
+       WHERE LOWER(name) LIKE $2 AND deleted_at IS NULL
+       RETURNING id`, [now, pat]
+    );
+
+    /* Audit log */
+    const { log, ACTIONS } = require('./src/audit');
+    await log({
+      userId: req.user.id,
+      action: 'admin.cleanup_executed',
+      entityType: 'admin',
+      detail: {
+        search,
+        scenariosDeleted: scen.rowCount,
+        discoveryDeactivated: disc.rowCount,
+        customersDeleted: cust.rowCount
+      },
+      ipAddress: req.ip
+    });
+
+    res.json({
+      ok: true,
+      scenariosDeleted:    scen.rowCount,
+      discoveryDeactivated: disc.rowCount,
+      customersDeleted:    cust.rowCount
+    });
+  } catch (err) {
+    console.error('Cleanup execute error:', err.message);
+    res.status(500).json({ error: 'Cleanup failed.' });
+  }
+});
+
+/* ── Cleanup: list recently soft-deleted records (last 30 days) ── */
+app.get('/api/admin/cleanup/deleted', requireAuth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only.' });
+  try {
+    const { query } = db();
+    const [scen, cust] = await Promise.all([
+      query(`SELECT s.id, s.name, s.company, u.username AS rep, s.version,
+               s.deleted_at, s.is_current
+             FROM scenarios s JOIN users u ON u.id = s.owner_id
+             WHERE s.deleted_at IS NOT NULL AND s.deleted_at > NOW() - INTERVAL '30 days'
+             ORDER BY s.deleted_at DESC LIMIT 100`),
+      query(`SELECT c.id, c.name, u.username AS owner, c.deleted_at
+             FROM customers c JOIN users u ON u.id = c.owner_id
+             WHERE c.deleted_at IS NOT NULL AND c.deleted_at > NOW() - INTERVAL '30 days'
+             ORDER BY c.deleted_at DESC LIMIT 50`)
+    ]);
+    res.json({ scenarios: scen.rows, customers: cust.rows });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to load deleted records.' });
+  }
+});
+
+/* ── Cleanup: restore a soft-deleted record by id and type ── */
+app.post('/api/admin/cleanup/restore', requireAuth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only.' });
+  try {
+    const { type, id } = req.body || {};
+    if (!id || !['scenario','customer'].includes(type)) {
+      return res.status(400).json({ error: 'type (scenario|customer) and id required.' });
+    }
+    const { query } = db();
+    if (type === 'scenario') {
+      const { rowCount } = await query(
+        `UPDATE scenarios SET deleted_at = NULL WHERE id = $1 AND deleted_at IS NOT NULL`,
+        [id]
+      );
+      if (!rowCount) return res.status(404).json({ error: 'Scenario not found or not deleted.' });
+    } else {
+      const { rowCount } = await query(
+        `UPDATE customers SET deleted_at = NULL WHERE id = $1 AND deleted_at IS NOT NULL`,
+        [id]
+      );
+      if (!rowCount) return res.status(404).json({ error: 'Customer not found or not deleted.' });
+    }
+    const { log, ACTIONS } = require('./src/audit');
+    await log({ userId: req.user.id, action: 'admin.cleanup_restored',
+      entityType: type, entityId: id, detail: { type, id }, ipAddress: req.ip });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Restore error:', err.message);
+    res.status(500).json({ error: 'Restore failed.' });
+  }
+});
+
+
 app.get('/api/admin/purge/confirm', async (req, res) => {
   try {
-    const token = await validatePurgeToken(req.query.token);
     if (!token || token.action !== 'confirm') {
       return res.status(400).send(purgeHtmlPage(
         '❌ Invalid or expired link',
@@ -465,6 +747,75 @@ app.post('/api/enhance', requireAuth, aiLimiter, async (req, res) => {
   }
 });
 
+/* Natural-language question over aggregate deal data (Admin Analytics).
+   Two-step: (1) AI picks which pre-written query/queries answer the
+   question, from the fixed catalog in src/deal-queries.js — the model
+   never writes SQL; (2) server runs those exact queries; (3) AI phrases
+   the actual results in plain English. Admin only. */
+app.post('/api/analytics/ask', requireAuth, aiLimiter, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only.' });
+  try {
+    const { question } = req.body || {};
+    if (typeof question !== 'string' || !question.trim()) {
+      return res.status(400).json({ error: 'question required.' });
+    }
+    const { pickDealQueries, phraseQueryResults } = require('./src/ai');
+    const { getCatalogDescriptions, runCatalogQuery, VALID_QUERY_NAMES } = require('./src/deal-queries');
+    const { query } = db();
+
+    const chosenNames = await pickDealQueries({
+      question: question.trim(),
+      catalogDescriptions: getCatalogDescriptions()
+    });
+    /* Re-validate every chosen name against the allow-list — never trust
+       the model's output even after pickDealQueries already filters. */
+    const safeNames = chosenNames.filter(n => VALID_QUERY_NAMES.includes(n)).slice(0, 2);
+
+    if (!safeNames.length) {
+      return res.json({
+        answer: "I don't have a pre-built report that answers that. Try asking about win rate by rep, win rate by industry, whether prospect-supplied data correlates with winning, which drivers resonate in closed deals, stakeholder coverage, rep activity, or open deal stages.",
+        queriesUsed: []
+      });
+    }
+
+    const results = {};
+    for (const name of safeNames) {
+      results[name] = await runCatalogQuery(name, query);
+    }
+
+    const answer = await phraseQueryResults({ question: question.trim(), results });
+    res.json({
+      answer: answer || 'Found the data but could not phrase a summary — raw results are in queriesUsed.',
+      queriesUsed: safeNames,
+      raw: results
+    });
+  } catch (err) {
+    console.error('analytics/ask error:', err.message);
+    res.status(500).json({ error: 'Could not process that question right now.' });
+  }
+});
+
+/* Extract numeric ROI figures from a free-text discovery answer.
+   Rep-triggered (button click), so this is auth-gated and rate-limited
+   like /api/enhance, but the field-validation whitelist lives server-side
+   in src/ai.js rather than trusting client-side JSON parsing of the model's
+   output — the client only ever sees pre-validated { field, value, reason }
+   suggestions it can apply or dismiss. */
+app.post('/api/discovery/extract-figures', requireAuth, aiLimiter, async (req, res) => {
+  try {
+    const { questionText, answerText } = req.body || {};
+    if (typeof answerText !== 'string' || typeof questionText !== 'string') {
+      return res.status(400).json({ error: 'questionText and answerText required.' });
+    }
+    const { extractDiscoveryFigures } = require('./src/ai');
+    const suggestions = await extractDiscoveryFigures({ questionText, answerText });
+    res.json({ suggestions });
+  } catch (err) {
+    console.error('extract-figures error:', err.message);
+    res.json({ suggestions: [] });  /* never a hard error — the rep just sees no suggestions */
+  }
+});
+
 /* Authentication is handled by src/routes/auth.js. */
 
 /* ── Public discovery route hardening ─────────────────────────────
@@ -483,8 +834,22 @@ function discoveryTokenRef(token) {
   return crypto.createHash('sha256').update(String(token || '')).digest('hex').slice(0, 12);
 }
 
-function isValidDiscoveryToken(token) {
-  return /^[a-f0-9]{64}$/i.test(String(token || '').trim());
+/* Validate a discovery token: correct format AND exists as an active
+   session in the database. Async because it checks the DB.
+   All four endpoints that accept prospect tokens call this. */
+async function isValidDiscoveryToken(token) {
+  if (!/^[a-f0-9]{64}$/i.test(String(token || '').trim())) return false;
+  try {
+    const { query } = db();
+    const { rows } = await query(
+      `SELECT id FROM discovery_sessions WHERE token = $1 AND is_active = TRUE LIMIT 1`,
+      [token]
+    );
+    return rows.length > 0;
+  } catch (e) {
+    console.error('isValidDiscoveryToken DB error:', e.message);
+    return false;
+  }
 }
 
 /* ── Discovery sessions ─────────────────────────────────────────── */
@@ -572,7 +937,7 @@ app.patch('/api/customers/:id/field-inventory', requireAuth, async (req, res) =>
 app.get('/api/discovery/sessions/:token', async (req, res) => {
   try {
     const token = String(req.params.token || '').trim();
-    if (!isValidDiscoveryToken(token)) {
+    if (!await isValidDiscoveryToken(token)) {
       console.warn('Discovery session invalid token', {
         tokenReference: discoveryTokenRef(token),
         ip: req.ip,
@@ -612,7 +977,7 @@ app.put('/api/discovery/sessions/:token/answers', async (req, res) => {
   try {
     const token = String(req.params.token || '').trim();
     const { questionId, answer, enteredBy } = req.body;
-    if (!isValidDiscoveryToken(token) || !questionId) {
+    if (!await isValidDiscoveryToken(token) || !questionId) {
       return res.status(400).json({ error: 'valid token and questionId required.' });
     }
     const { query } = db();
@@ -637,7 +1002,7 @@ app.put('/api/discovery/sessions/:token/answers', async (req, res) => {
 app.post('/api/discovery/sessions/:token/submit', async (req, res) => {
   try {
     const token = String(req.params.token || '').trim();
-    if (!isValidDiscoveryToken(token)) {
+    if (!await isValidDiscoveryToken(token)) {
       return res.status(403).json({ error: 'Invalid or expired session.' });
     }
     const { query } = db();
@@ -820,6 +1185,44 @@ app.get('/api/business-case-shares/:token', async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Failed to load business case.' }); }
 });
 
+/* Prospect-adjustable assumptions — record what the CFO changed */
+app.post('/api/business-case-shares/:token/assumptions', async (req, res) => {
+  try {
+    const token = String(req.params.token || '').trim();
+    if (!/^[a-f0-9]{64}$/.test(token)) return res.status(400).json({ error: 'Invalid token.' });
+    const { adjustments } = req.body || {};
+    if (!adjustments || typeof adjustments !== 'object') return res.status(400).json({ error: 'adjustments required.' });
+    const { query } = db();
+    const { rows } = await query(
+      `SELECT b.id, b.owner_id, b.company, u.email, u.username
+       FROM business_case_shares b JOIN users u ON u.id = b.owner_id
+       WHERE b.token = $1 AND b.is_active = TRUE`, [token]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Share not found.' });
+    /* Store adjustments on the share row */
+    await query(
+      `UPDATE business_case_shares
+       SET prospect_adjustments = $1, prospect_adjusted_at = NOW()
+       WHERE token = $2`,
+      [JSON.stringify(adjustments), token]
+    );
+    /* Email the rep — with an AI-generated one-sentence interpretation
+       when the API key is configured. Falls back to raw numbers only
+       if the AI call fails or isn't configured; never blocks the email. */
+    try {
+      const { sendProspectAssumptionChange } = require('./src/email');
+      const { interpretAssumptionChange } = require('./src/ai');
+      const insight = await interpretAssumptionChange({
+        company: rows[0].company,
+        adjustments,
+        baseValues: null
+      });
+      await sendProspectAssumptionChange(rows[0].email, rows[0].username, rows[0].company, adjustments, insight);
+    } catch(e) { /* non-blocking */ }
+    res.json({ ok: true });
+  } catch (err) { console.error('assumptions post error:', err.message); res.status(500).json({ error: 'Failed.' }); }
+});
+
 app.get('/api/business-case-shares', requireAuth, async (req, res) => {
   try {
     const { scenarioId } = req.query;
@@ -926,7 +1329,7 @@ app.post('/api/prospect-assist', aiLimiter, async (req, res) => {
       return res.status(400).json({ error: 'token and messages required.' });
     }
     /* Validate discovery token so only real prospect links can call this. */
-    if (!isValidDiscoveryToken(token)) {
+    if (!await isValidDiscoveryToken(token)) {
       return res.status(403).json({ error: 'Invalid or expired session.' });
     }
     /* Hard-coded system prompt — client cannot override it. */

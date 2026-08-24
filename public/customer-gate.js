@@ -12,8 +12,20 @@
 let _calcDirty = false;           // unsaved-changes flag
 let _gateInitialized = false;
 
-function markCalcDirty() { _calcDirty = true; updateCompletenessMeter(); }
-function clearCalcDirty() { _calcDirty = false; }
+function markCalcDirty() { _calcDirty = true; updateCompletenessMeter(); _updateDirtyIndicator(); }
+function clearCalcDirty() { _calcDirty = false; _updateDirtyIndicator(); }
+
+function _updateDirtyIndicator() {
+  const el = document.getElementById('saveStatus');
+  if (!el) return;
+  if (_calcDirty) {
+    el.style.display = 'inline-flex';
+    el.innerHTML = '<span style="width:7px;height:7px;border-radius:50%;background:#F59E0B;flex-shrink:0;margin-right:5px;"></span><span style="color:rgba(255,255,255,.6);font-size:12px;">Unsaved changes</span>';
+  } else {
+    el.style.display = 'none';
+    el.innerHTML = '';
+  }
+}
 /* Exposed on window so other files (api.js logout, index.html) share one check. */
 if (typeof window !== 'undefined') {
   window.markCalcDirty = markCalcDirty;

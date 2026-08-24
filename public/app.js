@@ -130,6 +130,16 @@ function toggleAcc(btn) {
   btn.nextElementSibling.classList.toggle('closed');
 }
 
+function expandAllCalcSections() {
+  /* Open all closed accordions and hide the expand toggle */
+  document.querySelectorAll('.accordion .acc-head:not(.open)').forEach(h => {
+    h.classList.add('open');
+    if (h.nextElementSibling) h.nextElementSibling.classList.remove('closed');
+  });
+  const row = document.getElementById('showAllSectionsRow');
+  if (row) row.style.display = 'none';
+}
+
 /* ════════════════════════════════════════
    Toast
    ════════════════════════════════════════ */
@@ -179,7 +189,24 @@ function applyDefaults() {
     b_throughput:(d.throughput||0)+'%', b_accuracy:(d.accuracy||0)+'%',
     b_firstfix:(d.firstFix||0)+'%', b_utilization:(d.utilization||0)+'%', b_leakage:(d.leakage||0)+'%'
   };
-  Object.entries(bmap).forEach(([id,v]) => { const el=document.getElementById(id); if(el) el.textContent='Avg: '+v; });
+  /* Map bench span IDs to BENCHMARK_CITATIONS keys so tooltips show source */
+  const citMap = {
+    b_shrinkRate:'shrinkRate', b_shrinkage:'mShrinkage', b_carryRate:'carryRate',
+    b_carrying:'mCarrying', b_otifRisk:'otifRisk', b_otif:'mOtif',
+    b_labor:'mLabor', b_invTurns:'invTurns'
+  };
+  Object.entries(bmap).forEach(([id,v]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = 'Avg: ' + v;
+    const citKey = citMap[id];
+    const cite = (typeof BENCHMARK_CITATIONS !== 'undefined') ? BENCHMARK_CITATIONS[citKey] : null;
+    if (cite) {
+      el.title = cite.note + '\nSource: ' + cite.source + ' (' + cite.year + ')';
+      el.style.cursor = 'help';
+      el.style.textDecoration = 'underline dotted';
+    }
+  });
   const badge = document.getElementById('benchBadge');
   if (badge) badge.style.display = 'inline-flex';
   renderProofPoints(ind);
@@ -574,6 +601,59 @@ function renderExec() {
   const payLiveStr = r.paybackFromGoLive===null?'—':r.paybackFromGoLive>=60?'60+ mo':r.paybackFromGoLive.toFixed(1)+' mo';
   const year1Pct   = Math.round(r.year1Factor*100);
 
+  /* ── Provenance: count prospect-verified vs rep-entered answers ── */
+  const da = (typeof discoveryAnswers !== 'undefined') ? discoveryAnswers : {};
+  const daKeys = Object.keys(da).filter(k => !k.endsWith('_by'));
+  const daAnswered = daKeys.filter(k => da[k] && String(da[k]).trim());
+  const daProspect = daKeys.filter(k => da[k + '_by'] === 'prospect' && da[k]);
+  const daRep      = daKeys.filter(k => da[k + '_by'] === 'rep' && da[k]);
+  const prospectPct = daAnswered.length ? Math.round(daProspect.length / daAnswered.length * 100) : 0;
+  const hasProvenanceData = daAnswered.length > 0;
+
+  const provenanceBanner = hasProvenanceData ? `
+    <div class="e-provenance-banner">
+      <div class="e-prov-icon">🔍</div>
+      <div class="e-prov-body">
+        <div class="e-prov-headline">
+          <strong>${daProspect.length} of ${daAnswered.length} inputs supplied directly by ${v.company || 'the prospect'}</strong>
+          — not vendor estimates.
+        </div>
+        <div class="e-prov-sub">
+          ${daProspect.length > 0 ? `${prospectPct}% of answered inputs were provided by the prospect's own team. ` : ''}${daRep.length > 0 ? `${daRep.length} figure${daRep.length !== 1 ? 's' : ''} entered by the Cloud Inventory rep. ` : ''}Industry benchmarks apply only where no prospect figure was provided.
+          <span class="e-prov-link" onclick="switchTab('disc')">View sources →</span>
+        </div>
+      </div>
+      <div class="e-prov-chip ${prospectPct >= 50 ? 'e-prov-chip-high' : prospectPct >= 25 ? 'e-prov-chip-med' : 'e-prov-chip-low'}">
+        ${prospectPct}% prospect data
+      </div>
+    </div>` : '';
+
+  /* ── Cost of inaction ── */
+  const monthlyInaction = r.annualBenefit > 0 ? r.annualBenefit / 12 : 0;
+  const inactionBlock = r.annualBenefit > 0 ? `
+    <div class="e-section e-inaction-section">
+      <div class="e-h2">Cost of delayed action</div>
+      <div class="e-inaction-lede">Every month without Cloud Inventory is a month these losses continue.</div>
+      <div class="e-inaction-grid">
+        <div class="e-inaction-card">
+          <div class="e-inaction-period">Per month</div>
+          <div class="e-inaction-cost">${fmtFull(monthlyInaction)}</div>
+          <div class="e-inaction-note">in recoverable value foregone</div>
+        </div>
+        <div class="e-inaction-card e-inaction-card-hi">
+          <div class="e-inaction-period">6-month delay</div>
+          <div class="e-inaction-cost">${fmtFull(monthlyInaction * 6)}</div>
+          <div class="e-inaction-note">typical evaluation-to-go-live cycle</div>
+        </div>
+        <div class="e-inaction-card">
+          <div class="e-inaction-period">12-month delay</div>
+          <div class="e-inaction-cost">${fmtFull(r.annualBenefit)}</div>
+          <div class="e-inaction-note">equivalent to a full year's benefit</div>
+        </div>
+      </div>
+      <div class="e-inaction-note-foot">Based on steady-state annual benefit of ${fmtFull(r.annualBenefit)}. Excludes compounding effects of improved inventory turns and reduced write-offs.</div>
+    </div>` : '';
+
   // Implementation proviso section for exec doc
   const implProvisoSection = v.implMonths > 0 || r.year1Factor < 0.99 ? `
     <div class="e-section e-proviso-section">
@@ -693,6 +773,8 @@ function renderExec() {
       <div class="e-kpi"><div class="e-kv ${r.npv3>=0?'g':'r'}">${fmtFull(r.npv3)}</div><div class="e-kl">3-yr NPV (${fmtPct(v.discRate*100)})</div></div>
       <div class="e-kpi"><div class="e-kv">${paySignStr}</div><div class="e-kl">Payback from signing (${payLiveStr} from go-live)</div></div>
     </div>
+    ${provenanceBanner}
+    ${inactionBlock}
     <div class="e-body">
       <div class="e-section e-approach">
         <div class="e-approach-head">
@@ -884,11 +966,12 @@ async function loadScenario(id) {
   try {
     let scenario = savedScenarios.find(x => x.id === id);
     let inputs   = scenario?.inputs;
+    let fullData = null;
     if (!inputs) {
       const resp = await apiFetch('/api/scenarios/' + id);
       if (!resp || !resp.ok) { showToast('Could not load scenario.'); return; }
-      const full = await resp.json();
-      inputs = full.data;
+      fullData = await resp.json();
+      inputs = fullData.data;
       if (scenario) scenario.inputs = inputs;
     }
     if (!inputs) { showToast('Scenario data not found.'); return; }
@@ -896,9 +979,15 @@ async function loadScenario(id) {
     window._scenarioLoaded = true;
     window._calcScenarioId = id;
     if (typeof refreshCalcScenarioPicker === 'function') refreshCalcScenarioPicker();
-    /* Load the field inventory flag for this customer */
+    /* Load the field inventory flag — check both the cache (scenario.customerId)
+       and the full API response (fullData.customer_id). The cache path is taken
+       when inputs were already in savedScenarios; fullData is only set when we
+       fetched from the API. Either way we need the customer_id. */
     if (typeof loadFieldInventoryFlag === 'function') {
-      const cid = full.customer_id || (full.data && full.data.customerId) || null;
+      const cid = (scenario && scenario.customerId)
+               || (fullData && fullData.customer_id)
+               || (inputs && inputs.customerId)
+               || null;
       loadFieldInventoryFlag(cid);
     }
     /* Remember which customer this scenario belongs to, so the Solution Fit

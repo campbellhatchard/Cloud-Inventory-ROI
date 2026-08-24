@@ -36,7 +36,10 @@ body{font-family:var(--font);background:#F0F4F8;color:var(--gray-800);min-height
 .progress-fill{height:100%;background:var(--cyan);border-radius:2px;transition:width .4s;}
 
 /* Main */
-.main{max-width:760px;margin:0 auto;padding:2rem 1.5rem 4rem;}
+.main{max-width:1060px;margin:0 auto;padding:2rem 1.5rem 4rem;}
+.main-grid{display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start;}
+.main-questions{min-width:0;}
+@media(max-width:820px){.main-grid{grid-template-columns:1fr;} .roi-sidebar{order:-1;}}
 
 /* Welcome card */
 .welcome-card{background:var(--white);border-radius:var(--radius);padding:2rem;margin-bottom:2rem;box-shadow:var(--shadow);}
@@ -218,10 +221,40 @@ button{cursor:pointer;}
 .rv-blank{color:var(--gray-400,#6B7A8D);font-weight:500;font-style:italic;}
 .rv-edit{flex-shrink:0;background:none;border:none;color:var(--cyan,#00A9CC);font-family:inherit;font-size:11.5px;font-weight:600;cursor:pointer;padding:2px 4px;text-decoration:underline;}
 .question.rv-flash{box-shadow:0 0 0 3px rgba(0,169,204,.35);border-radius:8px;transition:box-shadow .3s;}
-@media(max-width:560px){
-  .rv-row{flex-wrap:wrap;gap:4px;}
-  .rv-a{max-width:100%;text-align:left;}
-}
+/* ── Live ROI sidebar ── */
+.roi-sidebar{display:flex;flex-direction:column;gap:10px;}
+.roi-card{background:#fff;border:1px solid var(--gray-200);border-radius:12px;padding:14px 16px;}
+.roi-eyebrow{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400);display:flex;align-items:center;gap:6px;margin-bottom:8px;}
+.roi-live-dot{width:6px;height:6px;border-radius:50%;background:#22C55E;flex-shrink:0;}
+.roi-range-wrap{display:flex;align-items:baseline;gap:6px;margin-bottom:3px;}
+.roi-lo{font-size:20px;font-weight:700;color:var(--gray-700);}
+.roi-sep{font-size:13px;color:var(--gray-400);}
+.roi-hi{font-size:28px;font-weight:700;color:var(--cyan-dark);}
+.roi-range-label{font-size:11px;color:var(--gray-400);margin-bottom:10px;}
+.roi-disclaimer{font-size:11px;color:var(--gray-400);line-height:1.55;border-left:2px solid var(--gray-200);padding-left:8px;margin-top:8px;}
+.roi-driver-head{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400);margin-bottom:8px;}
+.roi-driver-row{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--gray-100);}
+.roi-driver-row:last-child{border-bottom:none;}
+.roi-driver-name{font-size:12px;color:var(--gray-600);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.roi-driver-name.locked{color:var(--gray-300);font-style:italic;}
+.roi-driver-bar{flex:0 0 54px;height:4px;background:var(--gray-100);border-radius:2px;overflow:hidden;}
+.roi-driver-fill{height:100%;border-radius:2px;background:var(--cyan);}
+.roi-driver-amt{font-size:12px;font-weight:700;color:var(--gray-700);min-width:40px;text-align:right;}
+.roi-driver-amt.locked{color:var(--gray-300);font-weight:400;font-style:italic;}
+.roi-conf-head{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400);margin-bottom:6px;}
+.roi-conf-bar{height:5px;background:var(--gray-100);border-radius:3px;overflow:hidden;margin-bottom:5px;}
+.roi-conf-fill{height:100%;border-radius:3px;background:var(--cyan);transition:width .4s;}
+.roi-conf-label{font-size:11px;color:var(--gray-500);line-height:1.4;}
+.roi-conf-label strong{color:var(--cyan-dark);}
+.roi-nudge{background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:10px 12px;font-size:12px;color:#92400E;line-height:1.55;}
+.roi-nudge strong{font-weight:700;}
+.roi-empty{text-align:center;padding:20px 12px;font-size:12px;color:var(--gray-400);line-height:1.6;}
+.roi-empty-icon{font-size:24px;margin-bottom:8px;}
+.roi-inaction{border-left:3px solid var(--cyan);padding:8px 12px;background:var(--cyan-pale);border-radius:0 8px 8px 0;margin-top:2px;}
+.roi-inaction-label{font-size:10.5px;color:var(--cyan-dark);text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin-bottom:2px;}
+.roi-inaction-cost{font-size:18px;font-weight:700;color:var(--navy);}
+.roi-inaction-sub{font-size:11px;color:var(--gray-500);}
+
 .p-to-top{position:fixed;bottom:22px;right:22px;width:46px;height:46px;border-radius:50%;border:1px solid var(--gray-200,#E2E8F0);background:#fff;color:var(--navy,#1E2931);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:95;box-shadow:0 4px 16px rgba(0,0,0,.16);transition:opacity .2s,transform .2s,visibility .2s;}
 .p-to-top:hover{transform:translateY(-2px);background:var(--cyan,#00A9CC);color:#fff;border-color:var(--cyan,#00A9CC);}
 .p-to-top-hidden{opacity:0;visibility:hidden;pointer-events:none;transform:translateY(8px);}
@@ -250,11 +283,24 @@ button{cursor:pointer;}
   </div>
 </div>
 
-<div class="main" id="mainContent">
-  <div class="error-card">
-    <div class="error-icon">⏳</div>
-    <div class="error-title">Loading your questionnaire…</div>
-    <div class="error-sub">Please wait a moment.</div>
+<div class="main">
+  <div class="main-grid">
+    <div class="main-questions">
+      <div id="mainContent">
+        <div class="error-card">
+          <div class="error-icon">⏳</div>
+          <div class="error-title">Loading your questionnaire…</div>
+          <div class="error-sub">Please wait a moment.</div>
+        </div>
+      </div>
+    </div>
+    <div class="roi-sidebar" id="roiSidebar" aria-live="polite" aria-label="Live ROI estimate, updates as you answer questions">
+      <div class="roi-card" id="roiLiveCard">
+        <div class="roi-empty-icon">📊</div>
+        <div class="roi-empty">Answer a few questions to see a live estimate of what Cloud Inventory could be worth for your operation.</div>
+      </div>
+      <div id="roiNudgeCard" style="display:none;" class="roi-nudge"></div>
+    </div>
   </div>
 </div>
 
@@ -267,6 +313,7 @@ button{cursor:pointer;}
 
 <div class="toast" id="toast"></div>
 
+<script src="src/shared/roi-engine.js"></script>
 <script src="discovery.js"></script>
 <script>
 /* ════════════════════════════════════════
@@ -323,17 +370,17 @@ async function init() {
       console.warn('Discovery link failed', { status: res.status, error: err.error || null, code: err.code || null });
 
       if (res.status === 400) {
-        showError('Invalid link', 'The questionnaire link appears incomplete or changed. Please request a new link.');
+        showError('Invalid link', 'The questionnaire link appears incomplete or changed. Please request a new link from your Cloud Inventory contact.');
       } else if (res.status === 401 || res.status === 403) {
-        showError('Access configuration error', 'This questionnaire is currently being blocked by access controls. Please contact Cloud Inventory for a corrected link.');
+        showError('Link not recognised', 'This questionnaire link could not be verified. It may have been rotated or updated — please use the most recent link sent to you, or request a new one.');
       } else if (res.status === 404) {
-        showError('Link not found', 'This questionnaire could not be found. Please request a new link.');
+        showError('Link not found', 'This questionnaire could not be found. Please request a new link from your Cloud Inventory contact.');
       } else if (res.status === 410) {
-        showError('Link no longer active', err.error || 'This link has expired or been revoked. Please request a new link.');
+        showError('Link no longer active', err.error || 'This link has been revoked. Please contact your Cloud Inventory representative for a new one.');
       } else if (res.status === 429) {
         showError('Temporarily unavailable', 'Too many requests were received from your network. Please wait a minute and try again.');
       } else {
-        showError('Service temporarily unavailable', 'The questionnaire could not be loaded. Please refresh or try again shortly.');
+        showError('Service temporarily unavailable', 'The questionnaire could not be loaded right now. Please refresh or try again shortly.');
       }
       return;
     }
@@ -785,45 +832,280 @@ function computeDriverProgress() {
   return out;
 }
 
-function renderValuePanel() {
-  const host = document.getElementById('valuePanel');
-  if (!host) return;
-  const prog = computeDriverProgress();
-  const active = Object.keys(VALUE_DRIVERS).filter(k => prog[k].total > 0);
-  if (!active.length) { host.innerHTML = ''; return; }
+/* ═══════════════════════════════════════════════════════════════════
+   LIVE ROI PANEL
+   Builds engine inputs from prospectAnswers via the sync field map,
+   runs calcROI(), and renders a conservative range in the sidebar.
+   Conservative = 70% of base recovery assumptions.
+   ═══════════════════════════════════════════════════════════════════ */
 
-  const unlocked = active.filter(k => prog[k].answered > 0).length;
-  const rows = active.map(k => {
-    const d = VALUE_DRIVERS[k], p = prog[k];
-    const done = p.answered >= p.total && p.total > 0;
-    const started = p.answered > 0;
-    const remaining = Math.max(0, p.total - p.answered);
-    const state = done ? 'vd-done' : started ? 'vd-part' : 'vd-todo';
-    const mark = done ? '&#10003;' : started ? '&#9679;' : '&#9675;';
-    const status = done
-      ? 'Complete'
-      : started
-        ? `${remaining} more to complete`
-        : `${p.total} question${p.total !== 1 ? 's' : ''}`;
-    return `<li class="vd-row ${state}">
-        <span class="vd-mark" aria-hidden="true">${mark}</span>
-        <span class="vd-body">
-          <span class="vd-label">${escapeHtml(d.label)}</span>
-          <span class="vd-blurb">${escapeHtml(d.blurb)}</span>
-        </span>
-        <span class="vd-status">${status}</span>
-      </li>`;
+/* Map: sync field name → roi-engine input key (most are identical) */
+const SYNC_TO_ROI = {
+  userCount:         'users',
+  laborWastePct:     'laborWastePct',
+  annualWriteOff:    'annualWriteOff',
+  countDaysYr:       'countDaysYr',
+  countPeople:       'countPeople',
+  inventoryValue:    'inventory',
+  invTurnsCurrent:   'invTurnsCurrent',
+  otifBaseline:      'otifBaseline',
+  otifTarget:        'otifTarget',
+  downtimeEventsYr:  'downtimeEventsYr',
+  downtimeHrsPerEvent:'downtimeHrsPerEvent',
+  downtimeCostPerHr: 'downtimeCostPerHr',
+  expediteSpendYr:   'expediteSpendYr',
+  itCost:            'itCost',
+  revenue:           'revenue',
+  discRate:          'discRate',
+  ordersPerYr:       'ordersPerYr',
+  currentAccuracy:   'currentAccuracy',
+  orderErrorPct:     'orderErrorPct',
+  costPerError:      'costPerError',
+  costPerOrder:      'costPerOrder',
+  labor:             'labor',
+};
+
+/* Industry-specific benchmark defaults — applied when prospect hasn't answered */
+const IND_DEFAULTS = {
+  distribution: { revenue:80e6, users:40, labor:52000, inventory:10e6, mLabor:0.20, mShrinkage:0.30, mCarrying:0.20, carryRate:0.25, mOtif:0.10, otifRisk:0.02, mIt:0.50, invTurnsBenchmark:10, discRate:0.10 },
+  construction:  { revenue:120e6, users:55, labor:65000, inventory:8e6, mLabor:0.22, mShrinkage:0.35, mCarrying:0.20, carryRate:0.25, mOtif:0.10, otifRisk:0.025, mIt:0.50, invTurnsBenchmark:8, discRate:0.10 },
+  mfg:           { revenue:150e6, users:60, labor:58000, inventory:18e6, mLabor:0.20, mShrinkage:0.30, mCarrying:0.20, carryRate:0.25, mOtif:0.10, otifRisk:0.02, mIt:0.50, invTurnsBenchmark:12, discRate:0.10 },
+  telecom:       { revenue:200e6, users:100, labor:72000, inventory:25e6, mLabor:0.20, mShrinkage:0.30, mCarrying:0.20, carryRate:0.25, mOtif:0.10, otifRisk:0.02, mIt:0.50, invTurnsBenchmark:8, discRate:0.10 },
+  oil:           { revenue:300e6, users:80, labor:85000, inventory:35e6, mLabor:0.20, mShrinkage:0.28, mCarrying:0.22, carryRate:0.28, mOtif:0.10, otifRisk:0.02, mIt:0.50, invTurnsBenchmark:6, discRate:0.12 },
+  food:          { revenue:90e6, users:50, labor:48000, inventory:6e6, mLabor:0.20, mShrinkage:0.35, mCarrying:0.18, carryRate:0.25, mOtif:0.10, otifRisk:0.025, mIt:0.50, invTurnsBenchmark:15, discRate:0.10 },
+  retail:        { revenue:60e6, users:35, labor:42000, inventory:5e6, mLabor:0.18, mShrinkage:0.35, mCarrying:0.18, carryRate:0.25, mOtif:0.10, otifRisk:0.02, mIt:0.50, invTurnsBenchmark:10, discRate:0.10 },
+  default:       { revenue:80e6, users:40, labor:52000, inventory:10e6, mLabor:0.20, mShrinkage:0.30, mCarrying:0.20, carryRate:0.25, mOtif:0.10, otifRisk:0.02, mIt:0.50, invTurnsBenchmark:10, discRate:0.10 },
+};
+
+/* Driver definitions for the breakdown */
+const ROI_DRIVERS = [
+  { key:'labor',    label:'Labor productivity',     sav:'laborSav',    needs:['users'] },
+  { key:'shrink',   label:'Shrinkage reduction',    sav:'shrinkSav',   needs:['annualWriteOff'] },
+  { key:'otif',     label:'OTIF / order accuracy',  sav:'otifSav',     needs:['revenue','otifBaseline'] },
+  { key:'turns',    label:'Working capital freed',  sav:'turnsSav',    needs:['inventoryValue','invTurnsCurrent'] },
+  { key:'expedite', label:'Expedite spend',         sav:'expediteSav', needs:['expediteSpendYr'] },
+  { key:'downtime', label:'Downtime reduction',     sav:'downtimeSav', needs:['downtimeEventsYr','downtimeHrsPerEvent','downtimeCostPerHr'] },
+  { key:'it',       label:'IT cost displacement',   sav:'itSav',       needs:['itCost'] },
+];
+
+function buildROIInputs() {
+  const ind = (sessionData && sessionData.industry) || 'default';
+  const def = IND_DEFAULTS[ind] || IND_DEFAULTS.default;
+  const sections = getProspectQuestions(ind, { hasFieldInventory: sessionData && !!sessionData.has_field_inventory });
+
+  /* Build a lookup: sync field → answered value */
+  const answered = {};
+  sections.forEach(sec => {
+    sec.questions.forEach(q => {
+      if (!q.sync) return;
+      const raw = prospectAnswers[q.id];
+      if (!isRealAnswer(raw)) return;
+      const n = parseFloat(raw);
+      if (isNaN(n)) return;
+      /* percent fields: stored as 0-100, engine expects fraction for some, raw for others */
+      const pctFields = ['laborWastePct','otifBaseline','otifTarget','discRate','currentAccuracy','orderErrorPct','fieldLeakageRate'];
+      answered[q.sync] = pctFields.includes(q.sync) ? n : n;
+    });
+  });
+
+  /* Merge answered fields over defaults */
+  const inp = {
+    modelVersion: 27,
+    /* Labor */
+    users:         answered.userCount       || def.users,
+    labor:         answered.labor           || def.labor,
+    mLabor:        def.mLabor,
+    laborWastePct: answered.laborWastePct   || 0,
+    /* Shrinkage */
+    mShrinkage:    def.mShrinkage,
+    shrinkRate:    0.03,
+    annualWriteOff: answered.annualWriteOff || 0,
+    effectiveShrinkBase: answered.annualWriteOff > 0
+      ? answered.annualWriteOff
+      : (answered.inventoryValue || def.inventory) * 0.03,
+    /* Carrying */
+    inventory:     answered.inventoryValue  || def.inventory,
+    mCarrying:     def.mCarrying,
+    carryRate:     def.carryRate,
+    /* Turns */
+    invTurnsCurrent:   answered.invTurnsCurrent  || 0,
+    invTurnsBenchmark: def.invTurnsBenchmark,
+    /* OTIF */
+    revenue:       answered.revenue         || def.revenue,
+    otifBaseline:  answered.otifBaseline    || 0,
+    otifTarget:    answered.otifTarget      || 0,
+    mOtif:         def.mOtif,
+    otifRisk:      def.otifRisk,
+    /* IT */
+    itCost:        answered.itCost          || 0,
+    mIt:           def.mIt,
+    /* Downtime */
+    downtimeEventsYr:   answered.downtimeEventsYr   || 0,
+    downtimeHrsPerEvent:answered.downtimeHrsPerEvent || 0,
+    downtimeCostPerHr:  answered.downtimeCostPerHr   || 0,
+    mDowntime:     0.30,
+    /* Expedite */
+    expediteSpendYr: answered.expediteSpendYr || 0,
+    mExpedite:     0.25,
+    /* Orders */
+    ordersPerYr:   answered.ordersPerYr     || 0,
+    costPerOrder:  answered.costPerOrder    || 0,
+    pickRateGainPct: 0,
+    mThroughput:   0.30,
+    orderErrorPct: answered.orderErrorPct   || 0,
+    costPerError:  answered.costPerError    || 0,
+    mAccuracy:     0.35,
+    /* Field inventory */
+    hasFieldInventory: sessionData && !!sessionData.has_field_inventory,
+    fieldInvValue: 0, fieldLeakageRate: 0, fieldLocations: 0,
+    fieldReconcileCost: 0, fieldReconcilePerYr: 1,
+    /* Investment — use a reasonable placeholder for payback calc */
+    invest:        90000, otc: 0,
+    discRate:      answered.discRate ? answered.discRate / 100 : def.discRate,
+    implMonths:    3, ramp1: 0.40, ramp2: 0.75, ramp3: 1.00,
+  };
+
+  return { inp, answered };
+}
+
+function computeLiveROI() {
+  if (typeof calcROI !== 'function') return null;
+  try {
+    const { inp, answered } = buildROIInputs();
+    /* Count how many key fields came from the prospect */
+    const keyFields = ['users','revenue','annualWriteOff','inventoryValue','invTurnsCurrent',
+                       'otifBaseline','expediteSpendYr','downtimeCostPerHr','itCost'];
+    const prospectFieldCount = keyFields.filter(f => answered[f] > 0).length;
+    const hasEnough = prospectFieldCount >= 1;  /* show after first real answer */
+
+    /* Base case */
+    const base = calcROI(inp);
+    /* Conservative: scale all recovery assumptions to 70% */
+    const consInp = { ...inp,
+      mLabor: inp.mLabor * 0.7, mShrinkage: inp.mShrinkage * 0.7,
+      mCarrying: inp.mCarrying * 0.7, mOtif: inp.mOtif * 0.7,
+      mIt: inp.mIt * 0.7, mDowntime: inp.mDowntime * 0.7, mExpedite: inp.mExpedite * 0.7,
+    };
+    const cons = calcROI(consInp);
+
+    return { base, cons, answered, prospectFieldCount, hasEnough, inp };
+  } catch(e) {
+    console.error('computeLiveROI:', e.message);
+    return null;
+  }
+}
+
+function renderValuePanel() {
+  const host = document.getElementById('roiLiveCard');
+  if (!host) return;
+
+  const result = computeLiveROI();
+
+  /* Not enough data yet */
+  if (!result || !result.hasEnough) {
+    host.innerHTML = '<div class="roi-empty-icon">📊</div>'
+      + '<div class="roi-empty">Answer a few questions to see a live estimate of what Cloud Inventory could be worth for your operation.</div>';
+    return;
+  }
+
+  const { base, cons, answered, prospectFieldCount, inp } = result;
+  const fmt = n => {
+    if (!n || n < 0) return '$0';
+    if (n >= 1e6) return '$' + (n/1e6).toFixed(1) + 'M';
+    if (n >= 1000) return '$' + Math.round(n/1000) + 'k';
+    return '$' + Math.round(n).toLocaleString();
+  };
+
+  /* Driver rows */
+  const totalBase = base.annualBenefit || 1;
+  const driverRows = ROI_DRIVERS.map(d => {
+    const amount = base[d.sav] || 0;
+    const hasInputs = d.needs.every(n => {
+      const mapped = { users:'userCount', revenue:'revenue', annualWriteOff:'annualWriteOff',
+        inventoryValue:'inventoryValue', invTurnsCurrent:'invTurnsCurrent',
+        otifBaseline:'otifBaseline', expediteSpendYr:'expediteSpendYr',
+        downtimeEventsYr:'downtimeEventsYr', downtimeHrsPerEvent:'downtimeHrsPerEvent',
+        downtimeCostPerHr:'downtimeCostPerHr', itCost:'itCost' };
+      return answered[mapped[n] || n] > 0;
+    });
+    const locked = !hasInputs && amount < 1000;
+    const pct = Math.round((amount / totalBase) * 100);
+
+    return `<div class="roi-driver-row">
+      <div class="roi-driver-name ${locked?'locked':''}">${locked?'<span style="font-size:10px;margin-right:2px;">🔒</span>':''} ${d.label}</div>
+      <div class="roi-driver-bar"><div class="roi-driver-fill" style="width:${locked?0:Math.min(pct,100)}%"></div></div>
+      <div class="roi-driver-amt ${locked?'locked':''}">${locked ? 'enter data' : fmt(amount)}</div>
+    </div>`;
   }).join('');
 
+  /* Nudge: which locked driver would add most value */
+  const lockedDrivers = ROI_DRIVERS.filter(d => {
+    return d.needs.some(n => {
+      const mapped = { inventoryValue:'inventoryValue', invTurnsCurrent:'invTurnsCurrent',
+        expediteSpendYr:'expediteSpendYr', downtimeCostPerHr:'downtimeCostPerHr', itCost:'itCost' };
+      return !answered[mapped[n] || n] || answered[mapped[n] || n] < 1;
+    });
+  });
+  const nudgeHtml = lockedDrivers.length
+    ? `<div class="roi-nudge"><strong>${lockedDrivers.length} area${lockedDrivers.length!==1?'s':''} not yet calculated</strong> — answering about ${lockedDrivers[0].label.toLowerCase()} could unlock a significant additional driver.</div>`
+    : '';
+
+  /* Confidence bar */
+  const totalQ = Object.keys(prospectAnswers).filter(k => !k.endsWith('_by')).length;
+  const answeredQ = Object.keys(prospectAnswers).filter(k => !k.endsWith('_by') && isRealAnswer(prospectAnswers[k])).length;
+  const sections = getProspectQuestions((sessionData&&sessionData.industry)||'default', {hasFieldInventory:sessionData&&!!sessionData.has_field_inventory});
+  const allQ = sections.reduce((s,sec)=>s+sec.questions.length,0);
+  const confPct = allQ > 0 ? Math.round((answeredQ / allQ) * 100) : 0;
+
+  /* Cost of inaction */
+  const monthly = Math.round((cons.annualBenefit || 0) / 12);
+  const inactionHtml = cons.annualBenefit > 10000
+    ? `<div class="roi-inaction">
+        <div class="roi-inaction-label">Per month without Cloud Inventory</div>
+        <div class="roi-inaction-cost">${fmt(monthly)}</div>
+        <div class="roi-inaction-sub">in recoverable value foregone</div>
+      </div>`
+    : '';
+
+  /* Populate nudge card separately */
+  const nudgeCard = document.getElementById('roiNudgeCard');
+  if (nudgeCard) {
+    if (nudgeHtml && lockedDrivers.length) {
+      nudgeCard.style.display = 'block';
+      nudgeCard.innerHTML = '<strong>' + lockedDrivers.length + ' area'
+        + (lockedDrivers.length !== 1 ? 's' : '')
+        + ' not yet calculated</strong> — answering about '
+        + lockedDrivers[0].label.toLowerCase()
+        + ' could unlock a significant additional driver.';
+    } else {
+      nudgeCard.style.display = 'none';
+    }
+  }
+
   host.innerHTML = `
-    <div class="vp-head">
-      <div>
-        <div class="vp-title">What your answers help assess</div>
-        <div class="vp-sub">${unlocked} of ${active.length} areas covered so far. Each area below becomes clearer as you answer \u2014 partial answers still help.</div>
-      </div>
+    <div class="roi-eyebrow"><div class="roi-live-dot"></div> Live estimate — updates as you answer</div>
+    <div class="roi-range-wrap">
+      <div class="roi-lo">${fmt(cons.annualBenefit)}</div>
+      <div class="roi-sep">–</div>
+      <div class="roi-hi">${fmt(base.annualBenefit)}</div>
     </div>
-    <ul class="vd-list">${rows}</ul>`;
+    <div class="roi-range-label">estimated annual benefit</div>
+    ${inactionHtml}
+    <div class="roi-disclaimer">Conservative to base range. Your Cloud Inventory rep will build the verified version from your answers.</div>
+
+    <div style="border-top:1px solid var(--gray-100);margin:12px -16px;padding:12px 16px 0;">
+      <div class="roi-driver-head">Where the value comes from</div>
+      ${driverRows}
+    </div>
+
+    <div style="border-top:1px solid var(--gray-100);margin:12px -16px 0;padding:12px 16px 0;">
+      <div class="roi-conf-head">Estimate confidence</div>
+      <div class="roi-conf-bar"><div class="roi-conf-fill" style="width:${confPct}%"></div></div>
+      <div class="roi-conf-label">Based on <strong>${answeredQ} of ${allQ}</strong> answers. More answers narrow the range.</div>
+    </div>
+  `;
 }
+
 
 /* Rough reading/answering time left, to set expectations and cut abandonment. */
 function estimateMinutesLeft(remaining) {
@@ -881,12 +1163,37 @@ async function pushAnswer(questionId, answer, enteredBy) {
         body: JSON.stringify({ questionId, answer, enteredBy: enteredBy || 'prospect' })
       }
     );
-    setAutosaveState(r && r.ok ? 'saved' : 'error');
+    if (r && (r.status === 401 || r.status === 403 || r.status === 410)) {
+      /* Link revoked or expired mid-session — surface a clear message */
+      setAutosaveState('revoked');
+    } else {
+      setAutosaveState(r && r.ok ? 'saved' : 'error');
+    }
   } catch(e) {
     console.error('pushAnswer error:', e.message);
     setAutosaveState('error');
   }
 }
+
+/* Retry all answers currently in memory after a connection error */
+async function retryPendingAnswers() {
+  setAutosaveState('saving');
+  let anyFail = false;
+  const entries = Object.entries(prospectAnswers).filter(([k]) => !k.endsWith('_by'));
+  for (const [questionId, answer] of entries) {
+    if (!answer || !answer.trim()) continue;
+    try {
+      const r = await fetch(
+        '/api/discovery/sessions/' + encodeURIComponent(sessionData.token) + '/answers',
+        { method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ questionId, answer, enteredBy: 'prospect' }) }
+      );
+      if (!r || !r.ok) anyFail = true;
+    } catch(e) { anyFail = true; }
+  }
+  setAutosaveState(anyFail ? 'error' : 'saved');
+}
+window.retryPendingAnswers = retryPendingAnswers;
 
 /* Visible autosave reassurance — a persistent indicator so the prospect
    always knows their answers are being saved as they go. */
@@ -894,9 +1201,21 @@ function setAutosaveState(state) {
   const el = document.getElementById('autosaveIndicator');
   if (!el) return;
   el.style.display = 'inline-flex';
-  if (state === 'saving') { el.className = 'autosave saving'; el.innerHTML = '<span class="as-dot"></span> Saving…'; }
-  else if (state === 'saved') { el.className = 'autosave saved'; el.innerHTML = '✓ All answers saved automatically'; }
-  else { el.className = 'autosave error'; el.innerHTML = '⚠ Couldn\'t save — check your connection'; }
+  if (state === 'saving') {
+    el.className = 'autosave saving';
+    el.innerHTML = '<span class="as-dot"></span> Saving\u2026';
+  } else if (state === 'saved') {
+    el.className = 'autosave saved';
+    el.innerHTML = '\u2713 All answers saved automatically';
+  } else if (state === 'revoked') {
+    el.className = 'autosave error';
+    el.style.cursor = 'default';
+    el.innerHTML = '\u26A0 This link has been deactivated. Your answers up to this point have been saved. Contact your Cloud Inventory representative for a new link if needed.';
+  } else {
+    /* Connection error — show with retry */
+    el.className = 'autosave error';
+    el.innerHTML = '\u26A0 Couldn\u2019t save \u2014 check your connection. <button onclick="retryPendingAnswers()" style="margin-left:8px;font-size:11px;padding:2px 8px;border-radius:6px;border:1px solid currentColor;background:transparent;color:inherit;cursor:pointer;">Retry</button>';
+  }
 }
 
 async function autoSave() {
@@ -990,7 +1309,17 @@ function editAnswer(id) {
   }, 60);
 }
 
+var _submitting = false;
 async function confirmSubmit() {
+  if (_submitting) return;
+  _submitting = true;
+
+  /* Disable all submit buttons immediately to prevent double-tap/double-click */
+  document.querySelectorAll('button[onclick="confirmSubmit()"]').forEach(function(btn) {
+    btn.disabled = true;
+    btn.textContent = 'Submitting\u2026';
+  });
+
   const answered = Object.keys(prospectAnswers)
     .filter(k => !k.endsWith('_by') && isRealAnswer(prospectAnswers[k])).length;
 

@@ -7,6 +7,198 @@
 
 const VERSION_HISTORY = [
   {
+    version: '5.4.0', date: '2026-08-22', tag: 'feature',
+    title: 'Two new AI features: free-text discovery figure extraction, natural-language deal data queries',
+    changes: [
+      'Discovery free-text figure extraction: context questions with no numeric field mapping (e.g. "What operational event exposed this problem?") now have an Extract numbers button once answered. It scans the free-text answer for numbers that imply a value for one of the ROI models 25 numeric fields and shows suggestions the rep can apply with one click or dismiss. Nothing is ever written automatically. Skips the API call entirely if the answer contains no digits.',
+      'Natural-language deal data queries: Admin Analytics has a new Ask about your deals box. Sales managers can ask plain-English questions like "which reps have the highest win rate" or "does prospect-supplied data correlate with winning" and get a phrased answer with real numbers.',
+      'Security: the AI never writes SQL for the deal query feature. It selects from 7 pre-written, parameterized queries in a fixed catalog (win rate by rep, win rate by industry, provenance vs outcome, resonance vs outcome, stakeholder coverage vs outcome, rep activity, deal stage breakdown). Every AI-chosen query name is re-validated against a server-side allow-list before execution — a hallucinated or malicious query name is rejected, never run.',
+      'New src/deal-queries.js module holds the fixed query catalog. src/ai.js extended with extractDiscoveryFigures, pickDealQueries, and phraseQueryResults — all following the same non-blocking, graceful-degradation pattern as the existing AI features.'
+    ]
+  },
+  {
+    version: '5.3.0', date: '2026-08-22', tag: 'feature',
+    title: 'Three new AI features: assumption-change interpretation, resonance pattern summary, AI-personalized follow-up email',
+    changes: [
+      'When a prospect adjusts assumptions on the interactive shared business case, the rep email now includes a one-sentence AI interpretation of what the change signals and what to do about it on the next call, in addition to the raw numbers already sent.',
+      'Admin Analytics resonance panel now shows an AI-generated 2-4 sentence summary above the chart, calling out which drivers resonate most, any pattern by industry, and any connection between a specific driver and deals that progressed or closed.',
+      'The follow-up email modal has a new AI personalize button. It rewrites the tone of the templated email for the selected audience (CFO, VP Ops, CEO, CIO) and weaves in the reps debrief notes where relevant, while keeping every dollar figure and percentage exactly as computed — the model never touches the numbers.',
+      'New internal module src/ai.js centralizes these system-triggered AI calls, separate from the rep-facing /api/enhance proxy used by the in-app assistant, Three Whys, action plans, and stakeholder analysis. All three new features degrade gracefully to showing raw data with no interpretation if ANTHROPIC_API_KEY is not set or the AI call fails — never a visible error.'
+    ]
+  },
+  {
+    version: '5.2.3', date: '2026-08-22', tag: 'fixes',
+    title: 'QA cleanup: accessibility on live ROI panel, dead default removed, nudge logic fixed',
+    changes: [
+      'Accessibility: prospect-facing live ROI sidebar now has aria-live=polite so screen readers announce updates as the estimate changes.',
+      'Prospect ROI panel: def.discRate in IND_DEFAULTS was defined but never used — the hurdle rate always fell back to a hardcoded 10%. Now each industry default (oil and gas at 12%, others at 10%) is correctly applied when the prospect has not answered the hurdle rate question.',
+      'Prospect ROI panel: the "which driver to answer next" nudge could incorrectly flag a fully-answered driver as locked if its computed savings happened to equal exactly $0. Lock status now depends only on whether the required inputs are present, not on the computed value.'
+    ]
+  },
+  {
+    version: '5.2.2', date: '2026-08-22', tag: 'feature',
+    title: 'Prospect discovery: live ROI estimate panel as you answer',
+    changes: [
+      'The prospect questionnaire now shows a live ROI estimate in a sticky sidebar on the right as the prospect fills in fields.',
+      'The estimate shows a conservative-to-base range (conservative = 70% of base recovery assumptions) so it reads honest rather than inflated.',
+      'A driver breakdown shows which value areas are calculated and which are locked pending more answers, with a padlock and Enter data prompt on unanswered drivers.',
+      'A confidence bar shows how many of the total questions have been answered, with a label nudging the prospect to provide more.',
+      'A cost-of-inaction line shows the per-month cost of delay once enough data is available.',
+      'The ROI engine (roi-engine.js) is loaded directly in prospect.html and runs entirely client-side — no server round-trip.',
+      'Industry-specific benchmark defaults fill in reasonable starting assumptions for each vertical so partial answers still produce a meaningful estimate.',
+      'A nudge card below the main panel highlights the locked driver that would add the most value if the prospect answered the relevant questions.'
+    ]
+  },
+  {
+    version: '5.2.1', date: '2026-08-22', tag: 'ux',
+    title: 'UX audit fixes: mobile livebar, unsaved changes, exec toolbar, calc default view, nav cleanup',
+    changes: [
+      'Mobile livebar: NPV cells now hidden on screens narrower than 640px. The 4-column grid collapses to 2 columns showing only Annual benefit and Year 1 ROI — no more truncated figures on phone.',
+      'Unsaved changes: an amber dot and Unsaved changes label appears in the topbar whenever the calculator has uncommitted edits. Switching tabs while dirty shows a non-blocking slide-up banner with a Save now shortcut. Removed the blocking native confirm() dialog.',
+      'Executive view toolbar: 16 buttons reduced to 4 visible (Download PDF, Export to PowerPoint, Share and track, Save). All secondary exports moved into a More exports dropdown. Log debrief button added to the toolbar so the Batch C panel is reachable without scrolling. Exec preview now auto-refreshes on tab switch — the manual Refresh preview button removed.',
+      'Calculator default view: Operational drivers and Assumptions accordions now collapsed by default. Reps see the 2 always-needed sections (Prospect details, Baseline questions) on first load. A Show advanced sections link at the bottom expands everything.',
+      'Nav cleanup: Compare and Impact Map moved under a collapsible More tools toggle. Main nav reduced from 15 to 12 items. Duplicate clipboard icon on Start from template changed to filing cabinet icon to distinguish it from Copy for CRM.'
+    ]
+  },
+  {
+    version: '5.2.0', date: '2026-08-22', tag: 'feature',
+    title: 'No-brainer upgrade: provenance trust, cost of inaction, 3 scenarios, champion pack, CFO sliders, role one-pagers, risk ledger',
+    changes: [
+      'Phase 1 — Provenance trust banner: the Executive View now leads with how many inputs came directly from the prospect, not the rep. "14 of 17 figures supplied by Ervin Cable" with a colour-coded chip collapses the CFO discount on vendor ROI before they apply it. Shows in the app, PDF, and shared link.',
+      'Phase 1 — Cost of inaction: per-month, 6-month, and 12-month cost of delay shown directly under the KPI strip. Reframes the decision from "should we spend $90K" to "should we keep losing $220K a month". In the app, PDF, and shared link.',
+      'Phase 1 — Benchmark citations: every industry average now shows its source and year on hover (Gartner, Aberdeen, APICS, Cloud Inventory customer median across 47 deployments). Field tooltips have a dotted underline to signal they are citable.',
+      'Phase 2 — Champion pack: new Champion pack button in the Executive View exports a 3-slide PPT the champion can take into their own steering committee — problem statement in their data, conservative/base financial case, and a pre-filled objection FAQ answering the 8 questions CFOs always ask.',
+      'Phase 3 — Interactive shared business case: the shared link now includes assumption sliders. The CFO can drag labor recovery, shrinkage, carrying cost, and OTIF assumptions to see how ROI changes under their own numbers. Clicking Send to rep records the adjustments and emails the rep exactly which numbers were pushed back on.',
+      'Phase 4 — Role-specific one-pagers: new One-pager button reads the Audience dropdown and generates a single-slide PPT specific to CFO (payback/NPV), VP Operations (throughput/accuracy), CEO (strategic/NPV), or CIO (integration/IT displacement). Cost-of-inaction box on every version.',
+      'Phase 5 — Prospect-facing risk ledger: the Solution Fit tab now has a Risk ledger button that generates a print-ready document showing every identified gap with its mitigation — framed as what you should know before you commit. Volunteering limitations before procurement finds them converts a discovered weakness into demonstrated integrity.',
+      'Migration 021 required: adds prospect_adjustments columns to business_case_shares.'
+    ]
+  },
+  {
+    version: '5.1.1', date: '2026-08-21', tag: 'feature',
+    title: 'README, resonance analytics, CRM label, server fix',
+    changes: [
+      'Added README.md covering local setup, environment variables, project structure, deployment checklist, migration notes, and security guidance.',
+      'Resonance summary now appears in the Admin Analytics tab. Shows a ranked bar chart of which ROI drivers resonate most across all deals, and a by-industry breakdown of the top three drivers. Populated from post-meeting debrief data entered in the Executive View.',
+      'CRM button renamed from Push to CRM to Copy for CRM. The modal title updated to Copy ROI summary for CRM. The feature copies a formatted summary to the clipboard — it never wrote directly to a CRM, and the label now reflects that accurately.',
+      'Fixed a server.js syntax error where the purge confirm route handler lost its async wrapper during a prior edit, causing node --check to fail.'
+    ]
+  },
+  {
+    version: '5.1.0', date: '2026-08-21', tag: 'feature',
+    title: 'Seven features: guided flow, prospect errors, accessibility, Batch C, cleanup undo, keyboard shortcuts, presentation mode',
+    changes: [
+      'Guided first-business-case flow: confirmed fully operational. The toggle, step-by-step navigation with progress dots, Next/Back buttons, soft validation, Advanced disclosure collapse, and session restore were all already complete.',
+      'Session expiry for prospect.html: mid-session link revocation now shows a clear message instead of a silent save error. Connection failures show a Retry button that re-pushes all in-memory answers.',
+      'Accessibility audit: all modal close buttons now have aria-label=Close across static HTML and dynamic modals. Nav items have min-height 44px for mobile touch targets. Duplicate keyboard shortcut handler removed.',
+      'Batch C — learning loop: After the meeting panel in the Executive View. Reps can tag which drivers resonated and which were questioned, set a meeting outcome, and add notes. Auto-saves. Migration 020 required.',
+      'Admin cleanup undo: Recently deleted panel in Admin → Cleanup shows all soft-deleted scenarios and customers from the last 30 days, each with a one-click Restore button. Loads automatically when the panel is opened.',
+      'Keyboard shortcuts: Ctrl/Cmd+N new scenario, Ctrl/Cmd+T template picker, Ctrl/Cmd+P PDF download added to existing shortcut system. Shortcut reference sheet updated to show all shortcuts.',
+      'Tablet presentation mode: confirmed fully operational. The Present button hides the sidebar and nav, enlarges the Executive View result cards, and adds an Exit button.'
+    ]
+  },
+  {
+    version: '5.0.4', date: '2026-08-21', tag: 'fixes',
+    title: 'QA audit fixes: field constraints, ESC handling, loading states',
+    changes: [
+      'Fix 1: Added min=0 to all primary dollar input fields (revenue, labor cost, inventory value, IT cost, subscription, services, hardware, training, write-off). The engine already clamped negatives — the field now prevents entry.',
+      'Fix 2: Added maxlength to scenarioName (120), companyName (120), and repName (80) to match database VARCHAR(255) limits and prevent silent truncation on save.',
+      'Fix 3: All percentage inputs already had max=100 — confirmed clean.',
+      'Fix 4: Global ESC key handler added. Pressing Escape now closes the topmost open modal across all tabs — version history, diff, template picker, stakeholder modal, cleanup preview, and the static email/share/CRM modals. ESC is ignored when focus is in a text field so reps can clear inputs normally.',
+      'Fix 5: Stakeholder list and Saved Scenarios tab now show a meaningful placeholder while data loads, instead of a blank container.'
+    ]
+  },
+  {
+    version: '5.0.3', date: '2026-08-21', tag: 'feature',
+    title: 'Version diffing — compare any two saved versions side by side',
+    changes: [
+      'The version history modal now shows a checkbox on each row. Select exactly two versions and click Compare selected to see what changed.',
+      'The diff view groups changes into five sections: ROI outputs, Core inputs, OTIF and turns, WMS and operations, Investment and timeline. Only fields that actually changed between the two versions are shown.',
+      'Each changed field shows the old value, the new value, and a direction arrow (up green or down red) indicating whether the change improved or worsened the ROI case.',
+      'A Back to history button returns to the version list without losing context. Load v buttons let the rep jump directly into either version from the diff.'
+    ]
+  },
+  {
+    version: '5.0.2', date: '2026-08-21', tag: 'feature',
+    title: 'Scenario templates — start any new deal pre-filled by vertical',
+    changes: [
+      'Six vertical templates available: Wholesale Distribution, Engineering and Construction, Manufacturing, Telecommunications, Oil and Gas, and Food and Beverage.',
+      'Each template pre-fills revenue, users, labor cost, inventory value, investment, OTIF, shrinkage, WMS levers, and downtime with realistic mid-market values grounded in the industry benchmarks already in the app.',
+      'Construction and Telecom templates pre-enable field inventory with typical field asset values.',
+      'Start from template button appears in the calculator toolbar and in the Saved Scenarios tab. A card picker shows each vertical with a description, key drivers, and a field inventory badge where relevant.',
+      'Templates apply through the same loadFromObject path as saved scenarios — every field restored correctly including ramp and benchmarks. Rep still fills in company name, scenario name, and actual figures.'
+    ]
+  },
+  {
+    version: '5.0.1', date: '2026-08-21', tag: 'feature',
+    title: 'Admin visibility for action plans and stakeholder maps; company typeahead on all pickers',
+    changes: [
+      'Admins can now see all reps action plans and stakeholder maps. Both tabs fetch all=true when the logged-in user is an admin. A rep filter dropdown appears so the admin can narrow to one rep.',
+      'Action plan list shows the owning rep name badge next to each plan when viewed as admin.',
+      'Stakeholder map list shows an owner column for admins.',
+      'Company picker on the Action plans editor replaced with a search-as-you-type typeahead. No more scrolling through hundreds of companies in a dropdown.',
+      'Company picker on the Stakeholder map tab replaced with a search-as-you-type typeahead with the same pattern.',
+      'Both typeaheads show a matched list filtered as you type, show a meta count (scenarios or stakeholders), and offer a create-new option when the typed name does not match any existing company.'
+    ]
+  },
+  {
+    version: '5.0.0', date: '2026-08-21', tag: 'fixes',
+    title: 'Version history panel fixed + UX/fields audit',
+    changes: [
+      'Version history now renders all entries correctly. The tag CSS only had styles for features/fixes/security/ux — 14 additional tag variants (hotfix, breaking, design, foundation, etc.) were unstyled, causing their pill badges to render as white on white.',
+      'Removed a duplicate 4.9.9 entry that appeared after the QA patch cycle.',
+      'tagClass normalisation now maps all legacy and multi-word tags (Design system, Features and fixes, Docs and responsive) to the correct CSS class.',
+      'UX audit: all calculator inputs have correct labels and tooltips. No duplicate IDs found. All 61 calculator fields checked.'
+    ]
+  },
+  {
+    version: '4.9.9', date: '2026-08-21', tag: 'fixes',
+    title: 'QA audit fixes (13 issues reviewed, 9 fixed)',
+    changes: [
+      'Security: discovery token validation now checks the database — format-only regex was insufficient.',
+      'ROI engine: inverted OTIF inputs (baseline > target) no longer produce positive savings. The fallback rate now only fires when neither field is entered.',
+      'ROI engine: zero or negative invest now returns null for ROI and payback rather than misleading 0% / 1 month.',
+      'Scenario load: field inventory flag now restores correctly when inputs come from the cache rather than the API.',
+      'Admin cleanup: now soft-deletes handoff (Solution Fit) records linked to matched customers.',
+      'Admin cleanup: share link deactivation ordering made consistent.',
+      'Prospect page: double-submit race condition fixed — all Confirm and send buttons are disabled immediately on first click.',
+      'Prospect page: 401/403 error messages rewritten to be prospect-friendly.',
+      'Issues confirmed as false positives: div balance (grep was counting lines not tags), migration 013 constraint (already guarded by DROP IF EXISTS).'
+    ]
+  },
+  
+  {
+    version: '4.9.8', date: '2026-08-21', tag: 'fixes',
+    title: 'Session expiry modal + font-weight cleanup',
+    changes: [
+      'Session expiry now shows a clear modal instead of a fleeting toast. The modal explains what happened, offers a Sign in again button, and counts down 12 seconds before auto-redirecting. The rep\'s current location is preserved so they land back where they were after signing in.',
+      'Removed all 9 instances of font-weight:800 across style.css and solution-fit.js. Inter only loads weights 400/500/600/700; 800 was silently falling back to 700 anyway. Now explicit.'
+    ]
+  },
+  {
+    version: '4.9.7', date: '2026-08-21', tag: 'fixes',
+    title: 'Version history button now always shows when a scenario is loaded',
+    changes: [
+      'Fixed: the Versions button in the calculator header never appeared because it tried to count versions from the in-memory scenario list, which only contains current versions (one row per scenario). The count was always 1 so the button was always hidden.',
+      'The button now appears whenever any scenario is loaded. When clicked, it fetches the real version list from the server and updates the button label with the actual count.'
+    ]
+  },
+  {
+    version: '4.9.6', date: '2026-08-21', tag: 'feature',
+    title: 'Discovery guide redesigned + field inventory bug fixes',
+    changes: [
+      'Fixed: field inventory questions were not appearing in the internal Discovery tab even when the toggle was on. The question list now correctly includes the field inventory section when that flag is enabled.',
+      'Fixed: toggling field inventory on the calculator did not update the Discovery tab. The tab now re-renders immediately when the toggle changes, with no need to switch away and back.',
+      'Discovery guide now shows a progress bar: answered / remaining / synced to calculator / from prospect counts with a percentage track.',
+      'Filter bar lets reps quickly see only unanswered questions, questions synced to the calculator, or questions answered by the prospect.',
+      'Sections are now collapsible. Completed sections collapse to show just the header, keeping the focus on what still needs answering. All sections start open and collapse individually.',
+      'Each section shows its answered count and a visual indicator (amber partial, green complete).',
+      'Each question now shows a question number, a provenance pill (rep / prospect), and a sync chip showing which calculator field the answer maps to.',
+      'Added a Save notes button with confirmation feedback. Answers still auto-save on each keystroke; this gives reps a clear visual confirmation.',
+      'Prospect link is now a compact card with the submission status, engagement count, and actions in one place.'
+    ]
+  },
+  {
     version: '4.9.5', date: '2026-08-21', tag: 'fixes',
     title: 'Admins can now see all reps\' scenarios when selecting a customer',
     changes: [
@@ -504,7 +696,16 @@ function renderVersionHistory() {
   if (cur && typeof APP_VERSION !== 'undefined') cur.textContent = 'v' + APP_VERSION;
   else if (cur && VERSION_HISTORY.length) cur.textContent = 'v' + VERSION_HISTORY[0].version;
 
-  const tagClass = t => 'vh-tag vh-tag-' + (t || 'release').toLowerCase().replace(/[^a-z]/g, '');
+  const tagClass = t => {
+    const norm = (t || 'release').toLowerCase().replace(/[^a-z]/g, '');
+    /* Map legacy and variant names to canonical CSS classes */
+    const map = {
+      featuresfixes:'fixes', featurefix:'fixes', featuresfix:'fixes',
+      feature:'feature', features:'features', fix:'fixes',
+      designsystem:'design', docsresponsive:'release', docs:'release'
+    };
+    return 'vh-tag vh-tag-' + (map[norm] || norm);
+  };
   host.innerHTML = VERSION_HISTORY.map((rel, i) => `
     <div class="vh-item${i === 0 ? ' vh-current' : ''}">
       <div class="vh-marker"></div>

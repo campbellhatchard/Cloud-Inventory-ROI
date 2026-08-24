@@ -19,7 +19,10 @@ async function initMapTab() {
 
 async function loadMaps() {
   try {
-    const resp = await apiFetch('/api/maps');
+    const user = window.ciAuth ? window.ciAuth.getUser() : {};
+    const isAdmin = user.role === 'admin';
+    const url = isAdmin ? '/api/maps?all=true' : '/api/maps';
+    const resp = await apiFetch(url);
     if (!resp || !resp.ok) return;
     _maps = await resp.json();
     renderMapList();
@@ -27,27 +30,52 @@ async function loadMaps() {
 }
 
 /* ── LIST VIEW ── */
+var _mapRepFilter = '';
 function renderMapList() {
   const el = document.getElementById('mapListWrap');
   if (!el) return;
   document.getElementById('mapEditorWrap').style.display = 'none';
   el.style.display = 'block';
+  const user = window.ciAuth ? window.ciAuth.getUser() : {};
+  const isAdmin = user.role === 'admin';
 
   if (!_maps.length) {
     el.innerHTML = `<div class="empty-state"><p>No action plans yet. Create one to build a shared close plan with your prospect.</p>
       <button class="btn btn-cta" onclick="newMap()" style="margin-top:.75rem;">+ New action plan</button></div>`;
     return;
   }
+
+  /* Rep filter for admins */
+  const reps = isAdmin
+    ? [...new Set(_maps.map(m => m.owner_username).filter(Boolean))].sort()
+    : [];
+  const filtered = _mapRepFilter
+    ? _maps.filter(m => m.owner_username === _mapRepFilter)
+    : _maps;
+
+  const repFilterHtml = isAdmin && reps.length ? `
+    <div class="admin-filter-bar">
+      <label class="admin-filter-label">Rep:</label>
+      <select class="admin-filter-sel" onchange="_mapRepFilter=this.value;renderMapList()">
+        <option value="">All reps (${_maps.length})</option>
+        ${reps.map(r => `<option value="${escapeHtml(r)}" ${_mapRepFilter===r?'selected':''}>${escapeHtml(r)} (${_maps.filter(m=>m.owner_username===r).length})</option>`).join('')}
+      </select>
+    </div>` : '';
+
   el.innerHTML = `
-    <div class="btn-row" style="margin-bottom:1rem;"><button class="btn btn-cta" onclick="newMap()">+ New action plan</button></div>
-    <ul class="scenario-list">${_maps.map(m => {
+    <div class="btn-row" style="margin-bottom:1rem;">
+      <button class="btn btn-cta" onclick="newMap()">+ New action plan</button>
+      ${repFilterHtml}
+    </div>
+    <ul class="scenario-list">${filtered.map(m => {
       const ms = m.milestones || [];
       const done = ms.filter(x => x.status === 'done').length;
       const pct = ms.length ? Math.round(done / ms.length * 100) : 0;
       const overdue = ms.filter(x => x.status !== 'done' && x.dueDate && new Date(x.dueDate) < new Date()).length;
+      const repBadge = isAdmin && m.owner_username ? `<span class="shared-badge">${escapeHtml(m.owner_username)}</span>` : '';
       return `<li class="scenario-item">
         <div class="scenario-info">
-          <div class="scenario-name">${escapeHtml(m.title)} ${m.token ? '<span class="shared-badge">🔗 shared with prospect</span>' : ''}</div>
+          <div class="scenario-name">${escapeHtml(m.title)} ${m.token ? '<span class="shared-badge">🔗 shared</span>' : ''} ${repBadge}</div>
           <div class="scenario-meta">${escapeHtml(m.company || 'No company')} ·
             ${m.target_close_date ? 'Target close: ' + new Date(m.target_close_date).toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}) : 'No target date'} ·
             ${done}/${ms.length} done${overdue ? ` · <span style="color:var(--red);font-weight:600;">${overdue} overdue</span>` : ''}</div>
@@ -120,7 +148,15 @@ function renderMapEditor() {
     <div class="card" style="margin-bottom:1.25rem;">
       <div style="display:grid;grid-template-columns:1.4fr 2fr 1fr;gap:10px;align-items:end;">
         <div class="field" style="margin:0;"><label>Company *</label>
-          <select id="mapCompanySel" onchange="mapCompanyChanged(this.value)"></select></div>
+          <div class="cs-input-wrap" style="position:relative;">
+            <input type="text" id="mapCompanyInput" placeholder="Search company…"
+              value="${escapeHtml(m.company || '')}"
+              autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+              oninput="mapCompanySearch(this.value)"
+              onfocus="mapCompanySearch(this.value)"
+              onblur="setTimeout(()=>{ const d=document.getElementById('mapCompanyResults'); if(d) d.style.display='none'; },180)"/>
+            <div id="mapCompanyResults" class="cs-results" style="display:none;"></div>
+          </div></div>
         <div class="field" style="margin:0;"><label>Plan title</label>
           <input type="text" id="mapTitle" value="${escapeHtml(m.title)}"/></div>
         <div class="field" style="margin:0;"><label>Target close date</label>
@@ -145,32 +181,59 @@ function renderMapEditor() {
       <div id="mapMilestones">${renderMilestones()}</div>
     </div>`;
 
-  /* Populate the company selector and enforce the gate */
-  fillCompanySelect(document.getElementById('mapCompanySel'), m.company);
+  /* Set initial value and wire the gate */
+  const mapInput = document.getElementById('mapCompanyInput');
+  if (mapInput) mapInput.value = m.company || '';
   mapUpdateGate();
 }
 
-/* Company selector change — handle "+ New company…", check-existing, scenario prompt */
-function mapCompanyChanged(val) {
-  if (val === '__new__') {
-    const typed = prompt('New company name:');
-    if (!typed || !typed.trim()) { fillCompanySelect(document.getElementById('mapCompanySel'), _mapCurrent.company); return; }
-    checkCompanyOnEntry(typed, (finalName) => {
-      if (!finalName) { fillCompanySelect(document.getElementById('mapCompanySel'), _mapCurrent.company); return; }
+/* Company typeahead for the MAP editor */
+function mapCompanySearch(q) {
+  const results = document.getElementById('mapCompanyResults');
+  if (!results) return;
+  const list = typeof getCompanies === 'function' ? getCompanies() : [];
+  const term = (q || '').toLowerCase().trim();
+  const matches = term ? list.filter(c => c.name.toLowerCase().includes(term)) : list.slice(0, 10);
+
+  const items = matches.slice(0, 12).map(c =>
+    `<div class="cs-result" onmousedown="mapSelectCompany('${escapeHtml(c.name).replace(/'/g,"\\'")}')">
+      ${escapeHtml(c.name)}
+      ${c.scenarios ? `<span style="font-size:11px;color:var(--gray-400);"> (${c.scenarios} scenario${c.scenarios!==1?'s':''})</span>` : ''}
+    </div>`
+  );
+  if (term && !list.some(c => c.name.toLowerCase() === term)) {
+    items.push(`<div class="cs-result cs-result-new" onmousedown="mapSelectCompany('${escapeHtml(q).replace(/'/g,"\\'")}',true)">+ Use "${escapeHtml(q)}" as new company</div>`);
+  }
+  if (!items.length) { results.style.display = 'none'; return; }
+  results.innerHTML = items.join('');
+  results.style.display = 'block';
+}
+
+function mapSelectCompany(name, isNew) {
+  const input = document.getElementById('mapCompanyInput');
+  const results = document.getElementById('mapCompanyResults');
+  if (input) input.value = name;
+  if (results) results.style.display = 'none';
+
+  if (isNew) {
+    checkCompanyOnEntry(name, finalName => {
+      if (!finalName) { if (input) input.value = _mapCurrent.company || ''; return; }
       _mapCurrent.company = finalName;
-      if (!_companies.some(c => c.name.toLowerCase() === finalName.toLowerCase())) {
-        _companies.push({ name: finalName, scenarios: 0, plans: 0, stakeholders: 0 });
+      if (input) input.value = finalName;
+      if (!getCompanies().some(c => c.name.toLowerCase() === finalName.toLowerCase())) {
+        getCompanies().push({ name: finalName, scenarios:0, plans:0, stakeholders:0 });
       }
-      fillCompanySelect(document.getElementById('mapCompanySel'), finalName);
       mapUpdateGate();
       promptScenarioForCompany(finalName, () => {});
     });
-    return;
+  } else {
+    _mapCurrent.company = name;
+    mapUpdateGate();
+    promptScenarioForCompany(name, () => {});
   }
-  _mapCurrent.company = val;
-  mapUpdateGate();
-  if (val) promptScenarioForCompany(val, () => {});
 }
+
+function mapCompanyChanged(val) { /* legacy — no longer used */ }
 
 function mapUpdateGate() {
   const has = !!(_mapCurrent.company && _mapCurrent.company.trim());
@@ -220,6 +283,11 @@ function removeMilestone(id) {
 
 /* ── Persistence ── */
 async function saveMap() {
+  /* If the user typed a company name without clicking a suggestion, capture it now */
+  const mapInput = document.getElementById('mapCompanyInput');
+  if (mapInput && mapInput.value.trim() && !_mapCurrent.company) {
+    _mapCurrent.company = mapInput.value.trim();
+  }
   if (!_mapCurrent.company || !_mapCurrent.company.trim()) {
     showToast('Select a company before saving.');
     mapUpdateGate();

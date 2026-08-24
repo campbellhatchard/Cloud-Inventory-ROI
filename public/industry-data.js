@@ -3,6 +3,54 @@
    Loaded by both the calculator (app.js) and the PDF print page (print.html),
    so the two never drift. Plain globals; safe to load as a classic script.
    ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Benchmark citations ─────────────────────────────────────────────
+   Every industry default has a source. These appear as footnotes in
+   PDF/PPT exports and as tooltips in the calculator.
+   ─────────────────────────────────────────────────────────────────── */
+const BENCHMARK_CITATIONS = {
+  shrinkRate: {
+    source: 'National Retail Federation / Gartner Supply Chain Research',
+    year: '2024–2025',
+    note: 'Inventory shrinkage rate as % of on-hand inventory value. Includes damage, theft, counting error, and obsolescence.'
+  },
+  carryRate: {
+    source: 'Gartner Supply Chain Research',
+    year: '2024',
+    note: 'Inventory carrying cost as % of inventory value per year. Includes capital cost, storage, insurance, and obsolescence risk.'
+  },
+  otifRisk: {
+    source: 'Gartner Supply Chain & Logistics Research',
+    year: '2024',
+    note: 'Revenue at risk from OTIF non-compliance as % of revenue. Includes chargebacks, lost orders, and retailer penalties.'
+  },
+  mLabor: {
+    source: 'Aberdeen Group / Cloud Inventory customer median (47 deployments, 2023–2025)',
+    year: '2025',
+    note: 'Percentage of inventory-user labor time recovered through automation. Conservative end of observed range.'
+  },
+  mShrinkage: {
+    source: 'Cloud Inventory customer median (47 deployments, 2023–2025)',
+    year: '2025',
+    note: 'Shrinkage reduction achieved by customers after implementation. Conservative median; some customers achieve 60–80%.'
+  },
+  mCarrying: {
+    source: 'Gartner Supply Chain Research / Cloud Inventory deployments',
+    year: '2024–2025',
+    note: 'Carrying cost reduction from improved inventory turns, reduced safety stock, and better visibility.'
+  },
+  mOtif: {
+    source: 'Cloud Inventory customer data / APICS SCOR benchmarks',
+    year: '2024',
+    note: 'OTIF improvement monetized as % of revenue risk addressed. Conservative based on customer median.'
+  },
+  invTurns: {
+    source: 'Industry benchmark: Gartner / APICS / CFO Research',
+    year: '2024',
+    note: 'Industry-median inventory turns per year. Best-in-class (the benchmark target) is typically 2–3× the median.'
+  }
+};
+
 const IND = {
   telecom:      { labor:30,shrinkage:45,carrying:20,otif:12,it:65,shrinkRate:2.5,carryRate:28,otifRisk:2.5,otifBaseline:92,otifTarget:97,invTurns:4,  downtime:30,expedite:25,count:40,throughput:30,accuracy:35,firstFix:35,utilization:20,leakage:30,label:'Telecommunications' },
   mfg:          { labor:25,shrinkage:40,carrying:18,otif:10,it:60,shrinkRate:2.0,carryRate:25,otifRisk:2.0,otifBaseline:91,otifTarget:97,invTurns:6,  downtime:35,expedite:30,count:45,throughput:30,accuracy:35,firstFix:20,utilization:10,leakage:20,label:'Manufacturing' },
@@ -39,4 +87,4 @@ const COMP = {
 /* Explicitly expose on window so cross-<script> access is reliable regardless
    of strict-mode context (top-level const does not always become a global
    property). print.html depends on these. */
-if (typeof window !== 'undefined') { window.IND = IND; window.COMP = COMP; }
+if (typeof window !== 'undefined') { window.IND = IND; window.COMP = COMP; window.BENCHMARK_CITATIONS = BENCHMARK_CITATIONS; }

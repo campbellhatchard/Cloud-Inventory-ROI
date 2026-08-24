@@ -551,6 +551,73 @@ function render(v,mode){
 
   </div>
 
+  <!-- Provenance + cost of inaction + citations page -->
+  ${(()=>{
+    /* Provenance summary */
+    const da=baseVals._discoveryAnswers||{};
+    const daK=Object.keys(da).filter(k=>!k.endsWith('_by'));
+    const daA=daK.filter(k=>da[k]&&String(da[k]).trim());
+    const daP=daK.filter(k=>da[k+'_by']==='prospect'&&da[k]);
+    const daR=daK.filter(k=>da[k+'_by']==='rep'&&da[k]);
+    const pPct=daA.length?Math.round(daP.length/daA.length*100):0;
+    const provSect=daA.length?`
+    <div style="border:1.5px solid #00AECF;border-radius:10px;padding:16px 20px;margin-bottom:20px;background:#F0F9FF;">
+      <div style="font-size:13px;font-weight:700;color:#1E2931;margin-bottom:6px;">
+        🔍 ${daP.length} of ${daA.length} inputs supplied directly by ${sv.company||'the prospect'}
+        <span style="font-size:11px;font-weight:400;color:#64748B;"> — not vendor estimates</span>
+      </div>
+      <div style="font-size:12px;color:#334155;line-height:1.6;">
+        ${daP.length>0?`${pPct}% of answered inputs were provided by the prospect's own operations team. `:``}${daR.length>0?`${daR.length} figure${daR.length!==1?'s':''} entered by the Cloud Inventory rep. `:''}Industry benchmarks apply only where no prospect figure was provided.
+      </div>
+      <div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;">
+        ${daP.length?`<span style="font-size:11px;padding:3px 10px;border-radius:99px;background:#D4EDDA;color:#155724;font-weight:700;">${pPct}% prospect data</span>`:''}
+        <span style="font-size:11px;padding:3px 10px;border-radius:99px;background:#E2E8F0;color:#334155;">${daP.length} prospect · ${daR.length} rep · industry defaults fill gaps</span>
+      </div>
+    </div>`:''||'';
+
+    /* Cost of inaction */
+    const ab=r.annualBenefit;
+    const inact=ab>0?`
+    <div style="border:1px solid #F2C4B0;border-radius:10px;padding:16px 20px;margin-bottom:20px;background:#FFF8F5;">
+      <div style="font-size:13px;font-weight:700;color:#1E2931;margin-bottom:8px;">⏱ Cost of delayed action</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:8px;">
+        <div style="background:#fff;border:1px solid #E8D5C8;border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Per month</div>
+          <div style="font-size:18px;font-weight:700;color:#C24A1E;">${ff(ab/12)}</div>
+        </div>
+        <div style="background:#FFF0EB;border:1.5px solid #C24A1E;border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">6-month delay</div>
+          <div style="font-size:22px;font-weight:700;color:#C24A1E;">${ff(ab/2)}</div>
+          <div style="font-size:10px;color:#64748B;">typical evaluation cycle</div>
+        </div>
+        <div style="background:#fff;border:1px solid #E8D5C8;border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">12-month delay</div>
+          <div style="font-size:18px;font-weight:700;color:#C24A1E;">${ff(ab)}</div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:#64748B;font-style:italic;">Based on steady-state annual benefit of ${ff(ab)}. Excludes compounding effects of improved inventory turns.</div>
+    </div>`:'';
+
+    /* Citations */
+    const cit=typeof BENCHMARK_CITATIONS!=='undefined'?BENCHMARK_CITATIONS:{};
+    const citKeys=Object.keys(cit);
+    const citRows=citKeys.map(k=>`<tr><td style="padding:5px 8px;font-size:10px;font-weight:600;color:#334155;border-bottom:1px solid #E2E8F0;">${k}</td><td style="padding:5px 8px;font-size:10px;color:#334155;border-bottom:1px solid #E2E8F0;">${cit[k].note}</td><td style="padding:5px 8px;font-size:10px;color:#64748B;border-bottom:1px solid #E2E8F0;white-space:nowrap;">${cit[k].source}, ${cit[k].year}</td></tr>`).join('');
+    const citSect=citKeys.length?`
+    <div style="margin-top:16px;">
+      <div style="font-size:12px;font-weight:700;color:#1E2931;margin-bottom:8px;">Benchmark assumptions &amp; sources</div>
+      <table style="width:100%;border-collapse:collapse;border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;">
+        <thead><tr style="background:#1E2931;">
+          <th style="padding:6px 8px;font-size:10px;color:#fff;text-align:left;width:130px;">Assumption</th>
+          <th style="padding:6px 8px;font-size:10px;color:#fff;text-align:left;">Definition</th>
+          <th style="padding:6px 8px;font-size:10px;color:#fff;text-align:left;width:200px;">Source</th>
+        </tr></thead>
+        <tbody>${citRows}</tbody>
+      </table>
+    </div>`:'';
+
+    return provSect+inact+citSect;
+  })()}
+
   <div class="doc-ft">
     <img class="ft-logo" src="ci-logo-full-color.png" alt="Cloud Inventory" onerror="this.style.display='none'"/>
     <span class="ft-txt">Business Value Assessment · ${sv.company||'Prospect'} · ${today} · Analysis uses industry benchmarks and prospect-supplied inputs. Actual results may vary. · cloudinventory.com</span>

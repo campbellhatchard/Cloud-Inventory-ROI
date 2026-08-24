@@ -84,7 +84,7 @@ function showSaveVersionDialog(v, r, dataBlob, existing) {
   modal.id = 'saveVersionModal';
   modal.innerHTML = `
     <div class="modal" style="max-width:520px;">
-      <button class="modal-close" onclick="document.getElementById('saveVersionModal').remove()">✕</button>
+      <button class="modal-close" aria-label="Close" onclick="document.getElementById('saveVersionModal').remove()">✕</button>
       <div class="modal-title">Save scenario — version control</div>
       <div class="version-dialog-info">
         <div class="vd-current">
@@ -126,69 +126,230 @@ function showSaveVersionDialog(v, r, dataBlob, existing) {
    Fetches all versions for a baseId from the API and shows a modal.
    ───────────────────────────────────────── */
 async function showVersionHistory(baseIdOrScenarioId) {
-  /* Find any scenario with this baseId to get an id for the versions endpoint */
   const any = savedScenarios.find(s => s.baseId === baseIdOrScenarioId || s.id === baseIdOrScenarioId);
   if (!any) { showToast('Cannot find version history.'); return; }
-
   try {
     const resp = await apiFetch('/api/scenarios/' + any.id + '/versions');
     if (!resp || !resp.ok) { showToast('Could not load version history.'); return; }
     const versions = await resp.json();
     if (!versions.length) { showToast('No version history found.'); return; }
-
-    /* Normalise if normaliseRow is available */
     const rows = typeof normaliseRow === 'function' ? versions.map(normaliseRow) : versions;
-
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay open';
-    modal.id = 'versionHistoryModal';
-    modal.innerHTML = `
-      <div class="modal" style="max-width:720px;">
-        <button class="modal-close" onclick="document.getElementById('versionHistoryModal').remove()">✕</button>
-        <div class="modal-title">Version history — "${rows[0].name}"</div>
-        <div class="vh-table-wrap">
-          <table class="vh-table">
-            <thead><tr>
-              <th>Version</th><th>Saved</th><th>Annual benefit</th>
-              <th>ROI</th><th>NPV 5yr</th><th>Note</th><th>Actions</th>
-            </tr></thead>
-            <tbody>
-              ${rows.map(s => `
-                <tr class="${s.isCurrent?'vh-current':''}">
-                  <td><span class="vh-ver-badge ${s.isCurrent?'vh-current-badge':''}">v${s.version||1}${s.isCurrent?' ★':''}</span></td>
-                  <td style="font-size:12px;">${s.date}</td>
-                  <td class="pos">${fmtFull(s.annualBenefit)}</td>
-                  <td style="color:var(--blue);font-weight:600;">${fmtPct(s.roi)}</td>
-                  <td class="${s.npv5>=0?'pos':'neg'}">${fmtFull(s.npv5)}</td>
-                  <td style="color:var(--gray-500);font-size:11px;">${s.versionNote||'—'}</td>
-                  <td>
-                    <div style="display:flex;gap:4px;">
-                      <button class="btn btn-ghost btn-sm" onclick="loadScenario('${s.id}');document.getElementById('versionHistoryModal').remove();">Load</button>
-                      ${!s.isCurrent
-                        ? `<button class="btn btn-danger btn-sm" onclick="deleteVersion('${s.id}','${rows[0].name}')">Del</button>`
-                        : `<span style="font-size:10px;color:var(--green);padding:0 6px;line-height:28px;">Current</span>`
-                      }
-                    </div>
-                  </td>
-                </tr>`).join('')}
-            </tbody>
-          </table>
-        </div>
-        <div class="btn-row" style="margin-top:1rem;">
-          <button class="btn btn-ghost" onclick="document.getElementById('versionHistoryModal').remove()">Close</button>
-        </div>
-      </div>`;
-    document.body.appendChild(modal);
-
+    const vbtn = document.getElementById('calcVersionsBtn');
+    if (vbtn) vbtn.textContent = '\u{1F557} ' + rows.length + ' version' + (rows.length !== 1 ? 's' : '');
+    renderVersionHistoryModal(rows);
   } catch(e) {
     console.error('showVersionHistory error:', e.message);
     showToast('Failed to load version history.');
   }
 }
 
-/* ─────────────────────────────────────────
-   deleteVersion  — delete a non-current version
-   ───────────────────────────────────────── */
+function renderVersionHistoryModal(rows) {
+  var old = document.getElementById('versionHistoryModal');
+  if (old) old.remove();
+  var modal = document.createElement('div');
+  modal.className = 'modal-overlay open';
+  modal.id = 'versionHistoryModal';
+  var singleVersion = rows.length === 1;
+  var hasMulti = rows.length >= 2;
+  var scenName = rows.length ? (typeof escapeHtml === 'function' ? escapeHtml(rows[0].name) : rows[0].name) : '';
+
+  var tableRows = rows.map(function(s) {
+    var chkCell = hasMulti ? '<td><input type="checkbox" class="vh-diff-chk" data-id="' + s.id + '" data-ver="' + (s.version||1) + '" onchange="vhCheckboxChanged()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--cyan);"/></td>' : '';
+    var verBadge = '<span class="vh-ver-badge ' + (s.isCurrent ? 'vh-current-badge' : '') + '">v' + (s.version||1) + (s.isCurrent ? ' \u2605' : '') + '</span>';
+    var actions = '<div style="display:flex;gap:4px;">'
+      + '<button class="btn btn-ghost btn-sm" onclick="loadScenario(\'' + s.id + '\');document.getElementById(\'versionHistoryModal\').remove();">Load</button>'
+      + (!s.isCurrent
+          ? '<button class="btn btn-danger btn-sm" onclick="deleteVersion(\'' + s.id + '\',\'' + scenName.replace(/'/g, "\\'") + '\')">Del</button>'
+          : '<span style="font-size:10px;color:var(--green);padding:0 6px;line-height:28px;">Current</span>')
+      + '</div>';
+    return '<tr class="' + (s.isCurrent ? 'vh-current' : '') + '">'
+      + chkCell
+      + '<td>' + verBadge + '</td>'
+      + '<td style="font-size:12px;">' + s.date + '</td>'
+      + '<td class="pos">' + fmtFull(s.annualBenefit) + '</td>'
+      + '<td style="color:var(--blue);font-weight:600;">' + fmtPct(s.roi) + '</td>'
+      + '<td class="' + (s.npv5 >= 0 ? 'pos' : 'neg') + '">' + fmtFull(s.npv5) + '</td>'
+      + '<td style="color:var(--gray-500);font-size:11px;">' + (s.versionNote || '\u2014') + '</td>'
+      + '<td>' + actions + '</td>'
+      + '</tr>';
+  }).join('');
+
+  modal.innerHTML = '<div class="modal" style="max-width:780px;">'
+    + '<button class="modal-close" aria-label="Close" onclick="document.getElementById(\'versionHistoryModal\').remove()">\u2715</button>'
+    + '<div class="modal-title">Version history \u2014 "' + scenName + '"'
+    + '<span style="font-size:12px;font-weight:400;color:var(--gray-500);margin-left:8px;">' + rows.length + ' version' + (rows.length !== 1 ? 's' : '') + '</span></div>'
+    + (hasMulti ? '<div class="vh-diff-hint" id="vhDiffHint">Select two versions to compare</div>' : '')
+    + '<div class="vh-table-wrap"><table class="vh-table"><thead><tr>'
+    + (hasMulti ? '<th style="width:28px;"></th>' : '')
+    + '<th>Version</th><th>Saved</th><th>Annual benefit</th><th>ROI</th><th>NPV 5yr</th><th>Note</th><th>Actions</th>'
+    + '</tr></thead><tbody>' + tableRows + '</tbody></table></div>'
+    + '<div class="btn-row" style="margin-top:1rem;">'
+    + (hasMulti ? '<button class="btn btn-primary" id="vhDiffBtn" disabled onclick="vhStartDiff()">Compare selected</button>' : '')
+    + '<button class="btn btn-ghost" onclick="document.getElementById(\'versionHistoryModal\').remove()">Close</button>'
+    + (singleVersion ? '<span style="font-size:12px;color:var(--gray-500);">Save again to create a second version and enable comparison.</span>' : '')
+    + '</div></div>';
+
+  modal._vhRows = rows;
+  document.body.appendChild(modal);
+}
+
+function vhCheckboxChanged() {
+  var checked = Array.from(document.querySelectorAll('.vh-diff-chk:checked'));
+  var all     = Array.from(document.querySelectorAll('.vh-diff-chk'));
+  var btn     = document.getElementById('vhDiffBtn');
+  var hint    = document.getElementById('vhDiffHint');
+  all.forEach(function(cb) { cb.disabled = checked.length >= 2 && !cb.checked; });
+  if (btn) btn.disabled = checked.length !== 2;
+  if (hint) {
+    if (checked.length === 0)      hint.textContent = 'Select two versions to compare';
+    else if (checked.length === 1) hint.textContent = 'Select one more version to compare';
+    else hint.textContent = 'Comparing v' + checked[0].dataset.ver + ' and v' + checked[1].dataset.ver + ' \u2014 click Compare selected';
+  }
+}
+
+async function vhStartDiff() {
+  var checked = Array.from(document.querySelectorAll('.vh-diff-chk:checked'));
+  if (checked.length !== 2) return;
+  var idA = checked[0].dataset.id, idB = checked[1].dataset.id;
+  var verA = Number(checked[0].dataset.ver), verB = Number(checked[1].dataset.ver);
+  var leftId  = verA < verB ? idA : idB,  rightId  = verA < verB ? idB : idA;
+  var leftVer = verA < verB ? verA : verB, rightVer = verA < verB ? verB : verA;
+  var modal = document.getElementById('versionHistoryModal');
+  var rows  = modal ? modal._vhRows : [];
+  var scenName = rows.length ? rows[0].name : 'Scenario';
+  var btn = document.getElementById('vhDiffBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Loading\u2026'; }
+  try {
+    var results = await Promise.all([apiFetch('/api/scenarios/' + leftId), apiFetch('/api/scenarios/' + rightId)]);
+    if (!results[0] || !results[0].ok || !results[1] || !results[1].ok) { showToast('Could not load scenario data.'); return; }
+    var datas = await Promise.all([results[0].json(), results[1].json()]);
+    if (modal) modal.remove();
+    showVersionDiff(datas[0], datas[1], leftVer, rightVer, scenName, rows);
+  } catch(e) {
+    console.error('vhStartDiff error:', e.message);
+    showToast('Failed to load comparison data.');
+    if (btn) { btn.disabled = false; btn.textContent = 'Compare selected'; }
+  }
+}
+
+function showVersionDiff(older, newer, verOld, verNew, scenName, allRows) {
+  var old = document.getElementById('versionDiffModal');
+  if (old) old.remove();
+  var oData = older.data || {};
+  var nData = newer.data || {};
+
+  function fmt$(v) { return (v != null && v !== '') ? fmtFull(Number(v)) : '\u2014'; }
+  function fmtN(v) { return (v != null && v !== '') ? Number(v).toLocaleString() : '\u2014'; }
+  function fmtP(v) { return (v != null && v !== '') ? Math.round(Number(v)) + '%' : '\u2014'; }
+  function fmtPD(v){ return (v != null && v !== '') ? (Number(v)*100).toFixed(1) + '%' : '\u2014'; }
+  function fmtY(v) { return (v != null && v !== '') ? Number(v).toFixed(1) + 'x' : '\u2014'; }
+  function fmtM(v) { return (v != null && v !== '') ? Number(v) + ' mo' : '\u2014'; }
+
+  var GROUPS = [
+    { label:'ROI outputs', icon:'\ud83d\udcca', fields:[
+      { label:'Annual benefit',    key:'annualBenefit', fmt:fmt$,  higher:true },
+      { label:'Year 1 ROI',        key:'roi',           fmt:fmtP,  higher:true },
+      { label:'5-yr NPV',          key:'npv5',          fmt:fmt$,  higher:true },
+      { label:'Payback',           key:'payback',       fmt:fmtM,  higher:false }
+    ]},
+    { label:'Core inputs', icon:'\ud83c\udfe2', fields:[
+      { label:'Annual revenue',    key:'revenue',       fmt:fmt$, higher:true },
+      { label:'Inventory users',   key:'users',         fmt:fmtN, higher:true },
+      { label:'Labor cost / user', key:'labor',         fmt:fmt$, higher:false },
+      { label:'Inventory value',   key:'inventory',     fmt:fmt$, higher:true },
+      { label:'Annual IT cost',    key:'itCost',        fmt:fmt$, higher:true },
+      { label:'Annual write-off',  key:'annualWriteOff',fmt:fmt$, higher:true }
+    ]},
+    { label:'OTIF & inventory turns', icon:'\ud83d\ude9a', fields:[
+      { label:'OTIF baseline',     key:'otifBaseline',     fmt:fmtP,  higher:false },
+      { label:'OTIF target',       key:'otifTarget',       fmt:fmtP,  higher:true },
+      { label:'Inv turns (current)',key:'invTurnsCurrent',  fmt:fmtY,  higher:true },
+      { label:'Inv turns (benchmark)',key:'invTurnsBenchmark',fmt:fmtY, higher:true }
+    ]},
+    { label:'WMS & operations', icon:'\ud83d\udce6', fields:[
+      { label:'Orders / yr',           key:'ordersPerYr',       fmt:fmtN, higher:true },
+      { label:'Cost per order',        key:'costPerOrder',      fmt:fmt$, higher:false },
+      { label:'Order error rate',      key:'orderErrorPct',     fmt:fmtP, higher:false },
+      { label:'Cost per error',        key:'costPerError',      fmt:fmt$, higher:false },
+      { label:'Downtime events / yr',  key:'downtimeEventsYr',  fmt:fmtN, higher:false },
+      { label:'Cost / downtime hour',  key:'downtimeCostPerHr', fmt:fmt$, higher:false },
+      { label:'Annual expedite spend', key:'expediteSpendYr',   fmt:fmt$, higher:false },
+      { label:'Count days / yr',       key:'countDaysYr',       fmt:fmtN, higher:false }
+    ]},
+    { label:'Investment & timeline', icon:'\ud83d\udcb0', fields:[
+      { label:'Annual subscription', key:'invest',     fmt:fmt$,  higher:false },
+      { label:'Implementation',      key:'implMonths', fmt:fmtM,  higher:false },
+      { label:'Ramp \u2014 month 1', key:'ramp1',     fmt:fmtPD, higher:true },
+      { label:'Ramp \u2014 month 2', key:'ramp2',     fmt:fmtPD, higher:true },
+      { label:'Ramp \u2014 steady',  key:'ramp3',     fmt:fmtPD, higher:true }
+    ]}
+  ];
+
+  var totalChanged = 0;
+  var groupHtml = GROUPS.map(function(g) {
+    var fieldRows = g.fields.map(function(f) {
+      var vOld = oData[f.key], vNew = nData[f.key];
+      var sOld = (vOld == null || vOld === '') ? '' : String(Number(vOld).toFixed(6));
+      var sNew = (vNew == null || vNew === '') ? '' : String(Number(vNew).toFixed(6));
+      if (sOld === sNew) return '';
+      var fOld = f.fmt(vOld), fNew = f.fmt(vNew);
+      var arrow = '', arrowCls = '';
+      if (vOld !== '' && vNew !== '' && vOld != null && vNew != null) {
+        var nOld = Number(vOld), nNew = Number(vNew);
+        if (!isNaN(nOld) && !isNaN(nNew) && nOld !== nNew) {
+          var improved = f.higher ? nNew > nOld : nNew < nOld;
+          arrow = improved ? '\u2191' : '\u2193';
+          arrowCls = improved ? 'vd-arrow-up' : 'vd-arrow-down';
+        }
+      }
+      totalChanged++;
+      return '<tr><td class="vd-field-label">' + f.label + '</td>'
+        + '<td class="vd-old">' + fOld + '</td>'
+        + '<td class="vd-new vd-changed">' + fNew + (arrow ? ' <span class="' + arrowCls + '">' + arrow + '</span>' : '') + '</td>'
+        + '</tr>';
+    }).filter(Boolean).join('');
+    if (!fieldRows) return '';
+    return '<div class="vd-group"><div class="vd-group-head">' + g.icon + ' ' + g.label + '</div>'
+      + '<table class="vd-table"><tbody>' + fieldRows + '</tbody></table></div>';
+  }).filter(Boolean).join('');
+
+  var noChanges = totalChanged === 0;
+  var escapedName = typeof escapeHtml === 'function' ? escapeHtml(scenName) : scenName;
+  var olderDate = older.updated_at ? new Date(older.updated_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '\u2014';
+  var newerDate = newer.updated_at ? new Date(newer.updated_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '\u2014';
+
+  var modal = document.createElement('div');
+  modal.className = 'modal-overlay open';
+  modal.id = 'versionDiffModal';
+  modal.innerHTML = '<div class="modal" style="max-width:680px;">'
+    + '<button class="modal-close" aria-label="Close" onclick="document.getElementById(\'versionDiffModal\').remove()">\u2715</button>'
+    + '<div class="modal-title">Comparing \u2014 "' + escapedName + '"</div>'
+    + '<div class="vd-header">'
+    + '<div class="vd-ver vd-ver-old"><div class="vd-ver-label">v' + verOld + '</div><div class="vd-ver-date">' + olderDate + '</div></div>'
+    + '<div class="vd-arrow-center">\u2192</div>'
+    + '<div class="vd-ver vd-ver-new"><div class="vd-ver-label">v' + verNew + (newer.is_current ? ' \u2605 Current' : '') + '</div><div class="vd-ver-date">' + newerDate + '</div></div>'
+    + '</div>'
+    + (noChanges
+      ? '<div class="empty-state"><p>No differences found between these two versions.</p></div>'
+      : '<div class="vd-col-labels"><span></span><span>v' + verOld + '</span><span>v' + verNew + '</span></div>'
+        + '<div class="vd-body">' + groupHtml + '</div>')
+    + '<div class="btn-row" style="margin-top:1rem;">'
+    + '<button class="btn btn-ghost btn-sm" onclick="document.getElementById(\'versionDiffModal\').remove();renderVersionHistoryModal(window._vhRowsCache);">\u2190 Back to history</button>'
+    + '<button class="btn btn-primary btn-sm" onclick="loadScenario(\'' + newer.id + '\');document.getElementById(\'versionDiffModal\').remove();">Load v' + verNew + '</button>'
+    + '<button class="btn btn-ghost btn-sm" onclick="loadScenario(\'' + older.id + '\');document.getElementById(\'versionDiffModal\').remove();">Load v' + verOld + '</button>'
+    + '<button class="btn btn-ghost" onclick="document.getElementById(\'versionDiffModal\').remove()">Close</button>'
+    + '</div></div>';
+
+  window._vhRowsCache = allRows;
+  document.body.appendChild(modal);
+}
+
+window.vhCheckboxChanged       = vhCheckboxChanged;
+window.vhStartDiff             = vhStartDiff;
+window.showVersionDiff         = showVersionDiff;
+window.renderVersionHistoryModal = renderVersionHistoryModal;
+
+
 async function deleteVersion(id, name) {
   if (!confirm(`Delete this version of "${name}"? This cannot be undone.`)) return;
   try {

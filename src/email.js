@@ -297,9 +297,39 @@ ${discUrl}
   });
 }
 
+async function sendProspectAssumptionChange(toEmail, repName, company, adjustments, aiInsight) {
+  const rows = Object.entries(adjustments).map(([k, v]) =>
+    `<tr><td style="padding:6px 10px;font-size:13px;border-bottom:1px solid #E2E8F0;">${k}</td>
+     <td style="padding:6px 10px;font-size:13px;font-weight:600;border-bottom:1px solid #E2E8F0;">${v}</td></tr>`
+  ).join('');
+  const insightHtml = aiInsight
+    ? `<div style="background:#F0F9FF;border:1.5px solid #00AECF;border-radius:8px;padding:12px 16px;margin:16px 0;">
+        <div style="font-size:11px;font-weight:700;color:#0089A6;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">What this signals</div>
+        <div style="font-size:13.5px;color:#1E2931;line-height:1.5;">${aiInsight}</div>
+      </div>`
+    : '';
+  const insightText = aiInsight ? `\n\nWHAT THIS SIGNALS: ${aiInsight}\n` : '';
+  return send({
+    to: toEmail,
+    subject: `[CI ROI] ${company} adjusted assumptions on their shared business case`,
+    text: `${repName},\n\n${company} just adjusted assumptions on the shared business case link.\n\nAdjusted fields:\n${Object.entries(adjustments).map(([k,v]) => `  ${k}: ${v}`).join('\n')}${insightText}\nReview before your next call.\n\nCloud Inventory ROI Builder`,
+    html: `<div style="font-family:'Inter',sans-serif;max-width:560px;margin:0 auto;padding:24px;">
+      <h2 style="color:#1E2931;">📊 ${company} adjusted business case assumptions</h2>
+      <p style="color:#334155;font-size:14px;">${repName}, the prospect just stress-tested the shared business case and changed the following assumptions. This tells you exactly which numbers they're pushing back on before your next call.</p>
+      ${insightHtml}
+      <table style="width:100%;border-collapse:collapse;border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;margin:16px 0;">
+        <thead><tr><th style="background:#1E2931;color:#fff;padding:8px 10px;text-align:left;font-size:12px;">Assumption changed</th><th style="background:#1E2931;color:#fff;padding:8px 10px;text-align:left;font-size:12px;">Value they used</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <p style="color:#64748B;font-size:12px;margin-top:16px;">Review these before your next conversation. If they reduced a recovery assumption significantly, that's the objection to address.</p>
+    </div>`
+  });
+}
+
 module.exports = {
   sendPasswordReset,
   sendWelcomeWithTempPassword,
   sendPurgeConfirmation,
-  sendDiscoverySubmitted
+  sendDiscoverySubmitted,
+  sendProspectAssumptionChange
 };

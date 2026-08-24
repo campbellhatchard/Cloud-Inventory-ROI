@@ -829,121 +829,248 @@ function generateToken(len = 32) {
 /* ─────────────────────────────────────────
    RENDER DISCOVERY TAB (rep view)
    ───────────────────────────────────────── */
+/* ── Discovery filter state (persists within the session) ── */
+var _discFilter = 'all'; /* all | unanswered | synced | prospect */
+var _discOpenSections = new Set(); /* section titles that are expanded */
+var _discInitialized  = false;
+
 function renderDiscoveryTab() {
-  const el = document.getElementById('tab-disc');
+  var el = document.getElementById('tab-disc');
   if (!el) return;
-  const industry = document.getElementById('industry')?.value || 'default';
-  const qs  = getDiscoveryQuestions(industry);
-  const ind = (typeof IND !== 'undefined' && IND[industry]) ? IND[industry].label : 'General';
+  var industry = (document.getElementById('industry') || {}).value || 'default';
+  /* ── BUG FIX: pass hasFieldInventory so the field inventory section
+     appears when the rep has enabled it on the calculator. ── */
+  var hasFieldInventory = !!(window._hasFieldInventory);
+  var qs  = getDiscoveryQuestions(industry, {hasFieldInventory: hasFieldInventory});
+  var ind = (typeof IND !== 'undefined' && IND[industry]) ? IND[industry].label : 'General';
 
-  /* Hard gate: a prospect link must belong to a customer, so a rep can never
-     generate or copy a link without an active customer selected — this
-     prevents sending one customer's link to another by mistake. */
-  const activeCompany = (document.getElementById('companyName')?.value || '').trim();
-  const activeScenario = (document.getElementById('scenarioName')?.value || '').trim();
+  /* Hard gate: a prospect link must belong to a customer */
+  var activeCompany  = ((document.getElementById('companyName') || {}).value || '').trim();
+  var activeScenario = ((document.getElementById('scenarioName') || {}).value || '').trim();
 
-  let prospectLinkHtml;
-  if (!activeCompany) {
-    prospectLinkHtml = `<div class="disc-link-gate">
-        <span class="disc-link-gate-icon">🔒</span>
-        <div>
-          <div class="disc-link-gate-title">Select a customer to enable the prospect link</div>
-          <div class="disc-link-gate-sub">Discovery links are tied to a customer so they're never sent to the wrong prospect. Choose or create a customer on the Calculator tab first.</div>
-        </div>
-        <button class="btn btn-ghost btn-sm" onclick="switchTab('calc')">Go to Calculator</button>
-      </div>`;
-  } else if (discoverySessionToken) {
-    prospectLinkHtml = `<div class="disc-prospect-link">
-        <div class="disc-prospect-link-label">🔗 Prospect link active — <strong>${activeCompany}${activeScenario ? ' · ' + activeScenario : ''}</strong></div>
-        <div class="disc-prospect-link-url" id="discProspectUrl"></div>
-        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
-          <button class="btn btn-cta btn-sm" onclick="copyProspectLink()">Copy link</button>
-          <button class="btn btn-ghost btn-sm" onclick="importProspectAnswers()">↻ Check submitted answers</button>
-          <button class="btn btn-ghost btn-sm" onclick="rotateProspectToken()">🔄 Rotate link</button>
-          <button class="btn btn-danger btn-sm" onclick="revokeProspectLink()">Revoke</button>
-        </div>
-        <div class="disc-prospect-note">This link belongs to <strong>${activeCompany}</strong>. Prospect answers are saved in real time. Click "Check submitted answers" to pull the latest.</div>
-        ${discoveryEngagement ? `<div class="disc-engagement">
-          ${discoveryEngagement.submittedAt
-            ? `<span class="disc-submitted-badge">&#10003; Submitted</span> ${discoveryEngagement.answerCount} answer${discoveryEngagement.answerCount!==1?'s':''} &middot; ${new Date(discoveryEngagement.submittedAt).toLocaleString()}`
-            : discoveryEngagement.openCount > 0
-              ? `&#128065; Opened <strong>${discoveryEngagement.openCount}</strong> time${discoveryEngagement.openCount!==1?'s':''}${discoveryEngagement.lastOpened ? ' &middot; last ' + new Date(discoveryEngagement.lastOpened).toLocaleString() : ''} &middot; not yet submitted`
-              : '&#9203; Not yet opened by the prospect'}
-        </div>` : ''}
-      </div>`;
-  } else {
-    prospectLinkHtml = `<div style="text-align:right;">
-        <div class="disc-link-customer-tag">For customer: <strong>${activeCompany}</strong></div>
-        <button class="btn btn-cta btn-sm" onclick="generateProspectLink()" style="margin-left:auto;">🔗 Generate prospect link</button>
-      </div>`;
+  /* ── Progress counts ── */
+  var allQs      = qs.flatMap(function(s){ return s.questions; });
+  var answered   = allQs.filter(function(q){ return discoveryAnswers[q.id] && discoveryAnswers[q.id].trim(); }).length;
+  var synced     = allQs.filter(function(q){ return q.sync && discoveryAnswers[q.id] && discoveryAnswers[q.id].trim(); }).length;
+  var fromProspect = allQs.filter(function(q){ return discoveryAnswers[q.id+'_by'] === 'prospect'; }).length;
+  var total      = allQs.length;
+  var pct        = total ? Math.round(answered / total * 100) : 0;
+
+  /* ── Prospect link card ── */
+  var engHtml = '';
+  if (discoveryEngagement) {
+    if (discoveryEngagement.submittedAt) {
+      engHtml = '<span class="disc-submitted-badge">&#10003; Submitted</span> '
+        + discoveryEngagement.answerCount + ' answer' + (discoveryEngagement.answerCount!==1?'s':'')
+        + ' &middot; ' + new Date(discoveryEngagement.submittedAt).toLocaleString();
+    } else if (discoveryEngagement.openCount > 0) {
+      engHtml = '&#128065; Opened <strong>' + discoveryEngagement.openCount + '</strong> time'
+        + (discoveryEngagement.openCount!==1?'s':'')
+        + (discoveryEngagement.lastOpened ? ' &middot; last ' + new Date(discoveryEngagement.lastOpened).toLocaleString() : '')
+        + ' &middot; not yet submitted';
+    } else {
+      engHtml = '&#9203; Not yet opened by the prospect';
+    }
   }
 
-  el.innerHTML = `
-    <div class="page-header">
-      <div>
-        <div class="page-title">Discovery guide</div>
-        <div class="page-subtitle">Industry-specific questions for ${ind}. Share the prospect link for collaborative data gathering.</div>
-      </div>
-      ${prospectLinkHtml}
-    </div>
-    <div class="disc-answer-legend">
-      <span class="disc-legend-rep">■ Rep entered</span>
-      <span class="disc-legend-prospect">■ Prospect entered</span>
-      <span class="disc-legend-synced">■ Synced to calculator</span>
-    </div>
-    <div class="two-col">
-      ${qs.map((section) => `
-        <div class="disc-section">
-          <div class="disc-section-head"><h3>${section.section}</h3></div>
-          ${section.questions.map(q => renderDiscQuestion(q)).join('')}
-        </div>`).join('')}
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-cta" onclick="applyDiscoveryToCalc()">Apply all answers to calculator →</button>
-      <button class="btn btn-ghost" onclick="downloadImpactMap()">📄 Download impact map (PDF)</button>
-      <button class="btn btn-ghost" onclick="clearDiscoveryAnswers()">Clear all answers</button>
-    </div>`;
+  var linkHtml;
+  if (!activeCompany) {
+    linkHtml = '<div class="disc-link-gate">'
+      + '<span class="disc-link-gate-icon">&#128274;</span><div>'
+      + '<div class="disc-link-gate-title">Select a customer to enable the prospect link</div>'
+      + '<div class="disc-link-gate-sub">Discovery links are tied to a customer so they are never sent to the wrong prospect.</div>'
+      + '</div><button class="btn btn-ghost btn-sm" onclick="switchTab(\'calc\')">Go to Calculator</button>'
+      + '</div>';
+  } else if (discoverySessionToken) {
+    linkHtml = '<div class="disc-link-card">'
+      + '<div class="disc-link-card-top">'
+      + '<div>'
+      + '<div class="disc-link-card-title">&#128279; Prospect link &mdash; <strong>' + escapeHtml(activeCompany) + (activeScenario ? ' &middot; ' + escapeHtml(activeScenario) : '') + '</strong></div>'
+      + (engHtml ? '<div class="disc-engagement">' + engHtml + '</div>' : '')
+      + '</div>'
+      + '<div class="disc-link-card-actions">'
+      + '<button class="btn btn-cta btn-sm" onclick="copyProspectLink()">Copy link</button>'
+      + '<button class="btn btn-ghost btn-sm" onclick="importProspectAnswers()">&#8635; Sync answers</button>'
+      + '<button class="btn btn-ghost btn-sm" onclick="rotateProspectToken()">Rotate</button>'
+      + '<button class="btn btn-danger btn-sm" onclick="revokeProspectLink()">Revoke</button>'
+      + '</div></div>'
+      + '<div class="disc-prospect-link-url" id="discProspectUrl"></div>'
+      + '</div>';
+  } else {
+    linkHtml = '<div class="disc-link-card disc-link-card-empty">'
+      + '<div class="disc-link-card-title">For customer: <strong>' + escapeHtml(activeCompany) + '</strong></div>'
+      + '<button class="btn btn-cta btn-sm" onclick="generateProspectLink()" style="margin-top:8px;">&#128279; Generate prospect link</button>'
+      + '</div>';
+  }
+
+  /* ── Open all sections on first render ── */
+  if (!_discInitialized) {
+    qs.forEach(function(s){ _discOpenSections.add(s.section); });
+    _discInitialized = true;
+  }
+
+  /* ── Section icons ── */
+  var SECTION_ICONS = {
+    'Value-engineering core (must-ask)': {icon:'&#9733;', cls:'disc-si-purple'},
+    'Labor & Productivity':              {icon:'&#128100;', cls:'disc-si-blue'},
+    'Inventory Accuracy & Write-offs':   {icon:'&#128203;', cls:'disc-si-amber'},
+    'Inventory Value & Carrying Costs':  {icon:'&#128200;', cls:'disc-si-green'},
+    'Order Accuracy & OTIF':             {icon:'&#128666;', cls:'disc-si-blue'},
+    'Downtime & Expediting':             {icon:'&#9888;', cls:'disc-si-amber'},
+    'Systems & Financial Baseline':      {icon:'&#128187;', cls:'disc-si-purple'},
+    'Warehouse throughput & order accuracy': {icon:'&#127970;', cls:'disc-si-green'},
+    'Industry context':                  {icon:'&#127759;', cls:'disc-si-blue'},
+    'Field inventory':                   {icon:'&#128666;', cls:'disc-si-amber'}
+  };
+
+  /* ── Render sections ── */
+  var sectionsHtml = qs.map(function(section) {
+    var sqs = section.questions;
+    var secAnswered = sqs.filter(function(q){ return discoveryAnswers[q.id] && discoveryAnswers[q.id].trim(); }).length;
+    var isOpen  = _discOpenSections.has(section.section);
+    var isDone  = secAnswered === sqs.length && sqs.length > 0;
+    var isMust  = section.isVeCore;
+    var hasSynced = sqs.some(function(q){ return q.sync; });
+    var iconInfo = SECTION_ICONS[section.section] || {icon:'&#9679;', cls:'disc-si-blue'};
+    var countCls = isDone ? 'disc-sec-count-done' : secAnswered > 0 ? 'disc-sec-count-part' : '';
+
+    /* Apply filter */
+    var filteredQs = sqs.filter(function(q) {
+      if (_discFilter === 'unanswered') return !discoveryAnswers[q.id] || !discoveryAnswers[q.id].trim();
+      if (_discFilter === 'synced')     return q.sync && discoveryAnswers[q.id] && discoveryAnswers[q.id].trim();
+      if (_discFilter === 'prospect')   return discoveryAnswers[q.id+'_by'] === 'prospect';
+      return true;
+    });
+    if (_discFilter !== 'all' && filteredQs.length === 0) return '';
+
+    return '<div class="disc-sec-card" id="disc-sec-' + section.section.replace(/[^a-z0-9]/gi,'_') + '">'
+      + '<button class="disc-sec-head" onclick="toggleDiscSection(' + JSON.stringify(section.section) + ')" type="button">'
+      + '<span class="disc-sec-icon ' + iconInfo.cls + '">' + iconInfo.icon + '</span>'
+      + '<span class="disc-sec-title">' + escapeHtml(section.section) + '</span>'
+      + (isMust ? '<span class="disc-sec-badge disc-sb-must">Must ask</span>' : '')
+      + (hasSynced && !isMust ? '<span class="disc-sec-badge disc-sb-sync">Syncs to calc</span>' : '')
+      + '<span class="disc-sec-count ' + countCls + '">' + secAnswered + '&thinsp;/&thinsp;' + sqs.length + (isDone ? ' &#10003;' : '') + '</span>'
+      + '<span class="disc-sec-chevron">' + (isOpen ? '&#9650;' : '&#9660;') + '</span>'
+      + '</button>'
+      + (isOpen ? '<div class="disc-sec-body">' + filteredQs.map(function(q,i){ return renderDiscQuestion(q,i+1); }).join('') + '</div>' : '')
+      + '</div>';
+  }).join('');
+
+  /* ── Full render ── */
+  el.innerHTML = '<div class="page-header"><div>'
+    + '<div class="page-title">Discovery guide</div>'
+    + '<div class="page-subtitle">Industry-specific questions for ' + escapeHtml(ind) + '. Answers save automatically as you type.</div>'
+    + '</div>' + linkHtml + '</div>'
+    + '<div class="disc-progress-bar">'
+    + '<div class="disc-progress-inner">'
+    + '<div class="disc-prog-stats">'
+    + '<div class="disc-prog-stat"><span class="disc-prog-n">' + answered + '</span><span class="disc-prog-l">Answered</span></div>'
+    + '<div class="disc-prog-stat"><span class="disc-prog-n">' + (total - answered) + '</span><span class="disc-prog-l">Remaining</span></div>'
+    + '<div class="disc-prog-stat"><span class="disc-prog-n disc-prog-n-sync">' + synced + '</span><span class="disc-prog-l">In calculator</span></div>'
+    + (fromProspect ? '<div class="disc-prog-stat"><span class="disc-prog-n disc-prog-n-pros">' + fromProspect + '</span><span class="disc-prog-l">From prospect</span></div>' : '')
+    + '</div>'
+    + '<div class="disc-prog-track-wrap">'
+    + '<div class="disc-prog-track"><div class="disc-prog-fill" style="width:' + pct + '%"></div></div>'
+    + '<div class="disc-prog-pct">' + pct + '%</div>'
+    + '</div>'
+    + '</div>'
+    + '<div class="disc-prog-actions">'
+    + '<button class="btn btn-cta btn-sm" onclick="applyDiscoveryToCalc()" title="Apply all answers to calculator fields">Apply to calculator &#8594;</button>'
+    + '<button class="btn btn-ghost btn-sm" id="discSaveBtn" onclick="discManualSave()" title="Save discovery notes">Save notes</button>'
+    + '</div></div>'
+    + '<div class="disc-filter-bar">'
+    + '<span class="disc-filter-label">Show:</span>'
+    + ['all','unanswered','synced','prospect'].map(function(f){
+        var labels = {all:'All (' + total + ')', unanswered:'Unanswered', synced:'Synced to calc', prospect:'Prospect answers'};
+        return '<button class="disc-filter-pill ' + (_discFilter===f?'active':'') + '" onclick="setDiscFilter(\'' + f + '\')">' + labels[f] + '</button>';
+      }).join('')
+    + '</div>'
+    + '<div class="disc-legend">'
+    + '<span class="disc-leg-item"><span class="disc-leg-dot disc-ld-rep"></span>Rep entered</span>'
+    + '<span class="disc-leg-item"><span class="disc-leg-dot disc-ld-pros"></span>Prospect entered</span>'
+    + '<span class="disc-leg-item"><span class="disc-leg-dot disc-ld-sync"></span>Synced to calculator</span>'
+    + '</div>'
+    + '<div class="disc-sections">' + sectionsHtml + '</div>'
+    + '<div class="btn-row" style="margin-top:12px;">'
+    + '<button class="btn btn-ghost btn-sm" onclick="downloadImpactMap()">&#128196; Impact map (PDF)</button>'
+    + '<button class="btn btn-ghost btn-sm" onclick="clearDiscoveryAnswers()">Clear all answers</button>'
+    + '</div>';
 
   if (discoverySessionToken) updateProspectLinkDisplay();
 }
 
-function renderDiscQuestion(q) {
-  const answer    = discoveryAnswers[q.id] || '';
-  const enteredBy = discoveryAnswers[q.id + '_by'] || '';
-  const isSynced  = q.sync && answer;
-  const byClass   = enteredBy === 'prospect' ? 'disc-answer-prospect' : enteredBy === 'rep' ? 'disc-answer-rep' : '';
-  const syncBadge = isSynced ? `<span class="disc-sync-badge">→ ${q.sync}</span>` : '';
+function toggleDiscSection(sectionTitle) {
+  if (_discOpenSections.has(sectionTitle)) {
+    _discOpenSections.delete(sectionTitle);
+  } else {
+    _discOpenSections.add(sectionTitle);
+  }
+  renderDiscoveryTab();
+}
 
-  /* Context (qualitative) questions: free-text, no calc impact, tagged. */
+function setDiscFilter(filter) {
+  _discFilter = filter;
+  renderDiscoveryTab();
+}
+
+function discManualSave() {
+  var btn = document.getElementById('discSaveBtn');
+  if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
+  /* Answers are already auto-saved on each keystroke; this is a visual
+     confirmation that triggers the same flush and shows feedback. */
+  setTimeout(function() {
+    if (btn) { btn.textContent = '✓ Saved'; btn.disabled = false; }
+    setTimeout(function(){ if (btn) btn.textContent = 'Save notes'; }, 1800);
+  }, 400);
+}
+
+function renderDiscQuestion(q, num) {
+  var answer    = discoveryAnswers[q.id] || '';
+  var enteredBy = discoveryAnswers[q.id + '_by'] || '';
+  var isSynced  = q.sync && answer;
+  var isAnswered = answer && answer.trim();
+  var byPill    = enteredBy === 'prospect'
+    ? '<span class="disc-by-pill disc-by-pros">prospect</span>'
+    : enteredBy === 'rep' && isAnswered
+      ? '<span class="disc-by-pill disc-by-rep">rep</span>' : '';
+  var syncChip  = isSynced
+    ? '<span class="disc-sync-chip">&#8594;&thinsp;' + escapeHtml(q.sync) + '</span>'
+    : (q.sync ? '<span class="disc-sync-chip disc-sync-empty">&#8594;&thinsp;' + escapeHtml(q.sync) + '</span>' : '');
+  var numHtml   = num ? '<span class="disc-q-num">' + num + '</span>' : '';
+  var inputCls  = enteredBy === 'prospect' ? 'disc-q-input disc-ans-pros'
+                : enteredBy === 'rep' && isAnswered ? 'disc-q-input disc-ans-rep' : 'disc-q-input';
+
   if (q.type === 'context') {
-    const tags = `<span class="disc-context-tag">Context</span>` +
-      (q.internal ? `<span class="disc-internal-tag" title="Internal — not shown to the prospect">Internal</span>` : '');
-    return `
-      <div class="disc-q disc-q-context ${answer ? 'disc-q-answered' : ''}">
-        <div class="q-text">${q.text} ${tags}</div>
-        <div class="q-why">${q.why}</div>
-        <div class="disc-input-wrap">
-          <textarea id="${q.id}" class="disc-textarea ${byClass}" rows="2"
-            placeholder="${q.placeholder || 'Capture the answer…'}"
-            oninput="handleDiscInput('${q.id}', this.value, 'rep')">${answer}</textarea>
-        </div>
-      </div>`;
+    var tags = '<span class="disc-tag disc-tag-ctx">Context</span>'
+      + (q.internal ? '<span class="disc-tag disc-tag-int">Internal</span>' : '');
+    return '<div class="disc-q-card disc-q-context ' + (isAnswered ? 'disc-q-answered' : '') + '" id="ctx-card-' + q.id + '">'
+      + '<div class="disc-q-row">' + numHtml
+      + '<div class="disc-q-body">'
+      + '<div class="disc-q-text">' + escapeHtml(q.text) + ' ' + tags + '</div>'
+      + '<div class="disc-q-why">' + escapeHtml(q.why) + '</div>'
+      + '<div class="disc-q-input-row">'
+      + '<textarea id="' + q.id + '" class="' + inputCls + ' disc-q-textarea" rows="2"'
+      + ' placeholder="' + escapeHtml(q.placeholder || 'Capture the answer\u2026') + '"'
+      + ' oninput="handleDiscInput(\'' + q.id + '\',this.value,\'rep\')">' + escapeHtml(answer) + '</textarea>'
+      + byPill
+      + (isAnswered ? '<button class="btn btn-ghost btn-sm disc-extract-btn" onclick="extractFiguresFromContext(\'' + q.id + '\')" title="Check this answer for numbers that could fill in ROI fields">\u2728 Extract numbers</button>' : '')
+      + '</div>'
+      + '<div id="ctx-suggest-' + q.id + '" class="disc-extract-suggestions" style="display:none;"></div>'
+      + '</div></div></div>';
   }
 
-  return `
-    <div class="disc-q ${answer ? 'disc-q-answered' : ''}">
-      <div class="q-text">${q.text}</div>
-      <div class="q-why">${q.why} ${syncBadge}</div>
-      <div class="disc-input-wrap">
-        <input type="text"
-          id="${q.id}"
-          class="${byClass}"
-          value="${answer}"
-          placeholder="${q.placeholder}"
-          oninput="handleDiscInput('${q.id}', this.value, 'rep')"/>
-        ${answer && enteredBy ? `<span class="disc-by-badge disc-by-${enteredBy}">${enteredBy}</span>` : ''}
-      </div>
-    </div>`;
+  return '<div class="disc-q-card ' + (isAnswered ? 'disc-q-answered' : '') + '">'
+    + '<div class="disc-q-row">' + numHtml
+    + '<div class="disc-q-body">'
+    + '<div class="disc-q-text">' + escapeHtml(q.text) + '</div>'
+    + '<div class="disc-q-why">' + escapeHtml(q.why) + '</div>'
+    + '<div class="disc-q-input-row">'
+    + '<input type="text" id="' + q.id + '" class="' + inputCls + '"'
+    + ' value="' + escapeHtml(answer) + '"'
+    + ' placeholder="' + escapeHtml(q.placeholder || '') + '"'
+    + ' oninput="handleDiscInput(\'' + q.id + '\',this.value,\'rep\')"/>'
+    + byPill + syncChip
+    + '</div></div></div></div>';
 }
 
 /* Rep types an answer — update cache, push to DB, sync to calc */
@@ -951,6 +1078,123 @@ function handleDiscInput(id, value, enteredBy) {
   /* setDiscoveryAnswer handles DB write (debounced), calc sync, and confidence */
   setDiscoveryAnswer(id, value, enteredBy || 'rep');
   if (typeof autoFlagConfidence === 'function') autoFlagConfidence();
+}
+
+/* Field labels for the suggestion UI — human-readable names for the
+   raw ROI field IDs the AI returns. */
+var EXTRACT_FIELD_LABELS = {
+  annualWriteOff:'Annual write-off', costPerError:'Cost per order error',
+  costPerOrder:'Cost per order', countDaysYr:'Count days per year',
+  countPeople:'People per count', currentAccuracy:'Current inventory accuracy',
+  discRate:'Hurdle rate', downtimeCostPerHr:'Cost per downtime hour',
+  downtimeEventsYr:'Downtime events per year', downtimeHrsPerEvent:'Hours lost per event',
+  expediteSpendYr:'Annual expedite spend', fieldInvValue:'Field inventory value',
+  fieldLeakageRate:'Field inventory leakage rate', fieldLocations:'Number of field locations',
+  invTurnsCurrent:'Current inventory turns', inventoryValue:'Inventory value',
+  itCost:'Annual IT system cost', laborWastePct:'Labor time wasted',
+  orderErrorPct:'Order error rate', ordersPerYr:'Orders per year',
+  otifBaseline:'Current OTIF rate', otifTarget:'Target OTIF rate',
+  pickRateGainPct:'Pick rate improvement', revenue:'Annual revenue',
+  userCount:'Number of inventory users'
+};
+
+/* Ask the server to scan a free-text context answer for numbers that
+   imply a value for one of the ROI model's numeric fields. Suggestions
+   are always shown for the rep to apply or dismiss — never written
+   automatically. */
+async function extractFiguresFromContext(questionId) {
+  var qEl = document.getElementById(questionId);
+  var suggestEl = document.getElementById('ctx-suggest-' + questionId);
+  var btn = document.querySelector('#ctx-card-' + questionId + ' .disc-extract-btn');
+  if (!qEl || !suggestEl) return;
+
+  var answerText = qEl.value || '';
+  var industry = (document.getElementById('industry') || {}).value || 'default';
+  var qs = getDiscoveryQuestions(industry);
+  var q  = qs.flatMap(function(s){ return s.questions; }).find(function(x){ return x.id === questionId; });
+  var questionText = q ? q.text : '';
+
+  var origBtnText = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.textContent = '✨ Scanning…'; }
+  suggestEl.style.display = 'none';
+
+  try {
+    var resp = await apiFetch('/api/discovery/extract-figures', {
+      method: 'POST',
+      body: JSON.stringify({ questionText: questionText, answerText: answerText })
+    });
+    if (!resp || !resp.ok) throw new Error('request failed');
+    var data = await resp.json();
+    var suggestions = data.suggestions || [];
+
+    if (!suggestions.length) {
+      suggestEl.innerHTML = '<div class="disc-extract-empty">No clear numeric fields found in this answer.</div>';
+      suggestEl.style.display = 'block';
+      setTimeout(function() { suggestEl.style.display = 'none'; }, 3000);
+      return;
+    }
+
+    suggestEl.innerHTML = '<div class="disc-extract-head">✨ Found ' + suggestions.length + ' possible field' + (suggestions.length !== 1 ? 's' : '') + ':</div>'
+      + suggestions.map(function(s, i) {
+          var label = EXTRACT_FIELD_LABELS[s.field] || s.field;
+          return '<div class="disc-extract-row">'
+            + '<div class="disc-extract-info">'
+            + '<span class="disc-extract-field">' + escapeHtml(label) + '</span>'
+            + '<span class="disc-extract-value">' + s.value.toLocaleString() + '</span>'
+            + '<span class="disc-extract-reason">' + escapeHtml(s.reason) + '</span>'
+            + '</div>'
+            + '<button class="btn btn-cta btn-sm" onclick="applyExtractedFigure(\'' + questionId + '\',' + i + ')">Apply</button>'
+            + '</div>';
+        }).join('')
+      + '<button class="btn btn-ghost btn-sm" onclick="dismissExtractSuggestions(\'' + questionId + '\')" style="margin-top:6px;">Dismiss</button>';
+    suggestEl.style.display = 'block';
+    suggestEl._suggestions = suggestions;  /* stash for applyExtractedFigure */
+  } catch(e) {
+    console.error('extractFiguresFromContext error:', e.message);
+    suggestEl.innerHTML = '<div class="disc-extract-empty">Could not scan this answer right now.</div>';
+    suggestEl.style.display = 'block';
+    setTimeout(function() { suggestEl.style.display = 'none'; }, 3000);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = origBtnText; }
+  }
+}
+
+/* Apply one suggested figure to its target calculator field via the same
+   setDiscoveryAnswer path used everywhere else, so provenance and sync
+   behave identically to a directly-answered numeric question. */
+function applyExtractedFigure(questionId, suggestionIndex) {
+  var suggestEl = document.getElementById('ctx-suggest-' + questionId);
+  var suggestions = suggestEl && suggestEl._suggestions;
+  if (!suggestions || !suggestions[suggestionIndex]) return;
+  var s = suggestions[suggestionIndex];
+
+  var el = document.getElementById(s.field);
+  if (el) {
+    el.value = s.value;
+    if (typeof fieldStates !== 'undefined') fieldStates[s.field] = 'estimated';
+  }
+  if (typeof recalc === 'function') recalc();
+  if (typeof markCalcDirty === 'function') markCalcDirty();
+  if (typeof renderConfidence === 'function') renderConfidence();
+  if (typeof showToast === 'function') {
+    var label = EXTRACT_FIELD_LABELS[s.field] || s.field;
+    showToast('✓ Applied ' + s.value.toLocaleString() + ' to ' + label);
+  }
+
+  /* Remove just this row from the suggestion list rather than clearing all */
+  suggestions.splice(suggestionIndex, 1);
+  if (!suggestions.length) {
+    suggestEl.style.display = 'none';
+  } else {
+    extractFiguresFromContext.call(null); /* no-op guard */
+    var rows = suggestEl.querySelectorAll('.disc-extract-row');
+    if (rows[suggestionIndex]) rows[suggestionIndex].remove();
+  }
+}
+
+function dismissExtractSuggestions(questionId) {
+  var suggestEl = document.getElementById('ctx-suggest-' + questionId);
+  if (suggestEl) suggestEl.style.display = 'none';
 }
 
 function applyDiscoveryToCalc() {

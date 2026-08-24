@@ -81,11 +81,16 @@
   /* ── 5. OTIF savings ── */
   let otifSav = 0;
   if (v.otifBaseline > 0 && v.otifTarget > 0 && v.otifTarget > v.otifBaseline) {
+    /* Both entered and target > baseline: use the gap */
     const otifGapPp = (v.otifTarget - v.otifBaseline) / 100;
     otifSav = v.revenue * otifGapPp * v.mOtif;
-  } else {
+  } else if (!v.otifBaseline && !v.otifTarget) {
+    /* Neither entered: use the industry-risk fallback so there is still
+       some OTIF value in the model when the rep hasn't filled these in. */
     otifSav = v.revenue * v.otifRisk * v.mOtif;
   }
+  /* All other cases (inverted, partial entry) → 0.
+     If baseline >= target, there is no improvement to quantify. */
 
   /* ── 6. IT displacement ── */
   const itSav = v.itCost * v.mIt;
@@ -188,25 +193,30 @@
   const totalInvestY1 = v.otc + v.invest;
   const netY1   = year1Benefit - totalInvestY1;
 
-  // ROI based on year 1 actual benefit
-  const roi = totalInvestY1 > 0 ? (netY1 / totalInvestY1) * 100 : 0;
+  /* When invest + otc = 0, ROI and payback are undefined (not zero).
+     Return null so the UI can show "N/A" rather than misleading 0% / 1 month.
+     Note: invest is already clamped to ≥ 0 in the sanitisation step above,
+     so a negative entry from the calculator also reaches this branch. */
+  const roi = totalInvestY1 > 0 ? (netY1 / totalInvestY1) * 100 : null;
 
   // Payback from CONTRACT SIGNING (includes impl months + ramp)
-  // Accumulate monthly benefit until cumulative exceeds total investment
+  // When there is no investment, payback is undefined — return null.
   let cumBenefit = 0, paybackFromSigning = null;
-  // Year 1 month by month
-  for (let m = 1; m <= 12; m++) {
-    cumBenefit += monthlyProfile[m-1].benefit;
-    if (cumBenefit >= totalInvestY1 && paybackFromSigning === null) {
-      paybackFromSigning = m;
-    }
-  }
-  // Year 2+ at full rate if not yet broken even
-  if (paybackFromSigning === null) {
-    for (let m = 13; m <= 60; m++) {
-      cumBenefit += monthlyBenefit * ramp3;
+  if (totalInvestY1 > 0) {
+    // Year 1 month by month
+    for (let m = 1; m <= 12; m++) {
+      cumBenefit += monthlyProfile[m-1].benefit;
       if (cumBenefit >= totalInvestY1 && paybackFromSigning === null) {
         paybackFromSigning = m;
+      }
+    }
+    // Year 2+ at full rate if not yet broken even
+    if (paybackFromSigning === null) {
+      for (let m = 13; m <= 60; m++) {
+        cumBenefit += monthlyBenefit * ramp3;
+        if (cumBenefit >= totalInvestY1 && paybackFromSigning === null) {
+          paybackFromSigning = m;
+        }
       }
     }
   }

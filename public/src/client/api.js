@@ -31,7 +31,7 @@
     const resp = await fetch(url, { ...options, headers });
 
     if (resp.status === 401) {
-      /* Session expired or invalid — explain, remember where they were, redirect.
+      /* Session expired or invalid — show a clear modal, then redirect.
          Guard against re-entrancy so multiple in-flight 401s don't stack. */
       if (!window.__ciSessionExpiring) {
         window.__ciSessionExpiring = true;
@@ -44,14 +44,7 @@
             sessionStorage.setItem('ci_return_to', returnTo);
           }
         } catch (e) {}
-        /* Brief, clear message before redirecting so it never looks broken. */
-        const notify = (window.showToast || null);
-        if (typeof notify === 'function') {
-          notify('Your session has expired — taking you back to sign in.');
-          setTimeout(() => { window.location.href = '/login.html?expired=1'; }, 1200);
-        } else {
-          window.location.href = '/login.html?expired=1';
-        }
+        showSessionExpiryModal();
       }
       return null;
     }
@@ -59,7 +52,68 @@
     return resp;
   }
 
-  /* ── logout ── */
+  /* ── Session expiry modal ────────────────────────────────────────
+     Shown instead of a fleeting toast when the server returns 401.
+     Gives the rep a clear explanation and a deliberate sign-in button.
+     Auto-redirects after 12 seconds if they don't click. */
+  function showSessionExpiryModal() {
+    /* Remove any existing instance */
+    var old = document.getElementById('sessionExpiryModal');
+    if (old) old.remove();
+
+    var modal = document.createElement('div');
+    modal.id = 'sessionExpiryModal';
+    modal.style.cssText = [
+      'position:fixed','inset:0','z-index:99999',
+      'background:rgba(14,20,27,.72)',
+      'display:flex','align-items:center','justify-content:center',
+      'padding:20px','backdrop-filter:blur(3px)'
+    ].join(';');
+
+    modal.innerHTML = [
+      '<div style="background:#fff;border-radius:16px;padding:32px 36px;max-width:420px;',
+        'width:100%;box-shadow:0 24px 64px rgba(0,0,0,.22);text-align:center;">',
+        '<div style="font-size:36px;margin-bottom:16px;">&#128274;</div>',
+        '<div style="font-size:18px;font-weight:700;color:#1E2931;margin-bottom:8px;">',
+          'Your session has expired',
+        '</div>',
+        '<div style="font-size:14px;color:#6B7A8D;line-height:1.6;margin-bottom:24px;">',
+          'For security, sessions time out after a period of inactivity. ',
+          'Your work is saved &mdash; sign in again to pick up right where you left off.',
+        '</div>',
+        '<button id="sessionExpiryBtn" onclick="window.location.href=\'/login.html?expired=1\'" ',
+          'style="background:#00AECF;color:#fff;border:none;border-radius:10px;',
+          'padding:12px 28px;font-size:15px;font-weight:700;cursor:pointer;',
+          'width:100%;font-family:inherit;transition:background .15s;">',
+          'Sign in again',
+        '</button>',
+        '<div id="sessionExpiryCountdown" style="font-size:12px;color:#A7B4C0;margin-top:14px;">',
+          'Redirecting automatically in <span id="sessionExpirySecs">12</span> seconds\u2026',
+        '</div>',
+      '</div>'
+    ].join('');
+
+    document.body.appendChild(modal);
+
+    /* Hover state on the button */
+    var btn = document.getElementById('sessionExpiryBtn');
+    if (btn) {
+      btn.addEventListener('mouseenter', function(){ btn.style.background = '#0089A6'; });
+      btn.addEventListener('mouseleave', function(){ btn.style.background = '#00AECF'; });
+    }
+
+    /* Countdown and auto-redirect */
+    var secs = 12;
+    var secsEl = document.getElementById('sessionExpirySecs');
+    var interval = setInterval(function() {
+      secs--;
+      if (secsEl) secsEl.textContent = secs;
+      if (secs <= 0) {
+        clearInterval(interval);
+        window.location.href = '/login.html?expired=1';
+      }
+    }, 1000);
+  }
   async function logout() {
     /* Route through the same unsaved-changes gate as tab switching. */
     if (typeof window.confirmDiscardChanges === 'function' && !window.confirmDiscardChanges()) return;

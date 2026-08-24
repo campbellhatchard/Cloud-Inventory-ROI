@@ -1,31 +1,46 @@
-# Cloud Inventory ROI v4.9.5 Deployment Validation
-Generated: 2026-08-21T19:47:33.843334Z
-## Corrections applied
+# Cloud Inventory ROI v5.4.0 Deployment Validation
+
+Source upload: `cloud-inventory-roi-v5_4_0.zip`  
+Validated package: `cloud-inventory-roi-v5.4.0-render-ready.zip`
+
+## Packaging corrections applied
+
 - Removed leftover nested `cloud-inventory-roi-v4_0_0/` folder.
-- Aligned `package-lock.json` to `4.9.5`.
-- Confirmed `.node-version` at repository root with `22.22.0`.
+- Aligned `package-lock.json` from `4.9.2` to `5.4.0`.
+- Confirmed `.node-version` exists at the repository root and contains `22.22.0`.
 - Confirmed `.npmrc` forces the public npm registry.
-- Confirmed migration `017_share_links_follow_latest.sql` includes the v4.9.2 foreign-key hotfix.
-- Excluded `node_modules`, `.git`, and environment files from the deployment ZIP.
+- Confirmed migration `017_share_links_follow_latest.sql` retains the prior FK hotfix.
+- Removed `node_modules`, `.git`, `.env`, `.env.local`, and OS metadata from the final deployment ZIP.
 
-## Validation results
+## Code-level deployment fixes applied
 
-- **PASS** — Original ZIP integrity: unzip -t passed
-- **PASS** — Required Render root files: all required files/folders present
-- **PASS** — Render Blueprint structure: checks passed
-- **PASS** — package.json / package-lock.json alignment: package=4.9.5 lock=4.9.5 root=4.9.5 node=22.22.0
-- **PASS** — NPM registry hygiene: no private/local registry references detected
-- **PASS** — JavaScript syntax checks: checked 53 JavaScript files
-- **PASS** — Inline HTML script syntax checks: checked 10 inline scripts
-- **PASS** — ROI engine tests: 17 passed, 0 failed
-- **PASS** — Route test loader: passed; DB integration skipped because DATABASE_URL is not set in sandbox
-- **PASS** — Discovery public-link auth fix: public route present; analytics router does not use broad requireAuth
-- **PASS** — Migration 017 FK hotfix: scenario_base_id has no invalid FK to scenarios(id)
-- **PASS** — Migrations present: 001_initial_schema.sql through 018_discovery_submission.sql (18 files)
-- **PASS** — No node_modules included: node_modules not present
-- **WARN** — Live npm ci in sandbox: attempted but timed out in sandbox; toolkit runs npm ci locally before push
+Two minimal syntax fixes were applied to `public/index.html` so the deployed browser bundle will parse correctly:
 
-## Notes
-- No application logic was changed during deployment packaging.
-- Database-backed route integration tests were not executed because `DATABASE_URL` is not set in the sandbox.
-- Render should use Node `22.22.0` via `NODE_VERSION` and run `npm ci --omit=dev --no-audit --no-fund`.
+- Restored the missing `function switchAdminPanel(panel) { ... }` wrapper around the Admin panel switching logic.
+- Restored a missing comment opener before the ESC-key modal-close comment block.
+
+These were required because inline script validation failed on the uploaded package before correction.
+
+## Validation checks completed
+
+- ZIP integrity: passed.
+- Required Render root files: passed.
+- Render Blueprint structure: passed.
+- `package.json` / `package-lock.json` alignment: passed.
+- NPM registry hygiene: passed.
+- Migration 017 FK hotfix: passed.
+- Migrations present: `001` through `021_prospect_adjustments.sql`.
+- JavaScript syntax checks: passed; 57 files checked.
+- Inline HTML script syntax checks: passed; 11 scripts checked.
+- ROI engine tests: 17 passed, 0 failed.
+- Route test loader: passed; DB integration skipped because `DATABASE_URL` is not set in the sandbox.
+- Discovery public-link auth fix: passed.
+- No `node_modules` included in final ZIP.
+
+## Sandbox caveat
+
+A full `npm ci --omit=dev --no-audit --no-fund` attempt timed out in this sandbox. The PowerShell toolkit runs the same command locally before pushing to GitHub. Subsequent syntax and test execution succeeded using the installed dependencies available in the sandbox validation directory.
+
+## Render target
+
+This package targets the existing production Render resources defined in `render.yaml`: `cloud-inventory-roi` and `cloud-inventory-roi-db`.

@@ -79,18 +79,75 @@ function render(payload){
   _viewCurrency = (d.currency && CURR_SYMBOLS[d.currency]) ? d.currency : 'USD';
   const company = payload.company || d.company || 'Your Company';
   const wrap = document.getElementById('wrap');
+
+  /* Provenance */
+  const da = d._discoveryAnswers || {};
+  const daK = Object.keys(da).filter(k => !k.endsWith('_by'));
+  const daA = daK.filter(k => da[k] && String(da[k]).trim());
+  const daP = daK.filter(k => da[k+'_by'] === 'prospect' && da[k]);
+  const pPct = daA.length ? Math.round(daP.length / daA.length * 100) : 0;
+  const provBanner = daA.length ? `
+    <div style="display:flex;align-items:flex-start;gap:12px;background:#F0F9FF;border:1.5px solid #00AECF;border-radius:10px;padding:14px 18px;margin-bottom:20px;flex-wrap:wrap;">
+      <div style="font-size:22px;flex-shrink:0;">🔍</div>
+      <div style="flex:1;min-width:180px;">
+        <div style="font-size:13.5px;font-weight:700;color:#1E2931;margin-bottom:4px;">
+          ${daP.length} of ${daA.length} inputs supplied directly by ${esc(company)}
+        </div>
+        <div style="font-size:12px;color:#334155;line-height:1.5;">
+          ${pPct}% of answered figures came from your own team. Industry benchmarks fill gaps only where no prospect figure was available.
+        </div>
+      </div>
+      <span style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:99px;background:${pPct>=50?'#D4EDDA':pPct>=25?'#FFF3CD':'#E2E8F0'};color:${pPct>=50?'#155724':pPct>=25?'#856404':'#334155'};white-space:nowrap;align-self:flex-start;">${pPct}% your data</span>
+    </div>` : '';
+
+  /* Cost of inaction */
+  const ab = Number(d.annualBenefit) || 0;
+  const inaction = ab > 0 ? `
+    <div class="card" style="border-left:4px solid #C24A1E;">
+      <h2 style="color:#C24A1E;">Cost of delayed action</h2>
+      <table><tbody>
+        <tr><td>Per month without Cloud Inventory</td><td style="color:#C24A1E;font-weight:700;">${fmtMoney(ab/12)}</td></tr>
+        <tr><td>6-month evaluation delay</td><td style="color:#C24A1E;font-weight:700;">${fmtMoney(ab/2)}</td></tr>
+        <tr><td>12-month delay (full year foregone)</td><td style="color:#C24A1E;font-weight:700;">${fmtMoney(ab)}</td></tr>
+      </tbody></table>
+    </div>` : '';
+
+  /* 3-scenario table */
+  const scenarios = [
+    {lbl:'Conservative (70%)', scale:0.70, col:'#8B6914'},
+    {lbl:'Base case (100%)',   scale:1.00, col:'#0089A6'},
+    {lbl:'Aggressive (130%)', scale:1.30, col:'#2E7D32'},
+  ];
+  const scenRows = scenarios.map(s => {
+    const ab_s = ab * s.scale;
+    return `<tr>
+      <td style="font-weight:600;color:${s.col};">${esc(s.lbl)}</td>
+      <td>${fmtMoney(ab_s)}</td>
+      <td>${d.roi !== null ? Math.round(Number(d.roi) * s.scale) + '%' : '—'}</td>
+    </tr>`;
+  }).join('');
+  const scenTable = ab > 0 ? `
+    <div class="card">
+      <h2>Scenario range</h2>
+      <table><thead><tr><th style="text-align:left;">Scenario</th><th>Annual benefit</th><th>Est. ROI</th></tr></thead>
+      <tbody>${scenRows}</tbody></table>
+      <div style="font-size:11px;color:var(--gray-500);font-style:italic;margin-top:8px;">Conservative and aggressive cases scale improvement recovery assumptions only. Investment costs are fixed.</div>
+    </div>` : '';
+
   wrap.innerHTML = `
     <div class="head">
       <img src="/ci-logo.png" onerror="this.style.display='none'"/>
       <div class="t">Business Case</div>
     </div>
     <h1>${esc(company)} — ROI Business Case</h1>
-    <div class="sub">A data-driven business case built from your operational data. Prepared by Cloud Inventory.</div>
+    <div class="sub">A data-driven business case built from operational data supplied by ${esc(company)} and modeled conservatively. Prepared by Cloud Inventory.</div>
+    ${provBanner}
     <div class="kpis">
       <div class="kpi"><div class="kpi-val">${fmtMoney(d.annualBenefit)}</div><div class="kpi-lbl">Annual benefit</div></div>
       <div class="kpi"><div class="kpi-val">${fmtPct(d.roi)}</div><div class="kpi-lbl">First-year ROI</div></div>
       <div class="kpi"><div class="kpi-val">${d.payback? (Number(d.payback).toFixed(1)+' mo') : '—'}</div><div class="kpi-lbl">Payback</div></div>
     </div>
+    ${inaction}
     <div class="card">
       <h2>Financial summary</h2>
       <table><tbody>
@@ -101,10 +158,132 @@ function render(payload){
         <tr><td>Net present value (5-year)</td><td>${fmtMoney(d.npv5)}</td></tr>
       </tbody></table>
     </div>
-    <div class="foot">This analysis is based on data provided by ${esc(company)} and modeled conservatively. It is an estimate for evaluation purposes and is not a guarantee of results.</div>
+    ${scenTable}
+    <div class="foot">This analysis uses figures provided by ${esc(company)} where available, supplemented by industry benchmarks where prospect data was not supplied. It is a conservative estimate for evaluation purposes and is not a guarantee of results. · cloudinventory.com</div>
   `;
 }
 init();
 </script>
 </body>
 </html>
+
+<script>
+/* After render() builds the page, inject the interactive assumption panel */
+const _origInit = init;
+async function init() {
+  await _origInit();
+  const token = (new URLSearchParams(window.location.search).get('token') || '').trim();
+  injectAssumptionPanel(token);
+}
+
+function injectAssumptionPanel(token) {
+  const wrap = document.getElementById('wrap');
+  if (!wrap || !wrap.querySelector('h1')) return; /* page didn't render cleanly */
+
+  const payload = window._lastPayload;
+  if (!payload) return;
+  const d = payload.data || {};
+  const ab = Number(d.annualBenefit) || 0;
+  if (ab === 0) return;
+
+  const panel = document.createElement('div');
+  panel.className = 'card';
+  panel.id = 'assumptionPanel';
+  panel.innerHTML = `
+    <h2 style="color:#1E2931;">🔧 Stress-test the assumptions</h2>
+    <p style="font-size:12px;color:var(--gray-500);margin-bottom:16px;">
+      Drag any slider to see how the ROI changes under your own assumptions. These numbers stay on your screen — your rep will be notified of what you adjusted so they can address it before the next call.
+    </p>
+    <div id="assumptionSliders"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;flex-wrap:wrap;gap:8px;">
+      <div id="assumptionResult" style="font-size:20px;font-weight:700;color:var(--navy);"></div>
+      <button onclick="sendAdjustments('${token}')" style="padding:8px 18px;background:#0089A6;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Send adjusted case to rep</button>
+    </div>
+  `;
+  wrap.appendChild(panel);
+
+  /* Build sliders for the key recovery assumptions */
+  const sliders = [
+    { key:'laborRecovery',   label:'Labor productivity recovery',    def: Math.round((d.mLabor||0.2)*100),     min:5,  max:50, unit:'%' },
+    { key:'shrinkRecovery',  label:'Shrinkage recovery',             def: Math.round((d.mShrinkage||0.3)*100), min:5,  max:70, unit:'%' },
+    { key:'carryRecovery',   label:'Carrying cost reduction',        def: Math.round((d.mCarrying||0.2)*100),  min:5,  max:50, unit:'%' },
+    { key:'otifRecovery',    label:'OTIF improvement recovery',      def: Math.round((d.mOtif||0.1)*100),      min:2,  max:30, unit:'%' },
+  ];
+
+  const state = {};
+  sliders.forEach(s => { state[s.key] = s.def; });
+
+  function recompute() {
+    const adjR = calcBenefit({
+      annualBenefit:ab, mLabor:state.laborRecovery/100, mShrinkage:state.shrinkRecovery/100,
+      mCarrying:state.carryRecovery/100, mOtif:state.otifRecovery/100
+    });
+    const pct = ab > 0 ? Math.round((adjR / ab) * 100) : 0;
+    const el = document.getElementById('assumptionResult');
+    if (el) el.innerHTML = `Adjusted annual benefit: <span style="color:#0089A6;">${fmtMoney(adjR)}</span> <span style="font-size:13px;color:var(--gray-500);">(${pct}% of base case)</span>`;
+  }
+
+  function calcBenefit(p) {
+    /* Simplified re-computation of benefit using labor + shrink + carry + otif share of base */
+    const base = Number(d.annualBenefit) || 0;
+    const dLabor = (p.mLabor) / (d.mLabor || 0.2);
+    const dShrink = (p.mShrinkage) / (d.mShrinkage || 0.3);
+    const dCarry = (p.mCarrying) / (d.mCarrying || 0.2);
+    const dOtif = (p.mOtif) / (d.mOtif || 0.1);
+    /* Weight by rough contribution: labor 35%, shrink 20%, carry 20%, otif 25% */
+    const adj = base * (dLabor*0.35 + dShrink*0.20 + dCarry*0.20 + dOtif*0.25);
+    return Math.max(0, adj);
+  }
+
+  const cont = panel.querySelector('#assumptionSliders');
+  sliders.forEach(s => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap;';
+    row.innerHTML = `
+      <div style="width:200px;font-size:13px;color:var(--gray-700);">${s.label}</div>
+      <input type="range" min="${s.min}" max="${s.max}" value="${s.def}" step="1"
+        style="flex:1;min-width:100px;accent-color:#0089A6;"
+        id="slider_${s.key}" oninput="document.getElementById('val_${s.key}').textContent=this.value+'${s.unit}';window._sliderState['${s.key}']=Number(this.value);window._recompute();"/>
+      <div id="val_${s.key}" style="width:42px;text-align:right;font-size:13px;font-weight:600;color:#0089A6;">${s.def}${s.unit}</div>
+    `;
+    cont.appendChild(row);
+  });
+
+  window._sliderState = state;
+  window._recompute = recompute;
+  recompute();
+}
+
+window._lastPayload = null;
+const _origRender = render;
+function render(payload) {
+  window._lastPayload = payload;
+  _origRender(payload);
+}
+
+async function sendAdjustments(token) {
+  const state = window._sliderState;
+  if (!state || !token) return;
+  const adjustments = {
+    'Labor productivity recovery': (state.laborRecovery || 0) + '%',
+    'Shrinkage recovery': (state.shrinkRecovery || 0) + '%',
+    'Carrying cost reduction': (state.carryRecovery || 0) + '%',
+    'OTIF improvement recovery': (state.otifRecovery || 0) + '%',
+  };
+  try {
+    const resp = await fetch('/api/business-case-shares/' + token + '/assumptions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ adjustments })
+    });
+    const btn = document.querySelector('#assumptionPanel button');
+    if (btn) {
+      btn.textContent = resp.ok ? '✓ Sent to rep' : '⚠ Could not send';
+      btn.disabled = true;
+    }
+  } catch(e) {
+    console.error('sendAdjustments error:', e);
+  }
+}
+window.sendAdjustments = sendAdjustments;
+</script>

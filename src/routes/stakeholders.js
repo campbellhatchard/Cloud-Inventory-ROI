@@ -11,27 +11,47 @@ router.use(requireAuth);
 
 const ROLES = ['champion','economic_buyer','technical_buyer','influencer','blocker','end_user'];
 
-/* List — optionally filtered by company */
+/* List — optionally filtered by company. Admins can pass ?all=true */
 router.get('/', async (req, res) => {
   try {
     const { company } = req.query;
-    const { rows } = await query(
-      `SELECT id, company, name, title, role, influence, support, engaged, notes, updated_at
-       FROM stakeholders WHERE owner_id = $1 ${company ? 'AND LOWER(company) = LOWER($2)' : ''}
-       ORDER BY influence DESC, name ASC LIMIT 200`,
-      company ? [req.user.id, company] : [req.user.id]
-    );
+    const isAdmin = req.user.role === 'admin';
+    const showAll = isAdmin && req.query.all === 'true';
+    let sql, params;
+    if (showAll) {
+      sql = `SELECT s.id, s.company, s.name, s.title, s.role, s.influence,
+                    s.support, s.engaged, s.notes, s.updated_at,
+                    u.username AS owner_username
+             FROM stakeholders s JOIN users u ON u.id = s.owner_id
+             ${company ? 'WHERE LOWER(s.company) = LOWER($1)' : ''}
+             ORDER BY s.influence DESC, s.name ASC LIMIT 500`;
+      params = company ? [company] : [];
+    } else {
+      sql = `SELECT id, company, name, title, role, influence, support, engaged, notes, updated_at
+             FROM stakeholders WHERE owner_id = $1
+             ${company ? 'AND LOWER(company) = LOWER($2)' : ''}
+             ORDER BY influence DESC, name ASC LIMIT 200`;
+      params = company ? [req.user.id, company] : [req.user.id];
+    }
+    const { rows } = await query(sql, params);
     res.json(rows);
   } catch (e) { res.status(500).json({ error: 'Failed to load stakeholders.' }); }
 });
 
-/* Distinct companies for the picker */
+/* Distinct companies for the picker — admins see all reps' companies */
 router.get('/companies', async (req, res) => {
   try {
-    const { rows } = await query(
-      `SELECT DISTINCT company FROM stakeholders WHERE owner_id = $1 AND company != '' ORDER BY company`,
-      [req.user.id]
-    );
+    const isAdmin = req.user.role === 'admin';
+    const showAll = isAdmin && req.query.all === 'true';
+    let sql, params;
+    if (showAll) {
+      sql = `SELECT DISTINCT company FROM stakeholders WHERE company != '' ORDER BY company`;
+      params = [];
+    } else {
+      sql = `SELECT DISTINCT company FROM stakeholders WHERE owner_id = $1 AND company != '' ORDER BY company`;
+      params = [req.user.id];
+    }
+    const { rows } = await query(sql, params);
     res.json(rows.map(r => r.company));
   } catch (e) { res.status(500).json({ error: 'Failed to load companies.' }); }
 });

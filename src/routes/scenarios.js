@@ -521,4 +521,114 @@ router.put('/group/:baseId/outcome', async (req, res) => {
   }
 });
 
+/* ═══════════════════════════════════════════════════════════════════
+   Batch C — Driver resonance / learning loop
+   GET  /api/scenarios/:id/resonance   — get existing feedback
+   PUT  /api/scenarios/:id/resonance   — save/update feedback
+   GET  /api/resonance/summary         — admin: patterns across deals
+   ═══════════════════════════════════════════════════════════════════ */
+
+router.get('/:id/resonance', async (req, res) => {
+  try {
+    const { rows } = await query(
+      `SELECT r.* FROM driver_resonance r
+       JOIN scenarios s ON s.id = r.scenario_id
+       WHERE r.scenario_id = $1 AND (s.owner_id = $2 OR $3)`,
+      [req.params.id, req.user.id, req.user.role === 'admin']
+    );
+    res.json(rows[0] || null);
+  } catch (err) {
+    console.error('Get resonance error:', err.message);
+    res.status(500).json({ error: 'Failed to load feedback.' });
+  }
+});
+
+router.put('/:id/resonance', async (req, res) => {
+  try {
+    const { driversResonated, driversQuestioned, meetingNotes, meetingOutcome } = req.body || {};
+    const VALID_OUTCOMES = ['progressed','stalled','lost','no_decision','closed_won',null,''];
+    if (meetingOutcome !== undefined && !VALID_OUTCOMES.includes(meetingOutcome)) {
+      return res.status(400).json({ error: 'Invalid meeting outcome.' });
+    }
+    /* Upsert — one feedback row per scenario */
+    const { rows } = await query(
+      `INSERT INTO driver_resonance
+         (scenario_id, owner_id, drivers_resonated, drivers_questioned, meeting_notes, meeting_outcome)
+       VALUES ($1, $2, $3::jsonb, $4::jsonb, $5, $6)
+       ON CONFLICT (scenario_id)
+       DO UPDATE SET
+         drivers_resonated  = EXCLUDED.drivers_resonated,
+         drivers_questioned = EXCLUDED.drivers_questioned,
+         meeting_notes      = EXCLUDED.meeting_notes,
+         meeting_outcome    = EXCLUDED.meeting_outcome,
+         updated_at         = NOW()
+       RETURNING *`,
+      [
+        req.params.id, req.user.id,
+        JSON.stringify(driversResonated || []),
+        JSON.stringify(driversQuestioned || []),
+        meetingNotes || null,
+        meetingOutcome || null
+      ]
+    );
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Save resonance error:', err.message);
+    res.status(500).json({ error: 'Failed to save feedback.' });
+  }
+});
+
+/* Admin summary — which drivers resonate most, by industry */
+router.get('/resonance/summary', async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only.' });
+  try {
+    const { rows } = await query(
+      `SELECT
+         s.industry,
+         r.meeting_outcome,
+         jsonb_array_elements_text(r.drivers_resonated)  AS driver,
+         COUNT(*) AS resonance_count
+       FROM driver_resonance r
+       JOIN scenarios s ON s.id = r.scenario_id
+       WHERE r.drivers_resonated != '[]'
+       GROUP BY s.industry, r.meeting_outcome, driver
+       ORDER BY resonance_count DESC
+       LIMIT 200`
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('Resonance summary error:', err.message);
+    res.status(500).json({ error: 'Failed to load summary.' });
+  }
+});
+
+/* AI narrative summary over the resonance data — separate, slower endpoint
+   so the bar chart above loads instantly and the summary fills in after.
+   Returns null (not an error) if AI isn't configured or the call fails. */
+router.get('/resonance/summary/ai', async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only.' });
+  try {
+    const { rows } = await query(
+      `SELECT
+         s.industry,
+         r.meeting_outcome,
+         jsonb_array_elements_text(r.drivers_resonated)  AS driver,
+         COUNT(*) AS resonance_count
+       FROM driver_resonance r
+       JOIN scenarios s ON s.id = r.scenario_id
+       WHERE r.drivers_resonated != '[]'
+       GROUP BY s.industry, r.meeting_outcome, driver
+       ORDER BY resonance_count DESC
+       LIMIT 100`
+    );
+    if (!rows.length) return res.json({ summary: null });
+    const { summarizeResonancePatterns } = require('../ai');
+    const summary = await summarizeResonancePatterns(rows);
+    res.json({ summary });
+  } catch (err) {
+    console.error('Resonance AI summary error:', err.message);
+    res.json({ summary: null });  /* never a hard error — the chart above still works */
+  }
+});
+
 module.exports = router;

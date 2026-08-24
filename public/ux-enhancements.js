@@ -282,6 +282,24 @@ function initKeyboardShortcuts() {
       if (typeof saveScenario === 'function') saveScenario();
       return;
     }
+    /* Cmd/Ctrl+N → new scenario */
+    if ((e.metaKey || e.ctrlKey) && (e.key === 'n' || e.key === 'N')) {
+      e.preventDefault();
+      if (typeof clearForm === 'function') { switchTab('calc'); clearForm(); }
+      return;
+    }
+    /* Cmd/Ctrl+T → template picker */
+    if ((e.metaKey || e.ctrlKey) && (e.key === 't' || e.key === 'T')) {
+      e.preventDefault();
+      if (typeof showTemplatePicker === 'function') showTemplatePicker();
+      return;
+    }
+    /* Cmd/Ctrl+P → download PDF (override browser print) */
+    if ((e.metaKey || e.ctrlKey) && (e.key === 'p' || e.key === 'P')) {
+      e.preventDefault();
+      if (typeof downloadPDF === 'function') downloadPDF();
+      return;
+    }
     if (typing) return;
     /* "?" → show shortcuts */
     if (e.key === '?') { e.preventDefault(); showShortcutSheet(); return; }
@@ -304,10 +322,15 @@ function initKeyboardShortcuts() {
 function showShortcutSheet() {
   if (document.getElementById('kbSheet')) return;
   const rows = [
-    ['g then c', 'Go to Calculator'], ['g then d', 'Go to Discovery'],
-    ['g then e', 'Go to Executive View'], ['g then s', 'Go to Saved'],
-    ['g then m', 'Go to Stakeholder Map'], ['g then a', 'Go to Analytics'],
-    ['⌘/Ctrl + S', 'Save scenario'], ['?', 'Show this help'], ['Esc', 'Close dialogs']
+    ['g → c', 'Calculator'], ['g → d', 'Discovery guide'],
+    ['g → e', 'Executive view'], ['g → s', 'Saved scenarios'],
+    ['g → m', 'Stakeholder map'], ['g → a', 'Analytics'],
+    ['⌘/Ctrl+S', 'Save scenario'],
+    ['⌘/Ctrl+N', 'New scenario'],
+    ['⌘/Ctrl+T', 'Start from template'],
+    ['⌘/Ctrl+P', 'Download PDF'],
+    ['?', 'Show this help'],
+    ['Esc', 'Close any modal']
   ];
   const modal = document.createElement('div');
   modal.className = 'modal-overlay'; modal.id = 'kbSheet';

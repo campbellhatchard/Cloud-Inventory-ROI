@@ -577,6 +577,7 @@
       <div class="btn-row" style="margin-top:0;">
         <button class="btn btn-primary btn-sm" data-sfaction="printDoc">🖨 Print / Save as PDF</button>
         <button class="btn btn-ghost btn-sm" data-sfaction="copyDoc">Copy text</button>
+        <button class="btn btn-ghost btn-sm" onclick="printRiskLedger()" title="Print a prospect-facing risk ledger showing gaps and mitigations — share before procurement asks">📋 Risk ledger</button>
       </div>
       <div class="sf-doc-preview" id="sfDocPreview">${S.handoffType==='customer'?customerDoc():internalDoc()}</div>
     </div>`;
@@ -675,7 +676,7 @@
       :root{--navy:#1E2931;--cyan:#00A9CC;--ink:#1E2931;--muted:#647681;--line:#dbe5e9;}
       *{box-sizing:border-box}body{margin:0;font-family:Aptos,"Segoe UI",Arial,sans-serif;color:var(--ink);line-height:1.5;padding:44px 52px;}
       .hd-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid var(--cyan);padding-bottom:16px;margin-bottom:22px;}
-      .hd-brand{font-weight:800;letter-spacing:.5px;color:var(--navy);font-size:15px;}
+      .hd-brand{font-weight:700;letter-spacing:.5px;color:var(--navy);font-size:15px;}
       .hd-reg{font-size:9px;vertical-align:super;}
       .hd-title{font-size:24px;margin:6px 0 2px;color:var(--navy);}
       .hd-sub{margin:0;color:var(--muted);font-size:13px;}
@@ -817,6 +818,63 @@
       if(a!=='printDoc' && a!=='copyDoc') el.style.display='none';
     });
   }
+
+  /* ── Prospect-facing risk ledger ──────────────────────────────────
+     An honest "here's what you need to know before you commit" document.
+     Shows gaps with their mitigations — volunteering limitations before
+     procurement finds them builds credibility. */
+  function printRiskLedger() {
+    const company = S.company || 'Prospect';
+    const gaps = S.gaps || [];
+    const today = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+
+    const priOrder = {'Must Have':0,'Should Have':1,'Could Have':2};
+    const sorted = gaps.slice().sort((a,b) => (priOrder[a.priority]||99) - (priOrder[b.priority]||99));
+
+    const priColors = {'Must Have':'#C24A1E','Should Have':'#A6791E','Could Have':'#2E7D32'};
+    const gapRows = sorted.map(g => {
+      const pri = g.priority || 'Could Have';
+      const col = priColors[pri] || '#64748B';
+      return `<div style="border:1px solid #E2E8F0;border-left:4px solid ${col};border-radius:8px;padding:14px 18px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:6px;">
+          <div style="font-size:14px;font-weight:700;color:#1E2931;">${esc(g.feature||g.id||'Gap')}</div>
+          <span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:99px;background:${col}20;color:${col};white-space:nowrap;">${pri}</span>
+        </div>
+        ${g.notes ? `<div style="font-size:12.5px;color:#334155;margin-bottom:6px;">${esc(g.notes)}</div>` : ''}
+        ${g.mitigation ? `<div style="font-size:12px;color:#2E7D32;font-weight:600;">✓ Mitigation: ${esc(g.mitigation)}</div>` : '<div style="font-size:12px;color:#A6791E;">⚠ Mitigation under discussion</div>'}
+      </div>`;
+    }).join('');
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+    <title>Risk Ledger — ${esc(company)}</title>
+    <style>*{box-sizing:border-box}body{font-family:'Inter','Segoe UI',sans-serif;color:#1E2931;padding:44px 52px;max-width:760px;margin:0 auto;line-height:1.5;}
+    h1{font-size:24px;margin:0 0 4px;}h2{font-size:16px;color:#0089A6;margin:24px 0 10px;border-bottom:1px solid #E2E8F0;padding-bottom:6px;}
+    @media print{body{padding:20px 30px;}}</style>
+    </head><body>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #00A9CC;padding-bottom:14px;margin-bottom:22px;">
+      <div><div style="font-size:12px;font-weight:700;color:#1E2931;letter-spacing:.5px;">CLOUD INVENTORY</div>
+        <h1>What you should know before you commit</h1>
+        <div style="color:#64748B;font-size:13px;">${esc(company)} · ${today}</div>
+      </div>
+    </div>
+    <p style="font-size:13.5px;color:#334155;background:#F0F9FF;border:1px solid #00AECF;border-radius:8px;padding:12px 16px;margin-bottom:24px;">
+      This document lists every gap or limitation identified during the evaluation of Cloud Inventory for ${esc(company)}, along with the proposed mitigation for each. We share this proactively — if your team or procurement finds these, we want you to hear them from us first.
+    </p>
+    <h2>${sorted.length} item${sorted.length!==1?'s':''} identified</h2>
+    ${sorted.length ? gapRows : '<p style="color:#64748B;font-style:italic;">No gaps were identified during the evaluation. All selected processes demonstrated full fit.</p>'}
+    <div style="margin-top:32px;padding-top:14px;border-top:1px solid #E2E8F0;font-size:11px;color:#64748B;font-style:italic;">
+      This document reflects the evaluation status as of ${today}. Items marked "Must Have" require resolution before contract. Contact your Cloud Inventory representative with questions. · cloudinventory.com
+    </div>
+    </body></html>`;
+
+    const w = window.open('', '_blank');
+    if (!w) { if(typeof showToast==='function') showToast('Pop-up blocked — allow pop-ups to print.'); return; }
+    w.document.write(html);
+    w.document.close();
+    setTimeout(() => { try { w.print(); } catch(e){} }, 400);
+    if (typeof trackEvent === 'function') trackEvent('risk_ledger_printed', { company, gapCount: gaps.length });
+  }
+  window.printRiskLedger = printRiskLedger;
 
   /* Expose entry point for the tab switch. */
   window.initSolutionFit = initSolutionFit;

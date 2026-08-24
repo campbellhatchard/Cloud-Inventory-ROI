@@ -58,16 +58,28 @@ router.put('/public/:token/milestone/:mid', async (req, res) => {
 /* ── All routes below require auth ── */
 router.use(requireAuth);
 
-/* List own plans */
+/* List own plans — admins can pass ?all=true to see all reps' plans */
 router.get('/', async (req, res) => {
   try {
-    const { rows } = await query(
-      `SELECT id, company, title, target_close_date, token, is_active,
-              milestones, created_at, updated_at
-       FROM mutual_action_plans WHERE owner_id = $1
-       ORDER BY updated_at DESC LIMIT 50`,
-      [req.user.id]
-    );
+    const isAdmin = req.user.role === 'admin';
+    const showAll = isAdmin && req.query.all === 'true';
+    let sql, params;
+    if (showAll) {
+      sql = `SELECT m.id, m.company, m.title, m.target_close_date, m.token, m.is_active,
+                    m.milestones, m.created_at, m.updated_at,
+                    u.username AS owner_username
+             FROM mutual_action_plans m
+             JOIN users u ON u.id = m.owner_id
+             ORDER BY m.updated_at DESC LIMIT 200`;
+      params = [];
+    } else {
+      sql = `SELECT id, company, title, target_close_date, token, is_active,
+                    milestones, created_at, updated_at
+             FROM mutual_action_plans WHERE owner_id = $1
+             ORDER BY updated_at DESC LIMIT 50`;
+      params = [req.user.id];
+    }
+    const { rows } = await query(sql, params);
     res.json(rows);
   } catch (e) { res.status(500).json({ error: 'Failed to load plans.' }); }
 });
