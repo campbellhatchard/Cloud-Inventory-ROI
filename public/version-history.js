@@ -7,9 +7,12 @@
 
 const VERSION_HISTORY = [
   {
-    version: '5.4.5', date: '2026-08-25', tag: 'hotfix',
-    title: 'Startup auth alias hotfix',
-    summary: 'Fixes startup ReferenceError by replacing stale _reqAuthCompanies route references with the initialized requireAuth middleware.'
+    version: '5.4.5', date: '2026-08-25', tag: 'fixes',
+    title: 'Dollar field width fix, discovery sections start collapsed',
+    changes: [
+      'Fixed dollar input fields clipping large numbers (e.g. "120,0" instead of "120,000"): the CSS min-width rules targeted type=number but in v5.4.2 those fields were switched to type=text inputmode=numeric — the selectors no longer matched. Updated to cover both types and ensured affix-wrap (the $ prefix container) always fills its parent regardless of grid layout (field-row-2/3/4 or two-col).',
+      'Discovery guide sections now start collapsed except the first. Previously all sections were forced open on initial render, making the guide feel overwhelming and breaking the collapse toggle (closing a section and then switching tabs or triggering a re-render would re-open everything). Fixed to open only the first section on initialization; all others start closed and each toggle persists correctly through re-renders.'
+    ]
   },
   {
     version: '5.4.4', date: '2026-08-22', tag: 'fixes',

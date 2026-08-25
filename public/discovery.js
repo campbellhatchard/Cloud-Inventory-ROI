@@ -903,9 +903,9 @@ function renderDiscoveryTab() {
       + '</div>';
   }
 
-  /* ── Open all sections on first render ── */
+  /* ── Open only the first section on first render ── */
   if (!_discInitialized) {
-    qs.forEach(function(s){ _discOpenSections.add(s.section); });
+    if (qs.length > 0) { _discOpenSections.add(qs[0].section); }
     _discInitialized = true;
   }
 

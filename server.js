@@ -718,6 +718,8 @@ app.get('/api/enhance/health', (req, res) => {
 });
 
 /* ── AI Enhance proxy — requires auth ── */
+/* requireAuth imported near top */
+
 app.post('/api/enhance', requireAuth, aiLimiter, async (req, res) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set.' });

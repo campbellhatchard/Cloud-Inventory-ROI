@@ -1885,18 +1885,23 @@ body.livebar-off .guided-nav{top:calc(var(--topbar-h) + 8px);}
    content. Give number inputs a readable floor and let rows wrap rather
    than crush columns. */
 .field-row-3,.field-row-4{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));}
-.field input[type="number"]{min-width:0;}
-.affix-wrap input[type="number"]{text-align:left;}
-/* Never let a number input render narrower than enough for 10 digits */
+/* Cover both type=number (legacy) and type=text inputmode=numeric (v5.4.2+) */
+.field input[type="number"],.field input[inputmode="numeric"]{min-width:0;}
+.affix-wrap input[type="number"],.affix-wrap input[inputmode="numeric"]{text-align:left;}
+/* Never let a numeric input render narrower than enough for 10 digits */
 .field-row-3 .field,.field-row-4 .field{min-width:0;}
 .field-row-3 .affix-wrap,.field-row-4 .affix-wrap,
 .field-row-3 .field input,.field-row-4 .field input{min-width:160px;}
 /* Dollar fields that can hold up to 10 digits — always full width */
 #revenue,#inventoryValue,#laborCost,#itCost,#invest,#otc,
 #annualWriteOff,#expediteSpendYr,#downtimeCostPerHr,
-#fieldInvValue,#fieldReconcileCost,#costPerOrder,#costPerError{
+#fieldInvValue,#fieldReconcileCost,#costPerOrder,#costPerError,
+#psvcCost,#hwCost,#trainCost,#costPerError{
   min-width:0;width:100%;
 }
+/* affix-wrap always fills its .field container regardless of grid layout */
+.field .affix-wrap{width:100%;min-width:0;}
+.field .affix-wrap input{min-width:0;width:100%;}
 @media(max-width:640px){
   .field-row-3 .affix-wrap,.field-row-4 .affix-wrap,
   .field-row-3 .field input,.field-row-4 .field input{min-width:0;}
