@@ -7,6 +7,65 @@
 
 const VERSION_HISTORY = [
   {
+    version: '5.5.0', date: '2026-08-25', tag: 'feature',
+    title: 'Mutual Action Plan redesigned — card view, overdue alerts, rep visibility, admin filters',
+    changes: [
+      'Complete list view redesign: replaced the plain bullet list with cards. Company name is the visual anchor (large, bold), plan title sits below it as secondary text, and each card shows a color-coded progress bar (red/amber/green), share status dot (green = live with prospect, grey = draft), close date, and an overdue or on-track pill.',
+      'Clicking anywhere on a card opens the plan — no separate Open button needed. Delete is still a button to prevent accidental opens, but is suppressed on plans the rep doesn’t own.',
+      'Overdue alert banner is always shown when any of your plans has overdue milestones. Lists each affected company and count inline. Cannot be dismissed — by design, so reps can’t ignore it.',
+      'Stats strip at the top shows total plans, overdue milestone count (amber), shared-with-prospect count (green), and (admin-only) active rep count.',
+      'Rep view now shows two sections: "Your plans" (full edit/delete access) and "All reps’ plans" (read-only, no delete). Reps can open any plan to view details but cannot delete plans they don’t own.',
+      'Admin view shows a flat table with filter bar: filter by rep, status (overdue/on-track/shared/draft), and company search. A live count shows how many plans match the current filters.',
+      'loadMaps now always fetches all=true for both roles. Client-side ownership check determines edit/delete access, matching the server-side guard that was already in place.'
+    ]
+  },
+  {
+    version: '5.4.9', date: '2026-08-25', tag: 'feature',
+    title: 'Solution dropdown simplified to CIP/MEP; competitive battlecard upgraded with full PDF battlecard data',
+    changes: [
+      'Calculator: Cloud Inventory solution dropdown now shows only Cloud Inventory Platform (CIP) and Mobile Enterprise Platform (MEP) — removed the legacy All/Platform, Warehouse Operations (WMS), and Manufacturing Materials options. Default changed from "all" to CIP.',
+      'Competitive displacement: added a solution filter (CIP or MEP) at the top. Selecting a solution filters the competitor dropdown to show only relevant competitors for that product. CIP shows SAP, Oracle WMS, Legacy RF, Spreadsheets, ERP-native, and Other WMS. MEP shows Low-code platforms (Power Apps/Mendix/Appian) and ERP Mobility/Scanning (RFgen/RF-SMART).',
+      'All COMP entries now carry the full battlecard data from the official PDFs: target account profile, target buyers, competitive landscape, competitive reframe strategy, prequalify discovery questions, qualify discovery questions, and why-Cloud-Inventory-wins points. These all render in expandable sections below the main pain/advantage grid.',
+      'Added two new MEP-specific competitors: Low-code Platform (Power Apps/Mendix/Appian) and ERP Mobility/Scanning (RFgen/RF-SMART), each with full battlecard content sourced from the Mobile Enterprise Platform battlecard PDF.',
+      'Each competitor card now shows a product badge (CIP or MEP) so reps know which product motion to lead with.',
+      'Talk tracks added for all eight competitor entries including the two new MEP-specific competitors.'
+    ]
+  },
+  {
+    version: '5.4.8', date: '2026-08-25', tag: 'feature',
+    title: 'Competitive battlecard redesign — structured layout, talk tracks, PDF & Word export',
+    changes: [
+      'Competitive displacement page rebuilt from a plain text dump into a structured battlecard: competitor name and "Current solution" tag at the top, a three-column cost/time/maintenance strip, then a clean two-column grid (Pain points on the left, Cloud Inventory advantages on the right) with red/green dot indicators and column headers that explain the intent to new reps.',
+      'Added per-competitor talk tracks — a paragraph-length opening line for the first call or email, with a "Copy talk track" button. Six talk tracks written for SAP, Oracle WMS, Legacy RF, Spreadsheets, ERP-native, and Other WMS.',
+      'Export PDF: opens a branded print window (same pattern as ROI Methodology PDF) with the battlecard laid out in a two-column table, talk track in a teal accent block, and company/rep/date header. Uses browser print dialog to save as PDF.',
+      'Export Word (.docx): downloads a fully formatted .docx via the docx@8.5.0 CDN browser bundle — two-column table with colored headers, metadata rows, and talk track with left border accent. Loads the library on first use (~200KB, cached after that). The Word file is editable so reps can customize before sharing.',
+      'Export buttons appear in the page header only after a competitor is selected, staying hidden when the selector is empty.'
+    ]
+  },
+  {
+    version: '5.4.7', date: '2026-08-25', tag: 'feature',
+    title: 'Benchmark editor redesigned — dropdown, per-industry reset, OTIF fields',
+    changes: [
+      'The admin Benchmarks tab is now a single-industry editor: choose an industry from a dropdown and edit only that industry\'s values, rather than scrolling through all 8 industries at once as an overwhelming flat list.',
+      'Added OTIF baseline and OTIF target as editable benchmark fields (previously hidden from the admin editor). These are the two OTIF values that drive the OTIF revenue-at-risk calculation.',
+      'Fields are grouped into three sections: Improvement levers, Industry rates, and OTIF baseline & target, each with a short description of what the number means.',
+      'Custom values are highlighted in teal with a dot indicator and show the factory default inline, so it\'s always clear what has been changed vs what ships out of the box.',
+      'A "Reset to factory defaults" button per industry sends DELETE /api/benchmarks/:industry, removing all custom rows from the database and restoring the hard-coded values. Replaces the previous no-op button that just showed a toast.',
+      'Save / Cancel / Reset buttons only appear when relevant — the footer is clean at rest and shows an "Unsaved changes" warning when fields are dirty.'
+    ]
+  },
+  {
+    version: '5.4.6', date: '2026-08-25', tag: 'feature',
+    title: 'Cleanup: selectable rows, typeahead search, any company (admin)',
+    changes: [
+      'Search input on the cleanup page is now a taller textarea with live typeahead — as you type, matching company names across all reps appear in a dropdown so you can pick exactly who you mean without guessing the exact spelling.',
+      'Preview results now show checkboxes on every row. You can check individual scenarios, discovery sessions, and customer records independently, use the per-section Select all toggle, or mix and match. A Delete selected button shows a live count of checked records and stays disabled until you pick something.',
+      'A secondary Delete all N matched button remains available for cases where you do want to wipe everything under a search term in one go.',
+      'The execute endpoint now accepts explicit record IDs from the selection, so only the checked rows are soft-deleted — not everything that happens to match the search string. The legacy all-match path is preserved as a fallback.',
+      'New admin-only GET /api/admin/companies?q= endpoint powers the typeahead — searches across scenarios, discovery sessions, and customers for any company name across all reps, not just the current user.'
+    ]
+  },
+  {
     version: '5.4.5', date: '2026-08-25', tag: 'fixes',
     title: 'Dollar field width fix, discovery sections start collapsed',
     changes: [

@@ -58,7 +58,7 @@ function normaliseRow(r) {
     industry:      r.industry,
     dealStage:     r.deal_stage,
     execAudience:  r.exec_audience || 'mixed',
-    solution:      r.solution || 'all',
+    solution:      r.solution || 'cip',
     ownerUsername: r.owner_username,
     sharedWith:    r.shared_with   || [],
     date:          r.updated_at
@@ -97,7 +97,7 @@ function switchTab(name) {
     if (nav) nav.classList.toggle('active', n === name);
   });
   document.body.classList.toggle('impact-active', name === 'impact');
-  if (name === 'comp')        { syncCompDropdowns(); renderComp(); }
+  if (name === 'comp')        { syncCompDropdowns(); renderCompFilter(); }
   if (name === 'exec')        renderExec();
   if (name === 'saved')       { renderList(); renderStageFilters(); }
   if (name === 'compare')     renderComparison();
@@ -281,7 +281,7 @@ function getVals() {
     competitor: gs('competitor') || gs('compSelect'),
     dealStage: gs('dealStage'),
     execAudience: gs('execAudience') || 'mixed',
-    solution: gs('solution') || 'all',
+    solution: gs('solution') || 'cip',
     currency: (typeof getCurrency === 'function') ? getCurrency() : 'USD',
     revenue: g('revenue'), users: g('userCount'), labor: g('laborCost'),
     inventory: inventoryVal, itCost: g('itCost'), invest: g('invest'),
@@ -492,31 +492,140 @@ function recalc() {
 /* ════════════════════════════════════════
    Competitive tab
    ════════════════════════════════════════ */
+function renderCompFilter() {
+  /* Rebuild the competitor dropdown based on selected solution */
+  const sol = (document.getElementById('compSolutionFilter') || {}).value || 'cip';
+  const sel = document.getElementById('compSelect');
+  if (!sel || typeof COMP === 'undefined') return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">\u2014 Select competitor \u2014</option>';
+  Object.entries(COMP).forEach(function([key, c]) {
+    if (!c.solution || c.solution === sol) {
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = c.name;
+      sel.appendChild(opt);
+    }
+  });
+  /* Restore previous selection if still valid */
+  if (prev && sel.querySelector('option[value="' + prev + '"]')) {
+    sel.value = prev;
+  } else {
+    sel.value = '';
+  }
+  renderComp();
+}
+
 function renderComp() {
-  const key = gs('compSelect') || gs('competitor');
+  const key = (document.getElementById('compSelect') || {}).value || gs('compSelect') || gs('competitor');
   const el  = document.getElementById('compContent');
-  if (!key) { el.innerHTML='<div class="empty-state"><p>Select a competing solution above.</p></div>'; return; }
+  const pdfBtn  = document.getElementById('compPdfBtn');
+  const docxBtn = document.getElementById('compDocxBtn');
+
+  if (!key) {
+    if (el) el.innerHTML = '<div class="empty-state"><p>Select a competing solution above to load the battlecard and talking points.</p></div>';
+    if (pdfBtn)  pdfBtn.style.display  = 'none';
+    if (docxBtn) docxBtn.style.display = 'none';
+    return;
+  }
+
   const c = COMP[key];
-  if (gs('competitor') !== key) document.getElementById('competitor').value = key;
-  el.innerHTML = `
-    <div class="comp-header-card">
-      <div class="comp-header-name">${c.name}</div>
-      <div class="comp-meta-row">
-        <div class="comp-meta-item"><div class="cm-label">Typical cost</div><div class="cm-value">${c.cost}</div></div>
-        <div class="comp-meta-item"><div class="cm-label">Time to value</div><div class="cm-value">${c.time}</div></div>
-        <div class="comp-meta-item"><div class="cm-label">Ongoing maintenance</div><div class="cm-value">${c.maint}</div></div>
-      </div>
-    </div>
-    <div class="comp-two">
-      <div class="comp-list-card pain">
-        <div class="comp-list-title">Pain points with ${c.name}</div>
-        ${c.pain.map(p=>`<div class="comp-row"><i class="comp-icon">✗</i><span>${p}</span></div>`).join('')}
-      </div>
-      <div class="comp-list-card adv">
-        <div class="comp-list-title">Cloud Inventory advantages</div>
-        ${c.adv.map(a=>`<div class="comp-row"><i class="comp-icon">✓</i><span>${a}</span></div>`).join('')}
-      </div>
-    </div>`;
+  if (!c) return;
+  /* Sync hidden competitor field used by exec view */
+  const compHidden = document.getElementById('competitor');
+  if (compHidden && gs('competitor') !== key) compHidden.value = key;
+  if (pdfBtn)  pdfBtn.style.display  = 'inline-flex';
+  if (docxBtn) docxBtn.style.display = 'inline-flex';
+
+  const TALK_TRACKS = {
+    sap:        '\u201cMost SAP shops we talk to are spending 20%+ of their WMS budget just keeping the system running \u2014 consultants, customizations, and upgrade projects that never quite end. Cloud Inventory gives you the same inventory control with zero ABAP and a fraction of the maintenance cost. Our last SAP displacement went live in 11 weeks.\u201d',
+    rf:         '\u201cRF-gun systems were built for a world where warehouses didn\u2019t move. Your team is managing field inventory on clipboards and radio calls, which means your shrinkage numbers are really just guesses. We give you real-time visibility across every truck, van, and job site \u2014 same platform as the warehouse.\u201d',
+    oracle:     '\u201cOracle WMS is a serious product, but it\u2019s engineered for Oracle shops. The moment you\u2019re connecting to a non-Oracle ERP or you want your field teams on mobile, the integration cost explodes. We\u2019re ERP-agnostic, API-first, and we deploy in months, not years.\u201d',
+    excel:      '\u201cSpreadsheets are really a hidden cost center \u2014 we typically find $80K to $200K a year in labor waste just from reconciliation, write-offs, and the time it takes to answer \u2018where is this inventory right now?\u2019 The ROI math is usually under six months, which is why this tends to be an easy buy-in.\u201d',
+    erp:        '\u201cERP inventory modules are great at recording transactions, but they\u2019re not designed for execution \u2014 no directed put-away, limited scanning, and zero support for field inventory. We sit on top of your ERP and handle the execution layer it was never built for.\u201d',
+    mep_lowcode:'\u201cLow-code platforms give you a blank canvas \u2014 which sounds good until you realize someone has to build and maintain every single workflow. MEP is purpose-built for governed enterprise workflow mobilization. No-code configuration, offline-first, and ERP-connected out of the box. Most of our customers are live in weeks, not quarters.\u201d',
+    mep_rfgen:  '\u201cRF-SMART and RFgen are solid scanning tools, but they\u2019re built around one ERP and one use case. If your frontline work spans multiple systems, offline environments, or workflows beyond basic scanning, they hit a wall fast. MEP connects to any ERP, handles offline execution natively, and lets your team change workflows without a dev cycle.\u201d',
+    other:      '\u201cMost WMS platforms were built to be configured once and frozen. If your business changes \u2014 new sites, new workflows, new ERP \u2014 you\u2019re back in a services engagement. We\u2019re no-code and cloud-native, so your team can adapt the system without calling us.\u201d'
+  };
+  const talk = TALK_TRACKS[key] || '';
+
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function listItems(arr) {
+    return (arr||[]).map(function(x){ return '<li>' + esc(x) + '</li>'; }).join('');
+  }
+
+  /* Determine product label */
+  const isMEP = c.solution === 'mep';
+  const productLabel = isMEP ? 'Mobile Enterprise Platform (MEP)' : 'Cloud Inventory Platform (CIP)';
+
+  el.innerHTML =
+    '<div class="comp-card">'
+    + '<div class="comp-card-head">'
+    +   '<div>'
+    +     '<span class="comp-card-name">' + esc(c.name) + '</span>'
+    +     '<span class="comp-product-tag">' + esc(productLabel) + '</span>'
+    +   '</div>'
+    +   '<span class="comp-current-tag">Current solution</span>'
+    + '</div>'
+    + '<div class="comp-meta-strip">'
+    +   '<div class="comp-meta-cell"><div class="comp-meta-lbl">Typical cost</div><div class="comp-meta-val">' + esc(c.cost) + '</div></div>'
+    +   '<div class="comp-meta-cell"><div class="comp-meta-lbl">Time to value</div><div class="comp-meta-val">' + esc(c.time) + '</div></div>'
+    +   '<div class="comp-meta-cell"><div class="comp-meta-lbl">Ongoing maintenance</div><div class="comp-meta-val">' + esc(c.maint) + '</div></div>'
+    + '</div>'
+    + '<div class="comp-battle-grid">'
+    +   '<div class="comp-battle-col comp-pain-col">'
+    +     '<div class="comp-battle-head">'
+    +       '<div class="comp-battle-icon comp-battle-icon-pain">!</div>'
+    +       '<div><div class="comp-battle-title">Pain points with ' + esc(c.name) + '</div>'
+    +       '<div class="comp-battle-sub">What the prospect is living with today</div></div>'
+    +     '</div>'
+    +     c.pain.map(function(p){ return '<div class="comp-item"><div class="comp-dot comp-dot-pain">\u2715</div><div class="comp-item-text">' + esc(p) + '</div></div>'; }).join('')
+    +   '</div>'
+    +   '<div class="comp-battle-col comp-adv-col">'
+    +     '<div class="comp-battle-head">'
+    +       '<div class="comp-battle-icon comp-battle-icon-adv">\u2713</div>'
+    +       '<div><div class="comp-battle-title">Why Cloud Inventory wins</div>'
+    +       '<div class="comp-battle-sub">How we win this displacement</div></div>'
+    +     '</div>'
+    +     c.adv.map(function(a){ return '<div class="comp-item"><div class="comp-dot comp-dot-adv">\u2713</div><div class="comp-item-text">' + esc(a) + '</div></div>'; }).join('')
+    +   '</div>'
+    + '</div>'
+    + '</div>'
+
+    /* Discovery + context detail strip */
+    + '<div class="comp-detail-grid">'
+    +   (c.targetProfile ? '<div class="comp-detail-card"><div class="comp-detail-lbl">Target account profile</div><p class="comp-detail-text">' + esc(c.targetProfile) + '</p></div>' : '')
+    +   (c.targetBuyers  ? '<div class="comp-detail-card"><div class="comp-detail-lbl">Target buyers</div><p class="comp-detail-text">' + esc(c.targetBuyers) + '</p></div>' : '')
+    +   (c.compLandscape ? '<div class="comp-detail-card"><div class="comp-detail-lbl">Competitive landscape</div><p class="comp-detail-text">' + esc(c.compLandscape) + '</p></div>' : '')
+    +   (c.compReframe   ? '<div class="comp-detail-card"><div class="comp-detail-lbl">Competitive reframe</div><p class="comp-detail-text">' + esc(c.compReframe) + '</p></div>' : '')
+    + '</div>'
+
+    /* Discovery questions */
+    + ((c.discPrequalify||[]).length || (c.discQualify||[]).length ? '<div class="comp-disc-grid">'
+    +   (c.discPrequalify ? '<div class="comp-disc-col"><div class="comp-disc-head">Discovery \u2014 prequalify</div><ul class="comp-disc-list">' + listItems(c.discPrequalify) + '</ul></div>' : '')
+    +   (c.discQualify    ? '<div class="comp-disc-col"><div class="comp-disc-head">Discovery \u2014 qualify</div><ul class="comp-disc-list">' + listItems(c.discQualify) + '</ul></div>' : '')
+    + '</div>' : '')
+
+    /* Talk track */
+    + (talk
+      ? '<div class="comp-talk-track">'
+        + '<div class="comp-talk-label">Talk track</div>'
+        + '<div class="comp-talk-text" id="compTalkText">' + esc(talk) + '</div>'
+        + '<button class="btn btn-ghost btn-sm" id="compTalkCopyBtn" onclick="_copyCompTalk()">Copy talk track</button>'
+        + '</div>'
+      : '');
+}
+
+
+function _copyCompTalk() {
+  const el = document.getElementById('compTalkCopyBtn');
+  const text = (document.getElementById('compTalkText') || {}).textContent || '';
+  if (navigator.clipboard) navigator.clipboard.writeText(text).catch(function(){});
+  if (el) {
+    el.textContent = 'Copied!';
+    el.style.color = 'var(--green)';
+    setTimeout(function(){ el.textContent = 'Copy talk track'; el.style.color = ''; }, 2000);
+  }
 }
 
 /* ════════════════════════════════════════
@@ -947,7 +1056,7 @@ async function _doSave(v, dataBlob, baseId, note) {
         industry:     v.industry     || null,
         dealStage:    v.dealStage    || null,
         execAudience: v.execAudience || 'mixed',
-        solution:     v.solution     || 'all',
+        solution:     v.solution     || 'cip',
         versionNote:  note           || null,
         baseId:       baseId         || null
       })
@@ -1141,15 +1250,13 @@ function applyAccuracySuggestion(rec) {
    calculates identically; this only guides the rep's attention and
    labels the outputs.                                                   */
 const SOLUTION_EMPHASIS = {
-  wms:    { label: 'Warehouse Operations (WMS)', highlight: ['wms','count'] },
-  mep:    { label: 'Field Inventory (MEP)',      highlight: ['mep','downtime'] },
-  mfgmat: { label: 'Manufacturing Materials',    highlight: ['downtime','count'] },
-  all:    { label: 'All / Platform',             highlight: [] }
+  cip:    { label: 'Cloud Inventory Platform (CIP)', highlight: ['wms','count'] },
+  mep:    { label: 'Mobile Enterprise Platform (MEP)', highlight: ['mep','downtime'] }
 };
 function applySolutionEmphasis() {
   const sel = document.getElementById('solution');
   const sol = sel ? sel.value : 'all';
-  const cfg = SOLUTION_EMPHASIS[sol] || SOLUTION_EMPHASIS.all;
+  const cfg = SOLUTION_EMPHASIS[sol] || SOLUTION_EMPHASIS.cip;
   document.querySelectorAll('.field-group-label').forEach(el => el.classList.remove('driver-emphasis'));
   if (cfg.highlight.includes('wms')) {
     document.querySelectorAll('.wms-tag').forEach(t => {

@@ -19,18 +19,24 @@ async function initMapTab() {
 
 async function loadMaps() {
   try {
-    const user = window.ciAuth ? window.ciAuth.getUser() : {};
-    const isAdmin = user.role === 'admin';
-    const url = isAdmin ? '/api/maps?all=true' : '/api/maps';
-    const resp = await apiFetch(url);
+    /* Both admins and reps fetch all=true — reps see all plans but can only
+       edit/delete their own. The list is filtered client-side by ownership. */
+    const resp = await apiFetch('/api/maps?all=true');
     if (!resp || !resp.ok) return;
     _maps = await resp.json();
+    /* Reset filters on fresh load */
+    _mapRepFilter = '';
+    _mapStatusFilter = '';
+    _mapSearchFilter = '';
     renderMapList();
   } catch (e) { console.error('loadMaps:', e.message); }
 }
 
 /* ── LIST VIEW ── */
 var _mapRepFilter = '';
+var _mapStatusFilter = '';
+var _mapSearchFilter = '';
+
 function renderMapList() {
   const el = document.getElementById('mapListWrap');
   if (!el) return;
@@ -38,55 +44,159 @@ function renderMapList() {
   el.style.display = 'block';
   const user = window.ciAuth ? window.ciAuth.getUser() : {};
   const isAdmin = user.role === 'admin';
+  const me = user.username || '';
 
   if (!_maps.length) {
-    el.innerHTML = `<div class="empty-state"><p>No action plans yet. Create one to build a shared close plan with your prospect.</p>
-      <button class="btn btn-cta" onclick="newMap()" style="margin-top:.75rem;">+ New action plan</button></div>`;
+    el.innerHTML = '<div class="empty-state"><p>No action plans yet. Create one to build a shared close plan with your prospect.</p>'
+      + '<button class="btn btn-cta" onclick="newMap()" style="margin-top:.75rem;">+ New action plan</button></div>';
     return;
   }
 
-  /* Rep filter for admins */
-  const reps = isAdmin
-    ? [...new Set(_maps.map(m => m.owner_username).filter(Boolean))].sort()
-    : [];
-  const filtered = _mapRepFilter
-    ? _maps.filter(m => m.owner_username === _mapRepFilter)
-    : _maps;
+  /* ── Separate my plans vs other reps' plans (rep view) ── */
+  const myMaps    = isAdmin ? _maps : _maps.filter(m => m.owner_username === me);
+  const otherMaps = isAdmin ? []    : _maps.filter(m => m.owner_username !== me);
 
-  const repFilterHtml = isAdmin && reps.length ? `
-    <div class="admin-filter-bar">
-      <label class="admin-filter-label">Rep:</label>
-      <select class="admin-filter-sel" onchange="_mapRepFilter=this.value;renderMapList()">
-        <option value="">All reps (${_maps.length})</option>
-        ${reps.map(r => `<option value="${escapeHtml(r)}" ${_mapRepFilter===r?'selected':''}>${escapeHtml(r)} (${_maps.filter(m=>m.owner_username===r).length})</option>`).join('')}
-      </select>
-    </div>` : '';
+  /* ── Stats ── */
+  const allOverdue = _maps.reduce(function(acc, m) {
+    return acc + (m.milestones||[]).filter(function(x){ return x.status !== 'done' && x.dueDate && new Date(x.dueDate) < new Date(); }).length;
+  }, 0);
+  const sharedCount = _maps.filter(function(m){ return !!m.token; }).length;
+  const repCount    = isAdmin ? new Set(_maps.map(function(m){ return m.owner_username; }).filter(Boolean)).size : 0;
 
-  el.innerHTML = `
-    <div class="btn-row" style="margin-bottom:1rem;">
-      <button class="btn btn-cta" onclick="newMap()">+ New action plan</button>
-      ${repFilterHtml}
-    </div>
-    <ul class="scenario-list">${filtered.map(m => {
-      const ms = m.milestones || [];
-      const done = ms.filter(x => x.status === 'done').length;
-      const pct = ms.length ? Math.round(done / ms.length * 100) : 0;
-      const overdue = ms.filter(x => x.status !== 'done' && x.dueDate && new Date(x.dueDate) < new Date()).length;
-      const repBadge = isAdmin && m.owner_username ? `<span class="shared-badge">${escapeHtml(m.owner_username)}</span>` : '';
-      return `<li class="scenario-item">
-        <div class="scenario-info">
-          <div class="scenario-name">${escapeHtml(m.title)} ${m.token ? '<span class="shared-badge">🔗 shared</span>' : ''} ${repBadge}</div>
-          <div class="scenario-meta">${escapeHtml(m.company || 'No company')} ·
-            ${m.target_close_date ? 'Target close: ' + new Date(m.target_close_date).toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}) : 'No target date'} ·
-            ${done}/${ms.length} done${overdue ? ` · <span style="color:var(--red);font-weight:600;">${overdue} overdue</span>` : ''}</div>
-          <div class="map-progress"><div class="map-progress-fill" style="width:${pct}%;"></div></div>
-        </div>
-        <div class="scenario-actions">
-          <button class="btn btn-ghost btn-sm" onclick="openMap('${m.id}')">Open</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteMap('${m.id}')">Delete</button>
-        </div>
-      </li>`;
-    }).join('')}</ul>`;
+  /* ── Overdue alert — always on ── */
+  const overdueDetails = myMaps.filter(function(m){
+    return (m.milestones||[]).some(function(x){ return x.status !== 'done' && x.dueDate && new Date(x.dueDate) < new Date(); });
+  }).map(function(m){
+    const ov = (m.milestones||[]).filter(function(x){ return x.status !== 'done' && x.dueDate && new Date(x.dueDate) < new Date(); }).length;
+    return escapeHtml(m.company || m.title) + ' (' + ov + ' overdue)';
+  });
+  const overdueAlertHtml = overdueDetails.length
+    ? '<div class="map-overdue-alert"><i class="ti ti-alert-triangle" aria-hidden="true"></i>'
+      + '<span>' + overdueDetails.join(' \xb7 ') + '</span></div>'
+    : '';
+
+  /* ── Filters (admin) ── */
+  const reps = isAdmin ? [...new Set(_maps.map(function(m){ return m.owner_username; }).filter(Boolean))].sort() : [];
+  const filtered = _maps.filter(function(m) {
+    if (_mapRepFilter && m.owner_username !== _mapRepFilter) return false;
+    if (_mapStatusFilter === 'overdue' && !(m.milestones||[]).some(function(x){ return x.status!=='done'&&x.dueDate&&new Date(x.dueDate)<new Date(); })) return false;
+    if (_mapStatusFilter === 'shared' && !m.token) return false;
+    if (_mapStatusFilter === 'draft' && m.token) return false;
+    if (_mapStatusFilter === 'on-track' && (
+      (m.milestones||[]).some(function(x){ return x.status!=='done'&&x.dueDate&&new Date(x.dueDate)<new Date(); }) || !m.token
+    )) return false;
+    if (_mapSearchFilter && !(m.company||'').toLowerCase().includes(_mapSearchFilter.toLowerCase())
+        && !(m.title||'').toLowerCase().includes(_mapSearchFilter.toLowerCase())) return false;
+    return true;
+  });
+
+  function mapCard(m, showRep, canDelete) {
+    const ms = m.milestones || [];
+    const done = ms.filter(function(x){ return x.status === 'done'; }).length;
+    const pct  = ms.length ? Math.round(done / ms.length * 100) : 0;
+    const overdue = ms.filter(function(x){ return x.status !== 'done' && x.dueDate && new Date(x.dueDate) < new Date(); }).length;
+    const progCls = pct >= 60 ? 'map-prog-hi' : pct >= 25 ? 'map-prog-mid' : 'map-prog-low';
+    const closeDate = m.target_close_date
+      ? new Date(m.target_close_date).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'})
+      : null;
+    const statusPill = overdue
+      ? '<span class="map-status-pill map-status-overdue">' + overdue + ' overdue</span>'
+      : (ms.length === 0
+        ? '<span class="map-status-pill map-status-empty">Empty</span>'
+        : '<span class="map-status-pill map-status-ok">On track</span>');
+    const shareIndicator = m.token
+      ? '<span class="map-share-dot map-share-live" title="Shared with prospect"></span>Shared'
+      : '<span class="map-share-dot map-share-draft" title="Not shared"></span>Draft';
+    const repBadge = showRep && m.owner_username
+      ? '<span class="map-rep-badge">'
+        + '<span class="map-rep-av">' + escapeHtml((m.owner_username||'').slice(0,2).toUpperCase()) + '</span>'
+        + escapeHtml(m.owner_username)
+        + '</span>'
+      : '';
+    const deleteBtn = canDelete
+      ? '<button class="btn btn-danger btn-sm" onclick="deleteMap(\'' + m.id + '\')" title="Delete plan">Delete</button>'
+      : '';
+
+    return '<div class="map-card" onclick="openMap(\'' + m.id + '\')" role="button" tabindex="0" onkeydown="if(event.key===\'Enter\')openMap(\'' + m.id + '\')">'
+      + '<div class="map-card-body">'
+      +   '<div class="map-card-top">'
+      +     '<span class="map-card-company">' + escapeHtml(m.company || 'No company') + '</span>'
+      +     repBadge
+      +     statusPill
+      +   '</div>'
+      +   '<div class="map-card-title">' + escapeHtml(m.title || 'Untitled plan') + '</div>'
+      +   '<div class="map-card-meta">'
+      +     '<span class="map-share-info">' + shareIndicator + '</span>'
+      +     (closeDate ? '<span>\xb7 Close: ' + closeDate + '</span>' : '<span class="map-no-date">\xb7 No target date</span>')
+      +     '<span>\xb7 ' + done + '\xa0/\xa0' + ms.length + ' done</span>'
+      +   '</div>'
+      +   '<div class="map-prog-wrap"><div class="map-prog-fill ' + progCls + '" style="width:' + pct + '%;"></div></div>'
+      + '</div>'
+      + '<div class="map-card-actions" onclick="event.stopPropagation()">'
+      +   deleteBtn
+      + '</div>'
+      + '</div>';
+  }
+
+  /* ── Stats strip ── */
+  const statsHtml = '<div class="map-stats-row">'
+    + '<div class="map-stat"><div class="map-stat-n">' + _maps.length + '</div><div class="map-stat-l">' + (isAdmin ? 'Total plans' : 'Your plans') + '</div></div>'
+    + (allOverdue ? '<div class="map-stat"><div class="map-stat-n map-stat-warn">' + allOverdue + '</div><div class="map-stat-l">Overdue milestones</div></div>' : '')
+    + '<div class="map-stat"><div class="map-stat-n map-stat-ok">' + sharedCount + '</div><div class="map-stat-l">Shared with prospects</div></div>'
+    + (isAdmin ? '<div class="map-stat"><div class="map-stat-n">' + repCount + '</div><div class="map-stat-l">Active reps</div></div>' : '')
+    + '</div>';
+
+  /* ── Admin filter bar ── */
+  const adminFiltersHtml = isAdmin ? '<div class="map-filter-bar">'
+    + '<select class="map-filter-sel" onchange="_mapRepFilter=this.value;renderMapList()">'
+    + '<option value="">All reps (' + _maps.length + ')</option>'
+    + reps.map(function(r){ return '<option value="' + escapeHtml(r) + '"' + (_mapRepFilter===r?' selected':'') + '>' + escapeHtml(r) + ' (' + _maps.filter(function(m){ return m.owner_username===r; }).length + ')</option>'; }).join('')
+    + '</select>'
+    + '<select class="map-filter-sel" onchange="_mapStatusFilter=this.value;renderMapList()">'
+    + '<option value="">All statuses</option>'
+    + '<option value="overdue"' + (_mapStatusFilter==='overdue'?' selected':'') + '>Has overdue</option>'
+    + '<option value="on-track"' + (_mapStatusFilter==='on-track'?' selected':'') + '>On track</option>'
+    + '<option value="shared"' + (_mapStatusFilter==='shared'?' selected':'') + '>Shared</option>'
+    + '<option value="draft"' + (_mapStatusFilter==='draft'?' selected':'') + '>Draft</option>'
+    + '</select>'
+    + '<input type="text" class="map-filter-search" placeholder="Search company\u2026" value="' + escapeHtml(_mapSearchFilter) + '" oninput="_mapSearchFilter=this.value;renderMapList()" />'
+    + '<span class="map-filter-count">' + filtered.length + ' of ' + _maps.length + '</span>'
+    + '</div>' : '';
+
+  if (isAdmin) {
+    /* ── Admin: flat filtered table ── */
+    el.innerHTML = '<div class="map-list-head">'
+      + '<div><h2 class="map-list-title">Mutual action plans</h2>'
+      + '<p class="map-list-sub">All plans across all reps.</p></div>'
+      + '<button class="btn btn-cta" onclick="newMap()">+ New action plan</button>'
+      + '</div>'
+      + statsHtml
+      + overdueAlertHtml
+      + adminFiltersHtml
+      + (filtered.length === 0
+        ? '<div class="empty-state"><p>No plans match the current filters.</p></div>'
+        : filtered.map(function(m){ return mapCard(m, true, true); }).join(''));
+  } else {
+    /* ── Rep: my plans + other reps (read-only) ── */
+    el.innerHTML = '<div class="map-list-head">'
+      + '<div><h2 class="map-list-title">Mutual action plans</h2>'
+      + '<p class="map-list-sub">Your shared close plans with prospects.</p></div>'
+      + '<button class="btn btn-cta" onclick="newMap()">+ New action plan</button>'
+      + '</div>'
+      + statsHtml
+      + overdueAlertHtml
+      + '<div class="map-section">'
+      + '<div class="map-section-head"><span class="map-section-title">Your plans</span><span class="map-section-count">' + myMaps.length + '</span></div>'
+      + (myMaps.length === 0
+        ? '<div class="empty-state"><p>No plans yet. Create your first action plan to get started.</p></div>'
+        : myMaps.map(function(m){ return mapCard(m, false, true); }).join(''))
+      + '</div>'
+      + (otherMaps.length ? '<div class="map-section">'
+        + '<div class="map-section-head"><span class="map-section-title">All reps\u2019 plans</span><span class="map-section-count">' + otherMaps.length + '</span></div>'
+        + '<p class="map-section-sub">Read-only. Open any plan to view details.</p>'
+        + otherMaps.map(function(m){ return mapCard(m, true, false); }).join('')
+        + '</div>' : '');
+  }
 }
 
 function newMap() {

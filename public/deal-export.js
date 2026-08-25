@@ -1065,3 +1065,413 @@ async function exportOnePager() {
   }
 }
 window.exportOnePager = exportOnePager;
+
+/* ═══════════════════════════════════════════════════════════════════
+   COMPETITIVE BATTLECARD EXPORTS
+   exportCompPDF()  — branded print window → Save as PDF
+   exportCompDocx() — .docx download via docx CDN browser bundle
+   ═══════════════════════════════════════════════════════════════════ */
+
+function _getCompData() {
+  const key = (document.getElementById('compSelect') || {}).value || '';
+  if (!key || !window.COMP || !window.COMP[key]) return null;
+  const c = window.COMP[key];
+  const company = (document.getElementById('company') || {}).value || 'Prospect';
+  const repName = (typeof currentUser !== 'undefined' && currentUser) ? currentUser.full_name || currentUser.username : '';
+
+  const TALK_TRACKS = {
+    sap:    '"Most SAP shops we talk to are spending 20%+ of their WMS budget just keeping the system running — consultants, customizations, and upgrade projects that never quite end. Cloud Inventory gives you the same inventory control with zero ABAP and a fraction of the maintenance cost. Our last SAP displacement went live in 11 weeks."',
+    rf:     '"RF-gun systems were built for a world where warehouses didn\'t move. Your team is managing field inventory on clipboards and radio calls, which means your shrinkage numbers are really just guesses. We give you real-time visibility across every truck, van, and job site — same platform as the warehouse."',
+    oracle: '"Oracle WMS is a serious product, but it\'s engineered for Oracle shops. The moment you\'re connecting to a non-Oracle ERP or you want your field teams on mobile, the integration cost explodes. We\'re ERP-agnostic, API-first, and we deploy in months, not years."',
+    excel:  '"Spreadsheets are really a hidden cost center — we typically find $80K to $200K a year in labor waste just from reconciliation, write-offs, and the time it takes to answer \'where is this inventory right now?\' The ROI math is usually under six months, which is why this tends to be an easy buy-in."',
+    erp:    '"ERP inventory modules are great at recording transactions, but they\'re not designed for execution — no directed put-away, limited scanning, and zero support for field inventory. We sit on top of your ERP and handle the execution layer it was never built for."',
+    other:  '"Most WMS platforms were built to be configured once and frozen. If your business changes — new sites, new workflows, new ERP — you\'re back in a services engagement. We\'re no-code and cloud-native, so your team can adapt the system without calling us."'
+  };
+
+  return { key, c, company, repName, talk: TALK_TRACKS[key] || '' };
+}
+
+/* ── PDF Export ── */
+function exportCompPDF() {
+  const d = _getCompData();
+  if (!d) { showToast('Select a competitor first.'); return; }
+  const { c, company, repName, talk } = d;
+  const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const date = new Date().toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
+
+  const html = `
+    <div class="doc-head">
+      <img src="${window.location.origin}/ci-logo.png" onerror="this.style.display='none'"/>
+      <div class="ht">Competitive Battlecard · ${esc(company)}</div>
+    </div>
+    <h1>Competitive displacement: ${esc(c.name)}</h1>
+    <div class="sub">${esc(company)}${repName ? ' · Prepared by ' + esc(repName) : ''} · ${date}</div>
+
+    <h2>Current solution overview</h2>
+    <table class="kv"><tbody>
+      <tr><td><strong>Typical cost</strong></td><td>${esc(c.cost)}</td></tr>
+      <tr><td><strong>Time to value</strong></td><td>${esc(c.time)}</td></tr>
+      <tr><td><strong>Ongoing maintenance</strong></td><td>${esc(c.maint)}</td></tr>
+    </tbody></table>
+
+    <div class="two-col-grid">
+      <div class="col-card pain-col">
+        <div class="col-head pain-head">Pain points with ${esc(c.name)}</div>
+        ${c.pain.map(p => `<div class="comp-row"><span class="x-dot">✕</span><span>${esc(p)}</span></div>`).join('')}
+      </div>
+      <div class="col-card adv-col">
+        <div class="col-head adv-head">Cloud Inventory advantages</div>
+        ${c.adv.map(a => `<div class="comp-row"><span class="chk-dot">✓</span><span>${esc(a)}</span></div>`).join('')}
+      </div>
+    </div>
+
+    ${talk ? `<h2>Talk track</h2>
+    <div class="talk-box">${esc(talk)}</div>` : ''}`;
+
+  const extraCss = `
+    .kv td { padding: 7px 10px; font-size: 13px; border-bottom: 1px solid #F1F5F9; vertical-align: top; }
+    .kv td:first-child { font-weight: 600; color: #1E2931; width: 38%; }
+    .two-col-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0 20px; }
+    .col-card { border-radius: 8px; overflow: hidden; border: 1px solid #E2E8F0; }
+    .col-head { font-size: 12px; font-weight: 700; padding: 9px 14px; text-transform: uppercase; letter-spacing: .05em; }
+    .pain-head { background: #FEF2F2; color: #991B1B; border-bottom: 1px solid #FECACA; }
+    .adv-head  { background: #F0FDF4; color: #166534; border-bottom: 1px solid #BBF7D0; }
+    .comp-row  { display: flex; align-items: flex-start; gap: 10px; padding: 8px 14px; border-bottom: 1px solid #F8FAFC; font-size: 12.5px; color: #1E2931; }
+    .comp-row:last-child { border-bottom: none; }
+    .x-dot   { flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; background: #FEE2E2; color: #DC2626; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+    .chk-dot { flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; background: #DCFCE7; color: #16A34A; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+    .talk-box { font-size: 13px; color: #1E2931; line-height: 1.7; background: #F0F9FF; border-left: 3px solid #00A9CC; border-radius: 0 8px 8px 0; padding: 14px 16px; margin-top: 8px; font-style: italic; }
+    @media print { .two-col-grid { break-inside: avoid; } }
+  `;
+
+  dePrintWindow(`Competitive Battlecard – ${c.name}`, html, extraCss);
+  if (typeof trackEvent === 'function') trackEvent('comp_pdf_exported', { competitor: d.key, company: d.company });
+}
+
+/* ── Word (.docx) Export — uses docx browser bundle via CDN ── */
+async function exportCompDocx() {
+  const d = _getCompData();
+  if (!d) { showToast('Select a competitor first.'); return; }
+  const btn = document.getElementById('compDocxBtn');
+  const orig = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating…'; }
+
+  try {
+    /* Load docx browser bundle if not already loaded */
+    if (typeof window.docx === 'undefined') {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js';
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('Failed to load docx library'));
+        document.head.appendChild(s);
+      });
+    }
+
+    const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+            HeadingLevel, AlignmentType, WidthType, BorderStyle,
+            ShadingType, TableLayoutType, VerticalAlign } = window.docx;
+
+    const { c, company, repName, talk } = d;
+    const date = new Date().toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
+
+    /* ── Helper builders ── */
+    const heading = (text, level) => new Paragraph({ text, heading: level, spacing: { before: 240, after: 80 } });
+    const body = (text, opts = {}) => new Paragraph({ children: [new TextRun({ text, size: 22, font: 'Calibri', ...opts })], spacing: { after: 80 } });
+    const hr = () => new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '00A9CC' } }, spacing: { before: 120, after: 120 } });
+
+    const metaRow = (label, value) => new TableRow({ children: [
+      new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: label, bold: true, size: 20, font: 'Calibri' })] })],
+        width: { size: 3000, type: WidthType.DXA }, shading: { type: ShadingType.CLEAR, fill: 'F8FAFC' },
+        borders: { bottom: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' } } }),
+      new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: value, size: 20, font: 'Calibri' })] })],
+        width: { size: 6000, type: WidthType.DXA },
+        borders: { bottom: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' } } })
+    ]});
+
+    const bulletItem = (text, tick, color) => new Paragraph({
+      children: [
+        new TextRun({ text: tick + '  ', bold: true, color, size: 20, font: 'Calibri' }),
+        new TextRun({ text, size: 20, font: 'Calibri' })
+      ],
+      spacing: { before: 60, after: 60 }
+    });
+
+    const colHeader = (text, fillColor) => new TableCell({
+      children: [new Paragraph({ children: [new TextRun({ text, bold: true, color: 'FFFFFF', size: 20, font: 'Calibri' })], alignment: AlignmentType.LEFT })],
+      width: { size: 4500, type: WidthType.DXA },
+      shading: { type: ShadingType.CLEAR, fill: fillColor },
+      verticalAlign: VerticalAlign.CENTER
+    });
+
+    /* Pain / advantages two-column table */
+    const maxRows = Math.max(c.pain.length, c.adv.length);
+    const battleRows = [
+      new TableRow({ children: [ colHeader('Pain points with ' + c.name, '991B1B'), colHeader('Cloud Inventory advantages', '166534') ] }),
+      ...Array.from({ length: maxRows }, (_, i) => new TableRow({ children: [
+        new TableCell({ children: [i < c.pain.length ? bulletItem(c.pain[i], '✕', 'DC2626') : new Paragraph({})],
+          width: { size: 4500, type: WidthType.DXA },
+          shading: { type: ShadingType.CLEAR, fill: i % 2 === 0 ? 'FFFFFF' : 'FEF9F9' },
+          borders: { bottom: { style: BorderStyle.SINGLE, size: 1, color: 'F1F5F9' } } }),
+        new TableCell({ children: [i < c.adv.length ? bulletItem(c.adv[i], '✓', '16A34A') : new Paragraph({})],
+          width: { size: 4500, type: WidthType.DXA },
+          shading: { type: ShadingType.CLEAR, fill: i % 2 === 0 ? 'FFFFFF' : 'F0FDF4' },
+          borders: { bottom: { style: BorderStyle.SINGLE, size: 1, color: 'F1F5F9' } } })
+      ]}))
+    ];
+
+    const sections = [
+      heading('Competitive Battlecard: ' + c.name, HeadingLevel.HEADING_1),
+      new Paragraph({ children: [new TextRun({ text: company + (repName ? '  ·  Prepared by ' + repName : '') + '  ·  ' + date, size: 20, color: '64748B', font: 'Calibri' })], spacing: { after: 160 } }),
+      hr(),
+      heading('Current solution overview', HeadingLevel.HEADING_2),
+      new Table({ rows: [metaRow('Typical cost', c.cost), metaRow('Time to value', c.time), metaRow('Ongoing maintenance', c.maint)],
+        width: { size: 9000, type: WidthType.DXA }, layout: TableLayoutType.FIXED }),
+      new Paragraph({ spacing: { after: 200 } }),
+      heading('Battlecard', HeadingLevel.HEADING_2),
+      new Table({ rows: battleRows, width: { size: 9000, type: WidthType.DXA }, layout: TableLayoutType.FIXED, columnWidths: [4500, 4500] }),
+      new Paragraph({ spacing: { after: 200 } }),
+    ];
+
+    if (talk) {
+      sections.push(heading('Talk track', HeadingLevel.HEADING_2));
+      sections.push(new Paragraph({
+        children: [new TextRun({ text: talk, size: 22, italics: true, font: 'Calibri', color: '1E2931' })],
+        shading: { type: ShadingType.CLEAR, fill: 'F0F9FF' },
+        border: { left: { style: BorderStyle.SINGLE, size: 12, color: '00A9CC' } },
+        indent: { left: 200 },
+        spacing: { before: 80, after: 80 }
+      }));
+    }
+
+    const doc = new Document({
+      sections: [{ properties: { page: { size: { width: 12240, height: 15840 } } }, children: sections }],
+      styles: {
+        default: {
+          document: { run: { font: 'Calibri', size: 22 } }
+        }
+      }
+    });
+
+    const blob = await Packer.toBlob(doc);
+    const url = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement('a'), { href: url, download: `Battlecard-${c.name.replace(/[^a-zA-Z0-9]/g,'-')}-${new Date().toISOString().split('T')[0]}.docx` });
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Word battlecard downloaded.');
+    if (typeof trackEvent === 'function') trackEvent('comp_docx_exported', { competitor: d.key, company: d.company });
+  } catch(err) {
+    console.error('Battlecard Word export error:', err);
+    showToast('Word export failed: ' + (err.message || 'unknown error'));
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = orig; }
+  }
+}
+
+window.exportCompPDF  = exportCompPDF;
+window.exportCompDocx = exportCompDocx;
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   COMPETITIVE BATTLECARD EXPORTS
+   exportCompPDF()   — branded print window → Save as PDF
+   exportCompDocx()  — .docx download via docx CDN browser bundle
+   ═══════════════════════════════════════════════════════════════════ */
+
+function _getCompData() {
+  const key = (document.getElementById('compSelect') || {}).value || '';
+  if (!key || !window.COMP || !window.COMP[key]) return null;
+  const c = window.COMP[key];
+  const company = (document.getElementById('company') || {}).value || 'Prospect';
+  const repName = (typeof currentUser !== 'undefined' && currentUser)
+    ? (currentUser.full_name || currentUser.username || '') : '';
+
+  const TALK = {
+    sap:    '"Most SAP shops we talk to are spending 20%+ of their WMS budget just keeping the system running \u2014 consultants, customizations, and upgrade projects that never quite end. Cloud Inventory gives you the same inventory control with zero ABAP and a fraction of the maintenance cost. Our last SAP displacement went live in 11 weeks."',
+    rf:     '"RF-gun systems were built for a world where warehouses didn\'t move. Your team is managing field inventory on clipboards and radio calls, which means your shrinkage numbers are really just guesses. We give you real-time visibility across every truck, van, and job site \u2014 same platform as the warehouse."',
+    oracle: '"Oracle WMS is a serious product, but it\'s engineered for Oracle shops. The moment you\'re connecting to a non-Oracle ERP or you want your field teams on mobile, the integration cost explodes. We\'re ERP-agnostic, API-first, and we deploy in months, not years."',
+    excel:  '"Spreadsheets are really a hidden cost center \u2014 we typically find $80K to $200K a year in labor waste just from reconciliation, write-offs, and the time it takes to answer \u2018where is this inventory right now?\u2019 The ROI math is usually under six months, which is why this tends to be an easy buy-in."',
+    erp:    '"ERP inventory modules are great at recording transactions, but they\u2019re not designed for execution \u2014 no directed put-away, limited scanning, and zero support for field inventory. We sit on top of your ERP and handle the execution layer it was never built for."',
+    other:  '"Most WMS platforms were built to be configured once and frozen. If your business changes \u2014 new sites, new workflows, new ERP \u2014 you\u2019re back in a services engagement. We\u2019re no-code and cloud-native, so your team can adapt the system without calling us."'
+  };
+
+  return { key, c, company, repName, talk: TALK[key] || '' };
+}
+
+/* ── PDF Export ── */
+function exportCompPDF() {
+  const d = _getCompData();
+  if (!d) { showToast('Select a competitor first.'); return; }
+  const { c, company, repName, talk } = d;
+  const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const date = new Date().toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
+
+  const html = `
+    <div class="doc-head">
+      <img src="${window.location.origin}/ci-logo.png" onerror="this.style.display='none'"/>
+      <div class="ht">Competitive Battlecard \xb7 ${esc(company)}</div>
+    </div>
+    <h1>Competitive displacement: ${esc(c.name)}</h1>
+    <div class="sub">${esc(company)}${repName ? ' \xb7 Prepared by ' + esc(repName) : ''} \xb7 ${date}</div>
+
+    <h2>Current solution overview</h2>
+    <table class="kv"><tbody>
+      <tr><td><strong>Typical cost</strong></td><td>${esc(c.cost)}</td></tr>
+      <tr><td><strong>Time to value</strong></td><td>${esc(c.time)}</td></tr>
+      <tr><td><strong>Ongoing maintenance</strong></td><td>${esc(c.maint)}</td></tr>
+    </tbody></table>
+
+    <div class="two-col-grid">
+      <div class="col-card">
+        <div class="col-head pain-head">Pain points with ${esc(c.name)}</div>
+        ${c.pain.map(p => '<div class="comp-row"><span class="x-dot">\u2715</span><span>' + esc(p) + '</span></div>').join('')}
+      </div>
+      <div class="col-card">
+        <div class="col-head adv-head">Cloud Inventory advantages</div>
+        ${c.adv.map(a => '<div class="comp-row"><span class="chk-dot">\u2713</span><span>' + esc(a) + '</span></div>').join('')}
+      </div>
+    </div>
+
+    ${talk ? '<h2>Talk track</h2><div class="talk-box">' + esc(talk) + '</div>' : ''}`;
+
+  const extraCss = `
+    .kv td { padding: 7px 10px; font-size: 13px; border-bottom: 1px solid #F1F5F9; vertical-align: top; }
+    .kv td:first-child { font-weight: 600; color: #1E2931; width: 38%; }
+    .two-col-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0 20px; }
+    .col-card { border-radius: 8px; overflow: hidden; border: 1px solid #E2E8F0; }
+    .col-head { font-size: 11.5px; font-weight: 700; padding: 9px 14px; text-transform: uppercase; letter-spacing: .05em; }
+    .pain-head { background: #FEF2F2; color: #991B1B; border-bottom: 1px solid #FECACA; }
+    .adv-head  { background: #F0FDF4; color: #166534; border-bottom: 1px solid #BBF7D0; }
+    .comp-row  { display: flex; align-items: flex-start; gap: 10px; padding: 8px 14px; border-bottom: 1px solid #F8FAFC; font-size: 12.5px; color: #1E2931; }
+    .comp-row:last-child { border-bottom: none; }
+    .x-dot   { flex-shrink:0;width:18px;height:18px;border-radius:50%;background:#FEE2E2;color:#DC2626;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px; }
+    .chk-dot { flex-shrink:0;width:18px;height:18px;border-radius:50%;background:#DCFCE7;color:#16A34A;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px; }
+    .talk-box { font-size:13px;color:#1E2931;line-height:1.7;background:#F0F9FF;border-left:3px solid #00A9CC;border-radius:0 8px 8px 0;padding:14px 16px;margin-top:8px;font-style:italic; }
+    @media print { .two-col-grid { break-inside: avoid; } }
+  `;
+
+  dePrintWindow('Competitive Battlecard \u2013 ' + c.name, html, extraCss);
+  if (typeof trackEvent === 'function') trackEvent('comp_pdf_exported', { competitor: d.key, company: d.company });
+}
+
+/* ── Word (.docx) Export ── */
+async function exportCompDocx() {
+  const d = _getCompData();
+  if (!d) { showToast('Select a competitor first.'); return; }
+  const btn = document.getElementById('compDocxBtn');
+  const orig = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating\u2026'; }
+
+  try {
+    if (typeof window.docx === 'undefined') {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js';
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('Failed to load docx library'));
+        document.head.appendChild(s);
+      });
+    }
+
+    const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+            HeadingLevel, AlignmentType, WidthType, BorderStyle,
+            ShadingType, TableLayoutType, VerticalAlign } = window.docx;
+
+    const { c, company, repName, talk } = d;
+    const date = new Date().toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
+
+    const mkPara = (runs, opts = {}) => new Paragraph({ children: Array.isArray(runs) ? runs : [runs], ...opts });
+    const mkRun  = (text, opts = {}) => new TextRun({ text, size: 22, font: 'Calibri', ...opts });
+    const hr = () => new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '00A9CC' } }, spacing: { before: 120, after: 120 } });
+
+    const metaRow = (label, value) => new TableRow({ children: [
+      new TableCell({ children: [mkPara(mkRun(label, { bold: true }))],
+        width: { size: 3200, type: WidthType.DXA },
+        shading: { type: ShadingType.CLEAR, fill: 'F8FAFC' },
+        borders: { bottom: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' }, right: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' } } }),
+      new TableCell({ children: [mkPara(mkRun(value))],
+        width: { size: 5800, type: WidthType.DXA },
+        borders: { bottom: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' } } })
+    ]});
+
+    const battleCell = (items, tick, tickColor, fill, fillAlt) => items.map((text, i) =>
+      new TableRow({ children: [new TableCell({
+        children: [mkPara([mkRun(tick + '  ', { bold: true, color: tickColor }), mkRun(text)], { spacing: { before: 60, after: 60 } })],
+        width: { size: 4500, type: WidthType.DXA },
+        shading: { type: ShadingType.CLEAR, fill: i % 2 === 0 ? fill : fillAlt },
+        borders: { bottom: { style: BorderStyle.SINGLE, size: 1, color: 'F1F5F9' } }
+      })] })
+    );
+
+    const maxRows = Math.max(c.pain.length, c.adv.length);
+    const painRows = battleCell(c.pain, '\u2715', 'DC2626', 'FFFFFF', 'FEF9F9');
+    const advRows  = battleCell(c.adv,  '\u2713', '16A34A', 'FFFFFF', 'F0FDF4');
+
+    const headerRow = new TableRow({ children: [
+      new TableCell({ children: [mkPara(mkRun('Pain points with ' + c.name, { bold: true, color: 'FFFFFF' }))],
+        width: { size: 4500, type: WidthType.DXA }, shading: { type: ShadingType.CLEAR, fill: '991B1B' } }),
+      new TableCell({ children: [mkPara(mkRun('Cloud Inventory advantages', { bold: true, color: 'FFFFFF' }))],
+        width: { size: 4500, type: WidthType.DXA }, shading: { type: ShadingType.CLEAR, fill: '166534' } })
+    ]});
+
+    const battleRows = [headerRow].concat(Array.from({ length: maxRows }, function(_, i) {
+      return new TableRow({ children: [
+        new TableCell({ children: [i < c.pain.length
+            ? mkPara([mkRun('✕  ', { bold:true, color:'DC2626' }), mkRun(c.pain[i])], { spacing:{before:60,after:60} })
+            : new Paragraph({})],
+          width: { size: 4500, type: WidthType.DXA }, shading: { type: ShadingType.CLEAR, fill: i%2===0?'FFFFFF':'FEF9F9' },
+          borders: { bottom: { style: BorderStyle.SINGLE, size: 1, color: 'F1F5F9' }, right: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' } } }),
+        new TableCell({ children: [i < c.adv.length
+            ? mkPara([mkRun('✓  ', { bold:true, color:'16A34A' }), mkRun(c.adv[i])], { spacing:{before:60,after:60} })
+            : new Paragraph({})],
+          width: { size: 4500, type: WidthType.DXA }, shading: { type: ShadingType.CLEAR, fill: i%2===0?'FFFFFF':'F0FDF4' },
+          borders: { bottom: { style: BorderStyle.SINGLE, size: 1, color: 'F1F5F9' } } })
+      ] });
+    }))
+
+    const children = [
+      mkPara(mkRun('Competitive Battlecard: ' + c.name, { bold: true, size: 36, color: '1E2931' }), { spacing: { after: 80 } }),
+      mkPara(mkRun(company + (repName ? '  \xb7  Prepared by ' + repName : '') + '  \xb7  ' + date, { size: 20, color: '64748B' }), { spacing: { after: 160 } }),
+      hr(),
+      new Paragraph({ text: 'Current solution overview', heading: HeadingLevel.HEADING_2, spacing: { before: 240, after: 80 } }),
+      new Table({ rows: [metaRow('Typical cost', c.cost), metaRow('Time to value', c.time), metaRow('Ongoing maintenance', c.maint)],
+        width: { size: 9000, type: WidthType.DXA }, layout: TableLayoutType.FIXED, columnWidths: [3200, 5800] }),
+      new Paragraph({ spacing: { after: 200 } }),
+      new Paragraph({ text: 'Battlecard', heading: HeadingLevel.HEADING_2, spacing: { before: 240, after: 80 } }),
+      new Table({ rows: battleRows, width: { size: 9000, type: WidthType.DXA }, layout: TableLayoutType.FIXED, columnWidths: [4500, 4500] }),
+      new Paragraph({ spacing: { after: 200 } }),
+    ];
+
+    if (talk) {
+      children.push(new Paragraph({ text: 'Talk track', heading: HeadingLevel.HEADING_2, spacing: { before: 240, after: 80 } }));
+      children.push(mkPara(mkRun(talk, { italics: true, color: '1E2931' }), {
+        shading: { type: ShadingType.CLEAR, fill: 'F0F9FF' },
+        border: { left: { style: BorderStyle.SINGLE, size: 12, color: '00A9CC' } },
+        indent: { left: 200 }, spacing: { before: 80, after: 80 }
+      }));
+    }
+
+    const doc = new Document({
+      sections: [{ properties: { page: { size: { width: 12240, height: 15840 } } }, children }]
+    });
+
+    const blob = await Packer.toBlob(doc);
+    const url  = URL.createObjectURL(blob);
+    const a    = Object.assign(document.createElement('a'), {
+      href: url,
+      download: 'Battlecard-' + c.name.replace(/[^a-zA-Z0-9]/g,'-') + '-' + new Date().toISOString().split('T')[0] + '.docx'
+    });
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Word battlecard downloaded.');
+    if (typeof trackEvent === 'function') trackEvent('comp_docx_exported', { competitor: d.key, company: d.company });
+  } catch(err) {
+    console.error('Battlecard Word export error:', err);
+    showToast('Word export failed: ' + (err.message || 'unknown error'));
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = orig; }
+  }
+}
+
+window.exportCompPDF  = exportCompPDF;
+window.exportCompDocx = exportCompDocx;

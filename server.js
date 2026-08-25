@@ -383,9 +383,40 @@ app.get('/api/admin/export/:entity', requireAuth, async (req, res) => {
 });
 
 /* ══════════════════════════════════════════════════════════════════
+   ADMIN — COMPANY TYPEAHEAD (all companies, admin-only)
+   GET /api/admin/companies?q=search
+   ══════════════════════════════════════════════════════════════════ */
+app.get('/api/admin/companies', requireAuth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only.' });
+  try {
+    const q = String(req.query.q || '').trim();
+    const pat = q ? '%' + q.toLowerCase() + '%' : '%';
+    const { query } = db();
+    const { rows } = await query(
+      `SELECT DISTINCT ON (lower_name) name FROM (
+         SELECT DISTINCT ON (LOWER(company)) company AS name, LOWER(company) AS lower_name
+         FROM scenarios WHERE deleted_at IS NULL AND company <> '' AND LOWER(company) LIKE $1
+         UNION ALL
+         SELECT DISTINCT ON (LOWER(company)) company AS name, LOWER(company) AS lower_name
+         FROM discovery_sessions WHERE company <> '' AND LOWER(company) LIKE $1
+         UNION ALL
+         SELECT DISTINCT ON (LOWER(name)) name, LOWER(name) AS lower_name
+         FROM customers WHERE deleted_at IS NULL AND name <> '' AND LOWER(name) LIKE $1
+       ) sub
+       ORDER BY lower_name LIMIT 20`,
+      [pat]
+    );
+    res.json({ companies: rows.map(r => r.name) });
+  } catch (err) {
+    console.error('Admin companies typeahead error:', err.message);
+    res.status(500).json({ error: 'Lookup failed.' });
+  }
+});
+
+/* ══════════════════════════════════════════════════════════════════
    ADMIN — TEST DATA CLEANUP
    POST /api/admin/cleanup/preview  — show what would be deleted
-   POST /api/admin/cleanup/execute  — soft-delete everything matched
+   POST /api/admin/cleanup/execute  — soft-delete selected records by ID
    ══════════════════════════════════════════════════════════════════ */
 app.post('/api/admin/cleanup/preview', requireAuth, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only.' });
@@ -442,65 +473,62 @@ app.post('/api/admin/cleanup/preview', requireAuth, async (req, res) => {
 });
 
 app.post('/api/admin/cleanup/execute', requireAuth, async (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only.' });  try {
-    const search = String(req.body.company || '').trim();
-    if (!search) return res.status(400).json({ error: 'Company name required.' });
-    const pat = '%' + search.toLowerCase() + '%';
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only.' });
+  try {
+    const search  = String(req.body.company || '').trim();
+    /* selectedIds — when provided, only delete these specific records */
+    const selScen = Array.isArray(req.body.scenarioIds)   ? req.body.scenarioIds.map(Number).filter(Boolean)   : null;
+    const selDisc = Array.isArray(req.body.discoveryIds)  ? req.body.discoveryIds.map(Number).filter(Boolean)  : null;
+    const selCust = Array.isArray(req.body.customerIds)   ? req.body.customerIds.map(Number).filter(Boolean)   : null;
+    const hasSelection = (selScen && selScen.length) || (selDisc && selDisc.length) || (selCust && selCust.length);
+    if (!search && !hasSelection) return res.status(400).json({ error: 'Company name or selection required.' });
     const { query } = db();
     const now = new Date().toISOString();
 
-    /* Soft-delete scenarios */
-    const scen = await query(
-      `UPDATE scenarios SET deleted_at = $1
-       WHERE LOWER(company) LIKE $2 AND deleted_at IS NULL
-       RETURNING id`, [now, pat]
-    );
+    let scen, disc, cust;
 
-    /* Deactivate discovery sessions */
-    const disc = await query(
-      `UPDATE discovery_sessions SET is_active = FALSE
-       WHERE LOWER(company) LIKE $1 AND is_active = TRUE
-       RETURNING id`, [pat]
-    );
+    if (hasSelection) {
+      /* Selective delete — only the explicitly checked IDs */
+      scen = selScen && selScen.length
+        ? await query(`UPDATE scenarios SET deleted_at = $1 WHERE id = ANY($2) AND deleted_at IS NULL RETURNING id`,
+            [now, selScen])
+        : { rowCount: 0 };
+      disc = selDisc && selDisc.length
+        ? await query(`UPDATE discovery_sessions SET is_active = FALSE WHERE id = ANY($1) AND is_active = TRUE RETURNING id`,
+            [selDisc])
+        : { rowCount: 0 };
+      cust = selCust && selCust.length
+        ? await query(`UPDATE customers SET deleted_at = $1 WHERE id = ANY($2) AND deleted_at IS NULL RETURNING id`,
+            [now, selCust])
+        : { rowCount: 0 };
+      /* Deactivate share links for the specifically deleted scenarios */
+      if (selScen && selScen.length) {
+        await query(`UPDATE scenario_shares SET is_active = FALSE WHERE is_active = TRUE AND scenario_id = ANY($1)`, [selScen]);
+        await query(`UPDATE business_case_shares SET is_active = FALSE WHERE is_active = TRUE AND scenario_id = ANY($1)`, [selScen]);
+      }
+      /* Deactivate handoffs for specifically deleted customers */
+      if (selCust && selCust.length) {
+        await query(`UPDATE handoffs SET deleted_at = $1 WHERE customer_id = ANY($2) AND deleted_at IS NULL`, [now, selCust]);
+      }
+    } else {
+      /* Legacy full-pattern delete (no selection made — deletes all matches) */
+      const pat = '%' + search.toLowerCase() + '%';
+      scen = await query(`UPDATE scenarios SET deleted_at = $1 WHERE LOWER(company) LIKE $2 AND deleted_at IS NULL RETURNING id`, [now, pat]);
+      disc = await query(`UPDATE discovery_sessions SET is_active = FALSE WHERE LOWER(company) LIKE $1 AND is_active = TRUE RETURNING id`, [pat]);
+      await query(`UPDATE scenario_shares SET is_active = FALSE WHERE is_active = TRUE AND scenario_id IN (SELECT id FROM scenarios WHERE LOWER(company) LIKE $1)`, [pat]);
+      await query(`UPDATE business_case_shares SET is_active = FALSE WHERE is_active = TRUE AND scenario_id IN (SELECT id FROM scenarios WHERE LOWER(company) LIKE $1)`, [pat]);
+      await query(`UPDATE handoffs SET deleted_at = $1 WHERE customer_id IN (SELECT id FROM customers WHERE LOWER(name) LIKE $2) AND deleted_at IS NULL`, [now, pat]);
+      cust = await query(`UPDATE customers SET deleted_at = $1 WHERE LOWER(name) LIKE $2 AND deleted_at IS NULL RETURNING id`, [now, pat]);
+    }
 
-    /* Deactivate share links for matched scenarios — join on company name
-       so both old (scenario_id only) and new (scenario_base_id) rows are caught */
-    await query(
-      `UPDATE scenario_shares SET is_active = FALSE
-       WHERE is_active = TRUE AND scenario_id IN (
-         SELECT id FROM scenarios WHERE LOWER(company) LIKE $1
-       )`, [pat]
-    );
-    await query(
-      `UPDATE business_case_shares SET is_active = FALSE
-       WHERE is_active = TRUE AND scenario_id IN (
-         SELECT id FROM scenarios WHERE LOWER(company) LIKE $1
-       )`, [pat]
-    );
-
-    /* Soft-delete handoffs for matched customers */
-    await query(
-      `UPDATE handoffs SET deleted_at = $1
-       WHERE customer_id IN (
-         SELECT id FROM customers WHERE LOWER(name) LIKE $2
-       ) AND deleted_at IS NULL`, [now, pat]
-    );
-
-    /* Soft-delete customers */
-    const cust = await query(
-      `UPDATE customers SET deleted_at = $1
-       WHERE LOWER(name) LIKE $2 AND deleted_at IS NULL
-       RETURNING id`, [now, pat]
-    );
-
-    /* Audit log */
-    const { log, ACTIONS } = require('./src/audit');
+    const { log } = require('./src/audit');
     await log({
       userId: req.user.id,
       action: 'admin.cleanup_executed',
       entityType: 'admin',
       detail: {
         search,
+        selective: !!hasSelection,
         scenariosDeleted: scen.rowCount,
         discoveryDeactivated: disc.rowCount,
         customersDeleted: cust.rowCount
@@ -510,9 +538,9 @@ app.post('/api/admin/cleanup/execute', requireAuth, async (req, res) => {
 
     res.json({
       ok: true,
-      scenariosDeleted:    scen.rowCount,
+      scenariosDeleted:     scen.rowCount,
       discoveryDeactivated: disc.rowCount,
-      customersDeleted:    cust.rowCount
+      customersDeleted:     cust.rowCount
     });
   } catch (err) {
     console.error('Cleanup execute error:', err.message);
@@ -718,7 +746,6 @@ app.get('/api/enhance/health', (req, res) => {
 });
 
 /* ── AI Enhance proxy — requires auth ── */
-/* requireAuth imported near top */
 
 app.post('/api/enhance', requireAuth, aiLimiter, async (req, res) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;

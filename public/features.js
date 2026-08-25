@@ -791,40 +791,168 @@ function renderStageFilters() {
    verified server-side on every /api/users request. */
 let adminUnlocked = true; // kept for backward compat
 
+/* ── Benchmark editor — factory defaults snapshot ── */
+const IND_FACTORY_DEFAULTS = (function() {
+  const d = {};
+  Object.keys(IND).forEach(k => { d[k] = Object.assign({}, IND[k]); });
+  return d;
+})();
+
+const BM_SECTIONS = [
+  { label: 'Improvement levers', fields: [
+    { key:'labor',     label:'Labor gain',          unit:'% of labor time recovered',  step:1,   min:0, max:100 },
+    { key:'shrinkage', label:'Shrinkage reduction', unit:'% of shrinkage eliminated',  step:1,   min:0, max:100 },
+    { key:'carrying',  label:'Carrying reduction',  unit:'% of carrying cost reduced', step:1,   min:0, max:100 },
+    { key:'otif',      label:'OTIF improvement',    unit:'percentage point gain',      step:0.5, min:0, max:30  },
+    { key:'it',        label:'IT displaced',        unit:'% of legacy IT cost',        step:1,   min:0, max:100 }
+  ]},
+  { label: 'Industry rates', fields: [
+    { key:'shrinkRate', label:'Shrinkage rate', unit:'% of inventory value / yr', step:0.1, min:0, max:20  },
+    { key:'carryRate',  label:'Carrying rate',  unit:'% of inventory value / yr', step:0.1, min:0, max:50  },
+    { key:'otifRisk',   label:'OTIF risk',      unit:'% of revenue at risk',      step:0.1, min:0, max:10  }
+  ]},
+  { label: 'OTIF baseline & target', fields: [
+    { key:'otifBaseline', label:'OTIF baseline', unit:'current industry OTIF % (0\u2013100)', step:0.5, min:0, max:100 },
+    { key:'otifTarget',   label:'OTIF target',   unit:'achievable OTIF % with WMS',           step:0.5, min:0, max:100 }
+  ]}
+];
+
+let _bmDirty = false;
+let _bmCurrentKey = null;
+
 function renderAdminEditor() {
   const el = document.getElementById('adminBenchmarkEditor');
   if (!el) return;
-  const fields = ['labor','shrinkage','carrying','otif','it','shrinkRate','carryRate','otifRisk'];
-  const labels = ['Labor gain %','Shrinkage reduction %','Carrying reduction %','OTIF improvement %','IT displaced %','Shrinkage rate %','Carrying rate %','OTIF risk %'];
+  const options = Object.entries(IND)
+    .filter(([k, d]) => d && d.label && k !== 'default')
+    .map(([k, d]) => '<option value="' + k + '">' + escapeHtml(d.label) + '</option>')
+    .join('');
 
-  el.innerHTML = Object.entries(IND).map(([key, d]) => `
-    <div class="admin-industry-card" id="admin-${key}">
-      <div class="admin-industry-title">${d.label}</div>
-      <div class="admin-fields-grid">
-        ${fields.map((f, i) => `
-          <div class="admin-field">
-            <label>${labels[i]}</label>
-            <input type="number" step="0.1" value="${d[f]}"
-              onchange="updateBenchmark('${key}','${f}',this.value)" />
-          </div>`).join('')}
-      </div>
-    </div>`).join('');
+  el.innerHTML = '<div class="bm-editor">'
+    + '<p style="font-size:13px;color:var(--gray-600);margin:0 0 18px;">Select an industry to edit its default values. Changes apply to all reps immediately.</p>'
+    + '<div class="bm-top-row">'
+    + '<div class="field" style="flex:1;max-width:340px;margin:0;"><label>Industry</label>'
+    + '<select id="bmIndSelect" onchange="bmSelectIndustry(this.value)">' + options + '</select></div>'
+    + '<span id="bmCustomBadge" class="bm-custom-badge" style="display:none;">Custom values active</span>'
+    + '</div>'
+    + '<div class="bm-card" style="margin-top:16px;">'
+    + '<div class="bm-card-head"><span class="bm-card-title" id="bmCardTitle"></span><span class="bm-card-meta" id="bmCardMeta"></span></div>'
+    + '<div id="bmFieldsWrap" class="bm-fields-wrap"></div>'
+    + '<div class="bm-card-foot">'
+    + '<span class="bm-save-msg" id="bmSaveMsg"></span>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+    + '<button class="btn btn-danger btn-sm" id="bmRevertBtn" onclick="bmRevertToDefaults()" style="display:none;">\u21ba Reset to factory defaults</button>'
+    + '<button class="btn btn-ghost btn-sm" id="bmCancelBtn" onclick="bmCancelEdits()" style="display:none;">Cancel</button>'
+    + '<button class="btn btn-primary btn-sm" id="bmSaveBtn" onclick="bmSaveIndustry()" style="display:none;">Save changes</button>'
+    + '</div></div>'
+    + '</div>'
+    + '</div>';
+
+  const firstKey = Object.keys(IND).find(k => IND[k] && IND[k].label && k !== 'default');
+  if (firstKey) bmSelectIndustry(firstKey);
 }
 
-function updateBenchmark(industryKey, field, value) {
-  const num = parseFloat(value);
-  if (!isNaN(num)) {
-    IND[industryKey][field] = num;
-    /* Persist server-side (admin-gated); reaches all users. */
-    apiFetch('/api/benchmarks', {
-      method: 'PUT',
-      body: JSON.stringify({ benchmarks: { [industryKey]: { [field]: num } } })
-    }).then(r => {
-      if (r && r.ok) showToast(`Updated ${industryKey} → ${field} = ${num}`);
-      else if (r && r.status === 403) showToast('Only admins can change benchmarks.');
-    }).catch(() => {});
-    applyDefaults();
+function bmSelectIndustry(key) {
+  _bmCurrentKey = key;
+  _bmDirty = false;
+  const d = IND[key] || {};
+  const factory = IND_FACTORY_DEFAULTS[key] || {};
+  const selEl = document.getElementById('bmIndSelect');
+  if (selEl) selEl.value = key;
+  const titleEl = document.getElementById('bmCardTitle');
+  if (titleEl) titleEl.textContent = d.label || key;
+  const hasCustom = BM_SECTIONS.flatMap(function(s){return s.fields;}).some(function(f){ return d[f.key] !== undefined && factory[f.key] !== undefined && d[f.key] !== factory[f.key]; });
+  const badge = document.getElementById('bmCustomBadge');
+  if (badge) badge.style.display = hasCustom ? 'inline-flex' : 'none';
+  const meta = document.getElementById('bmCardMeta');
+  if (meta) meta.textContent = hasCustom ? 'Custom values active' : 'Using factory defaults';
+
+  const wrap = document.getElementById('bmFieldsWrap');
+  if (!wrap) return;
+  wrap.innerHTML = BM_SECTIONS.map(function(sec) {
+    const fieldHtml = sec.fields.map(function(f) {
+      const isCustom = d[f.key] !== undefined && factory[f.key] !== undefined && d[f.key] !== factory[f.key];
+      return '<div class="bm-field' + (isCustom ? ' bm-field-custom' : '') + '">'
+        + '<label class="bm-field-label">' + escapeHtml(f.label) + (isCustom ? ' <span class="bm-custom-dot" title="Custom value">\u25cf</span>' : '') + '</label>'
+        + '<input type="number" class="bm-num-input" id="bm-' + f.key + '" value="' + (d[f.key] !== undefined ? d[f.key] : '') + '" step="' + f.step + '" min="' + f.min + '" max="' + f.max + '" oninput="bmMarkDirty()" />'
+        + '<span class="bm-field-unit">' + escapeHtml(f.unit) + '</span>'
+        + (isCustom ? '<span class="bm-factory-val">Factory: ' + factory[f.key] + '</span>' : '')
+        + '</div>';
+    }).join('');
+    return '<div class="bm-section"><div class="bm-section-label">' + escapeHtml(sec.label) + '</div><div class="bm-field-grid">' + fieldHtml + '</div></div>';
+  }).join('');
+
+  bmSetSaveState('idle');
+}
+
+function bmMarkDirty() {
+  if (!_bmDirty) { _bmDirty = true; bmSetSaveState('dirty'); }
+}
+
+function bmSetSaveState(state) {
+  var msg    = document.getElementById('bmSaveMsg');
+  var saveBtn= document.getElementById('bmSaveBtn');
+  var cancelBtn = document.getElementById('bmCancelBtn');
+  var revertBtn = document.getElementById('bmRevertBtn');
+  if (!msg) return;
+  if (state === 'dirty') {
+    msg.textContent = 'Unsaved changes'; msg.className = 'bm-save-msg bm-msg-warn';
+    if (saveBtn) saveBtn.style.display = 'inline-flex';
+    if (cancelBtn) cancelBtn.style.display = 'inline-flex';
+  } else if (state === 'saved') {
+    msg.textContent = 'Saved \u2014 reps will see updated benchmarks on next load'; msg.className = 'bm-save-msg bm-msg-ok';
+    if (saveBtn) saveBtn.style.display = 'none';
+    if (cancelBtn) cancelBtn.style.display = 'none';
+  } else if (state === 'reset') {
+    msg.textContent = 'Reset to factory defaults'; msg.className = 'bm-save-msg bm-msg-ok';
+    if (saveBtn) saveBtn.style.display = 'none';
+    if (cancelBtn) cancelBtn.style.display = 'none';
+  } else {
+    msg.textContent = ''; msg.className = 'bm-save-msg';
+    if (saveBtn) saveBtn.style.display = 'none';
+    if (cancelBtn) cancelBtn.style.display = 'none';
   }
+  var d = IND[_bmCurrentKey] || {};
+  var factory = IND_FACTORY_DEFAULTS[_bmCurrentKey] || {};
+  var hasCustom = BM_SECTIONS.flatMap(function(s){return s.fields;}).some(function(f){ return d[f.key] !== factory[f.key]; });
+  if (revertBtn) revertBtn.style.display = (hasCustom || state === 'dirty') ? 'inline-flex' : 'none';
+}
+
+function bmCancelEdits() { if (_bmCurrentKey) bmSelectIndustry(_bmCurrentKey); }
+
+async function bmSaveIndustry() {
+  if (!_bmCurrentKey) return;
+  const updates = {};
+  let valid = true;
+  BM_SECTIONS.flatMap(function(s){return s.fields;}).forEach(function(f) {
+    const el = document.getElementById('bm-' + f.key);
+    if (el) { const v = parseFloat(el.value); if (isNaN(v)) { valid = false; } else { updates[f.key] = v; IND[_bmCurrentKey][f.key] = v; } }
+  });
+  if (!valid) { showToast('Some fields have invalid values.'); return; }
+  _bmDirty = false;
+  try {
+    const resp = await apiFetch('/api/benchmarks', { method: 'PUT', body: JSON.stringify({ benchmarks: { [_bmCurrentKey]: updates } }) });
+    if (resp && resp.ok) {
+      bmSelectIndustry(_bmCurrentKey);
+      bmSetSaveState('saved');
+      if (typeof applyDefaults === 'function') applyDefaults();
+    } else { showToast('Save failed.'); }
+  } catch(e) { showToast('Save failed.'); }
+}
+
+async function bmRevertToDefaults() {
+  if (!_bmCurrentKey) return;
+  const label = (IND[_bmCurrentKey] && IND[_bmCurrentKey].label) || _bmCurrentKey;
+  if (!confirm('Reset ' + label + ' to factory defaults? This removes any custom benchmark values for this industry.')) return;
+  try {
+    const resp = await apiFetch('/api/benchmarks/' + encodeURIComponent(_bmCurrentKey), { method: 'DELETE' });
+    if (resp && resp.ok) {
+      Object.assign(IND[_bmCurrentKey], IND_FACTORY_DEFAULTS[_bmCurrentKey]);
+      bmSelectIndustry(_bmCurrentKey);
+      bmSetSaveState('reset');
+      if (typeof applyDefaults === 'function') applyDefaults();
+    } else { showToast('Reset failed.'); }
+  } catch(e) { showToast('Reset failed.'); }
 }
 
 async function loadCustomBenchmarks() {
@@ -832,15 +960,13 @@ async function loadCustomBenchmarks() {
     const resp = await apiFetch('/api/benchmarks');
     if (resp && resp.ok) {
       const custom = await resp.json();
-      Object.keys(custom).forEach(k => { if (IND[k]) Object.assign(IND[k], custom[k]); });
+      Object.keys(custom).forEach(function(k) { if (IND[k]) Object.assign(IND[k], custom[k]); });
       if (typeof applyDefaults === 'function') applyDefaults();
     }
   } catch (e) {}
 }
 
-function resetBenchmarks() {
-  showToast('To reset a benchmark, set it back to its factory value in the field above.');
-}
+function resetBenchmarks() { if (_bmCurrentKey) bmRevertToDefaults(); }
 
 /* ─────────────────────────────────────────
    11. ANALYTICS DASHBOARD

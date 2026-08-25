@@ -261,9 +261,8 @@
             </div>
             <div class="field"><label>Cloud Inventory solution</label>
               <select id="solution" onchange="applySolutionEmphasis()">
-                <option value="all">All / Platform</option>
-                <option value="wms">Warehouse Operations (WMS)</option>
-                <option value="mfgmat">Manufacturing Materials</option>
+                <option value="cip">Cloud Inventory Platform (CIP)</option>
+                <option value="mep">Mobile Enterprise Platform (MEP)</option>
               </select>
             </div>
             <div class="field"><label>Currency</label>
@@ -659,23 +658,33 @@
 
 <!-- ═══ COMPETITIVE ═══ -->
 <div id="tab-comp" class="pane">
-  <div class="page-header"><div><div class="page-title">Competitive displacement</div><div class="page-subtitle">Select the prospect's current solution. It auto-appears in the executive presentation.</div></div></div>
-  <div class="card">
-    <div class="field" style="max-width:380px;margin-bottom:0;"><label>Current competing solution</label>
-      <select id="compSelect" onchange="renderComp()">
-        <option value="">— Select competitor —</option>
-        <option value="sap">SAP WM / Extended WH Mgmt</option>
-        <option value="rf">Legacy RF / paper-based</option>
-        <option value="oracle">Oracle WMS</option>
-        <option value="excel">Spreadsheets / manual</option>
-        <option value="erp">ERP-native inventory module</option>
-        <option value="other">Other WMS</option>
-      </select>
+  <div class="page-header">
+    <div>
+      <div class="page-title">Competitive displacement</div>
+      <div class="page-subtitle">Select the prospect’s current solution to load talking points and export a battlecard.</div>
+    </div>
+    <div class="btn-row" style="margin-top:0;gap:6px;">
+      <button class="btn btn-ghost btn-sm" id="compDocxBtn" onclick="exportCompDocx()" style="display:none;">&#128196; Export Word</button>
+      <button class="btn btn-ghost btn-sm" id="compPdfBtn"  onclick="exportCompPDF()"  style="display:none;">&#128424; Export PDF</button>
     </div>
   </div>
-  <div id="compContent"><div class="empty-state"><p>Select a competing solution above to see the displacement narrative.</p></div></div>
+  <div class="card" style="margin-bottom:1rem;">
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;">
+      <div class="field" style="min-width:220px;flex:1;max-width:300px;margin-bottom:0;"><label>Cloud Inventory solution</label>
+        <select id="compSolutionFilter" onchange="renderCompFilter()">
+          <option value="cip">Cloud Inventory Platform (CIP)</option>
+          <option value="mep">Mobile Enterprise Platform (MEP)</option>
+        </select>
+      </div>
+      <div class="field" style="min-width:260px;flex:2;max-width:460px;margin-bottom:0;"><label>Current competing solution</label>
+        <select id="compSelect" onchange="renderComp()">
+          <option value="">— Select competitor —</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div id="compContent"><div class="empty-state"><p>Select a competing solution above to load the battlecard and talking points.</p></div></div>
 </div>
-
 <!-- ═══ SENSITIVITY ═══ -->
 <div id="tab-sensitivity" class="pane">
   <div class="page-header"><div><div class="page-title">Sensitivity analysis</div><div class="page-subtitle">See how much each assumption impacts the 5-yr NPV. Bars show the range if each input changes ±20–30%.</div></div>
@@ -967,9 +976,6 @@
     <!-- ─── BENCHMARKS PANEL ─── -->
     <div id="adminPanel-benchmarks" class="admin-panel" style="display:none;">
       <div id="adminBenchmarkEditor"></div>
-      <div class="btn-row">
-        <button class="btn btn-danger" onclick="resetBenchmarks()">Reset to factory defaults</button>
-      </div>
     </div>
 
     <!-- ─── AUDIT LOG PANEL ─── -->
@@ -1091,12 +1097,18 @@
     <div id="adminPanel-cleanup" class="admin-panel" style="display:none;">
       <div class="admin-section-title">Test data cleanup</div>
       <p style="font-size:13px;color:var(--gray-600);margin-bottom:20px;">
-        Soft-delete all data associated with a company name. Matches any company containing the search term (case-insensitive).
-        Deleted records are recoverable — nothing is permanently removed.
+        Search any company name to preview records across all reps. Check the rows you want to remove, then delete only the selection.
+        Deleted records are soft-deleted — nothing is permanently removed and everything is recoverable.
       </p>
-      <div class="cleanup-search-row">
-        <input type="text" id="cleanupSearch" placeholder="e.g. test, ACME, demo" style="max-width:320px;"
-          onkeydown="if(event.key==='Enter') adminCleanupPreview()"/>
+      <div class="cleanup-search-wrap">
+        <div class="cleanup-typeahead-wrap">
+          <textarea id="cleanupSearch" class="cleanup-search-input" rows="2"
+            placeholder="Search any company name&#10;e.g. James Test, ACME, demo"
+            oninput="adminCleanupTypeahead()"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();adminCleanupPreview()}"
+          ></textarea>
+          <div id="cleanupTypeaheadDropdown" class="cleanup-ta-dropdown" style="display:none;"></div>
+        </div>
         <button class="btn btn-primary" onclick="adminCleanupPreview()">Preview matches</button>
       </div>
       <div id="cleanupPreview" style="margin-top:16px;"></div>
@@ -1171,10 +1183,6 @@
 
 <!-- ═══ MUTUAL ACTION PLAN ═══ -->
 <div id="tab-map" class="pane">
-  <div class="page-header">
-    <div><div class="page-title">Mutual Action Plan</div>
-    <div class="page-subtitle">Build a shared close plan with your prospect. They see a live link and check off their own steps.</div></div>
-  </div>
   <div id="mapListWrap"><div class="empty-state"><p>Loading…</p></div></div>
   <div id="mapEditorWrap" style="display:none;"></div>
 </div>
@@ -1390,7 +1398,7 @@
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="5.4.5";</script>
+<script>const APP_VERSION="5.5.0";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
 <script src="assistant.js"></script>
@@ -1805,12 +1813,82 @@ async function adminExport(entity) {
 }
 
 /* ── Admin: test data cleanup ── */
+
+/* Typeahead: fetch matching company names as the admin types */
+let _cleanupTaTimer = null;
+async function adminCleanupTypeahead() {
+  clearTimeout(_cleanupTaTimer);
+  const dd = document.getElementById('cleanupTypeaheadDropdown');
+  const val = (document.getElementById('cleanupSearch')?.value || '').trim();
+  if (!val || val.length < 2) { if (dd) dd.style.display = 'none'; return; }
+  _cleanupTaTimer = setTimeout(async () => {
+    try {
+      const resp = await apiFetch('/api/admin/companies?q=' + encodeURIComponent(val));
+      if (!resp || !resp.ok) return;
+      const { companies } = await resp.json();
+      if (!companies || companies.length === 0) { dd.style.display = 'none'; return; }
+      dd.innerHTML = companies.map(c =>
+        '<div class="cleanup-ta-item" onclick="adminCleanupPickCompany(' + JSON.stringify(c) + ')">' + escapeHtml(c) + '</div>'
+      ).join('');
+      dd.style.display = 'block';
+    } catch(e) { /* silently ignore */ }
+  }, 200);
+}
+
+function adminCleanupPickCompany(name) {
+  const el = document.getElementById('cleanupSearch');
+  if (el) el.value = name;
+  const dd = document.getElementById('cleanupTypeaheadDropdown');
+  if (dd) dd.style.display = 'none';
+  adminCleanupPreview();
+}
+
+/* Close typeahead dropdown when clicking outside */
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.cleanup-typeahead-wrap')) {
+    const dd = document.getElementById('cleanupTypeaheadDropdown');
+    if (dd) dd.style.display = 'none';
+  }
+});
+
+/* Track which records are checked */
+let _cleanupSelection = { scenarioIds: [], discoveryIds: [], customerIds: [] };
+
+function _cleanupUpdateDeleteBtn() {
+  const btn = document.getElementById('cleanupDeleteSelectedBtn');
+  if (!btn) return;
+  const total = _cleanupSelection.scenarioIds.length + _cleanupSelection.discoveryIds.length + _cleanupSelection.customerIds.length;
+  btn.textContent = total > 0 ? 'Delete ' + total + ' selected record' + (total !== 1 ? 's' : '') : 'Delete selected';
+  btn.disabled = total === 0;
+}
+
+function _cleanupToggle(type, id, checked) {
+  const arr = _cleanupSelection[type];
+  if (checked) { if (!arr.includes(id)) arr.push(id); }
+  else { const i = arr.indexOf(id); if (i > -1) arr.splice(i, 1); }
+  _cleanupUpdateDeleteBtn();
+}
+
+function _cleanupSelectAll(type, ids, checked) {
+  _cleanupSelection[type] = checked ? [...ids] : [];
+  /* sync individual checkboxes */
+  ids.forEach(id => {
+    const cb = document.getElementById('clcb-' + type + '-' + id);
+    if (cb) cb.checked = checked;
+  });
+  _cleanupUpdateDeleteBtn();
+}
+
 async function adminCleanupPreview() {
   const search = (document.getElementById('cleanupSearch')?.value || '').trim();
   if (!search) { showToast('Enter a company name to search.'); return; }
+  const dd = document.getElementById('cleanupTypeaheadDropdown');
+  if (dd) dd.style.display = 'none';
   const el = document.getElementById('cleanupPreview');
   if (!el) return;
   el.innerHTML = '<div class="empty-state"><p>Searching\u2026</p></div>';
+  /* Reset selection */
+  _cleanupSelection = { scenarioIds: [], discoveryIds: [], customerIds: [] };
   try {
     const resp = await apiFetch('/api/admin/cleanup/preview', {
       method: 'POST', body: JSON.stringify({ company: search })
@@ -1825,9 +1903,60 @@ async function adminCleanupPreview() {
       return;
     }
 
-    const tableRows = (rows, cols) => rows.map(r =>
-      '<tr>' + cols.map(c => '<td>' + escapeHtml(String(r[c] ?? '')) + '</td>').join('') + '</tr>'
-    ).join('');
+    /* Build selectable table with checkboxes */
+    function scenarioRows(rows) {
+      const allIds = rows.map(r => r.id);
+      return '<div class="cleanup-section-label">'
+        + '<label class="cleanup-sel-all"><input type="checkbox" id="clcb-all-scenarios" onchange="_cleanupSelectAll(\'scenarioIds\',' + JSON.stringify(allIds) + ',this.checked)"> Select all</label>'
+        + 'Scenarios</div>'
+        + '<div class="cleanup-table-wrap"><table class="cleanup-table"><thead><tr>'
+        + '<th class="cleanup-th-cb"></th><th>Name</th><th>Company</th><th>Rep</th><th>Version</th><th>Active</th>'
+        + '</tr></thead><tbody>'
+        + rows.map(r => '<tr class="cleanup-row" id="clrow-scenarios-' + r.id + '">'
+          + '<td class="cleanup-td-cb"><input type="checkbox" id="clcb-scenarioIds-' + r.id + '" onchange="_cleanupToggle(\'scenarioIds\',' + r.id + ',this.checked)"></td>'
+          + '<td>' + escapeHtml(r.name || '') + '</td>'
+          + '<td>' + escapeHtml(r.company || '') + '</td>'
+          + '<td>' + escapeHtml(r.rep || '') + '</td>'
+          + '<td>' + escapeHtml(String(r.version ?? '')) + '</td>'
+          + '<td>' + (r.is_current ? '<span class="cleanup-pill-active">Active</span>' : '<span class="cleanup-pill-old">Old</span>') + '</td>'
+          + '</tr>').join('')
+        + '</tbody></table></div>';
+    }
+
+    function discoveryRows(rows) {
+      const allIds = rows.map(r => r.id);
+      return '<div class="cleanup-section-label">'
+        + '<label class="cleanup-sel-all"><input type="checkbox" id="clcb-all-discovery" onchange="_cleanupSelectAll(\'discoveryIds\',' + JSON.stringify(allIds) + ',this.checked)"> Select all</label>'
+        + 'Discovery sessions</div>'
+        + '<div class="cleanup-table-wrap"><table class="cleanup-table"><thead><tr>'
+        + '<th class="cleanup-th-cb"></th><th>Company</th><th>Rep</th><th>Submitted</th><th>Answers</th>'
+        + '</tr></thead><tbody>'
+        + rows.map(r => '<tr class="cleanup-row" id="clrow-discovery-' + r.id + '">'
+          + '<td class="cleanup-td-cb"><input type="checkbox" id="clcb-discoveryIds-' + r.id + '" onchange="_cleanupToggle(\'discoveryIds\',' + r.id + ',this.checked)"></td>'
+          + '<td>' + escapeHtml(r.company || '') + '</td>'
+          + '<td>' + escapeHtml(r.rep || '') + '</td>'
+          + '<td>' + (r.submitted ? '<span class="cleanup-pill-active">Yes</span>' : '<span class="cleanup-pill-old">No</span>') + '</td>'
+          + '<td>' + escapeHtml(String(r.answer_count ?? 0)) + '</td>'
+          + '</tr>').join('')
+        + '</tbody></table></div>';
+    }
+
+    function customerRows(rows) {
+      const allIds = rows.map(r => r.id);
+      return '<div class="cleanup-section-label">'
+        + '<label class="cleanup-sel-all"><input type="checkbox" id="clcb-all-customers" onchange="_cleanupSelectAll(\'customerIds\',' + JSON.stringify(allIds) + ',this.checked)"> Select all</label>'
+        + 'Customer records</div>'
+        + '<div class="cleanup-table-wrap"><table class="cleanup-table"><thead><tr>'
+        + '<th class="cleanup-th-cb"></th><th>Name</th><th>Owner</th><th>Scenarios</th>'
+        + '</tr></thead><tbody>'
+        + rows.map(r => '<tr class="cleanup-row" id="clrow-customers-' + r.id + '">'
+          + '<td class="cleanup-td-cb"><input type="checkbox" id="clcb-customerIds-' + r.id + '" onchange="_cleanupToggle(\'customerIds\',' + r.id + ',this.checked)"></td>'
+          + '<td>' + escapeHtml(r.name || '') + '</td>'
+          + '<td>' + escapeHtml(r.owner || '') + '</td>'
+          + '<td>' + escapeHtml(String(r.scenario_count ?? 0)) + '</td>'
+          + '</tr>').join('')
+        + '</tbody></table></div>';
+    }
 
     el.innerHTML = '<div class="cleanup-preview-card">'
       + '<div class="cleanup-preview-header">'
@@ -1839,36 +1968,41 @@ async function adminCleanupPreview() {
       + (summary.handoffs ? '<span class="cleanup-count-pill">' + summary.handoffs + ' solution fit record' + (summary.handoffs!==1?'s':'') + '</span>' : '')
       + '</div>'
       + '</div>'
-
-      + (scenarios.length ? '<div class="cleanup-section-label">Scenarios</div>'
-        + '<div class="cleanup-table-wrap"><table class="cleanup-table"><thead><tr><th>Name</th><th>Company</th><th>Rep</th><th>Version</th><th>Status</th></tr></thead><tbody>'
-        + tableRows(scenarios, ['name','company','rep','version','is_current'])
-        + '</tbody></table></div>' : '')
-
-      + (discovery.length ? '<div class="cleanup-section-label">Discovery sessions</div>'
-        + '<div class="cleanup-table-wrap"><table class="cleanup-table"><thead><tr><th>Company</th><th>Rep</th><th>Submitted</th><th>Answers</th></tr></thead><tbody>'
-        + tableRows(discovery, ['company','rep','submitted','answer_count'])
-        + '</tbody></table></div>' : '')
-
-      + (customers.length ? '<div class="cleanup-section-label">Customer records</div>'
-        + '<div class="cleanup-table-wrap"><table class="cleanup-table"><thead><tr><th>Name</th><th>Owner</th><th>Scenarios</th></tr></thead><tbody>'
-        + tableRows(customers, ['name','owner','scenario_count'])
-        + '</tbody></table></div>' : '')
-
+      + (scenarios.length ? scenarioRows(scenarios) : '')
+      + (discovery.length ? discoveryRows(discovery) : '')
+      + (customers.length ? customerRows(customers) : '')
       + '<div class="cleanup-preview-actions">'
-      + '<div class="cleanup-warning">&#9888; This will soft-delete all matched records. They remain in the database and are recoverable.</div>'
-      + '<button class="btn btn-danger" onclick="adminCleanupExecute(' + JSON.stringify(search) + ')">Delete all matched records</button>'
+      + '<div class="cleanup-warning">&#9888; Soft-deletes the selected records. They remain in the database and are recoverable below.</div>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
+      + '<button class="btn btn-danger" id="cleanupDeleteSelectedBtn" onclick="adminCleanupExecuteSelected(' + JSON.stringify(search) + ')" disabled>Delete selected</button>'
+      + '<button class="btn btn-danger btn-outline" onclick="adminCleanupExecuteAll(' + JSON.stringify(search) + ')">Delete all ' + total + ' matched</button>'
       + '<button class="btn btn-ghost" onclick="document.getElementById(\'cleanupPreview\').innerHTML=\'\'">Cancel</button>'
-      + '</div>'
+      + '</div></div>'
       + '</div>';
+
+    _cleanupUpdateDeleteBtn();
   } catch(e) { el.innerHTML = '<div class="empty-state"><p>Preview failed.</p></div>'; }
 }
 
-async function adminCleanupExecute(search) {
-  if (!confirm('Soft-delete all records matching "' + search + '"? This is recoverable but will remove them from all rep views.')) return;
+async function adminCleanupExecuteSelected(search) {
+  const total = _cleanupSelection.scenarioIds.length + _cleanupSelection.discoveryIds.length + _cleanupSelection.customerIds.length;
+  if (total === 0) { showToast('No records selected.'); return; }
+  if (!confirm('Soft-delete ' + total + ' selected record' + (total!==1?'s':'') + '? This is recoverable.')) return;
+  await _doCleanupExecute(search, _cleanupSelection);
+}
+
+async function adminCleanupExecuteAll(search) {
+  if (!confirm('Soft-delete ALL records matching "' + search + '"? This is recoverable but will remove them from all rep views.')) return;
+  await _doCleanupExecute(search, null);
+}
+
+async function _doCleanupExecute(search, selection) {
   try {
+    const body = selection
+      ? { company: search, scenarioIds: selection.scenarioIds, discoveryIds: selection.discoveryIds, customerIds: selection.customerIds }
+      : { company: search };
     const resp = await apiFetch('/api/admin/cleanup/execute', {
-      method: 'POST', body: JSON.stringify({ company: search })
+      method: 'POST', body: JSON.stringify(body)
     });
     if (!resp || !resp.ok) { showToast('Cleanup failed.'); return; }
     const data = await resp.json();
@@ -1884,9 +2018,11 @@ async function adminCleanupExecute(search) {
       + '<button class="btn btn-ghost btn-sm" onclick="document.getElementById(\'cleanupSearch\').value=\'\';document.getElementById(\'cleanupPreview\').innerHTML=\'\'">Done</button>'
       + '</div>';
     document.getElementById('cleanupSearch').value = '';
+    _cleanupSelection = { scenarioIds: [], discoveryIds: [], customerIds: [] };
     await fetchScenarios();
   } catch(e) { showToast('Cleanup failed.'); }
 }
+
 /* ── Batch C: After-the-meeting debrief / driver resonance ── */
 const DEBRIEF_DRIVERS = [
   { key:'labor',      label:'Labor savings',                  icon:'👥' },
@@ -3029,8 +3165,7 @@ function _showUnsavedBanner() {
   document.body.appendChild(bar);
   setTimeout(() => bar.remove(), 7000);
 }
-/* ESC closes modal overlays.
-   Covers all dynamically created modals (version history, diff, template
+/* Covers all dynamically created modals (version history, diff, template
    picker, stakeholder, outcome, cleanup preview) and the static ones.
    Ignores ESC when focus is inside a text input or textarea so reps can
    clear fields normally. */
