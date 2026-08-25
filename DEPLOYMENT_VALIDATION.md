@@ -1,41 +1,56 @@
-# Cloud Inventory ROI v5.4.1 Deployment Validation
+# Cloud Inventory ROI v5.4.5 Deployment Validation
 
 ## Purpose
 
-Hotfix package for the Render startup failure in `server.js`:
+Hotfix package for the v5.4.4 deployment validator smoke-test failure:
 
 ```text
-ReferenceError: Cannot access 'requireAuth' before initialization
+ReferenceError: _reqAuthCompanies is not defined
 ```
 
-## Root cause
+## Fix applied
 
-The admin export/cleanup routes referenced `requireAuth` before `const { requireAuth } = require('./src/middleware/auth')` was initialized later in the file. `node --check` catches syntax errors but not this runtime temporal dead zone failure.
+- Replaced stale `_reqAuthCompanies` route references in `server.js` with the initialized `requireAuth` middleware.
+- Preserved the earlier v5.4.x `requireAuth` hoist before protected admin routes.
+- Preserved the migration `017_share_links_follow_latest.sql` FK hotfix.
+- Updated package/version metadata to `5.4.5`.
+- Updated `APP_VERSION` and `VERSION_HISTORY[0]` to `5.4.5`.
 
-## Fix included
+## Packaging corrections retained
 
-- Hoisted the `requireAuth` import to the earlier auth-middleware import area.
-- Removed the later duplicate `requireAuth` declaration.
-- Updated package metadata and visible version marker to `5.4.1`.
-- Added an explicit validation check that fails if admin routes reference `requireAuth` before it is initialized.
+- Required Render/GitHub files are at repository root.
+- `.node-version` is at repository root and contains `22.22.0`.
+- `.npmrc` forces the public npm registry.
+- `package.json`, `package-lock.json`, and lockfile root package version are aligned.
+- `node_modules`, `.git`, `.env`, `.env.local`, and OS metadata are excluded from the deployment ZIP.
 
 ## Validation completed
 
-- ZIP/root structure valid for Render/GitHub.
-- Required files present: `render.yaml`, `package.json`, `package-lock.json`, `.node-version`, `.npmrc`, `server.js`, `src/`, `public/`, `migrations/`, `.github/workflows/ci.yml`.
-- `package.json`, `package-lock.json`, and lockfile root package aligned to `5.4.1`.
-- `.node-version` contains `22.22.0`.
-- JavaScript syntax checks passed.
-- Inline HTML script syntax checks passed.
-- `requireAuth` order validation passed.
-- Migration 017 FK hotfix remains present.
-- Migrations present through `021_prospect_adjustments.sql`.
-- No `node_modules`, `.git`, `.env`, or `.env.local` included in the final ZIP.
+- ZIP/root structure: passed.
+- Render Blueprint structure: passed.
+- package.json / package-lock.json alignment: passed.
+- Migration 017 FK hotfix: passed.
+- Migrations present: 001 through 021.
+- requireAuth initialization-order validation: passed.
+- `_reqAuthCompanies` stale alias validation: passed.
+- JavaScript syntax checks: passed; 57 files checked.
+- Inline HTML script syntax checks: passed; 11 scripts checked.
+- ROI engine tests: 17 passed, 0 failed.
+- Route test loader: passed; DB integration skipped because DATABASE_URL is not set in sandbox.
+- Version consistency test: passed.
+- No node_modules included: passed.
 
 ## Sandbox caveat
 
-A full live `npm ci --omit=dev --no-audit --no-fund` did not complete reliably in this sandbox. Render already completed `npm ci` successfully for v5.4.0, and the PowerShell toolkit runs that same command locally before pushing to GitHub.
+A full `npm ci --omit=dev --no-audit --no-fund` could not be completed reliably inside this sandbox timeout. The PowerShell toolkit runs `npm ci` locally before pushing to GitHub, and Render has previously completed the same build step successfully.
 
-## Expected Render behavior
+## Expected Render health
 
-The app should now start past `server.js` route registration and continue to database connection/migration startup. `/health` should return version `5.4.1` after deployment.
+```json
+{
+  "status": "ok",
+  "version": "5.4.5",
+  "database": "connected",
+  "phase": "production"
+}
+```

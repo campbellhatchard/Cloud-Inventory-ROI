@@ -221,6 +221,14 @@ button{cursor:pointer;}
 .rv-blank{color:var(--gray-400,#6B7A8D);font-weight:500;font-style:italic;}
 .rv-edit{flex-shrink:0;background:none;border:none;color:var(--cyan,#00A9CC);font-family:inherit;font-size:11.5px;font-weight:600;cursor:pointer;padding:2px 4px;text-decoration:underline;}
 .question.rv-flash{box-shadow:0 0 0 3px rgba(0,169,204,.35);border-radius:8px;transition:box-shadow .3s;}
+/* ── Time-basis badge + annualize helper ── */
+.q-basis-badge{display:inline-block;font-size:11px;font-weight:600;color:var(--cyan-dark,#0089A6);background:var(--cyan-pale,#F0F9FF);border:1px solid var(--cyan,#00AECF);border-radius:99px;padding:1px 9px;margin-left:6px;vertical-align:middle;white-space:nowrap;}
+.q-annualize-toggle{background:none;border:none;color:var(--cyan-dark,#0089A6);font-size:12px;cursor:pointer;padding:4px 0;margin-top:4px;text-decoration:underline;font-family:inherit;}
+.q-annualizer{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;padding:10px 12px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;font-size:12.5px;color:#475569;}
+.q-annualizer input{width:120px;padding:6px 8px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;}
+.q-annualizer select{padding:6px 8px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;background:#fff;}
+.annz-result{font-weight:700;color:var(--cyan-dark,#0089A6);}
+
 /* ── Live ROI sidebar ── */
 .roi-sidebar{display:flex;flex-direction:column;gap:10px;}
 .roi-card{background:#fff;border:1px solid var(--gray-200);border-radius:12px;padding:14px 16px;}
@@ -313,7 +321,7 @@ button{cursor:pointer;}
 
 <div class="toast" id="toast"></div>
 
-<script src="src/shared/roi-engine.js"></script>
+<script src="/roi-engine.js"></script>
 <script src="discovery.js"></script>
 <script>
 /* ════════════════════════════════════════
@@ -543,6 +551,30 @@ function renderProspectQuestion(q) {
   var helps = drv
     ? '<div class="q-helps">Helps assess: <strong>' + escapeHtml(VALUE_DRIVERS[drv].label) + '</strong></div>'
     : '';
+
+  /* Time-basis badge + optional annualize helper. Makes explicit whether a
+     figure is wanted per year, per month, per person, etc., and for annual
+     dollar questions offers a small converter so a prospect who only knows a
+     monthly/weekly number can still give a good annual figure. */
+  var basis = questionBasis(q);
+  var basisBadge = basis
+    ? '<span class="q-basis-badge" title="' + escapeHtml(basis.tip) + '">' + escapeHtml(basis.label) + '</span>'
+    : '';
+  var annualizer = (basis && basis.annualize && q.type === 'number')
+    ? '<button type="button" class="q-annualize-toggle" onclick="toggleAnnualizer(\'' + q.id + '\')">Know it per month or week? Convert →</button>'
+      + '<div class="q-annualizer" id="annualizer-' + q.id + '" style="display:none;">'
+      + '<span>Enter what you know:</span>'
+      + '<input type="text" inputmode="decimal" id="annz-val-' + q.id + '" placeholder="amount" oninput="runAnnualizer(\'' + q.id + '\')" />'
+      + '<select id="annz-per-' + q.id + '" onchange="runAnnualizer(\'' + q.id + '\')">'
+      + '<option value="12">per month</option>'
+      + '<option value="52">per week</option>'
+      + '<option value="365">per day</option>'
+      + '<option value="1">per year (already annual)</option>'
+      + '</select>'
+      + '<span class="annz-result" id="annz-out-' + q.id + '"></span>'
+      + '</div>'
+    : '';
+
   const unsure = (answer || '').trim().toLowerCase() === NOT_SURE_TOKEN;
   const shown = unsure ? '' : answer;
 
@@ -583,10 +615,11 @@ function renderProspectQuestion(q) {
 
   return `
     <div class="question ${isAnswered?'answered':''} ${unsure?'unsure':''}" id="wrap-${q.id}">
-      <div class="q-text">${q.text}</div>
+      <div class="q-text">${q.text} ${basisBadge}</div>
       ${context}
       <div class="q-placeholder-hint">e.g. ${q.placeholder}</div>
       ${control}
+      ${annualizer}
       ${helps}
       <div class="q-foot">
         <button type="button" class="q-unsure ${unsure?'is-on':''}" onclick="toggleNotSure('${q.id}')">
@@ -597,8 +630,70 @@ function renderProspectQuestion(q) {
     </div>`;
 }
 
-/* Display-only thousands separators. Stored values stay raw so the rep-side
-   sync and ROI model never see formatting characters. */
+/* Determine the time/unit basis for a question, driving the badge and the
+   annualize helper. Keyed by sync field where possible so it stays correct
+   across industry variants. Returns null for questions where a basis badge
+   would just be noise (percentages, ratios). */
+function questionBasis(q) {
+  var sync = q.sync || '';
+  var pctType = q.type === 'percent';
+  /* Annual dollar figures — these benefit from the per-month/week converter. */
+  var annualDollar = {
+    annualWriteOff:  { label:'per year', tip:'Total across a full year', annualize:true },
+    expediteSpendYr: { label:'per year', tip:'Total across a full year', annualize:true },
+    itCost:          { label:'per year', tip:'Total annual licenses, maintenance, and support', annualize:true },
+    revenue:         { label:'per year', tip:'Annual company revenue', annualize:true }
+  };
+  if (annualDollar[sync]) return annualDollar[sync];
+
+  /* Per-unit and count bases — badge only, no annualizer. */
+  var other = {
+    downtimeCostPerHr:   { label:'per hour',  tip:'Cost of a single hour of lost/slowed work' },
+    downtimeHrsPerEvent: { label:'per event', tip:'Hours lost in one typical event' },
+    downtimeEventsYr:    { label:'per year',  tip:'Number of events across a full year', annualize:true },
+    countDaysYr:         { label:'per year',  tip:'Total person-days spent counting across a year', annualize:true },
+    countPeople:         { label:'per count', tip:'People involved in one count' },
+    invTurnsCurrent:     { label:'per year',  tip:'Inventory turns in a full year' },
+    inventoryValue:      { label:'point-in-time', tip:'Value on hand at any single moment — not a yearly total' },
+    ordersPerYr:         { label:'per year',  tip:'Total orders/lines shipped across a year', annualize:true },
+    costPerOrder:        { label:'per order', tip:'Fully-loaded cost to process one order/line' },
+    costPerError:        { label:'per error', tip:'Fully-loaded cost of one order error' },
+    laborWastePct:       null,
+    discRate:            null
+  };
+  if (sync in other) return other[sync];
+
+  /* Fallbacks by text cue for questions without a mapped sync. */
+  if (pctType) return null;
+  if (/per year|annual/i.test(q.text)) return { label:'per year', tip:'Total across a full year', annualize:true };
+  if (/hours per week/i.test(q.text)) return { label:'per week', tip:'Hours in a typical week' };
+  return null;
+}
+
+function toggleAnnualizer(qid) {
+  var box = document.getElementById('annualizer-' + qid);
+  if (box) box.style.display = box.style.display === 'none' ? 'flex' : 'none';
+}
+
+/* Convert a per-month/week/day figure to an annual total and write it into
+   the actual answer field, so the stored value is always the annual number. */
+function runAnnualizer(qid) {
+  var valEl = document.getElementById('annz-val-' + qid);
+  var perEl = document.getElementById('annz-per-' + qid);
+  var outEl = document.getElementById('annz-out-' + qid);
+  if (!valEl || !perEl || !outEl) return;
+  var raw = parseFloat(String(valEl.value).replace(/[^0-9.]/g, ''));
+  var mult = parseFloat(perEl.value) || 1;
+  if (!isFinite(raw) || raw <= 0) { outEl.textContent = ''; return; }
+  var annual = Math.round(raw * mult);
+  outEl.textContent = '= ' + annual.toLocaleString() + ' per year';
+  /* Push into the real field + store. */
+  var field = document.getElementById('pq-' + qid);
+  if (field) { field.value = formatNumDisplay(String(annual)); }
+  handleNumAnswer(qid, String(annual));
+}
+
+/* Display-only thousands separators. Stored values stay raw so the rep-side   sync and ROI model never see formatting characters. */
 function formatNumDisplay(v) {
   const raw = String(v == null ? '' : v).replace(/,/g, '').trim();
   if (raw === '' || raw.toLowerCase() === NOT_SURE_TOKEN) return '';
@@ -973,7 +1068,7 @@ function computeLiveROI() {
   try {
     const { inp, answered } = buildROIInputs();
     /* Count how many key fields came from the prospect */
-    const keyFields = ['users','revenue','annualWriteOff','inventoryValue','invTurnsCurrent',
+    const keyFields = ['userCount','revenue','annualWriteOff','inventoryValue','invTurnsCurrent',
                        'otifBaseline','expediteSpendYr','downtimeCostPerHr','itCost'];
     const prospectFieldCount = keyFields.filter(f => answered[f] > 0).length;
     const hasEnough = prospectFieldCount >= 1;  /* show after first real answer */

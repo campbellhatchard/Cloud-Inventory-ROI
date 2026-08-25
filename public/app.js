@@ -229,7 +229,14 @@ function syncDisc(discId, calcId) {
 /* ════════════════════════════════════════
    Form values
    ════════════════════════════════════════ */
-function g(id) { return Math.max(0, parseFloat(document.getElementById(id)?.value) || 0); }
+function g(id) {
+  const el = document.getElementById(id);
+  if (!el) return 0;
+  /* Strip commas (from live thousands-formatting) and $ before parsing, so a
+     displayed "27,000,000" reads as 27000000, not 27. */
+  const raw = String(el.value).replace(/[$,\s]/g, '');
+  return Math.max(0, parseFloat(raw) || 0);
+}
 function gs(id) { return document.getElementById(id)?.value || ''; }
 
 function metricPct(id, industryKey) {

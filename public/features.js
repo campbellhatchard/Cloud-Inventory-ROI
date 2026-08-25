@@ -170,6 +170,13 @@ function loadFromObject(i) {
   /* Auto-expand the collapsed field-service group if this scenario actually
      has field-service data, so a loaded MEP deal shows its entered values. */
 
+  /* Re-apply thousands formatting to the freshly-loaded dollar values so a
+     loaded scenario shows "27,000,000" not "27000000". Must run before the
+     magnitude checks so they read the grouped display correctly. */
+  if (typeof window !== 'undefined' && typeof COMMA_FORMAT_FIELDS !== 'undefined' && typeof applyLiveCommaFormat === 'function') {
+    COMMA_FORMAT_FIELDS.forEach(id => { const el = document.getElementById(id); if (el && el.value) applyLiveCommaFormat(el); });
+  }
+
   recalc();
   renderConfidence();
   /* A freshly loaded scenario has no unsaved changes — clear the flag so the

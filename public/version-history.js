@@ -7,9 +7,50 @@
 
 const VERSION_HISTORY = [
   {
-    version: '5.4.1', date: '2026-08-24', tag: 'hotfix',
-    title: 'Server startup hotfix',
-    summary: 'Hoists requireAuth before admin routes so Render startup does not fail with a temporal dead zone ReferenceError.'
+    version: '5.4.5', date: '2026-08-25', tag: 'hotfix',
+    title: 'Startup auth alias hotfix',
+    summary: 'Fixes startup ReferenceError by replacing stale _reqAuthCompanies route references with the initialized requireAuth middleware.'
+  },
+  {
+    version: '5.4.4', date: '2026-08-22', tag: 'fixes',
+    title: 'Version history render crash fixed, version consistency test, admin nav hidden for reps',
+    changes: [
+      'Fixed the recurring version-history bug at its root: one old entry (v4.9.2) used a summary field instead of a changes array, which threw a TypeError mid-render and blanked the ENTIRE version-history panel — leaving only the header and a stale version number. Converted that entry and made the renderer defensive so no single malformed entry can ever blank the list again (it now accepts a legacy summary field and coerces anything unexpected to an empty list).',
+      'Added a version-consistency test (test/version-consistency.test.js) that fails loudly if the three version sources — package.json, APP_VERSION in index.html, and VERSION_HISTORY[0] — ever disagree, and validates that every version-history entry is well-formed. This is the structural fix for version drift showing a stale number in the panel.',
+      'Role-based UX: the Admin nav item was always visible to everyone, so reps saw an Admin link that only led to an access-denied gate. It is now hidden entirely for non-admins, matching how the Customers command center is already handled. The access gate remains as defense in depth.'
+    ]
+  },
+  {
+    version: '5.4.3', date: '2026-08-22', tag: 'fixes',
+    title: 'Critical layout fix (modal overlay), stakeholder cross-company data fix',
+    changes: [
+      'Fixed a major layout bug: the modal overlay CSS had lost its positioning rules, so opening any modal (CRM copy, share link, AI personalize) rendered a giant grey block inline in the page instead of a centered dialog. This pushed content down, ran buttons off the bottom of the screen, and caused the horizontal overflow that put page content behind the sidebar. Restored full modal positioning (fixed, centered, scrollable) plus the close-button and label styles that were also lost.',
+      'Added overflow-x protection on the body so nothing can push content sideways behind the fixed sidebar again.',
+      'Fixed stakeholder map showing another company data: when no company was selected, an admin view fell through to loading every stakeholder across all companies. Now an unselected stakeholder map shows the empty "select a company" state with no data behind it.',
+      'Re-verified the prospect discovery live ROI panel: engine loads from the served /roi-engine.js route and the range appears and narrows correctly as each field is entered.'
+    ]
+  },
+  {
+    version: '5.4.2', date: '2026-08-22', tag: 'fixes',
+    title: 'Comma formatting extended to every dollar-entry field',
+    changes: [
+      'Every dollar-entry field in the calculator now formats with thousands separators as you type — including the one-time cost fields (professional services, hardware, training), field-service costs (field inventory value, reconciliation cost), and cost per error. Previously only the annual figures were formatted.',
+      'All 14 dollar fields are now type=text with numeric input mode for consistent behavior, readable large numbers, and no spinner arrows.',
+      'Fixed a field-ID mismatch where the formatter targeted fieldInventoryValue but the actual input is fieldInvValue, so field inventory value never formatted.',
+      'The comma-stripping value parser applies to all of these, so stored figures and the computed NPV are always correct regardless of display formatting.'
+    ]
+  },
+  {
+    version: '5.4.1', date: '2026-08-22', tag: 'fixes',
+    title: 'Prospect live-ROI fix, dollar-field comma formatting, prospect time-basis clarity',
+    changes: [
+      'Fixed: the prospect discovery link was not showing the live ROI panel. The ROI engine was loaded from an unserved path (src/shared/roi-engine.js) and 404d in the browser, so calcROI was never defined. Now loads from the served /roi-engine.js route, the same one the main app uses.',
+      'Fixed: the live ROI panel gate used the wrong field name (users instead of userCount), so a prospect who answered only the user-count question would not see the panel appear.',
+      'Dollar fields (revenue, inventory value, subscription, write-offs, IT cost, labor cost, expedite spend, downtime cost/hr) now format with thousands separators as you type — 27000000 shows as 27,000,000. This directly prevents the order-of-magnitude entry errors that could produce a nonsensical negative NPV: an $80,000,000 subscription is now visually obvious versus $80,000. The value parser strips commas so stored figures are always correct.',
+      'These dollar fields changed from type=number to type=text with numeric input mode, removing the spinner arrows and making large figures readable.',
+      'Prospect discovery questions now show a time-basis badge (per year, per month, per event, per hour, point-in-time, etc.) so the prospect knows exactly what basis a figure should be on.',
+      'Annual dollar questions on the prospect link now have a Convert helper: a prospect who only knows a monthly or weekly figure can enter it and have it converted to the annual total automatically.'
+    ]
   },
   {
     version: '5.4.0', date: '2026-08-22', tag: 'feature',
@@ -231,7 +272,7 @@ const VERSION_HISTORY = [
   {
     version: '4.9.2', date: '2026-08-20', tag: 'hotfix',
     title: 'Migration 017 deployment hotfix',
-    summary: 'Corrects share-link latest-version migration so scenario_base_id stores the base_id grouping key without an invalid foreign key to scenarios.id.'
+    changes: ['Corrects share-link latest-version migration so scenario_base_id stores the base_id grouping key without an invalid foreign key to scenarios.id.']
   },
   {
     version: '4.9.1', date: '2026-08-05', tag: 'feature',
@@ -711,7 +752,15 @@ function renderVersionHistory() {
     };
     return 'vh-tag vh-tag-' + (map[norm] || norm);
   };
-  host.innerHTML = VERSION_HISTORY.map((rel, i) => `
+  host.innerHTML = VERSION_HISTORY.map((rel, i) => {
+    /* Defensive: never let one malformed entry blank the whole list.
+       Accept a legacy `summary` string in place of a `changes` array, and
+       coerce anything unexpected into an empty list rather than throwing. */
+    let changes = rel.changes;
+    if (!Array.isArray(changes)) {
+      changes = rel.summary ? [rel.summary] : [];
+    }
+    return `
     <div class="vh-item${i === 0 ? ' vh-current' : ''}">
       <div class="vh-marker"></div>
       <div class="vh-body">
@@ -722,10 +771,11 @@ function renderVersionHistory() {
         </div>
         <div class="vh-title">${escapeHistoryHtml(rel.title)}</div>
         <ul class="vh-changes">
-          ${rel.changes.map(c => `<li>${escapeHistoryHtml(c)}</li>`).join('')}
+          ${changes.map(c => `<li>${escapeHistoryHtml(c)}</li>`).join('')}
         </ul>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function escapeHistoryHtml(s) {

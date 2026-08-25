@@ -96,6 +96,15 @@ async function loadStakeCompanies() {
 
 async function loadStakeholders() {
   try {
+    /* No company selected → show nothing. Previously an admin with no company
+       selected fell through to /api/stakeholders?all=true and saw every
+       stakeholder across all companies, which looked like another customer's
+       data leaking into an unselected view. */
+    if (!_stakeCompany || !_stakeCompany.trim()) {
+      _stakeholders = [];
+      renderStakeTab();
+      return;
+    }
     const user = window.ciAuth ? window.ciAuth.getUser() : {};
     const isAdmin = user.role === 'admin';
     let url = isAdmin ? '/api/stakeholders?all=true' : '/api/stakeholders';

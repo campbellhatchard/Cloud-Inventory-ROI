@@ -41,7 +41,7 @@
   --font-mono:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,monospace;
 }
 html{font-size:16px;scroll-behavior:smooth;}
-body{font-family:var(--font);background:var(--canvas);color:var(--gray-800);font-size:var(--fs-base);line-height:1.6;min-height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+body{font-family:var(--font);background:var(--canvas);color:var(--gray-800);font-size:var(--fs-base);line-height:1.6;min-height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden;}
 a{color:var(--cyan-dark);text-decoration:none;}
 a:hover{color:var(--cyan);text-decoration:underline;}
 ::selection{background:rgba(0,169,204,.22);}
@@ -1693,8 +1693,12 @@ body.livebar-off .guided-nav{top:calc(var(--topbar-h) + 8px);}
 .smb-hint{font-size:var(--fs-xs);font-style:normal;color:var(--gray-500);}
 
 /* ── Modals & toasts ── */
-.modal-overlay{background:rgba(21,30,36,.55);backdrop-filter:blur(2px);}
-.modal{border-radius:var(--radius-xl);padding:26px 28px;box-shadow:var(--shadow-lg);}
+.modal-overlay{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(21,30,36,.55);backdrop-filter:blur(2px);overflow-y:auto;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--white);border-radius:var(--radius-xl);padding:26px 28px;box-shadow:var(--shadow-lg);max-width:640px;width:100%;max-height:88vh;overflow-y:auto;position:relative;}
+.modal-close{position:absolute;top:14px;right:16px;background:none;border:none;font-size:18px;color:var(--gray-400);cursor:pointer;line-height:1;padding:4px 8px;border-radius:6px;}
+.modal-close:hover{background:var(--gray-100);color:var(--gray-700);}
+.modal-label{font-size:var(--fs-xs);font-weight:600;color:var(--gray-600);}
 .modal-title{font-size:var(--fs-lg);letter-spacing:-.01em;margin-bottom:16px;}
 .toast{border-radius:var(--radius-md);border-left:3px solid var(--cyan);padding:13px 20px;box-shadow:var(--shadow-lg);}
 .undo-toast{border-radius:var(--radius-md);box-shadow:var(--shadow-lg);}

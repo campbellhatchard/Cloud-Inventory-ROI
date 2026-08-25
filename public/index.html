@@ -106,7 +106,7 @@
     <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.4"/><path d="M6 6.5C6 5.4 6.9 4.5 8 4.5s2 .9 2 2c0 .83-.5 1.55-1.22 1.88C8.3 8.65 8 9.1 8 9.5v.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="11.5" r=".75" fill="currentColor"/></svg>
     How to Use
   </button>
-  <button class="nav-item" onclick="switchTab('admin')" id="nav-admin">
+  <button class="nav-item" onclick="switchTab('admin')" id="nav-admin" style="display:none;">
     <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.22 3.22l1.41 1.41M11.37 11.37l1.41 1.41M3.22 12.78l1.41-1.41M11.37 4.63l1.41-1.41" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
     Admin
   </button>
@@ -302,14 +302,14 @@
             </button>
           </div>
           <div class="two-col two-col-primary">
-            <div class="field field-primary"><label title="Used for OTIF value-at-risk">Annual revenue ($)</label><input type="number" id="revenue" placeholder="e.g. 50,000,000" oninput="recalc()" min="0"/></div>
+            <div class="field field-primary"><label title="Used for OTIF value-at-risk">Annual revenue ($)</label><input type="text" inputmode="numeric" id="revenue" placeholder="e.g. 50,000,000" oninput="recalc()" min="0"/></div>
             <div class="field field-primary"><label title="Warehouse, field, and office users">Inventory users</label><input type="number" id="userCount" placeholder="e.g. 50" oninput="recalc()"/></div>
           </div>
           <div class="two-col two-col-primary">
-            <div class="field field-primary"><label title="Salary + benefits + overhead">Avg. labor cost / user / yr ($)</label><input type="number" id="laborCost" value="55000" oninput="recalc()" min="0"/></div>
-            <div class="field field-primary"><label title="Total inventory on hand at any time">Annual inventory value ($)</label><input type="number" id="inventoryValue" placeholder="e.g. 10,000,000" oninput="recalc()" min="0"/></div>
+            <div class="field field-primary"><label title="Salary + benefits + overhead">Avg. labor cost / user / yr ($)</label><input type="text" inputmode="numeric" id="laborCost" value="55000" oninput="recalc()" min="0"/></div>
+            <div class="field field-primary"><label title="Total inventory on hand at any time">Annual inventory value ($)</label><input type="text" inputmode="numeric" id="inventoryValue" placeholder="e.g. 10,000,000" oninput="recalc()" min="0"/></div>
           </div>
-          <div class="field field-primary"><label title="Annual licenses, maintenance, support">Current IT / legacy cost / yr ($)</label><input type="number" id="itCost" placeholder="e.g. 150,000" oninput="recalc()" min="0"/></div>
+          <div class="field field-primary"><label title="Annual licenses, maintenance, support">Current IT / legacy cost / yr ($)</label><input type="text" inputmode="numeric" id="itCost" placeholder="e.g. 150,000" oninput="recalc()" min="0"/></div>
 
           <!-- Field inventory value drivers (shown only when toggle is on) -->
           <div class="driver-group" id="fieldInventorySection" style="display:none;">
@@ -319,7 +319,7 @@
             </div>
             <div class="field-row-2">
               <div class="field"><label title="Total value of inventory held at field locations (trucks, vans, job sites, contractor stores)">Field inventory value ($)</label>
-                <input type="number" id="fieldInvValue" placeholder="e.g. 2,000,000" oninput="recalc()" min="0" step="10000"/></div>
+                <input type="text" inputmode="numeric" id="fieldInvValue" placeholder="e.g. 2,000,000" oninput="recalc()" min="0" step="10000"/></div>
               <div class="field"><label title="Estimated % of field inventory lost, unaccounted for, or written off per year">Field leakage / shrinkage rate (%)</label>
                 <input type="number" id="fieldLeakageRate" placeholder="e.g. 4" oninput="recalc()" min="0" max="100" step="0.5"/></div>
             </div>
@@ -331,7 +331,7 @@
             </div>
             <div class="field-row-2">
               <div class="field"><label title="Cost to reconcile / count one field location (labor + travel)">Cost to reconcile / location ($)</label>
-                <input type="number" id="fieldReconcileCost" placeholder="e.g. 500" oninput="recalc()" min="0" step="50"/></div>
+                <input type="text" inputmode="numeric" id="fieldReconcileCost" placeholder="e.g. 500" oninput="recalc()" min="0" step="50"/></div>
               <div class="field"></div>
             </div>
           </div>
@@ -359,17 +359,17 @@
           One-time investment costs
         </div>
         <div class="two-col">
-          <div class="field"><label title="Project management, config, integration">Professional services ($)</label><input type="number" id="psvcCost" placeholder="e.g. 50,000" oninput="recalc()" min="0"/></div>
-          <div class="field"><label title="Scanners, mobile devices, printers">Hardware — scanners &amp; devices ($)</label><input type="number" id="hwCost" placeholder="e.g. 30,000" oninput="recalc()" min="0"/></div>
+          <div class="field"><label title="Project management, config, integration">Professional services ($)</label><input type="text" inputmode="numeric" id="psvcCost" placeholder="e.g. 50,000" oninput="recalc()" min="0"/></div>
+          <div class="field"><label title="Scanners, mobile devices, printers">Hardware — scanners &amp; devices ($)</label><input type="text" inputmode="numeric" id="hwCost" placeholder="e.g. 30,000" oninput="recalc()" min="0"/></div>
         </div>
-        <div class="field"><label title="End-user training and change management">Training &amp; change management ($)</label><input type="number" id="trainCost" placeholder="e.g. 10,000" oninput="recalc()" min="0"/></div>
+        <div class="field"><label title="End-user training and change management">Training &amp; change management ($)</label><input type="text" inputmode="numeric" id="trainCost" placeholder="e.g. 10,000" oninput="recalc()" min="0"/></div>
         <div class="otc-total"><span class="label">Total one-time cost</span><span class="value" id="totalOTC">$0</span></div>
       </div>
 
       <div class="card">
         <div class="card-title">Recurring investment &amp; NPV rate</div>
         <div class="two-col">
-          <div class="field"><label title="Annual SaaS subscription">Annual subscription ($)</label><input type="number" id="invest" value="80000" oninput="recalc()" min="0"/></div>
+          <div class="field"><label title="Annual SaaS subscription">Annual subscription ($)</label><input type="text" inputmode="numeric" id="invest" value="80000" oninput="recalc()" min="0"/></div>
           <div class="field"><label title="Cost of capital / hurdle rate. Typically 8–15%.">Discount rate for NPV (%)</label><input type="number" id="discRate" value="10" oninput="recalc()" step="0.5" min="0" max="50"/></div>
         </div>
       </div>
@@ -426,7 +426,7 @@
                   Annual write-off / shrinkage ($)
                   <span class="field-badge field-badge-primary">Preferred</span>
                 </label>
-                <input type="number" id="annualWriteOff" placeholder="e.g. 200,000" oninput="recalc();autoFlagConfidence()" min="0"/>
+                <input type="text" inputmode="numeric" id="annualWriteOff" placeholder="e.g. 200,000" oninput="recalc();autoFlagConfidence()" min="0"/>
                 <div class="field-hint" id="writeOffHint"></div>
               </div>
               <div class="field">
@@ -548,7 +548,7 @@
               <div class="field"><label title="Current order error / mis-ship rate %">Order error rate (%)</label>
                 <input type="number" id="orderErrorPct" placeholder="e.g. 2" oninput="recalc()" min="0" max="100" step="0.1"/></div>
               <div class="field"><label title="Fully-loaded cost of one error: return processing + re-ship freight + chargeback">Cost per error ($)</label>
-                <input type="number" id="costPerError" placeholder="e.g. 120" oninput="recalc()" min="0" step="5"/></div>
+                <input type="text" inputmode="numeric" id="costPerError" placeholder="e.g. 120" oninput="recalc()" min="0" step="5"/></div>
             </div>
             <div class="field-row-2">
               <div class="field"><label title="% of error cost recovered by better accuracy (blank = industry avg)">Error recovery % <span class="metric-bench" id="b_accuracy"></span></label>
@@ -567,14 +567,14 @@
             </div>
             <div class="field-row-2">
               <div class="field"><label title="Fully-loaded cost of one hour of lost production (labor + margin + overhead)">Cost / downtime hour ($)</label>
-                <input type="number" id="downtimeCostPerHr" placeholder="e.g. 5,000" oninput="recalc()" min="0" step="100"/></div>
+                <input type="text" inputmode="numeric" id="downtimeCostPerHr" placeholder="e.g. 5,000" oninput="recalc()" min="0" step="100"/></div>
               <div class="field"></div>
             </div>
 
             <div class="field-group-label">Expedite / emergency procurement</div>
             <div class="field-row-2">
               <div class="field"><label title="Total annual spend on expedited/emergency inbound orders caused by stockouts">Annual expedite spend ($)</label>
-                <input type="number" id="expediteSpendYr" placeholder="e.g. 400,000" oninput="recalc()" min="0" step="1000"/></div>
+                <input type="text" inputmode="numeric" id="expediteSpendYr" placeholder="e.g. 400,000" oninput="recalc()" min="0" step="1000"/></div>
               <div class="field"><label title="Percentage of that spend recoverable through better accuracy (blank = industry avg)">Recovery % <span class="metric-bench" id="b_expedite"></span></label>
                 <input type="number" id="m_expedite" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
             </div>
@@ -1390,7 +1390,7 @@
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="5.4.1";</script>
+<script>const APP_VERSION="5.4.5";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
 <script src="assistant.js"></script>
@@ -1412,11 +1412,14 @@
 window._authReady = (async function() {
   if (typeof window.ciAuth !== 'undefined') {
     const r = await window.ciAuth.initAuth();
-    /* Reveal admin-only nav (Customers command center). */
+    /* Reveal admin-only nav (Customers command center + Admin panel). */
     try {
       const u = window.ciAuth.getUser ? window.ciAuth.getUser() : {};
+      const isAdmin = !!(u && u.role === 'admin');
       const navC = document.getElementById('nav-admincustomers');
-      if (navC) navC.style.display = (u && u.role === 'admin') ? 'flex' : 'none';
+      if (navC) navC.style.display = isAdmin ? 'flex' : 'none';
+      const navA = document.getElementById('nav-admin');
+      if (navA) navA.style.display = isAdmin ? 'flex' : 'none';
     } catch(e) {}
     return r;
   }
@@ -2102,7 +2105,6 @@ async function adminRestore(type, id, btn) {
 }
 window.loadRecentlyDeleted = loadRecentlyDeleted;
 window.adminRestore = adminRestore;
-
 function switchAdminPanel(panel) {
   document.querySelectorAll('.admin-tab').forEach(b =>
     b.classList.toggle('active', b.dataset.panel === panel)
@@ -2115,7 +2117,6 @@ function switchAdminPanel(panel) {
   if (panel === 'errors' && typeof loadErrorLog === 'function') loadErrorLog();
   if (panel === 'cleanup' && typeof loadRecentlyDeleted === 'function') loadRecentlyDeleted();
 }
-window.switchAdminPanel = switchAdminPanel;
 
 /* ─────────────────────────────────────────
    AUDIT LOG
