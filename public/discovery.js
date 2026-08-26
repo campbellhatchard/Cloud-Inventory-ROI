@@ -944,7 +944,7 @@ function renderDiscoveryTab() {
     if (_discFilter !== 'all' && filteredQs.length === 0) return '';
 
     return '<div class="disc-sec-card" id="disc-sec-' + section.section.replace(/[^a-z0-9]/gi,'_') + '">'
-      + '<button class="disc-sec-head" onclick="toggleDiscSection(' + JSON.stringify(section.section) + ')" type="button">'
+      + '<button class="disc-sec-head" onclick="toggleDiscSection(\'' + section.section.replace(/\\/g,'\\\\').replace(/'/g,"\\'") + '\')" type="button">'
       + '<span class="disc-sec-icon ' + iconInfo.cls + '">' + iconInfo.icon + '</span>'
       + '<span class="disc-sec-title">' + escapeHtml(section.section) + '</span>'
       + (isMust ? '<span class="disc-sec-badge disc-sb-must">Must ask</span>' : '')

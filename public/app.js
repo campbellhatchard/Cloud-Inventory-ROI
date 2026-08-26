@@ -669,6 +669,91 @@ function buildPreviewScenarioTable(baseV) {
     </div>`;
 }
 
+/* ── Three Whys UI helpers (v5.5.1) ── */
+
+function setExecAudience(chip, val) {
+  /* Sync pill chips with the hidden select */
+  document.querySelectorAll('.whys-aud-chip').forEach(function(c){ c.classList.remove('active'); });
+  if (chip) chip.classList.add('active');
+  const sel = document.getElementById('execAudience');
+  if (sel) { sel.value = val; }
+  if (typeof refreshExec === 'function') refreshExec();
+}
+
+function _whysUpdateComp() {
+  const ids = ['why_act','why_ci','why_now'];
+  const filled = ids.filter(function(id){
+    const el = document.getElementById(id);
+    return el && el.value.trim().length > 15;
+  }).length;
+  const pct = Math.round(filled / ids.length * 100);
+  const fill = document.getElementById('whysCompFill');
+  const pctEl = document.getElementById('whysCompPct');
+  if (fill) fill.style.width = pct + '%';
+  if (pctEl) pctEl.textContent = pct + '%';
+}
+
+function _whysMicToggle(fieldId, btnId) {
+  /* Use existing SFDictation if available; otherwise degrade gracefully */
+  const field = document.getElementById(fieldId);
+  const btn   = document.getElementById(btnId);
+  if (!field || !btn) return;
+  if (typeof SFDictation !== 'undefined' && SFDictation.supported) {
+    /* Ensure the field is enhanced (idempotent) then trigger click on its dictate-btn */
+    SFDictation.enhance(field);
+    const dictBtn = field.closest('.dictate-wrap') && field.closest('.dictate-wrap').querySelector('.dictate-btn');
+    if (dictBtn) { dictBtn.click(); return; }
+  }
+  /* Fallback: toggle the visual state and show a toast */
+  if (btn.classList.contains('dictating')) {
+    btn.classList.remove('dictating');
+  } else {
+    btn.classList.add('dictating');
+    if (typeof showToast === 'function') showToast('Voice input requires Chrome or Edge with microphone permission.');
+    setTimeout(function(){ btn.classList.remove('dictating'); }, 2000);
+  }
+}
+
+function _execPopulateSidebar(valueRows, annualBenefit, monthlyInaction) {
+  /* Value breakdown sidebar card */
+  const bodyEl   = document.getElementById('execSideBreakdown');
+  const totalEl  = document.getElementById('execSideTotal');
+  const totalVal = document.getElementById('execSideTotalVal');
+  if (bodyEl && valueRows && valueRows.length > 0) {
+    const maxVal = Math.max.apply(null, valueRows.map(function(r){ return r.val; }).concat([1]));
+    const colors = ['#0089A6','#2E7D32','#12786F','#A6791E','#6A4C93','#45688A'];
+    bodyEl.innerHTML = valueRows.map(function(row, i) {
+      return '<div class="exec-side-bar-row">'
+        + '<span class="exec-side-bar-lbl">' + (row.label.length > 16 ? row.label.slice(0,16) + '…' : row.label) + '</span>'
+        + '<div class="exec-side-bar-track"><div class="exec-side-bar-fill" style="width:' + Math.round(row.val/maxVal*100) + '%;background:' + (colors[i]||colors[0]) + ';"></div></div>'
+        + '<span class="exec-side-bar-val">' + (typeof fmtFull === 'function' ? fmtFull(row.val) : '$-') + '</span>'
+        + '</div>';
+    }).join('');
+    if (totalEl) totalEl.style.display = 'flex';
+    if (totalVal) totalVal.textContent = typeof fmtFull === 'function' ? fmtFull(annualBenefit) : '';
+  }
+
+  /* Cost of inaction sidebar card */
+  const inEl = document.getElementById('execSideInaction');
+  const inCard = document.getElementById('execInactionCard');
+  if (inEl && inCard && monthlyInaction > 0) {
+    const fmt = typeof fmtFull === 'function' ? fmtFull : function(v){ return '$' + Math.round(v/1000) + 'K'; };
+    inEl.innerHTML = '<div class="exec-ia-cell"><div class="exec-ia-period">Per month</div>'
+      + '<div class="exec-ia-cost">' + fmt(monthlyInaction) + '</div>'
+      + '<div class="exec-ia-note">foregone value</div></div>'
+      + '<div class="exec-ia-cell hi"><div class="exec-ia-period">6-month delay</div>'
+      + '<div class="exec-ia-cost">' + fmt(monthlyInaction * 6) + '</div>'
+      + '<div class="exec-ia-note">typical eval</div></div>'
+      + '<div class="exec-ia-cell"><div class="exec-ia-period">12 months</div>'
+      + '<div class="exec-ia-cost">' + fmt(annualBenefit) + '</div>'
+      + '<div class="exec-ia-note">full year lost</div></div>';
+    inCard.style.display = 'block';
+  }
+
+  /* Sync completeness bar on render */
+  _whysUpdateComp();
+}
+
 function renderExec() {
   // Apply Conservative / Base / Aggressive scaling
   const mode = (typeof currentScenarioMode !== 'undefined') ? currentScenarioMode : 'base';
@@ -997,6 +1082,15 @@ function renderExec() {
     </div>
   </div>`;
   trackEvent('exec_view', { company: v.company });
+
+  /* ── Populate the Three Whys sidebar cards ── */
+  _execPopulateSidebar(valueRows, r.annualBenefit, r.annualBenefit > 0 ? r.annualBenefit / 12 : 0);
+
+  /* ── Re-run SFDictation on the new textareas ── */
+  if (typeof SFDictation !== 'undefined' && SFDictation.supported) {
+    SFDictation.enhanceAll(document.getElementById('tab-exec'));
+  }
+  _whysUpdateComp();
 }
 
 /* ════════════════════════════════════════

@@ -108,8 +108,26 @@ function injectFormatHints() {
     hint.id = id + '_fmt';
     hint.className = 'fmt-hint';
     hint.textContent = DOLLAR_FIELDS[id].hint;
-    /* Place after any existing range-warning slot, else right after the input. */
-    el.insertAdjacentElement('afterend', hint);
+    /* Insert after the affix-wrap ($ prefix container) if present,
+       or after the .field parent, so the hint sits BELOW the input
+       and is never trapped inside affix-wrap where it overlaps the text.
+       ui-v4.js wraps inputs after this runs, so we also re-anchor in
+       a rAF pass to catch any hints still inside an affix-wrap.        */
+    const affixWrap = el.closest('.affix-wrap');
+    const fieldWrap = el.closest('.field');
+    const anchor = affixWrap || fieldWrap || el;
+    anchor.insertAdjacentElement('afterend', hint);
+  });
+  /* Re-anchor any hint that ended up inside an affix-wrap after ui-v4 ran */
+  requestAnimationFrame(function() {
+    Object.keys(DOLLAR_FIELDS).forEach(id => {
+      const hint = document.getElementById(id + '_fmt');
+      if (!hint) return;
+      const wrap = hint.closest('.affix-wrap');
+      if (!wrap) return;
+      /* Move the hint immediately after the affix-wrap */
+      wrap.insertAdjacentElement('afterend', hint);
+    });
   });
 }
 

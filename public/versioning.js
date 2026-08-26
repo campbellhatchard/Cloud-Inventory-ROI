@@ -415,6 +415,16 @@ function renderListVersioned() {
     return;
   }
 
+  /* Show filtered-empty state if filters exclude everything */
+  if (!filtered.length) {
+    const isFiltered = ownershipFilter !== 'all' || stageFilter || industryFilter;
+    el.innerHTML = '<div class="empty-state"><p>'
+      + (isFiltered ? 'No scenarios match the current filters. Try clearing a filter above.' : 'No scenarios to show.')
+      + '</p></div>';
+    renderStageFilters();
+    return;
+  }
+
   const initials    = n => n.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase()||'?';
   const payStr      = pb => pb===null?'—':pb>=60?'60+mo':pb.toFixed(1)+'mo';
   const stageColors = (typeof STAGE_COLORS !== 'undefined') ? STAGE_COLORS : { Discovery:'#0089A6', Demo:'#A6791E', Proposal:'#12786F', Negotiation:'#6A4C93', 'Closed Won':'#2E7D32', 'Closed Lost':'#C81E10' };
@@ -422,36 +432,46 @@ function renderListVersioned() {
   el.innerHTML = `<ul class="scenario-list">${filtered.map(s => {
     const versionCount = savedScenarios.filter(x => x.baseId === s.baseId).length;
     const isShared = s.ownerUsername && s.ownerUsername !== me.username;
+    const initials2 = n => (n||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase()||'?';
+    const repAv = isShared ? `<span class="scenario-rep-badge" title="Owned by ${s.ownerUsername}"><span class="scenario-rep-av">${initials2(s.ownerUsername)}</span>${s.ownerUsername}</span>` : '';
+    const kpiColor = s.roi > 0 ? 'var(--green)' : 'var(--red,#DC2626)';
     return `
-    <li class="scenario-item" data-scenario-id="${s.id}">
+    <li class="scenario-item scenario-item-v2" data-scenario-id="${s.id}">
       <label class="compare-check" title="Add to comparison">
         <input type="checkbox" ${compareIds.has(s.id)?'checked':''} onchange="toggleCompare('${s.id}')"/>
       </label>
       <div class="scenario-avatar">${initials(s.company||s.name)}</div>
       <div class="scenario-info">
-        <div class="scenario-name">${s.name}
+        <div class="scenario-name-row">
+          <span class="scenario-name">${s.name}</span>
           <span class="version-badge">v${s.version||1}</span>
-          ${isShared ? `<span class="shared-badge">shared by ${s.ownerUsername}</span>` : ''}
-          ${versionCount > 1 ? `<button class="version-history-btn" onclick="showVersionHistory('${s.baseId}')" title="View ${versionCount} versions">📋 ${versionCount} versions</button>` : ''}
+          ${repAv}
+          ${versionCount > 1 ? `<button class="version-history-btn" onclick="showVersionHistory('${s.baseId}')" title="View ${versionCount} versions">📋 ${versionCount}</button>` : ''}
         </div>
         <div class="scenario-meta">
-          ${s.company}${s.industry&&IND[s.industry]?' · '+IND[s.industry].label:''} · ${s.date} · Payback: ${payStr(s.payback)}
+          <span class="scenario-company">${s.company||'—'}</span>
+          ${s.industry&&IND[s.industry]?`<span class="scenario-meta-sep">·</span><span>${IND[s.industry].label}</span>`:''}
+          <span class="scenario-meta-sep">·</span><span>${s.date}</span>
+          <span class="scenario-meta-sep">·</span><span>Payback: ${payStr(s.payback)}</span>
         </div>
-        ${s.dealStage?`<span class="stage-pill" style="background:${stageColors[s.dealStage]||'#64748B'}20;color:${stageColors[s.dealStage]||'#64748B'};border:1px solid ${stageColors[s.dealStage]||'#64748B'}40">${s.dealStage}</span>`:''}
-        ${s.outcome?`<span class="outcome-pill outcome-${s.outcome}">${outcomeLabel(s.outcome)}${s.outcome==='won'&&s.realizedValue!=null?' · '+fmtFull(s.realizedValue)+'/yr actual':''}</span>`:''}
-        ${s.versionNote?`<span class="version-note-inline">${s.versionNote}</span>`:''}
+        <div class="scenario-pills-row">
+          ${s.dealStage?`<span class="stage-pill" style="background:${stageColors[s.dealStage]||'#64748B'}20;color:${stageColors[s.dealStage]||'#64748B'};border:1px solid ${stageColors[s.dealStage]||'#64748B'}40">${s.dealStage}</span>`:''}
+          ${s.outcome?`<span class="outcome-pill outcome-${s.outcome}">${outcomeLabel(s.outcome)}${s.outcome==='won'&&s.realizedValue!=null?' · '+fmtFull(s.realizedValue)+'/yr actual':''}</span>`:''}
+          ${s.versionNote?`<span class="version-note-inline">${s.versionNote}</span>`:''}
+        </div>
       </div>
       <div class="scenario-kpis">
-        <div class="sk-main">${fmtFull(s.annualBenefit)}/yr · ${fmtPct(s.roi)} ROI</div>
-        <div class="sk-sub">NPV3: ${fmtFull(s.npv3)} · NPV5: ${fmtFull(s.npv5)}</div>
+        <div class="sk-main" style="color:${kpiColor}">${fmtFull(s.annualBenefit)}/yr</div>
+        <div class="sk-sub">${fmtPct(s.roi)} ROI · NPV5: ${fmtFull(s.npv5)}</div>
+        <div class="sk-sub">Payback: ${payStr(s.payback)}</div>
       </div>
       <div class="scenario-actions">
-        <button class="btn btn-ghost btn-sm" onclick="loadScenario('${s.id}')">Load</button>
-        <button class="btn btn-ghost btn-sm" onclick="cloneScenario('${s.id}')" title="Duplicate as a new business case">Duplicate</button>
-        <button class="btn btn-ghost btn-sm" onclick="openOutcomeModal('${s.baseId}')" title="Record whether this deal was won or lost">${s.outcome?'✎ Outcome':'＋ Outcome'}</button>
+        <button class="btn btn-cta btn-sm" onclick="loadScenario('${s.id}')">Load</button>
+        <button class="btn btn-ghost btn-sm" onclick="cloneScenario('${s.id}')" title="Duplicate">Duplicate</button>
+        <button class="btn btn-ghost btn-sm" onclick="openOutcomeModal('${s.baseId}')">${s.outcome?'✎ Outcome':'＋ Outcome'}</button>
         <button class="btn btn-ghost btn-sm" onclick="generateShareURLFromScenario('${s.id}')" title="Copy share link">🔗</button>
         ${versionCount > 1 ? `<button class="btn btn-ghost btn-sm" onclick="showVersionHistory('${s.baseId}')">History</button>` : ''}
-        ${versionCount > 1 ? `<button class="btn btn-ghost btn-sm" onclick="compareVersions('${s.baseId}')" title="See what changed between versions">Compare versions</button>` : ''}
+        ${versionCount > 1 ? `<button class="btn btn-ghost btn-sm" onclick="compareVersions('${s.baseId}')">Compare v</button>` : ''}
         ${!isShared ? `<button class="btn btn-ghost btn-sm" onclick="openShareModal('${s.id}','${s.name.replace(/'/g,"\\'")}')">Share</button>` : ''}
         ${!isShared ? `<button class="btn btn-danger btn-sm" onclick="deleteScenarioGroup('${s.baseId}')">Delete</button>` : ''}
       </div>

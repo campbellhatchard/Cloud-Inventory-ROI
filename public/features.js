@@ -705,7 +705,7 @@ Industry: ${IND[v.industry] ? IND[v.industry].label : '—'} | Users: ${Math.rou
    ───────────────────────────────────────── */
 const DEAL_STAGES = ['Discovery', 'Demo', 'Proposal', 'Negotiation', 'Closed Won', 'Closed Lost'];
 let stageFilter     = '';
-let ownershipFilter = 'mine'; // 'all' | 'mine' | 'shared' — defaults to user's own scenarios
+let ownershipFilter = 'all'; // 'all' | 'mine' | 'shared' — default shows all visible scenarios
 let industryFilter  = '';     // '' = all industries, otherwise an IND key
 let adminViewAll    = false;  // admin-only: include all users' scenarios
 

@@ -7,6 +7,79 @@
 
 const VERSION_HISTORY = [
   {
+    version: '5.5.8', date: '2026-08-25', tag: 'fix',
+    title: 'Full regression pass: added missing cr-badge-client CSS class',
+    changes: [
+      'Regression pass caught a missing CSS class: .cr-badge-client (purple badge for AI-researched items from browser sources in the competitive research panel) was referenced in comp-research.js output but had no matching CSS rule. Added alongside the existing cr-badge-file, cr-badge-web, cr-badge-ai, and cr-badge-cur classes.',
+      'Confirmed all other 106 regression checks pass: 17 ROI engine tests, 17 phase-1 spec tests, 3 version consistency checks, 41 JS files syntax-clean, 11 server files syntax-clean, 1859 CSS braces balanced, 5 HTML pages div-balanced, 22 migrations sequential, 65 feature integrity checks, 41 UX/UI checks, 12 security checks, 36 critical IDs present.'
+    ]
+  },
+  {
+    version: '5.5.7', date: '2026-08-25', tag: 'fix',
+    title: 'Dollar field hint text no longer overlaps the input value',
+    changes: [
+      'injectFormatHints() placed the hint div immediately after the <input> element using insertAdjacentElement("afterend"). However, ui-v4.js runs later and wraps that same input in an affix-wrap flex container (the $ prefix). The hint ended up trapped inside the affix-wrap, which is a flex row, causing it to render inline next to the input text and overlap the value. Fixed in two ways: (1) injectFormatHints now checks for an existing affix-wrap or .field parent and inserts after that instead; (2) a requestAnimationFrame pass re-anchors any hints that still ended up inside an affix-wrap after ui-v4 ran. The fmt-hint CSS is also hardened to display:block with width:100% so it cannot collapse into an inline element regardless of its container.'
+    ]
+  },
+  {
+    version: '5.5.6', date: '2026-08-25', tag: 'fix',
+    title: 'How to Use fixed; client-side errors now captured in Admin error log',
+    changes: [
+      'How to Use tab stuck on "Loading...": initHelpTab was awaiting window._authReady with no timeout. If the auth promise never resolved (race condition on page load), the tab hung indefinitely. Fixed with a 5-second timeout using Promise.race so the help content always either loads or shows a clear error message. The content area now also shows an error state (not just the TOC sidebar) when the API call fails.',
+      'Client-side error capture: added window.onerror and unhandledrejection handlers that POST browser JS errors to a new /api/errors/client endpoint. These are written to the existing error_log table with source prefixed "client:" so they are distinguishable from server errors. Errors are queued before the page is fully loaded and flushed via XHR to avoid losing early boot errors. A global logClientError(msg, source, level) helper is also available for manual instrumentation.',
+      'Admin Error log tab improved: shows All / Server / Client filter pills so admins can focus on browser-only or server-only errors. Each entry now shows a "browser" (purple) or "server" (teal) badge alongside the source label. Stack traces are expandable via a toggle button rather than always-visible, keeping the list scannable. The warn level now has its own amber styling.'
+    ]
+  },
+  {
+    version: '5.5.5', date: '2026-08-25', tag: 'fix',
+    title: 'Competitive battlecard Word export: replaced broken CDN with HTML-in-Word',
+    changes: [
+      'Export Word on the competitive battlecard page was failing with "Failed to load docx library" because docx@8.5.0 was being loaded from cdn.jsdelivr.net at runtime, and the Render hosting environment blocks that CDN URL (403 host_not_allowed). Replaced the entire CDN-dependent approach with the HTML-in-Word technique: generates a styled HTML document with Word XML namespaces and serves it as a .doc file via Blob URL. Word, Google Docs, and LibreOffice all open it natively. Zero external dependencies, no CDN, no runtime script injection. Also removed the duplicate copy of exportCompDocx that had accumulated from earlier append operations.'
+    ]
+  },
+  {
+    version: '5.5.4', date: '2026-08-25', tag: 'fix',
+    title: 'Export fixes: PDF popup fallback, pptxgen lazy-load, menu onclick order',
+    changes: [
+      'Download PDF: when the browser blocks the pop-up (common in Render\'s hosted environment or fullscreen presentation mode), a dismissible notification bar now appears with a direct "Open PDF in new tab" link. Previously it silently failed or showed a vague toast.',
+      'More exports menu: champion pack, role one-pager, ROI methodology PDF/PPT were not firing reliably because toggleExecMore() was called before the export function. Browsers treat window.open and async operations as untrusted if they don\'t happen directly in the user gesture. Fixed by swapping the order: close the menu first, then run the export.',
+      'deChk (PowerPoint library check) upgraded from synchronous to async with lazy-loading: if pptxgen isn\'t loaded yet (CDN still fetching), it now polls for up to 6 seconds then attempts a fresh script inject before giving up. Previously it returned false immediately with a toast, causing champion pack and one-pager to silently abort on slow connections.',
+      'dePrintWindow (ROI methodology PDF, action plan print, stakeholder print) now generates a Blob URL fallback when window.open is blocked, showing a clickable link rather than an unhelpful "Pop-up blocked" toast.',
+      'All export functions that call deChk are now properly async/await-chained: printActionPlan, printStakeholderMap, roiMethodologyPDF (were missing async keyword).'
+    ]
+  },
+  {
+    version: '5.5.3', date: '2026-08-25', tag: 'fix',
+    title: 'Saved scenarios visible again; sensitivity analysis chart fixed',
+    changes: [
+      'Saved scenarios bug fix: the ownership filter defaulted to "Mine" (ownershipFilter = \'mine\') while the UI showed "All" as the active button, so the list was filtered to empty even when scenarios existed. Fixed by defaulting to "all" and marking the All button active in HTML.',
+      'Saved scenarios empty state: the check for no results used !display.length (before the ownership filter was applied) instead of !filtered.length (after). When filter excluded all results, it still rendered an empty <ul> with no message. Fixed to show "No scenarios match the current filters" when filters are active.',
+      'Saved scenario cards redesigned: company name is now the primary anchor with rep badge shown inline for scenarios owned by other reps, deal stage and outcome pills have their own row, and the Load button is now the primary CTA (teal) with other actions as ghost.',
+      'Sensitivity analysis chart: the bars had almost no CSS, so the neg-fill and pos-fill divs had no visible height or color. Added full chart CSS: grid layout for label/bars/values, red gradient for -30% bars, green gradient for +30% bars, center axis line, and legend. Chart now renders as a proper tornado diagram.',
+      'AI competitive research (v5.5.2 work): added /api/competitive/research and /api/competitive/ci-source server routes, migration 022 for competitive_sources tables, comp-research.js UI, and competitive sub-tabs. Full dual-source research with provenance-tagged output.'
+    ]
+  },
+  {
+    version: '5.5.2', date: '2026-08-25', tag: 'fix',
+    title: 'Discovery guide: section collapse/expand now works',
+    changes: [
+      'Root cause: section header buttons used JSON.stringify() to embed the section title in an onclick attribute, but JSON.stringify wraps strings in double quotes. Since the onclick attribute itself uses double quotes, the browser saw onclick="toggleDiscSection(\"Value-engineering core (must-ask)\")" — the inner double quotes terminated the attribute early and the click handler was silently dropped. Every section header appeared clickable but did nothing. Fixed by using single-quote wrapping with proper apostrophe escaping instead of JSON.stringify.'
+    ]
+  },
+  {
+    version: '5.5.1', date: '2026-08-25', tag: 'feature',
+    title: 'Executive view redesigned — larger Three Whys, persistent mic buttons, sidebar',
+    changes: [
+      'Three Whys editor rebuilt: each field is now 5 rows tall (was 3) with a larger font and more breathing room, making it practical to write a full paragraph without scrolling inside the box.',
+      'Persistent mic button inside each textarea (bottom-right corner). Previously the mic icon was injected dynamically by SFDictation.enhanceAll() after the tab loaded, making it invisible until you knew to look. Now each field has a clearly visible mic button at all times. Clicking it calls SFDictation if available (Chrome/Edge), or shows a graceful fallback toast on unsupported browsers. The button pulses red while recording.',
+      'AI enhance button is now teal/filled and lives in the card header next to Reset, as the primary action on the card. It was previously a small secondary button buried in a toolbar with other controls.',
+      'Audience selector is now pill chips (Mixed / CFO / COO / CEO / CIO) instead of a dropdown. Five options in a row is more scannable than a collapsed select. A hidden select element is preserved for back-compat with refreshExec().',
+      'Two-column layout: Three Whys on the left, a right sidebar showing the value breakdown bar chart and cost-of-delay cells. Populated live by renderExec() so the rep can write "labor saves $980K" while confirming that number without switching sections. Stacks to single column on mobile.',
+      'Narrative completeness bar in the card footer shows what % of the three fields are filled (threshold: >15 characters), so reps know before export if they left a field empty.',
+      'Value breakdown sidebar card shows a horizontal bar chart per driver. Cost-of-delay sidebar card shows per-month / 6-month / 12-month foregone value, with the 6-month cell highlighted in red as the most likely scenario.'
+    ]
+  },
+  {
     version: '5.5.0', date: '2026-08-25', tag: 'feature',
     title: 'Mutual Action Plan redesigned — card view, overdue alerts, rep visibility, admin filters',
     changes: [

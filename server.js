@@ -774,6 +774,291 @@ app.post('/api/enhance', requireAuth, aiLimiter, async (req, res) => {
   }
 });
 
+/* ══════════════════════════════════════════════════════════════════
+   COMPETITIVE RESEARCH — AI-powered dual-source comparison
+   POST /api/competitive/ci-source       — admin: save CI product source
+   GET  /api/competitive/ci-source       — get active CI source info
+   POST /api/competitive/research        — run AI comparison
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Helper: fetch a URL server-side (avoids CORS, handles redirects) */
+async function fetchUrlContent(url) {
+  const { URL: NURL } = require('url');
+  const https2 = require('https');
+  const http2  = require('http');
+  return new Promise((resolve) => {
+    try {
+      const parsed = new NURL(url);
+      const mod = parsed.protocol === 'https:' ? https2 : http2;
+      const opts = {
+        hostname: parsed.hostname,
+        path: parsed.pathname + parsed.search,
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; CloudInventoryResearch/1.0)',
+          'Accept': 'text/html,application/xhtml+xml,*/*'
+        },
+        timeout: 12000
+      };
+      const req = mod.request(opts, (res) => {
+        /* Follow one redirect */
+        if ((res.statusCode === 301 || res.statusCode === 302) && res.headers.location) {
+          fetchUrlContent(res.headers.location).then(resolve);
+          return;
+        }
+        let data = '';
+        res.setEncoding('utf8');
+        res.on('data', c => { if (data.length < 200000) data += c; });
+        res.on('end', () => {
+          /* Strip HTML tags, collapse whitespace, keep meaningful text */
+          const text = data
+            .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+            .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+            .replace(/\s{3,}/g, '\n\n')
+            .trim()
+            .slice(0, 15000); /* cap at 15K chars */
+          resolve({ ok: true, text, statusCode: res.statusCode });
+        });
+      });
+      req.on('error', e => resolve({ ok: false, error: e.message }));
+      req.on('timeout', () => { req.destroy(); resolve({ ok: false, error: 'Timeout' }); });
+      req.end();
+    } catch(e) { resolve({ ok: false, error: e.message }); }
+  });
+}
+
+/* Helper: call Anthropic synchronously (re-uses existing https pattern) */
+async function callAnthropicDirect(messages, system, maxTokens) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set');
+  const payload = JSON.stringify({
+    model: ANTHROPIC_MODEL,
+    max_tokens: maxTokens || 2000,
+    system,
+    messages
+  });
+  let baseUrl;
+  try { baseUrl = new URL(ANTHROPIC_BASE_URL); } catch(e) { throw new Error('Bad ANTHROPIC_BASE_URL'); }
+  return new Promise((resolve, reject) => {
+    const req2 = https.request({
+      hostname: baseUrl.hostname,
+      path: '/v1/messages',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload),
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      }
+    }, (r) => {
+      let d = '';
+      r.on('data', c => d += c);
+      r.on('end', () => {
+        try { resolve(JSON.parse(d)); } catch(e) { reject(new Error('Bad Anthropic response')); }
+      });
+    });
+    req2.on('error', reject);
+    req2.setTimeout(45000, () => { req2.destroy(); reject(new Error('Anthropic timeout')); });
+    req2.write(payload);
+    req2.end();
+  });
+}
+
+/* GET  /api/competitive/ci-source — active CI source info */
+app.get('/api/competitive/ci-source', requireAuth, async (req, res) => {
+  try {
+    const { query } = db();
+    const { rows } = await query(
+      `SELECT id, source_type, source_name, source_url, file_size, created_at
+       FROM ci_product_sources WHERE is_active = TRUE ORDER BY created_at DESC LIMIT 1`
+    );
+    res.json(rows[0] || null);
+  } catch(err) {
+    console.error('ci-source GET error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch CI source.' });
+  }
+});
+
+/* POST /api/competitive/ci-source — admin: save new canonical CI source */
+app.post('/api/competitive/ci-source', requireAuth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only.' });
+  try {
+    const { sourceType, sourceName, sourceUrl, contentText, fileSize } = req.body;
+    if (!sourceType || !sourceName) return res.status(400).json({ error: 'sourceType and sourceName required.' });
+    const { query } = db();
+    /* Deactivate previous */
+    await query(`UPDATE ci_product_sources SET is_active = FALSE WHERE is_active = TRUE`);
+    /* Insert new */
+    const { rows } = await query(
+      `INSERT INTO ci_product_sources (source_type, source_name, source_url, content_text, file_size, uploaded_by)
+       VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, source_name, created_at`,
+      [sourceType, sourceName, sourceUrl || null, contentText || null, fileSize || null, req.user.id]
+    );
+    const { log } = require('./src/audit');
+    await log({ userId: req.user.id, action: 'admin.ci_source_updated', entityType: 'admin', detail: { sourceName, sourceType }, ipAddress: req.ip });
+    res.json({ ok: true, source: rows[0] });
+  } catch(err) {
+    console.error('ci-source POST error:', err.message);
+    res.status(500).json({ error: 'Failed to save CI source.' });
+  }
+});
+
+/* POST /api/competitive/research — AI dual-source comparison */
+app.post('/api/competitive/research', requireAuth, aiLimiter, async (req, res) => {
+  try {
+    const {
+      competitorKey, competitorName, competitorUrl,
+      competitorFileText,   /* base64-decoded text from uploaded competitor doc */
+      ciSourceOverride,     /* { text, name } — rep-session override of canonical CI source */
+    } = req.body;
+
+    if (!competitorKey && !competitorName) return res.status(400).json({ error: 'competitorName required.' });
+
+    /* Step 1: resolve CI product content */
+    let ciContent = '';
+    let ciSourceLabel = 'Cloud Inventory curated battlecard';
+    if (ciSourceOverride && ciSourceOverride.text) {
+      ciContent = ciSourceOverride.text.slice(0, 12000);
+      ciSourceLabel = ciSourceOverride.name || 'Uploaded CI document';
+    } else {
+      const { query } = db();
+      const { rows } = await query(
+        `SELECT source_type, source_name, source_url, content_text FROM ci_product_sources WHERE is_active = TRUE ORDER BY created_at DESC LIMIT 1`
+      );
+      if (rows[0]) {
+        if (rows[0].content_text) {
+          ciContent = rows[0].content_text.slice(0, 12000);
+          ciSourceLabel = rows[0].source_name;
+        } else if (rows[0].source_url) {
+          const fetched = await fetchUrlContent(rows[0].source_url);
+          if (fetched.ok) { ciContent = fetched.text; ciSourceLabel = rows[0].source_url; }
+        }
+      }
+    }
+
+    /* Step 2: resolve competitor content */
+    let compContent = '';
+    let compSourceLabel = competitorName || competitorKey || 'Competitor';
+    let compFetchStatus = 'none';
+
+    if (competitorFileText) {
+      compContent = competitorFileText.slice(0, 12000);
+      compSourceLabel = 'Uploaded competitor document';
+      compFetchStatus = 'file';
+    } else if (competitorUrl) {
+      const fetched = await fetchUrlContent(competitorUrl);
+      if (fetched.ok) {
+        compContent = fetched.text;
+        compFetchStatus = 'fetched';
+      } else {
+        compFetchStatus = 'failed';
+      }
+    }
+
+    /* Step 3: Build system prompt + call Anthropic */
+    const system = `You are a B2B enterprise software sales strategist specializing in inventory management and field operations technology. You produce structured, factual competitive battlecard analysis grounded strictly in the source materials provided. You NEVER invent capabilities or prices not mentioned in the sources. When you infer something not explicitly stated, you flag it with "inferred" in the confidence field.`;
+
+    const userPrompt = `Compare Cloud Inventory against ${competitorName || competitorKey} using the source materials below.
+
+=== CLOUD INVENTORY SOURCE (${ciSourceLabel}) ===
+${ciContent || '[No CI source provided — use general knowledge of Cloud Inventory Platform: ERP-agnostic inventory execution, warehouse + production + field, no-code configuration, offline-first mobile, API-first multi-ERP integration]'}
+
+=== COMPETITOR SOURCE (${compSourceLabel}) ===
+${compContent || `[No competitor document fetched — use general market knowledge about ${competitorName || competitorKey}]`}
+
+Produce a JSON object with this exact structure:
+{
+  "competitorName": "Full official product name",
+  "ciSourceLabel": "${ciSourceLabel}",
+  "compSourceLabel": "${compSourceLabel}",
+  "compFetchStatus": "${compFetchStatus}",
+  "meta": {
+    "cost": "Typical implementation/subscription cost range",
+    "timeToValue": "Typical time to go-live",
+    "maintenance": "Ongoing maintenance cost or model"
+  },
+  "diffs": [
+    {
+      "dimension": "Short dimension name (e.g. Mobile UX)",
+      "current": "What our battlecard previously said about this",
+      "updated": "What the source material now shows",
+      "changed": true/false,
+      "confidence": "high|medium|inferred",
+      "sourceRef": "Where in the source doc this came from"
+    }
+  ],
+  "competitorPain": [
+    { "text": "Pain point or weakness of the competitor", "confidence": "high|medium|inferred", "sourceRef": "Source reference" }
+  ],
+  "ciAdvantages": [
+    { "text": "Cloud Inventory advantage over this competitor", "confidence": "high|medium|inferred", "sourceRef": "Source reference" }
+  ],
+  "talkTrack": "A 3-5 sentence talk track for a sales rep to use when displacing this competitor. Must acknowledge any new capabilities they have while pivoting to CI advantages. Factual, confident, not hyperbolic.",
+  "researchNotes": "1-2 sentences about what was and wasn't available in the source material, and what the rep should verify."
+}
+
+Return ONLY the JSON object. No markdown fences, no preamble.`;
+
+    const aiResp = await callAnthropicDirect(
+      [{ role: 'user', content: userPrompt }],
+      system,
+      2500
+    );
+
+    const rawText = (aiResp.content || []).map(b => b.text || '').join('');
+    let parsed;
+    try {
+      const clean = rawText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
+      parsed = JSON.parse(clean);
+    } catch(e) {
+      console.error('AI response JSON parse failed:', rawText.slice(0, 200));
+      return res.status(502).json({ error: 'AI returned malformed response. Try again.' });
+    }
+
+    /* Cache result */
+    try {
+      const { query } = db();
+      await query(
+        `INSERT INTO competitive_research_cache (competitor_key, competitor_url, competitor_name, result_json, created_by)
+         VALUES ($1,$2,$3,$4,$5)`,
+        [competitorKey || null, competitorUrl || null, competitorName || null, JSON.stringify(parsed), req.user.id]
+      );
+    } catch(e) { /* cache failure is non-fatal */ }
+
+    res.json({ ok: true, result: parsed, ciSourceLabel, compSourceLabel, compFetchStatus });
+  } catch(err) {
+    console.error('Competitive research error:', err.message);
+    res.status(500).json({ error: 'Research failed: ' + err.message });
+  }
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   CLIENT-SIDE ERROR REPORTING
+   POST /api/errors/client — browser JS errors → error_log table
+   Rate-limited separately; no auth required (pre-login errors too).
+   ══════════════════════════════════════════════════════════════════ */
+const clientErrLimiter = rateLimit({ windowMs: 60000, max: 30, standardHeaders: true, legacyHeaders: false });
+
+app.post('/api/errors/client', clientErrLimiter, async (req, res) => {
+  try {
+    const { message, source, stack, url, line, col, level } = req.body || {};
+    if (!message) return res.status(400).json({ error: 'message required' });
+    const { logError } = require('./src/error-log');
+    const errObj = { message: String(message).slice(0, 2000), stack: stack ? String(stack).slice(0, 4000) : null };
+    await logError(errObj, {
+      source: ('client:' + (source || 'js')).slice(0, 120),
+      level:  level === 'warn' ? 'warn' : 'error',
+      req:    { method: 'CLIENT', originalUrl: (url || '').slice(0, 500), user: req.user || null, ip: req.ip }
+    });
+    res.json({ ok: true });
+  } catch(e) {
+    /* Never cascade — silently swallow */
+    res.json({ ok: false });
+  }
+});
+
 /* Natural-language question over aggregate deal data (Admin Analytics).
    Two-step: (1) AI picks which pre-written query/queries answer the
    question, from the fixed catalog in src/deal-queries.js — the model
