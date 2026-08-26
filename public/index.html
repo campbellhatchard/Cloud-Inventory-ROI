@@ -2506,9 +2506,9 @@ async function loadErrorLog(filter) {
 
     /* Filter pills */
     var pillHtml = '<div class="elog-filter-row">'
-      + '<button class="elog-pill' + (_elogFilter==='all'?' active':'') + '" onclick="loadErrorLog('all')">All (' + all.length + ')</button>'
-      + '<button class="elog-pill' + (_elogFilter==='server'?' active':'') + '" onclick="loadErrorLog('server')">Server (' + serverCount + ')</button>'
-      + '<button class="elog-pill' + (_elogFilter==='client'?' active':'') + '" onclick="loadErrorLog('client')">Client / browser (' + clientCount + ')</button>'
+      + '<button class="elog-pill' + (_elogFilter==='all'?' active':'') + '" onclick="loadErrorLog(\'all\')">All (' + all.length + ')</button>'
+      + '<button class="elog-pill' + (_elogFilter==='server'?' active':'') + '" onclick="loadErrorLog(\'server\')">Server (' + serverCount + ')</button>'
+      + '<button class="elog-pill' + (_elogFilter==='client'?' active':'') + '" onclick="loadErrorLog(\'client\')">Client / browser (' + clientCount + ')</button>'
       + '</div>';
 
     if (!filtered.length) {
@@ -2529,7 +2529,7 @@ async function loadErrorLog(filter) {
         : (e.path ? '<span class="elog-route">' + escapeHtml(e.path) + '</span>' : '');
       var stackId = 'estack-' + e.id;
       var stackHtml = e.stack
-        ? '<button class="elog-stack-btn" onclick="var s=document.getElementById('' + stackId + '');s.style.display=s.style.display==='block'?'none':'block'">Stack trace</button>'
+        ? '<button class="elog-stack-btn" onclick="var s=document.getElementById(&quot;' + stackId + '&quot;);s.style.display=s.style.display===&quot;block&quot;?&quot;none&quot;:&quot;block&quot;">Stack trace</button>'
           + '<pre class="elog-stack" id="' + stackId + '" style="display:none;">' + escapeHtml(e.stack) + '</pre>'
         : '';
       return '<div class="elog-item elog-' + lvl + '">'
@@ -3402,7 +3402,7 @@ function _showUnsavedBanner() {
   document.body.appendChild(bar);
   setTimeout(() => bar.remove(), 7000);
 }
-   Covers all dynamically created modals (version history, diff, template
+/* Covers all dynamically created modals (version history, diff, template
    picker, stakeholder, outcome, cleanup preview) and the static ones.
    Ignores ESC when focus is inside a text input or textarea so reps can
    clear fields normally. */

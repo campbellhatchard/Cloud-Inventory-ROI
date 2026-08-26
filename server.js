@@ -193,8 +193,8 @@ app.use('/api', require('./src/routes/analytics'));  // analytics + custom bench
    De-duplicated company names across scenarios, action plans and
    stakeholders for the current user, each with usage counts.
    Case-insensitive grouping; canonical spelling = most recent use.  */
-const { requireAuth: _reqAuthCompanies } = require('./src/middleware/auth');
-app.get('/api/companies', _reqAuthCompanies, async (req, res) => {
+const { requireAuth } = require('./src/middleware/auth');
+app.get('/api/companies', requireAuth, async (req, res) => {
   try {
     const { rows } = await db().query(
       `WITH all_companies AS (
@@ -241,7 +241,7 @@ app.get('/api/companies', _reqAuthCompanies, async (req, res) => {
 /* Lightweight list of assignable Solution Engineers + Admins, readable by any
    authenticated user (returns only id/username/role — no sensitive fields).
    Used to populate the Solution Fit "Solution Engineer" dropdown. */
-app.get('/api/solution-engineers', _reqAuthCompanies, async (req, res) => {
+app.get('/api/solution-engineers', requireAuth, async (req, res) => {
   try {
     const { query } = db();
     const { rows } = await query(
@@ -257,7 +257,7 @@ app.get('/api/solution-engineers', _reqAuthCompanies, async (req, res) => {
 });
 
 /* First-class customers (stable IDs). SE/admin see all; AE sees their own. */
-app.get('/api/customers', _reqAuthCompanies, async (req, res) => {
+app.get('/api/customers', requireAuth, async (req, res) => {
   try {
     const { listCustomersForOwner, listAllCustomers } = require('./src/customers');
     const { isCrossCustomer } = require('./src/handoff-access');
@@ -273,7 +273,7 @@ app.get('/api/customers', _reqAuthCompanies, async (req, res) => {
   }
 });
 
-app.get('/api/customers/:id', _reqAuthCompanies, async (req, res) => {
+app.get('/api/customers/:id', requireAuth, async (req, res) => {
   try {
     const { getCustomer } = require('./src/customers');
     const { isCrossCustomer } = require('./src/handoff-access');
@@ -759,7 +759,6 @@ app.get('/api/enhance/health', (req, res) => {
 });
 
 /* ── AI Enhance proxy — requires auth ── */
-const { requireAuth } = require('./src/middleware/auth');
 
 app.post('/api/enhance', requireAuth, aiLimiter, async (req, res) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
