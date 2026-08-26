@@ -7,7 +7,7 @@
    from a stale or buggy client.
 
    This module is PURE: calcROI(v) depends only on its input object and
-   OVERLAP_DEDUCTION. It performs no DOM access — getVals() (DOM-coupled)
+   its documented overlap policy. It performs no DOM access — getVals() (DOM-coupled)
    stays in app.js and calls this.
    ═══════════════════════════════════════════════════════════════════ */
 (function (root, factory) {
@@ -15,11 +15,13 @@
     module.exports = factory();            // Node / CommonJS (server + tests)
   } else {
     const api = factory();                 // Browser global
-    root.OVERLAP_DEDUCTION = api.OVERLAP_DEDUCTION;
+    root.OVERLAP_METHOD = api.OVERLAP_METHOD;
     root.calcROI = api.calcROI;
   }
 })(typeof self !== 'undefined' ? self : this, function () {
-  const OVERLAP_DEDUCTION = 0.15; // 15% carrying cost overlap deduction — disclosed in footnotes
+  const OVERLAP_METHOD = 'incremental-after-turns';
+
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
   function calcROI(v) {
     /* Defensive input contract: the browser's getVals() guarantees every
@@ -35,14 +37,28 @@
       'expediteSpendYr','mExpedite','countDaysYr','countPeople','mCount','ordersPerYr','costPerOrder',
       'pickRateGainPct','mThroughput','orderErrorPct','costPerError','mAccuracy',
       'fieldInvValue','fieldLeakageRate','mFieldLeakage',
-      'fieldLocations','fieldReconcileCost','fieldReconcilePerYr'];
+      'fieldLocations','fieldReconcileCost','fieldReconcilePerYr','mFieldCount','currentAccuracy'];
     const _v = Object.assign({}, v);
     for (const k of _num) { const n = parseFloat(_v[k]); _v[k] = (isNaN(n) || n < 0) ? 0 : n; }
-    /* hasFieldInventory is a boolean — must not be parseFloat-ed */
-    _v.hasFieldInventory = !!v.hasFieldInventory;
-    if (_v.ramp1 === undefined) _v.ramp1 = v.ramp1; // preserve undefined-ramp default logic below
-    if (_v.ramp2 === undefined) _v.ramp2 = v.ramp2;
-    if (_v.ramp3 === undefined) _v.ramp3 = v.ramp3;
+    const fractionFields = ['mLabor','mShrinkage','mCarrying','carryRate','mOtif','otifRisk','mIt',
+      'discRate','laborWastePct','mDowntime','mExpedite','mCount','pickRateGainPct','mThroughput',
+      'orderErrorPct','mAccuracy','mFieldLeakage','mFieldCount'];
+    for (const k of fractionFields) _v[k] = clamp(_v[k], 0, 1);
+    for (const k of ['otifBaseline','otifTarget','fieldLeakageRate','currentAccuracy']) {
+      _v[k] = clamp(_v[k], 0, 100);
+    }
+    _v.implMonths = clamp(_v.implMonths, 0, 60);
+    const ramp = (value, fallback) => {
+      if (value === undefined || value === null || value === '') return fallback;
+      const n = parseFloat(value);
+      return Number.isFinite(n) ? clamp(n, 0, 1) : fallback;
+    };
+    _v.ramp1 = ramp(v.ramp1, 0.40);
+    _v.ramp2 = ramp(v.ramp2, 0.75);
+    _v.ramp3 = ramp(v.ramp3, 1.00);
+    /* Accept only explicit boolean-like values. The string "false" must not become true. */
+    _v.hasFieldInventory = v.hasFieldInventory === true || v.hasFieldInventory === 1
+      || String(v.hasFieldInventory).toLowerCase() === 'true';
     _v.modelVersion = v.modelVersion;  // preserve (may be undefined for legacy)
     v = _v;
 
@@ -60,24 +76,23 @@
      This is a DIRECT saving — reduction in actual loss dollars.              */
   const shrinkSav = v.effectiveShrinkBase * v.mShrinkage;
 
-  /* ── 3. Carrying cost savings — Option 1 overlap disclosure ──
-     Calculate gross carrying cost savings, then apply a fixed 15%
-     overlap deduction to account for partial double-counting with
-     write-off reduction and inventory turns. The deduction is disclosed
-     transparently in the executive document footnote.                  */
+  /* ── 3–4. Inventory carrying cost and turns ──
+     Both approaches estimate carrying-cost savings on the same inventory
+     pool. Count the turns-based estimate first, then include only any
+     incremental carrying-cost estimate above it. This makes the combined
+     benefit equal to the higher estimate instead of adding overlapping
+     estimates or relying on an arbitrary fixed deduction.              */
   const annualCarryCost   = v.inventory * v.carryRate;
   const carrySavGross     = annualCarryCost * v.mCarrying;
-  const carrySavCorrected = carrySavGross * (1 - OVERLAP_DEDUCTION);
-  const overlapAdj        = carrySavGross - carrySavCorrected;   // for footnote
 
-  /* ── 4. Inventory turns: capital freed carrying cost ──
-     Calculated independently — the 15% deduction above already
-     accounts for partial overlap between turns and carry savings.     */
   let capitalFreed = 0, turnsSav = 0;
   if (v.invTurnsCurrent > 0 && v.invTurnsBenchmark > 0 && v.invTurnsCurrent < v.invTurnsBenchmark) {
     capitalFreed = v.inventory * (1 - v.invTurnsCurrent / v.invTurnsBenchmark);
     turnsSav     = capitalFreed * v.carryRate;
   }
+  const carrySav = Math.max(0, carrySavGross - turnsSav);
+  const inventoryCarrySav = carrySav + turnsSav;
+  const overlapAdj = Math.min(carrySavGross, turnsSav);
   /* ── 5. OTIF savings ── */
   let otifSav = 0;
   if (v.otifBaseline > 0 && v.otifTarget > 0 && v.otifTarget > v.otifBaseline) {
@@ -151,41 +166,45 @@
      3. Count / reconciliation labor — periodic manual counting at remote
         sites. locations × costPerReconcile × reconciliationsPerYr.           */
   const fiLeakageSav = (v.hasFieldInventory && v.fieldInvValue && v.fieldLeakageRate)
-    ? (v.fieldInvValue * (v.fieldLeakageRate / 100)) * (v.mFieldLeakage || 0.30)
+    ? (v.fieldInvValue * (v.fieldLeakageRate / 100)) * v.mFieldLeakage
     : 0;
   const fiCarrySav = (v.hasFieldInventory && v.fieldInvValue)
-    ? v.fieldInvValue * (v.carryRate || 0.25) * (v.mCarrying || 0)
+    ? v.fieldInvValue * v.carryRate * v.mCarrying
     : 0;
   const fiCountSav = (v.hasFieldInventory && v.fieldLocations && v.fieldReconcileCost)
-    ? v.fieldLocations * v.fieldReconcileCost * (v.fieldReconcilePerYr || 1)
+    ? v.fieldLocations * v.fieldReconcileCost * v.fieldReconcilePerYr * v.mFieldCount
     : 0;
   const fieldInvSav = fiLeakageSav + fiCarrySav + fiCountSav;
 
-  const annualBenefit = laborSav + shrinkSav + carrySavCorrected + turnsSav + otifSav + itSav + newLeverSav + wmsLeverSav + fieldInvSav;
+  const annualBenefit = laborSav + shrinkSav + inventoryCarrySav + otifSav + itSav + newLeverSav + wmsLeverSav + fieldInvSav;
 
   /* ── Ramp-up & implementation timeline ──
      implMonths: months from contract signing to go-live (0 benefit)
      Post go-live, efficiency ramps: ramp1 (month 1), ramp2 (month 2), ramp3+ (full)
      Year 1 benefit is the sum of partial-month benefits within months 1–12.  */
   const impl = Math.round(v.implMonths || 0);
-  const ramp1 = v.ramp1 !== undefined ? v.ramp1 : 0.40;
-  const ramp2 = v.ramp2 !== undefined ? v.ramp2 : 0.75;
-  const ramp3 = v.ramp3 !== undefined ? v.ramp3 : 1.00;
+  const ramp1 = v.ramp1;
+  const ramp2 = v.ramp2;
+  const ramp3 = v.ramp3;
   const monthlyBenefit = annualBenefit / 12;
 
-  // Build month-by-month benefit for year 1
-  let year1Benefit = 0;
+  // Build one continuous five-year profile so implementation and ramp behavior
+  // remain correct when either extends beyond the first calendar year.
   const monthlyProfile = [];
-  for (let m = 1; m <= 12; m++) {
+  for (let m = 1; m <= 60; m++) {
     const postGoLive = m - impl;  // months after go-live (negative = still in impl)
     let eff = 0;
     if (postGoLive === 1)      eff = ramp1;
     else if (postGoLive === 2) eff = ramp2;
     else if (postGoLive >= 3)  eff = ramp3;
     const mBenefit = monthlyBenefit * eff;
-    year1Benefit += mBenefit;
     monthlyProfile.push({ month: m, postGoLive, eff, benefit: mBenefit });
   }
+  const yearBenefits = Array.from({ length: 5 }, (_, yearIndex) =>
+    monthlyProfile.slice(yearIndex * 12, yearIndex * 12 + 12)
+      .reduce((sum, month) => sum + month.benefit, 0)
+  );
+  const year1Benefit = yearBenefits[0];
 
   // Effective year 1 benefit fraction (for display)
   const year1Factor = annualBenefit > 0 ? year1Benefit / annualBenefit : 0;
@@ -201,22 +220,14 @@
 
   // Payback from CONTRACT SIGNING (includes impl months + ramp)
   // When there is no investment, payback is undefined — return null.
-  let cumBenefit = 0, paybackFromSigning = null;
+  let cumulativeCash = -v.otc, paybackFromSigning = null;
   if (totalInvestY1 > 0) {
-    // Year 1 month by month
-    for (let m = 1; m <= 12; m++) {
-      cumBenefit += monthlyProfile[m-1].benefit;
-      if (cumBenefit >= totalInvestY1 && paybackFromSigning === null) {
+    for (let m = 1; m <= 60; m++) {
+      // Treat the annual subscription as paid at the start of each service year.
+      if ((m - 1) % 12 === 0) cumulativeCash -= v.invest;
+      cumulativeCash += monthlyProfile[m - 1].benefit;
+      if (cumulativeCash >= 0 && paybackFromSigning === null) {
         paybackFromSigning = m;
-      }
-    }
-    // Year 2+ at full rate if not yet broken even
-    if (paybackFromSigning === null) {
-      for (let m = 13; m <= 60; m++) {
-        cumBenefit += monthlyBenefit * ramp3;
-        if (cumBenefit >= totalInvestY1 && paybackFromSigning === null) {
-          paybackFromSigning = m;
-        }
       }
     }
   }
@@ -227,12 +238,11 @@
     : null;
 
   // NPV — use ramp-adjusted cash flows
-  const dr = Math.max(v.discRate, 0.001);
+  const dr = v.discRate;
   let npv3 = -v.otc, npv5 = -v.otc;
   const cashflows = [];
   for (let yr = 1; yr <= 5; yr++) {
-    // Year 1 uses ramp-adjusted benefit; years 2–5 use full annual benefit
-    const yBenefit = yr === 1 ? year1Benefit : annualBenefit;
+    const yBenefit = yearBenefits[yr - 1];
     const netCF = yBenefit - v.invest;
     const pv    = netCF / Math.pow(1 + dr, yr);
     if (yr <= 3) npv3 += pv;
@@ -243,7 +253,7 @@
       invest: v.invest + (yr === 1 ? v.otc : 0),
       net: netCF - (yr === 1 ? v.otc : 0),
       pv, cumPV: 0,
-      isRamped: yr === 1 && year1Factor < 0.99
+      isRamped: yBenefit < annualBenefit * 0.99
     });
   }
   let cum = -v.otc;
@@ -251,7 +261,7 @@
 
   return {
     laborSav, shrinkSav,
-    carrySav: carrySavCorrected, turnsSav, capitalFreed, otifSav, itSav,
+    carrySav, carrySavGross, turnsSav, inventoryCarrySav, capitalFreed, otifSav, itSav,
     downtimeSav, expediteSav, countSav, newLeverSav,
     throughputSav, accuracySav, wmsLeverSav,
     fiLeakageSav, fiCarrySav, fiCountSav, fieldInvSav,
@@ -266,12 +276,13 @@
     // Ramp-aware undiscounted benefit totals — Year 1 uses year1Benefit,
     // Years 2+ use full annualBenefit. Prevents overstating totals when
     // implementation/ramp reduces Year 1 below steady-state.
-    totalBenefit3: year1Benefit + annualBenefit * 2,
-    totalBenefit5: year1Benefit + annualBenefit * 4,
+    totalBenefit3: yearBenefits.slice(0, 3).reduce((sum, value) => sum + value, 0),
+    totalBenefit5: yearBenefits.reduce((sum, value) => sum + value, 0),
+    yearBenefits,
     cashflows,
     monthlyProfile, implMonths: impl, ramp1, ramp2, ramp3
   };
 }
 
-  return { OVERLAP_DEDUCTION, calcROI };
+  return { OVERLAP_METHOD, calcROI };
 });

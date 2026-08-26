@@ -229,7 +229,7 @@ The model computes annual benefit as the sum of these levers:
 
 1. **laborSav** = users × labor rate × labor-recovery%
 2. **shrinkSav** = annual write-off × shrink-recovery%
-3. **carrySav** = inventory × carrying% (−15% overlap)
+3. **inventoryCarrySav** = max(direct carrying reduction, turns-based carrying savings)
 4. **turnsSav** = inventory × (1 − current/benchmark turns) × carry rate
 5. **otifSav** = revenue × (OTIF target − baseline) × OTIF-recovery%
 6. **itSav** = IT cost × IT-recovery%

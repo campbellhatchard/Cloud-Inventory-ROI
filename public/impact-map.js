@@ -10,8 +10,8 @@
 
 /* Plain-language description of what each calculator field is used for. */
 const IMPACT_FIELD_INFO = {
-  userCount:          { label: 'Labor savings',              desc: 'The number of people who touch inventory. Multiplied by labor rate and recovery % to size labor savings.' },
-  laborWastePct:      { label: 'Labor savings',              desc: 'Measured share of staff time lost to manual inventory work. Scales labor savings to the actual waste, not just headcount.' },
+  userCount:          { label: 'Labor capacity value',       desc: 'The number of people who touch inventory. Multiplied by labor rate and recovery % to value capacity; it is cashable only when cost is avoided.' },
+  laborWastePct:      { label: 'Labor capacity value',       desc: 'Measured share of staff time lost to manual inventory work. Scales recovered capacity to actual waste, not just headcount.' },
   currentAccuracy:    { label: 'Shrink & carrying (suggested)', desc: 'The prospect’s current inventory accuracy. The gap below the 99.5% benchmark suggests a shrink/carrying recovery % the rep can apply.' },
   annualWriteOff:     { label: 'Write-off / shrink savings', desc: 'Annual dollars written off to loss, damage, or shrinkage. Multiplied by the shrink recovery % to size write-off savings.' },
   inventoryValue:     { label: 'Carrying cost + turns',      desc: 'Total inventory on hand. Drives carrying-cost savings and, with turns, the working-capital release.' },
@@ -72,7 +72,7 @@ function renderImpactMap() {
       <ul class="impact-lever-list">
         <li><strong>Labor</strong> = users × rate × (waste%) × recovery%</li>
         <li><strong>Write-off</strong> = write-off $ × recovery%</li>
-        <li><strong>Carrying</strong> = inventory × carrying% (−15% overlap)</li>
+        <li><strong>Carrying</strong> = max(direct carrying reduction, turns-based carrying savings)</li>
         <li><strong>Turns</strong> = inventory × turns gap × carry rate</li>
         <li><strong>OTIF</strong> = revenue × (target−baseline) × recovery%</li>
         <li><strong>IT</strong> = IT cost × recovery%</li>

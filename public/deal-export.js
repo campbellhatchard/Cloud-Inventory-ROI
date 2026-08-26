@@ -432,11 +432,11 @@ function buildRoiMethodology() {
     { name:'Carrying-cost reduction',
       desc:'Lower cost of holding inventory (capital, storage, insurance, obsolescence).',
       provided: carryBase>0,
-      formula:'carrying cost × recovery % − 15% overlap deduction',
-      plugged:`${M(carryBase)} × ${PC(v.mCarrying)} − 15%`,
+      formula:'incremental carrying estimate after turns overlap',
+      plugged:`max(0, ${M(carryBase)} × ${PC(v.mCarrying)} − ${M(r.turnsSav)})`,
       value: r.carrySav },
-    { name:'Working capital (inventory turns)',
-      desc:'Capital freed by improving inventory turns toward the benchmark.',
+    { name:'Inventory turns — annual carrying savings',
+      desc:'Annual carrying-cost savings from capital freed by improving inventory turns toward the benchmark.',
       provided: (v.inventory>0 && v.invTurnsCurrent>0),
       formula:'freed capital × carry rate',
       plugged:`${M(r.capitalFreed)} × ${PC(v.carryRate)}`,
@@ -586,7 +586,7 @@ async function roiMethodologyPDF() {
     return `<tr><td>${esc(k)}${mark}</td><td class="${val==='Not Provided'?'np-cell':''}">${esc(val)}</td></tr>`;
   }).join('');
 
-  const rampNote = `Year-1 benefit is ramp-adjusted (${Math.round((v.ramp1||0.4)*100)}% / ${Math.round((v.ramp2||0.75)*100)}% / ${Math.round((v.ramp3||1)*100)}% over the first three periods), so it is lower than the full annual benefit.`;
+  const rampNote = `Year-1 benefit is ramp-adjusted (${Math.round((v.ramp1 ?? 0.4)*100)}% / ${Math.round((v.ramp2 ?? 0.75)*100)}% / ${Math.round((v.ramp3 ?? 1)*100)}% over the first three periods), so it is lower than the full annual benefit.`;
 
   /* Prospect-verification headline (value-engineering credibility signal) */
   const p = m.provenance || { prospectVerified:0, totalTracked:0 };
@@ -619,7 +619,7 @@ async function roiMethodologyPDF() {
     <h2>3. Assumptions &amp; conservatism</h2>
     <ul class="notes">
       <li><strong>Accuracy benchmark 99.5%.</strong> Recovery percentages are grounded in the gap between your current accuracy and this benchmark.</li>
-      <li><strong>15% carrying-cost overlap deduction.</strong> Applied to avoid double-counting between carrying-cost, write-off, and turns benefits (${M(r.overlapAdj)} removed).</li>
+      <li><strong>Inventory-carrying overlap control.</strong> Direct carrying reduction and turns-based carrying savings are not added together; ${M(r.overlapAdj)} of overlap was removed.</li>
       <li><strong>Ramp-up applied.</strong> ${esc(rampNote)}</li>
       <li><strong>Prospect-provided figures</strong> are used wherever supplied; industry benchmarks fill only what was not provided.</li>
     </ul>
@@ -750,7 +750,7 @@ async function roiMethodologyPPT() {
     s2.addText('Conservative adjustments applied',{x:7.4,y:1.6,w:2.6,h:0.3,fontSize:12,bold:true,color:PPT.CYAN,fontFace:PPT.FONT});
     s2.addText([
       {text:'99.5% accuracy benchmark',options:{bullet:{indent:8},breakLine:true}},
-      {text:`15% carrying-cost overlap deduction (${M(r.overlapAdj)})`,options:{bullet:{indent:8},breakLine:true}},
+      {text:`Inventory-carrying overlap removed (${M(r.overlapAdj)})`,options:{bullet:{indent:8},breakLine:true}},
       {text:'Ramp-up applied to Year 1',options:{bullet:{indent:8},breakLine:true}},
       {text:'Prospect figures used where provided',options:{bullet:{indent:8}}}
     ],{x:7.4,y:2.0,w:2.6,h:2.5,fontSize:9.5,color:PPT.GRAY_TXT,fontFace:PPT.FONT,paraSpaceAfter:6,valign:'top'});

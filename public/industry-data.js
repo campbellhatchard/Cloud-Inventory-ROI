@@ -25,14 +25,14 @@ const BENCHMARK_CITATIONS = {
     note: 'Revenue at risk from OTIF non-compliance as % of revenue. Includes chargebacks, lost orders, and retailer penalties.'
   },
   mLabor: {
-    source: 'Aberdeen Group / Cloud Inventory customer median (47 deployments, 2023–2025)',
-    year: '2025',
-    note: 'Percentage of inventory-user labor time recovered through automation. Conservative end of observed range.'
+    source: 'Cloud Inventory published customer case studies (Art.com and Trek)',
+    year: 'accessed 2026',
+    note: 'Published examples report productivity improvement, but every labor assumption must be confirmed with measured customer time and treated as capacity unless cost is actually avoided.'
   },
   mShrinkage: {
-    source: 'Cloud Inventory customer median (47 deployments, 2023–2025)',
-    year: '2025',
-    note: 'Shrinkage reduction achieved by customers after implementation. Conservative median; some customers achieve 60–80%.'
+    source: 'Cloud Inventory published Rawlings customer case study',
+    year: 'accessed 2026',
+    note: 'The published example reports lower inventory write-downs. Replace the starting assumption with the prospect’s validated loss baseline and agreed recovery target.'
   },
   mCarrying: {
     source: 'Gartner Supply Chain Research / Cloud Inventory deployments',
@@ -59,7 +59,9 @@ const IND = {
   mining:       { labor:20,shrinkage:35,carrying:15,otif:8, it:55,shrinkRate:2.5,carryRate:23,otifRisk:1.5,otifBaseline:88,otifTarget:95,invTurns:3,  downtime:35,expedite:25,count:35,throughput:30,accuracy:35,firstFix:30,utilization:15,leakage:28,label:'Minerals & Mining' },
   distribution: { labor:35,shrinkage:50,carrying:22,otif:15,it:70,shrinkRate:1.5,carryRate:30,otifRisk:3.0,otifBaseline:94,otifTarget:99,invTurns:12, downtime:20,expedite:35,count:50,throughput:35,accuracy:40,firstFix:20,utilization:10,leakage:20,label:'Wholesale Distribution' },
   food:         { labor:28,shrinkage:42,carrying:18,otif:12,it:60,shrinkRate:2.2,carryRate:27,otifRisk:2.5,otifBaseline:92,otifTarget:98,invTurns:15, downtime:25,expedite:30,count:45,throughput:30,accuracy:35,firstFix:20,utilization:10,leakage:22,label:'Food & Beverage' },
-  retail:       { labor:30,shrinkage:40,carrying:22,otif:16,it:65,shrinkRate:1.5,carryRate:26,otifRisk:2.5,otifBaseline:95,otifTarget:99,invTurns:6,  downtime:25,expedite:35,count:45,throughput:30,accuracy:45,firstFix:25,utilization:12,leakage:25,label:'Medical Devices / Life Sciences' } /* PLACEHOLDER benchmarks — tune to validated figures */
+  /* No defensible public benchmark set is bundled for this segment. Zero
+     defaults force customer-specific inputs instead of silently inventing ROI. */
+  retail:       { labor:0,shrinkage:0,carrying:0,otif:0,it:0,shrinkRate:0,carryRate:0,otifRisk:0,otifBaseline:0,otifTarget:0,invTurns:0,downtime:0,expedite:0,count:0,throughput:0,accuracy:0,firstFix:0,utilization:0,leakage:0,label:'Medical Devices / Life Sciences — customer inputs required' }
 };
 
 /* ── Competitive data ── */

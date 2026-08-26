@@ -10,7 +10,7 @@
 /* ════════════════════════════════════════
    Storage
    ════════════════════════════════════════ */
-/* OVERLAP_DEDUCTION + calcROI now provided by shared roi-engine.js */
+/* OVERLAP_METHOD + calcROI now provided by shared roi-engine.js */
 
 /* ── Scenario in-memory cache ──────────────────────────────────────
    savedScenarios is populated from /api/scenarios on page load and
@@ -268,10 +268,14 @@ function getVals() {
   const invTurnsCurrent   = g('invTurnsCurrent');
   const invTurnsBenchmark = g('invTurnsBenchmark');
   // Implementation timeline & ramp
-  const implMonths = Math.max(0, Math.min(18, g('implMonths') || 3));
-  const ramp1 = Math.min(100, g('ramp1') || 40) / 100;
-  const ramp2 = Math.min(100, g('ramp2') || 75) / 100;
-  const ramp3 = Math.min(100, g('ramp3') || 100) / 100;
+  const valueOrDefault = (id, fallback) => {
+    const raw = document.getElementById(id)?.value;
+    return raw === undefined || raw === null || String(raw).trim() === '' ? fallback : g(id);
+  };
+  const implMonths = Math.max(0, Math.min(18, valueOrDefault('implMonths', 3)));
+  const ramp1 = Math.min(100, valueOrDefault('ramp1', 40)) / 100;
+  const ramp2 = Math.min(100, valueOrDefault('ramp2', 75)) / 100;
+  const ramp3 = Math.min(100, valueOrDefault('ramp3', 100)) / 100;
 
   return {
     name: gs('scenarioName') || 'Unnamed scenario',
@@ -301,10 +305,11 @@ function getVals() {
     hasFieldInventory:   window._hasFieldInventory || false,
     fieldInvValue:       g('fieldInvValue'),
     fieldLeakageRate:    g('fieldLeakageRate'),
-    mFieldLeakage:       0.30,                        // default 30% recovery — no override UI yet
+    mFieldLeakage:       g('mFieldLeakage') / 100,
     fieldLocations:      g('fieldLocations'),
     fieldReconcileCost:  g('fieldReconcileCost'),
-    fieldReconcilePerYr: g('fieldReconcilePerYr') || 1,
+    fieldReconcilePerYr: g('fieldReconcilePerYr'),
+    mFieldCount:         g('mFieldCount') / 100,
     /* ── v2.6 WMS levers ── */
     ordersPerYr:         g('ordersPerYr'),
     costPerOrder:        g('costPerOrder'),
@@ -437,10 +442,11 @@ function recalc() {
     <div class="result-card r-neu"><div class="r-label">Payback from signing<br><span style="font-size:10px;font-weight:400;color:var(--gray-400)">From go-live: ${payLiveStr}</span></div><div class="r-value">${paySignStr}</div></div>
     <div class="result-card ${rClass(r.npv3)}"><div class="r-label">3-yr NPV (${fmtPct(v.discRate*100)})</div><div class="r-value">${fmtFull(r.npv3)}</div></div>
     <div class="result-card ${rClass(r.npv5)}"><div class="r-label">5-yr NPV (${fmtPct(v.discRate*100)})</div><div class="r-value">${fmtFull(r.npv5)}</div></div>
-    <div class="result-card r-pos" title="Users × labor cost × productivity gain %"><div class="r-label">Labor savings</div><div class="r-value">${fmtFull(r.laborSav)}</div></div>
+    <div class="result-card r-pos" title="Economic value of recovered capacity; cashable only when overtime, contractors, or headcount cost is avoided"><div class="r-label">Labor capacity value</div><div class="r-value">${fmtFull(r.laborSav)}</div></div>
     <div class="result-card r-pos" title="Write-off baseline (${fmtFull(v.effectiveShrinkBase)}) × ${fmtPct(v.mShrinkage*100)} reduction"><div class="r-label">Write-off reduction</div><div class="r-value">${fmtFull(r.shrinkSav)}</div></div>
-    <div class="result-card r-pos" title="Overlap-corrected carry base × ${fmtPct(v.mCarrying*100)}${r.overlapAdj > 100 ? ' (adj. -'+fmtFull(r.overlapAdj)+' overlap)' : ''}"><div class="r-label">Carrying cost savings</div><div class="r-value">${fmtFull(r.carrySav)}</div></div>
-    ${r.turnsSav > 0 ? `<div class="result-card r-pos" title="Freed capital (${fmtFull(r.capitalFreed)}) × carry rate — overlap-corrected"><div class="r-label">Turns: capital freed</div><div class="r-value">${fmtFull(r.turnsSav)}</div></div>` : ''}
+    <div class="result-card r-pos" title="Incremental carrying-cost benefit after removing overlap with turns"><div class="r-label">Additional carrying-cost savings</div><div class="r-value">${fmtFull(r.carrySav)}</div></div>
+    ${r.turnsSav > 0 ? `<div class="result-card r-pos" title="Annual carrying-cost avoidance on ${fmtFull(r.capitalFreed)} of working capital identified"><div class="r-label">Turns: annual carrying savings</div><div class="r-value">${fmtFull(r.turnsSav)}</div></div>` : ''}
+    ${r.capitalFreed > 0 ? `<div class="result-card r-neu" title="Balance-sheet opportunity; not added directly to annual ROI"><div class="r-label">Working capital identified</div><div class="r-value">${fmtFull(r.capitalFreed)}</div></div>` : ''}
     <div class="result-card r-blue" title="${v.otifBaseline > 0 && v.otifTarget > 0 ? 'OTIF gap '+v.otifBaseline+'%→'+v.otifTarget+'% × revenue × improvement' : 'Revenue × at-risk % assumption'}"><div class="r-label">OTIF protection</div><div class="r-value">${fmtFull(r.otifSav)}</div></div>
     <div class="result-card r-pos"><div class="r-label">IT displaced</div><div class="r-value">${fmtFull(r.itSav)}</div></div>`;
 
@@ -782,11 +788,11 @@ function renderExec() {
 
   const DC = (typeof DRIVER_CHART_COLORS !== 'undefined') ? DRIVER_CHART_COLORS : ['#0089A6','#2E7D32','#12786F','#A6791E','#6A4C93','#45688A'];
   const valueRows=[
-    {label:'Labor & productivity savings',  val:r.laborSav,  color:DC[0]},
+    {label:'Labor capacity value',           val:r.laborSav,  color:DC[0]},
     {label:'Shrinkage / write-off reduction',val:r.shrinkSav,color:DC[1]},
     {label:'Inventory carrying cost reduction',val:r.carrySav,color:DC[2]},
     {label:'OTIF / order accuracy improvement',val:r.otifSav, color:DC[3]},
-    {label:'Inventory turns — capital freed', val:r.turnsSav, color:DC[4]},
+    {label:'Inventory turns — annual carrying savings', val:r.turnsSav, color:DC[4]},
     {label:'IT & legacy system displacement', val:r.itSav,   color:DC[5]}
   ].filter(row => row.val > 0).sort((a,b) => b.val - a.val);
   const maxVal=Math.max(...valueRows.map(x=>x.val),1);
@@ -892,7 +898,7 @@ function renderExec() {
 
   // Overlap disclosure footnote
   const overlapNote = r.overlapAdj > 100
-    ? `A ${Math.round(OVERLAP_DEDUCTION*100)}% overlap deduction (${fmtFull(r.overlapAdj)}) has been applied to carrying cost savings to account for partial overlap with write-off reduction and inventory turns improvements. `
+    ? `${fmtFull(r.overlapAdj)} of overlapping carrying-cost estimates was removed; only the higher of the direct carrying-reduction and turns-based estimates is counted. `
     : '';
 
   const cfRows=r.cashflows.map(c=>`
@@ -1031,7 +1037,7 @@ function renderExec() {
             <tr class="tfoot-row"><td class="left">5-year total</td><td>${fmtFull(r.totalBenefit5)}</td><td class="neg">(${fmtFull(r.totalCost5)})</td><td class="${r.totalBenefit5-r.totalCost5>=0?'pos':'neg'}">${fmtFull(r.totalBenefit5-r.totalCost5)}</td><td></td><td class="${r.npv5>=0?'pos':'neg'}">${fmtFull(r.npv5)}</td></tr>
           </tfoot>
         </table>
-        <p class="e-footnote">${overlapNote}NPV discounts at ${fmtPct(v.discRate*100)}/yr. One-time costs (services: ${fmtFull(v.psvc)}, hardware: ${fmtFull(v.hw)}, training: ${fmtFull(v.train)}) are year-0 outflows. Year 1 benefit reflects ${year1Pct}% of steady-state due to ${v.implMonths}-month implementation and efficiency ramp.</p>
+        <p class="e-footnote">${overlapNote}Labor productivity is presented as capacity value and becomes cash savings only when overtime, contractor, or headcount cost is avoided. OTIF value applies the stated realization rate to the revenue-risk gap; it is not booked as gross revenue. NPV discounts at ${fmtPct(v.discRate*100)}/yr. One-time costs (services: ${fmtFull(v.psvc)}, hardware: ${fmtFull(v.hw)}, training: ${fmtFull(v.train)}) are year-0 outflows. Benefits follow the configured implementation and monthly ramp across the full model horizon.</p>
       </div>
       <div class="e-section">
         <div class="e-h2">Investment summary</div>
@@ -1058,7 +1064,7 @@ function renderExec() {
               <tr><td>Annual revenue</td><td>${fmtFull(v.revenue)}</td></tr>
               <tr><td>Inventory users</td><td>${Math.round(v.users).toLocaleString()}</td></tr>
               <tr><td>Avg. labor cost/user/yr</td><td>${fmtFull(v.labor)}</td></tr>
-              <tr><td>Annual inventory value</td><td>${fmtFull(v.inventory)}</td></tr>
+              <tr><td>Warehouse inventory value on hand</td><td>${fmtFull(v.inventory)}</td></tr>
               <tr><td>Current IT / legacy cost</td><td>${fmtFull(v.itCost)}</td></tr>
               <tr><td>Discount rate</td><td>${fmtPct(v.discRate*100)}</td></tr>
             </tbody>
@@ -1066,10 +1072,10 @@ function renderExec() {
           <table class="e-assump-tbl">
             <thead><tr><th colspan="2">Benchmarks (${indLabel})</th></tr></thead>
             <tbody>
-              <tr><td>Labor productivity gain</td><td>${fmtPct(v.mLabor*100)}</td></tr>
+              <tr><td>Labor capacity recovered (cashable only when cost is avoided)</td><td>${fmtPct(v.mLabor*100)}</td></tr>
               <tr><td>Shrinkage reduction</td><td>${fmtPct(v.mShrinkage*100)}</td></tr>
               <tr><td>Carrying cost reduction</td><td>${fmtPct(v.mCarrying*100)}</td></tr>
-              <tr><td>OTIF improvement</td><td>${fmtPct(v.mOtif*100)}</td></tr>
+              <tr><td>OTIF value realization</td><td>${fmtPct(v.mOtif*100)}</td></tr>
               <tr><td>IT cost displaced</td><td>${fmtPct(v.mIt*100)}</td></tr>
               <tr><td>Shrinkage rate (baseline)</td><td>${fmtPct(v.shrinkRate*100)}</td></tr>
             </tbody>

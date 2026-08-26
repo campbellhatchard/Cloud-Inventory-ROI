@@ -19,8 +19,8 @@ const BENCHMARK_SOURCES = {
     basis: 'Typical on-time-in-full ranges by sector. Baseline should be replaced with the customer\u2019s measured OTIF where available.' },
   invTurns:    { label: 'Inventory turns',           tier: 'industry',
     basis: 'Sector-typical annual turns. Wide variance by business model \u2014 confirm the customer\u2019s current and target turns.' },
-  overlap:     { label: '15% overlap deduction',     tier: 'validated',
-    basis: 'A conservative adjustment applied to carrying-cost savings to avoid double-counting with write-off and turns benefits. Fixed and disclosed in every business case.' },
+  overlap:     { label: 'Inventory-carrying overlap control', tier: 'validated',
+    basis: 'Direct carrying-reduction and turns-based carrying estimates use the same inventory pool. The model counts only the higher estimate, never their sum.' },
   recovery:    { label: 'Recovery / improvement %',  tier: 'industry',
     basis: 'Share of each inefficiency Cloud Inventory is modeled to recover. Set conservatively and adjustable via the Conservative/Base/Aggressive scenario toggle.' }
 };
@@ -28,7 +28,7 @@ const BENCHMARK_SOURCES = {
 /* Industry keys whose entire benchmark set is provisional (not yet validated
    against real deployment data). These trigger a visible rep-facing banner. */
 const PLACEHOLDER_INDUSTRIES = {
-  retail: 'Medical Devices / Life Sciences benchmarks are provisional placeholders and have not yet been validated against deployment data.'
+  retail: 'Medical Devices / Life Sciences has no bundled benchmark values in v5.6.3; customer-specific assumptions are required.'
 };
 
 function isPlaceholderIndustry(key) {
@@ -45,7 +45,7 @@ function updateBenchmarkBanner() {
   if (isPlaceholderIndustry(key)) {
     host.style.display = 'flex';
     host.innerHTML = `<span class="bpb-icon" aria-hidden="true">\u26A0</span>
-      <span><strong>Provisional benchmarks.</strong> ${escBench(PLACEHOLDER_INDUSTRIES[key])}
+      <span><strong>Customer inputs required.</strong> ${escBench(PLACEHOLDER_INDUSTRIES[key])}
       Confirm key figures with the customer through discovery before sharing this business case externally.</span>`;
   } else {
     host.style.display = 'none';
@@ -61,7 +61,7 @@ function benchmarkProvenanceLines(industryKey) {
     return `${s.label} — ${tierTxt}. ${s.basis}`;
   });
   if (isPlaceholderIndustry(industryKey)) {
-    lines.unshift('NOTE: This industry\u2019s benchmark set is provisional and pending validation. Figures should be confirmed with the customer before external use.');
+    lines.unshift('NOTE: No bundled benchmark values are provided for this industry in v5.6.3. Use customer-specific assumptions and validate them before external use.');
   }
   return lines;
 }

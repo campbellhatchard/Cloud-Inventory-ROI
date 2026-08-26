@@ -125,7 +125,7 @@ PROSPECT CONTEXT:
 - Industry: ${indLabel}
 - Annual revenue: ${fmtFull(v.revenue)}
 - Inventory users: ${Math.round(v.users)}
-- Annual inventory value: ${fmtFull(v.inventory)}
+- Warehouse inventory value on hand: ${fmtFull(v.inventory)}
 - Current solution being displaced: ${compName}
 - Deal stage: ${v.dealStage || 'Discovery'}
 - Annual benefit identified: ${fmtFull(r.annualBenefit)}

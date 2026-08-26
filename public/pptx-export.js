@@ -294,7 +294,7 @@ async function exportToPowerPoint() {
         { t: 'Labor Efficiency',    c: PPT.GREEN,  v: r.laborSav,               d: 'Mobile, low-code workflows eliminate manual tasks and overtime' },
         { t: 'Service Excellence',  c: PPT.ORANGE, v: r.otifSav,                d: 'Real-time visibility accelerates throughput and improves fulfillment' },
         { t: 'Risk Reduction',      c: PPT.CYAN,   v: r.itSav,                  d: 'IT displacement plus better traceability & audit trails' },
-        { t: 'Working Capital',     c: PPT.GREEN,  v: r.turnsSav,               d: r.capitalFreed > 0 ? `${pptFmtMoney(r.capitalFreed)} capital freed through faster inventory turns` : 'Low-code platform adapts to growth without replatforming' }
+        { t: 'Turns Carrying Savings', c: PPT.GREEN, v: r.turnsSav, d: r.capitalFreed > 0 ? `${pptFmtMoney(r.capitalFreed)} working capital identified; ${pptFmtMoney(r.turnsSav)} annual carrying-cost savings` : 'Annual carrying-cost savings from improved inventory turns' }
       ];
       /* 2×2 grid + 1 centered */
       const positions = [

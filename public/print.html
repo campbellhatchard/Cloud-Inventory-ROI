@@ -272,9 +272,9 @@ function fp(n){return Math.round(n)+'%';}
 
 function donutChart(r,sz=180){
   const COLS=['#0089A6','#2E7D32','#12786F','#A6791E','#6A4C93','#45688A'];
-  const segs=[{l:'Labor savings',v:r.laborSav,c:COLS[0]},{l:'Write-off reduction',v:r.shrinkSav,c:COLS[1]},
+  const segs=[{l:'Labor capacity value',v:r.laborSav,c:COLS[0]},{l:'Write-off reduction',v:r.shrinkSav,c:COLS[1]},
     {l:'Carrying cost',v:r.carrySav,c:COLS[2]},{l:'OTIF protection',v:r.otifSav,c:COLS[3]},
-    {l:'Turns (capital)',v:r.turnsSav,c:COLS[4]},{l:'IT displaced',v:r.itSav,c:COLS[5]}].filter(s=>s.v>0);
+    {l:'Turns carrying savings',v:r.turnsSav,c:COLS[4]},{l:'IT displaced',v:r.itSav,c:COLS[5]}].filter(s=>s.v>0);
   const tot=segs.reduce((s,x)=>s+x.v,0);
   if(!tot)return'<p style="color:#6B7A8D;font-size:11px;">No data.</p>';
   const cx=sz/2,cy=sz/2,R=sz*.43,ri=sz*.26;
@@ -293,7 +293,7 @@ function donutChart(r,sz=180){
 function waterfallBars(r){
   const bars=[{l:'Labor & productivity',v:r.laborSav,c:'#0089A6'},{l:'Write-off reduction',v:r.shrinkSav,c:'#2E7D32'},
     {l:'Carrying cost savings',v:r.carrySav,c:'#12786F'},{l:'OTIF protection',v:r.otifSav,c:'#A6791E'},
-    {l:'Turns: capital freed',v:r.turnsSav,c:'#6A4C93'},{l:'IT displaced',v:r.itSav,c:'#45688A'}]
+    {l:'Turns: annual carrying savings',v:r.turnsSav,c:'#6A4C93'},{l:'IT displaced',v:r.itSav,c:'#45688A'}]
     .filter(b=>b.v>0).sort((a,b)=>b.v-a.v);
   /* mx = widest bar (always the top driver = 100% width for visual scaling)
      tot = sum of all drivers = denominator for the PERCENTAGE LABEL
@@ -457,7 +457,7 @@ function render(v,mode){
   }
   const nextSteps = _buildPrintNextSteps(sv);
   const timeline=(typeof buildTimeline==='function')?buildTimeline():[];
-  const ovNote=(typeof OVERLAP_DEDUCTION!=='undefined'&&r.overlapAdj>100)?`A ${Math.round(OVERLAP_DEDUCTION*100)}% overlap deduction (${ff(r.overlapAdj)}) applied to carrying cost savings. `:'';
+  const ovNote=r.overlapAdj>100?`${ff(r.overlapAdj)} of overlapping carrying-cost estimates was removed; only the higher direct or turns-based estimate is counted. `:'';
 
   let sn=1;
   const secNum=()=>sn++;
@@ -598,7 +598,7 @@ function render(v,mode){
       <div class="two-g">
         <table class="atbl"><thead><tr><th colspan="2">Prospect profile</th></tr></thead><tbody>
           <tr><td>Annual revenue</td><td>${ff(sv.revenue)}</td></tr><tr><td>Inventory users</td><td>${Math.round(sv.users).toLocaleString()}</td></tr>
-          <tr><td>Avg. labor cost / user / yr</td><td>${ff(sv.labor)}</td></tr><tr><td>Annual inventory value</td><td>${ff(sv.inventory)}</td></tr>
+          <tr><td>Avg. labor cost / user / yr</td><td>${ff(sv.labor)}</td></tr><tr><td>Warehouse inventory value on hand</td><td>${ff(sv.inventory)}</td></tr>
           <tr><td>Write-off baseline</td><td>${ff(sv.effectiveShrinkBase)}</td></tr>
           ${sv.otifBaseline>0?`<tr><td>Current OTIF</td><td>${sv.otifBaseline}% → ${sv.otifTarget}%</td></tr>`:''}
           ${sv.invTurnsCurrent>0?`<tr><td>Inventory turns</td><td>${sv.invTurnsCurrent}× vs ${sv.invTurnsBenchmark}× benchmark</td></tr>`:''}
@@ -606,7 +606,7 @@ function render(v,mode){
         </tbody></table>
         <table class="atbl"><thead><tr><th colspan="2">Benchmarks${mode!=='base'?` (${mode})`:''}</th></tr></thead><tbody>
           <tr><td>Labor productivity gain</td><td>${fp(sv.mLabor*100)}</td></tr><tr><td>Write-off reduction</td><td>${fp(sv.mShrinkage*100)}</td></tr>
-          <tr><td>Carrying cost reduction</td><td>${fp(sv.mCarrying*100)}</td></tr><tr><td>OTIF improvement</td><td>${fp(sv.mOtif*100)}</td></tr>
+          <tr><td>Carrying cost reduction</td><td>${fp(sv.mCarrying*100)}</td></tr><tr><td>OTIF value realization</td><td>${fp(sv.mOtif*100)}</td></tr>
           <tr><td>IT cost displaced</td><td>${fp(sv.mIt*100)}</td></tr><tr><td>Carrying rate (baseline)</td><td>${fp(sv.carryRate*100)}</td></tr>
           <tr><td>Implementation duration</td><td>${sv.implMonths} months</td></tr><tr><td>Ramp Mo 1/2/3+</td><td>${Math.round(sv.ramp1*100)}% / ${Math.round(sv.ramp2*100)}% / ${Math.round(sv.ramp3*100)}%</td></tr>
         </tbody></table>
@@ -707,15 +707,16 @@ function init(){
   }
   try{
     baseVals=JSON.parse(decodeURIComponent(escape(atob(hash.replace('#data=','')))));
-    /* A ramp value below ~8% is a corruption artifact from the old
-       double-division bug (e.g. 0.004 or 0.01 instead of 0.40 / 1.00).
-       Reversing arbitrary corruption depth is ambiguous, so fall back to the
-       sensible default rather than guessing. Legitimate ramps are always >= 8%. */
-    const healRamp=(val,dflt)=>{const d=(val==null||val==='')?dflt:Number(val);
-      return (!isFinite(d)||d<=0||d<0.08)?dflt:Math.min(1,d);};
-    baseVals.ramp1=healRamp(baseVals.ramp1,0.40);
-    baseVals.ramp2=healRamp(baseVals.ramp2,0.75);
-    baseVals.ramp3=healRamp(baseVals.ramp3,1.00);
+    /* Preserve explicit zero ramp assumptions. Only missing or non-numeric values
+       fall back to defaults; valid inputs are bounded to 0–100%. */
+    const normalizeRamp=(val,dflt)=>{
+      if(val==null||val==='') return dflt;
+      const d=Number(val);
+      return Number.isFinite(d)?Math.max(0,Math.min(1,d)):dflt;
+    };
+    baseVals.ramp1=normalizeRamp(baseVals.ramp1,0.40);
+    baseVals.ramp2=normalizeRamp(baseVals.ramp2,0.75);
+    baseVals.ramp3=normalizeRamp(baseVals.ramp3,1.00);
     document.getElementById('scenToggle').style.display='flex';
     if(typeof threeWhys!=='undefined'){threeWhys.act=baseVals.threeWhysAct||'';threeWhys.ci=baseVals.threeWhysCi||'';threeWhys.now=baseVals.threeWhysNow||'';}
     render(baseVals,'base');

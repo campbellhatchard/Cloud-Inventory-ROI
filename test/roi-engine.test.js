@@ -1,6 +1,6 @@
 /* Dependency-free golden-value + version-guard tests for the shared ROI engine.
    Runs on plain Node (no jest/devDeps): `npm run test:engine` or `node test/roi-engine.test.js`. */
-const { calcROI, OVERLAP_DEDUCTION } = require('../src/shared/roi-engine');
+const { calcROI, OVERLAP_METHOD } = require('../src/shared/roi-engine');
 
 let _pass = 0, _fail = 0;
 function check(name, cond) {
@@ -19,10 +19,17 @@ const BASE = {
 
 function run() {
   const r = calcROI({ ...BASE, modelVersion:27 });
-  check('OVERLAP_DEDUCTION is 0.15', OVERLAP_DEDUCTION === 0.15);
+  check('overlap method is explicit', OVERLAP_METHOD === 'incremental-after-turns');
   check('laborSav = users\u00d7labor\u00d7mLabor', approx(r.laborSav, 60*60000*0.25));
   check('shrinkSav = base\u00d7mShrinkage', approx(r.shrinkSav, 320000*0.40));
-  check('carrySav applies 15% overlap', approx(r.carrySav, 14000000*0.25*0.18*0.85));
+  check('carrying + turns count only the higher estimate', approx(
+    r.inventoryCarrySav,
+    Math.max(14000000*0.25*0.18, 14000000*(1-4/6)*0.25)
+  ));
+  check('overlap removed equals the smaller estimate', approx(
+    r.overlapAdj,
+    Math.min(14000000*0.25*0.18, 14000000*(1-4/6)*0.25)
+  ));
   check('otifSav uses target-baseline gap', approx(r.otifSav, 75000000*0.06*0.10, 5));
   check('itSav = itCost\u00d7mIt', approx(r.itSav, 240000*0.60));
   check('annualBenefit positive', r.annualBenefit > 0);
@@ -54,6 +61,36 @@ function run() {
 
   const z = calcROI({ modelVersion:27 });
   check('empty input safe (benefit >= 0, no NaN)', z.annualBenefit >= 0);
+
+  const longImpl = calcROI({ ...BASE, modelVersion:27, implMonths:18 });
+  check('18-month implementation has no year-1 benefit', longImpl.year1Benefit === 0);
+  check('18-month implementation cannot pay back before go-live',
+    longImpl.paybackFromSigning === null || longImpl.paybackFromSigning >= 19);
+  check('year 2 retains post-go-live ramp', approx(
+    longImpl.yearBenefits[1],
+    longImpl.annualBenefit * (0.40 + 0.75 + 4) / 12
+  ));
+
+  const fieldZero = calcROI({ modelVersion:27, hasFieldInventory:true,
+    fieldInvValue:1000000, fieldLeakageRate:4, mFieldLeakage:0,
+    carryRate:0, mCarrying:0.2, fieldLocations:10,
+    fieldReconcileCost:500, fieldReconcilePerYr:0, mFieldCount:0.5 });
+  check('explicit zero field assumptions produce zero field benefit', fieldZero.fieldInvSav === 0);
+
+  const bounded = calcROI({ ...BASE, modelVersion:27, mLabor:5, mOtif:3,
+    carryRate:2, otifBaseline:120, otifTarget:150 });
+  check('fraction assumptions are capped at 100%', approx(bounded.laborSav, BASE.users*BASE.labor));
+  check('percentage-point inputs are capped at 100', bounded.otifSav === 0);
+
+  const falseString = calcROI({ modelVersion:27, hasFieldInventory:'false',
+    fieldInvValue:1000000, fieldLeakageRate:4, mFieldLeakage:0.3 });
+  check('string false does not enable field inventory', falseString.fieldInvSav === 0);
+
+  const zeroDiscount = calcROI({ ...BASE, modelVersion:27, discRate:0 });
+  check('zero discount rate stays zero', approx(
+    zeroDiscount.npv3,
+    zeroDiscount.totalBenefit3 - zeroDiscount.totalCost3
+  ));
   return { pass:_pass, fail:_fail };
 }
 console.log('ROI engine tests:');

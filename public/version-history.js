@@ -7,6 +7,19 @@
 
 const VERSION_HISTORY = [
   {
+    version: '5.6.3', date: '2026-08-26', tag: 'fix',
+    title: 'ROI calculation integrity, timeline, overlap, and assumption controls',
+    changes: [
+      'Implementation and ramp benefits now use one continuous 60-month schedule. Payback and NPV can no longer count benefits before go-live when implementation extends beyond year one.',
+      'All recovery, carrying, discount, leakage, error, accuracy, and ramp percentages are bounded to their documented ranges by the server-authoritative engine.',
+      'Inventory carrying and turns estimates no longer use a fixed 15% heuristic or add overlapping benefits. The model counts the turns estimate plus only incremental direct carrying savings, equal to the higher estimate overall.',
+      'Field-inventory zero values are preserved. Leakage recovery and reconciliation-effort recovery are explicit inputs, and reconciliation savings now apply the chosen recovery rate.',
+      'Saved percentage inputs reload at the correct scale, including explicit zero discount and ramp values.',
+      'Working capital, labor capacity value, and OTIF value realization are labeled and disclosed according to their financial meaning. Unvalidated Medical Devices / Life Sciences defaults were replaced with zero values that require customer inputs.',
+      'ROI tests expanded from 17 to 26 checks covering long implementations, zero assumptions, percentage bounds, boolean coercion, zero discount rates, and overlap removal.'
+    ]
+  },
+  {
     version: '5.6.2', date: '2026-08-26', tag: 'fix',
     title: 'Value breakdown percentages fixed; next steps MAP-aware and deal-stage-aware',
     changes: [

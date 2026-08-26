@@ -968,7 +968,7 @@ const IND_DEFAULTS = {
   telecom:       { revenue:200e6, users:100, labor:72000, inventory:25e6, mLabor:0.20, mShrinkage:0.30, mCarrying:0.20, carryRate:0.25, mOtif:0.10, otifRisk:0.02, mIt:0.50, invTurnsBenchmark:8, discRate:0.10 },
   oil:           { revenue:300e6, users:80, labor:85000, inventory:35e6, mLabor:0.20, mShrinkage:0.28, mCarrying:0.22, carryRate:0.28, mOtif:0.10, otifRisk:0.02, mIt:0.50, invTurnsBenchmark:6, discRate:0.12 },
   food:          { revenue:90e6, users:50, labor:48000, inventory:6e6, mLabor:0.20, mShrinkage:0.35, mCarrying:0.18, carryRate:0.25, mOtif:0.10, otifRisk:0.025, mIt:0.50, invTurnsBenchmark:15, discRate:0.10 },
-  retail:        { revenue:60e6, users:35, labor:42000, inventory:5e6, mLabor:0.18, mShrinkage:0.35, mCarrying:0.18, carryRate:0.25, mOtif:0.10, otifRisk:0.02, mIt:0.50, invTurnsBenchmark:10, discRate:0.10 },
+  retail:        { revenue:0, users:0, labor:0, inventory:0, mLabor:0, mShrinkage:0, mCarrying:0, carryRate:0, mOtif:0, otifRisk:0, mIt:0, invTurnsBenchmark:0, discRate:0.10 },
   default:       { revenue:80e6, users:40, labor:52000, inventory:10e6, mLabor:0.20, mShrinkage:0.30, mCarrying:0.20, carryRate:0.25, mOtif:0.10, otifRisk:0.02, mIt:0.50, invTurnsBenchmark:10, discRate:0.10 },
 };
 
@@ -977,7 +977,7 @@ const ROI_DRIVERS = [
   { key:'labor',    label:'Labor productivity',     sav:'laborSav',    needs:['users'] },
   { key:'shrink',   label:'Shrinkage reduction',    sav:'shrinkSav',   needs:['annualWriteOff'] },
   { key:'otif',     label:'OTIF / order accuracy',  sav:'otifSav',     needs:['revenue','otifBaseline'] },
-  { key:'turns',    label:'Working capital freed',  sav:'turnsSav',    needs:['inventoryValue','invTurnsCurrent'] },
+  { key:'turns',    label:'Turns: annual carrying savings',  sav:'turnsSav',    needs:['inventoryValue','invTurnsCurrent'] },
   { key:'expedite', label:'Expedite spend',         sav:'expediteSav', needs:['expediteSpendYr'] },
   { key:'downtime', label:'Downtime reduction',     sav:'downtimeSav', needs:['downtimeEventsYr','downtimeHrsPerEvent','downtimeCostPerHr'] },
   { key:'it',       label:'IT cost displacement',   sav:'itSav',       needs:['itCost'] },

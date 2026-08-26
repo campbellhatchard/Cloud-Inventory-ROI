@@ -105,7 +105,7 @@ function loadFromObject(i) {
   set('laborCost', i.labor);     set('inventoryValue', i.inventory);
   set('itCost', i.itCost);       set('invest', i.invest);
   set('psvcCost', i.psvc);       set('hwCost', i.hw);
-  set('trainCost', i.train);     set('discRate', Math.round((i.discRate || 0.1) * 100));
+  set('trainCost', i.train);     set('discRate', Math.round((i.discRate ?? 0.1) * 100));
   set('m_labor',     Math.round((i.mLabor     || 0) * 100));
   set('m_shrinkage', Math.round((i.mShrinkage || 0) * 100));
   set('m_carrying',  Math.round((i.mCarrying  || 0) * 100));
@@ -136,25 +136,30 @@ function loadFromObject(i) {
   // reloading a scenario turned 40% into 0.4%, then 0.004%, etc.).
   ['annualWriteOff','otifBaseline','otifTarget','invTurnsCurrent','invTurnsBenchmark',
    'implMonths',
-   'laborWastePct','currentAccuracy',
-   'ordersPerYr','costPerOrder','pickRateGainPct','m_throughput','orderErrorPct','costPerError','m_accuracy',
-   'downtimeEventsYr','downtimeHrsPerEvent','downtimeCostPerHr','m_downtime',
-   'expediteSpendYr','m_expedite','countDaysYr','countPeople','m_count'].forEach(id => {
+   'currentAccuracy','ordersPerYr','costPerOrder','costPerError',
+   'downtimeEventsYr','downtimeHrsPerEvent','downtimeCostPerHr',
+   'expediteSpendYr','countDaysYr','countPeople',
+   'fieldInvValue','fieldLeakageRate','fieldLocations','fieldReconcileCost','fieldReconcilePerYr'].forEach(id => {
     const el = document.getElementById(id);
-    if (el && i[id] !== undefined) el.value = i[id] || '';
+    if (el && i[id] !== undefined) el.value = i[id] ?? '';
+  });
+  const percentInputMap = {
+    laborWastePct:'laborWastePct', pickRateGainPct:'pickRateGainPct',
+    m_throughput:'mThroughput', orderErrorPct:'orderErrorPct', m_accuracy:'mAccuracy',
+    m_downtime:'mDowntime', m_expedite:'mExpedite', m_count:'mCount',
+    mFieldLeakage:'mFieldLeakage', mFieldCount:'mFieldCount'
+  };
+  Object.entries(percentInputMap).forEach(([id, key]) => {
+    const el = document.getElementById(id);
+    if (el && i[key] !== undefined) el.value = Math.round(Number(i[key] || 0) * 10000) / 100;
   });
 
   /* Ramp: stored as a decimal (0–1), field shows percent (0–100).
-     normalizeRamp also self-heals scenarios corrupted by the old
-     double-division bug: any ramp saved as an implausibly small value
-     (< 8%, e.g. 0.004 or 0.01 instead of 0.40 / 1.00) falls back to the
-     sensible default. Reversing arbitrary corruption depth is ambiguous, so
-     a predictable default is safer than guessing the original. Legitimate
-     ramps are always >= 8%. Returns a percent (0–100) for the input field. */
+     Explicit zero is valid and must remain zero. */
   const normalizeRamp = (val, dflt) => {
     const d = (val === undefined || val === null || val === '') ? dflt : Number(val);
-    const healed = (!isFinite(d) || d <= 0 || d < 0.08) ? dflt : Math.min(1, d);
-    return Math.round(healed * 100);
+    const bounded = !isFinite(d) ? dflt : Math.max(0, Math.min(1, d));
+    return Math.round(bounded * 100);
   };
   set('ramp1', normalizeRamp(i.ramp1, 0.40));
   set('ramp2', normalizeRamp(i.ramp2, 0.75));
@@ -566,7 +571,7 @@ Thank you for taking the time to explore Cloud Inventory with us. As promised, I
 
 EXECUTIVE SUMMARY FOR ${(v.company || 'YOUR COMPANY').toUpperCase()}
 
-Based on your inputs — ${Math.round(v.users)} inventory users, ${fmtFull(v.inventory)} in annual inventory value, and ${fmtFull(v.revenue)} in revenue — here is what Cloud Inventory could deliver for your ${indLabel} operations:
+Based on your inputs — ${Math.round(v.users)} inventory users, ${fmtFull(v.inventory)} in warehouse inventory value on hand, and ${fmtFull(v.revenue)} in revenue — here is what Cloud Inventory could deliver for your ${indLabel} operations:
 
   • Annual benefit:       ${fmtFull(r.annualBenefit)}
   • Year 1 ROI:          ${fmtPct(r.roi)}

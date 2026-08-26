@@ -376,7 +376,7 @@
           </div>
           <div class="two-col two-col-primary">
             <div class="field field-primary"><label title="Salary + benefits + overhead">Avg. labor cost / user / yr ($)</label><input type="text" inputmode="numeric" id="laborCost" value="55000" oninput="recalc()" min="0"/></div>
-            <div class="field field-primary"><label title="Total inventory on hand at any time">Annual inventory value ($)</label><input type="text" inputmode="numeric" id="inventoryValue" placeholder="e.g. 10,000,000" oninput="recalc()" min="0"/></div>
+            <div class="field field-primary"><label title="Point-in-time warehouse inventory on hand. Exclude field inventory entered separately below.">Warehouse inventory value on hand ($)</label><input type="text" inputmode="numeric" id="inventoryValue" placeholder="e.g. 10,000,000" oninput="recalc()" min="0"/></div>
           </div>
           <div class="field field-primary"><label title="Annual licenses, maintenance, support">Current IT / legacy cost / yr ($)</label><input type="text" inputmode="numeric" id="itCost" placeholder="e.g. 150,000" oninput="recalc()" min="0"/></div>
 
@@ -401,6 +401,12 @@
             <div class="field-row-2">
               <div class="field"><label title="Cost to reconcile / count one field location (labor + travel)">Cost to reconcile / location ($)</label>
                 <input type="text" inputmode="numeric" id="fieldReconcileCost" placeholder="e.g. 500" oninput="recalc()" min="0" step="50"/></div>
+              <div class="field"><label title="Share of reconciliation effort that will actually be eliminated or redeployed">Reconciliation effort reduction (%)</label>
+                <input type="number" id="mFieldCount" placeholder="e.g. 50" oninput="recalc()" min="0" max="100" step="1"/></div>
+            </div>
+            <div class="field-row-2">
+              <div class="field"><label title="Share of annual field leakage expected to be prevented">Field leakage recovery (%)</label>
+                <input type="number" id="mFieldLeakage" placeholder="e.g. 30" oninput="recalc()" min="0" max="100" step="1"/></div>
               <div class="field"></div>
             </div>
           </div>
@@ -672,7 +678,7 @@
           <div class="assumptions-header">Your estimate &nbsp;|&nbsp; Industry avg</div>
           <div class="metric-row"><span class="metric-label" title="Reduction in time spent on manual processes">Labor productivity gain</span><input class="metric-input" type="number" id="m_labor" placeholder="Use industry avg until confirmed" oninput="recalc();autoFlagConfidence()" min="0" max="100"/><span class="metric-unit">%</span><span class="metric-bench" id="b_labor">Avg: 25%</span></div>
           <div class="metric-row"><span class="metric-label" title="Reduction in carrying costs via better accuracy and reduced buffer stock">Carrying cost reduction</span><input class="metric-input" type="number" id="m_carrying" placeholder="Use industry avg until confirmed" oninput="recalc()" min="0" max="100"/><span class="metric-unit">%</span><span class="metric-bench" id="b_carrying">Avg: 15%</span></div>
-          <div class="metric-row"><span class="metric-label" title="OTIF improvement delivered by CI — applied to the gap between baseline and target">OTIF improvement CI delivers</span><input class="metric-input" type="number" id="m_otif" placeholder="Use industry avg until confirmed" oninput="recalc()" min="0" max="100"/><span class="metric-unit">%</span><span class="metric-bench" id="b_otif">Avg: 10%</span></div>
+          <div class="metric-row"><span class="metric-label" title="Share of the revenue-risk gap expected to be realized as economic value; validate with Finance">OTIF value realization</span><input class="metric-input" type="number" id="m_otif" placeholder="Use industry avg until confirmed" oninput="recalc()" min="0" max="100"/><span class="metric-unit">%</span><span class="metric-bench" id="b_otif">Avg: 10%</span></div>
           <div class="metric-row"><span class="metric-label" title="% of current IT/legacy costs Cloud Inventory displaces">IT / legacy cost displaced</span><input class="metric-input" type="number" id="m_it" placeholder="Use industry avg until confirmed" oninput="recalc()" min="0" max="100"/><span class="metric-unit">%</span><span class="metric-bench" id="b_it">Avg: 60%</span></div>
           <div class="metric-row"><span class="metric-label" title="Annual cost to hold inventory: storage, insurance, obsolescence, capital cost">Carrying cost rate (% of inventory)</span><input class="metric-input" type="number" id="m_carryRate" placeholder="Use industry avg until confirmed" oninput="recalc();autoFlagConfidence()" min="0"/><span class="metric-unit">%</span><span class="metric-bench" id="b_carryRate">Avg: 25%</span></div>
         </div>
@@ -1560,7 +1566,7 @@
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="5.6.2";</script>
+<script>const APP_VERSION="5.6.3";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
 <script src="assistant.js"></script>
