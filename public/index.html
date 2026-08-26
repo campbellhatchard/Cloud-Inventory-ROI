@@ -1550,16 +1550,17 @@
 <script src="versioning.js"></script>
 <!-- PptxGenJS: load local copy if present, else fall back to jsDelivr CDN.
      onerror on the local tag triggers the CDN tag.  -->
-<!-- pptxgenjs for PowerPoint export. Loaded from jsDelivr npm (minified, no
-     sourcemap request, so no CSP connect-src violation). No local copy exists
-     in public/, so the prior local-first script tag returned the SPA HTML
-     fallback (a text/html MIME error) before falling back to the CDN. -->
-<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.min.js"></script>
+<!-- pptxgenjs: try local npm-served copy first; fall back to CDN if unavailable.
+     The CDN build bundles JSZip internally; the local build may not.
+     We use the CDN build as the definitive source to guarantee JSZip is present. -->
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.min.js"
+  onerror="(function(){var s=document.createElement('script');s.src='/pptxgen.min.js';document.head.appendChild(s);}())">
+</script>
 <script src="pptx-export.js"></script>
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="5.5.9";</script>
+<script>const APP_VERSION="5.6.1";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
 <script src="assistant.js"></script>
@@ -2292,7 +2293,7 @@ window.initDebriefSection      = initDebriefSection;
 
 window.adminExport = adminExport;
 window.adminCleanupPreview = adminCleanupPreview;
-window.adminCleanupExecute = adminCleanupExecute;
+/* adminCleanupExecute renamed → adminCleanupExecuteSelected / adminCleanupExecuteAll */
 
 /* ── Exec toolbar: More exports dropdown ── */
 function toggleExecMore() {
@@ -2413,6 +2414,7 @@ async function adminRestore(type, id, btn) {
 }
 window.loadRecentlyDeleted = loadRecentlyDeleted;
 window.adminRestore = adminRestore;
+
 function switchAdminPanel(panel) {
   document.querySelectorAll('.admin-tab').forEach(b =>
     b.classList.toggle('active', b.dataset.panel === panel)
@@ -2515,7 +2517,7 @@ async function loadErrorLog(filter) {
         : (e.path ? '<span class="elog-route">' + escapeHtml(e.path) + '</span>' : '');
       var stackId = 'estack-' + e.id;
       var stackHtml = e.stack
-        ? `<button class="elog-stack-btn" data-stack-id="${stackId}" onclick="var s=document.getElementById(this.dataset.stackId);s.style.display=s.style.display==='block'?'none':'block'">Stack trace</button>`
+        ? '<button class="elog-stack-btn" onclick="var s=document.getElementById(&quot;' + stackId + '&quot;);s.style.display=s.style.display===&quot;block&quot;?&quot;none&quot;:&quot;block&quot;">Stack trace</button>'
           + '<pre class="elog-stack" id="' + stackId + '" style="display:none;">' + escapeHtml(e.stack) + '</pre>'
         : '';
       return '<div class="elog-item elog-' + lvl + '">'

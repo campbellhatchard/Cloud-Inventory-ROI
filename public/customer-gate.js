@@ -34,14 +34,33 @@ if (typeof window !== 'undefined') {
 
 /* ── Entry point: called when the calc tab initializes ── */
 async function initCalcTab() {
-  if (!_gateInitialized) {
-    _gateInitialized = true;
-    if (typeof loadCompanies === 'function') await loadCompanies();
-    bindCalcDirtyTracking();
-  }
   const company = document.getElementById('companyName');
   const hasActive = company && company.value && company.value.trim();
-  if (!hasActive) showCustomerGate(); else showCalcBody();
+
+  if (!_gateInitialized) {
+    _gateInitialized = true;
+    bindCalcDirtyTracking();
+
+    if (!hasActive) {
+      /* Show gate immediately with current (possibly empty) list so there's no blank
+         "Loading..." hang. Then refresh once companies arrive from the server. */
+      showCustomerGate();
+      if (typeof loadCompanies === 'function') {
+        await loadCompanies();
+        /* Re-render the list now that data has arrived */
+        const search = document.getElementById('cgSearch');
+        cgRenderList(search ? search.value : '');
+      }
+      return;
+    }
+    /* Company already set (loaded scenario) — fetch companies in background */
+    if (typeof loadCompanies === 'function') loadCompanies();
+  } else if (!hasActive) {
+    showCustomerGate();
+    return;
+  }
+
+  showCalcBody();
 }
 
 /* ── Gate visibility ── */

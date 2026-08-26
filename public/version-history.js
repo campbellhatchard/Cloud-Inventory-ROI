@@ -6,13 +6,38 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 const VERSION_HISTORY = [
-  
   {
-    version: '5.5.9', date: '2026-08-26', tag: 'hotfix',
-    title: 'Competitive source migration hotfix',
-    summary: 'Corrects migration 022 so uploaded_by and created_by use UUID foreign keys to match users.id.'
+    version: '5.6.1', date: '2026-08-26', tag: 'fix',
+    title: 'Customer gate, scenario lookup, cleanup export, and JSZip bugs fixed',
+    changes: [
+      'Customer gate showed "Loading..." on first login: initCalcTab() was awaiting loadCompanies() before rendering the gate, causing a blank/loading state until the API responded. Fixed by showing the gate immediately with an empty list, then refreshing the list once companies arrive from the server. The gate is now instant.',
+      '"No scenarios for James Test yet" despite 10 existing: promptScenarioForCompany() filtered the in-memory savedScenarios array, but that array may not be populated yet if the user selected a customer before fetchScenarios() completed (common on first login). Fixed by making the function async and awaiting fetchScenarios() when the cache is empty before filtering.',
+      'adminCleanupExecute is not defined: the cleanup function was renamed to adminCleanupExecuteSelected / adminCleanupExecuteAll in v5.5.3, but a stale window.adminCleanupExecute = adminCleanupExecute export remained in the code, causing a ReferenceError logged in the console on every page load. Removed the stale export.',
+      'JSZip is not defined (pptxgen error): in v5.6.0 we switched from loading pptxgen from CDN to serving it from npm via /pptxgen.min.js. The CDN build of pptxgen bundles JSZip internally; the local npm build does not expose JSZip as a global, causing pptxgen to fail immediately. Reverted to CDN as the primary source (which bundles JSZip), with /pptxgen.min.js as the onerror fallback. CSP already allows cdn.jsdelivr.net.'
+    ]
   },
-{
+  {
+    version: '5.6.0', date: '2026-08-26', tag: 'fix',
+    title: 'Full functional audit: admin panel, duplicates, server-side exports, pptxgen local',
+    changes: [
+      'CRITICAL FIX: switchAdminPanel() was called by all 7 admin tab buttons (Users, Benchmarks, Audit log, Version history, Error log, Export, Cleanup) but the function declaration was missing — the function body existed but the opening line had been accidentally removed in a previous edit. Admin tab navigation was completely non-functional. Restored the function declaration.',
+      'CRITICAL FIX: deal-export.js had accumulated three copies of _getCompData() and exportCompPDF() from repeated append operations during development. JavaScript uses the last definition, so behaviour was unpredictable. Removed all duplicates leaving exactly one of each function plus the correct window.exportCompPDF and window.exportCompDocx assignments.',
+      'Word (.docx) export now runs server-side: added POST /api/export/battlecard-docx route that uses the docx npm package to generate a real .docx file on the server and streams it to the browser as a download. No CDN, no client-side library, no popup required. The old HTML-in-Word Blob approach is replaced.',
+      'pptxgenjs now served from npm package: added pptxgenjs and docx as real npm dependencies in package.json. Express serves /pptxgen.min.js directly from node_modules so no CDN call is needed for PowerPoint export. The deChk() lazy-loader now tries /pptxgen.min.js first and only falls back to CDN if the local file is unavailable.',
+      'Removed stale CDN script tag for pptxgenjs from index.html — replaced with /pptxgen.min.js served by Express from node_modules.',
+      'Fixed dangling comment fragment in deal-export.js that caused a JavaScript syntax error (a file header comment was split across the boundary when a duplicate block was removed).'
+    ]
+  },
+  {
+    version: '5.5.9', date: '2026-08-25', tag: 'fix',
+    title: 'Migration 022 FK type fix: UUID not INTEGER for users(id) references',
+    changes: [
+      'Migration 022_competitive_sources.sql used INTEGER for uploaded_by and created_by columns that REFERENCES users(id). The production users.id column is UUID (set in migration 001), so PostgreSQL rejected the foreign key with "cannot be implemented". Fixed: both columns now declared UUID REFERENCES users(id) ON DELETE SET NULL. The ci_source_id column referencing ci_product_sources(id) correctly remains INTEGER since ci_product_sources.id is SERIAL.',
+      'Added test/migration-schema-compat.test.js: a new automated test that runs against all migrations and checks every REFERENCES clause against the known primary key types of referenced tables. UUID PK tables (users, scenarios, customers, etc.) require UUID local column type; SERIAL/INTEGER PK tables require INTEGER-family. The test splits on comma+newline to analyze individual column definitions rather than spanning multiple columns. Currently validates 26 FK relationships across 22 migrations and will catch this class of type mismatch before packaging in future.',
+      'The migration is idempotent (CREATE TABLE IF NOT EXISTS) and safe to re-run since it had not successfully applied in production. Filename unchanged as required.'
+    ]
+  },
+  {
     version: '5.5.8', date: '2026-08-25', tag: 'fix',
     title: 'Full regression pass: added missing cr-badge-client CSS class',
     changes: [

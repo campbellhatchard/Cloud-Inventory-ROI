@@ -1,46 +1,58 @@
-# Cloud Inventory ROI v5.5.9 Deployment Validation
+# Cloud Inventory ROI v5.6.1 Deployment Validation
 
-## Purpose
+Source upload: `cloud-inventory-roi-v5_6_1.zip`  
+Validated package: `cloud-inventory-roi-v5.6.1-render-ready.zip`
 
-Hotfix for the Render startup failure in `022_competitive_sources.sql`.
+## Packaging corrections applied
 
-Render failed with:
+- Removed leftover nested `cloud-inventory-roi-v4_0_0/` folder.
+- Aligned `package-lock.json` root metadata from `4.9.2` to `5.6.1`.
+- Preserved `render.yaml` production build target with `npm ci --omit=dev --no-audit --no-fund`.
+- Confirmed `.node-version` is `22.22.0`.
+- Confirmed `.npmrc` uses the public npm registry.
+- Confirmed migration `017_share_links_follow_latest.sql` keeps the scenario_base_id FK hotfix.
+- Confirmed migration `022_competitive_sources.sql` uses UUID for `uploaded_by` and `created_by`, matching `users.id`.
+- Replaced legacy `_reqAuthCompanies` references with `requireAuth` and ensured `requireAuth` is declared before protected routes.
+- Fixed browser inline JavaScript errors in `public/index.html`:
+  - error-log filter button quote escaping;
+  - error-log stack-trace button quote escaping;
+  - ESC modal comment opener.
+- Removed `node_modules`, `.git`, `.env`, `.env.local`, and OS metadata from the deployment ZIP.
 
-```text
-foreign key constraint "ci_product_sources_uploaded_by_fkey" cannot be implemented
+## Important lockfile handling
+
+This release adds real npm dependencies, including `pptxgenjs` and `docx`. The uploaded lockfile was stale, so the PowerShell toolkit refreshes `package-lock.json` with:
+
+```powershell
+npm install --package-lock-only --ignore-scripts --no-audit --no-fund
 ```
 
-## Root cause
+Then it runs:
 
-`users.id` is UUID, but migration 022 defined `uploaded_by` and `created_by` as INTEGER references to `users(id)`. PostgreSQL cannot implement a foreign key between INTEGER and UUID columns.
+```powershell
+npm ci --omit=dev --no-audit --no-fund
+```
 
-## Fix included
+The updated lockfile is what gets committed and pushed to GitHub. Do not manually push the ZIP contents without running the toolkit, or Render may fail at `npm ci` because the lockfile would not yet include the new dependencies.
 
-- `ci_product_sources.uploaded_by` changed to `UUID REFERENCES users(id)`.
-- `competitive_research_cache.created_by` changed to `UUID REFERENCES users(id)`.
-- Version metadata updated to `5.5.9`.
-- Prior hardening retained for migration 017, `requireAuth`, browser inline scripts, version consistency, and deployment ZIP exclusions.
-- The PowerShell toolkit was consolidated into a single deployment script to avoid the prior cross-script parameter defects.
-
-## Validation completed in sandbox
+## Validation checks completed in sandbox
 
 - ZIP/root structure: passed.
-- Required Render files present.
-- `package.json`, `package-lock.json`, and lockfile root package aligned to `5.5.9`.
-- `.node-version` is `22.22.0`.
-- Migration 017 FK hotfix retained.
-- Migration 022 UUID FK hotfix applied.
-- Migrations present through `022_competitive_sources.sql`.
-- JavaScript syntax checks passed; 58 files checked.
-- Inline HTML script syntax checks passed; 3 inline scripts checked.
-- `switchAdminPanel(panel)` wrapper restored.
-- ESC modal comment opener restored.
-- Error Log inline quote escaping repaired.
-- ROI engine tests passed: 17 passed, 0 failed.
-- Route test loader passed; DB integration skipped because `DATABASE_URL` is not set in sandbox.
-- Version consistency passed.
-- Deployment ZIP excludes `node_modules`, `.git`, environment files, and OS metadata.
+- Render Blueprint structure: passed.
+- `package.json` / `package-lock.json` version metadata alignment: passed.
+- Migration 017 FK hotfix: passed.
+- Migration 022 UUID FK compatibility: passed.
+- Migrations present: 001 through 022.
+- `requireAuth` initialization-order validation: passed.
+- Legacy `_reqAuthCompanies` reference check: passed.
+- JavaScript syntax checks: passed; 60 files checked.
+- Inline HTML script syntax checks: passed; 12 scripts checked.
+- Browser inline fixes: passed.
+- ROI engine tests: 17 passed, 0 failed.
+- Version consistency: passed; package, APP_VERSION, and VERSION_HISTORY all report `5.6.1`.
+- Migration schema compatibility tests: 26 passed, 0 failed.
+- No `node_modules`, `.git`, `.env`, `.env.local`, or OS metadata included in the deployment ZIP.
 
 ## Sandbox caveat
 
-A full `npm ci` did not complete reliably inside this sandbox. The PowerShell toolkit runs `npm ci --omit=dev --no-audit --no-fund`, the server require smoke test, syntax checks, application tests, ZIP exclusion checks, repository replacement checks, and Git commit/push locally before it pushes to GitHub.
+A full registry-backed lockfile regeneration could not be completed in this sandbox because the sandbox cannot reach npm reliably. The PowerShell toolkit performs that step on the deployment machine before cloning, committing, or pushing to GitHub.
