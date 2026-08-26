@@ -6,7 +6,13 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 const VERSION_HISTORY = [
+  
   {
+    version: '5.5.9', date: '2026-08-26', tag: 'hotfix',
+    title: 'Competitive source migration hotfix',
+    summary: 'Corrects migration 022 so uploaded_by and created_by use UUID foreign keys to match users.id.'
+  },
+{
     version: '5.5.8', date: '2026-08-25', tag: 'fix',
     title: 'Full regression pass: added missing cr-badge-client CSS class',
     changes: [

@@ -1559,7 +1559,7 @@
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="5.5.8";</script>
+<script>const APP_VERSION="5.5.9";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
 <script src="assistant.js"></script>
@@ -2413,7 +2413,6 @@ async function adminRestore(type, id, btn) {
 }
 window.loadRecentlyDeleted = loadRecentlyDeleted;
 window.adminRestore = adminRestore;
-
 function switchAdminPanel(panel) {
   document.querySelectorAll('.admin-tab').forEach(b =>
     b.classList.toggle('active', b.dataset.panel === panel)
@@ -2516,7 +2515,7 @@ async function loadErrorLog(filter) {
         : (e.path ? '<span class="elog-route">' + escapeHtml(e.path) + '</span>' : '');
       var stackId = 'estack-' + e.id;
       var stackHtml = e.stack
-        ? '<button class="elog-stack-btn" onclick="var s=document.getElementById(\'' + stackId + '\');s.style.display=s.style.display===\'block\'?\'none\':\'block\'">Stack trace</button>'
+        ? `<button class="elog-stack-btn" data-stack-id="${stackId}" onclick="var s=document.getElementById(this.dataset.stackId);s.style.display=s.style.display==='block'?'none':'block'">Stack trace</button>`
           + '<pre class="elog-stack" id="' + stackId + '" style="display:none;">' + escapeHtml(e.stack) + '</pre>'
         : '';
       return '<div class="elog-item elog-' + lvl + '">'

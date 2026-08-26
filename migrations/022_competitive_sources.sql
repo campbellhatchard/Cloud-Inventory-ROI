@@ -2,6 +2,11 @@
    022_competitive_sources.sql
    Stores canonical Cloud Inventory product source (admin-managed)
    and per-session research results cache.
+
+   HOTFIX v5.5.9:
+   users.id is UUID in 001_initial_schema.sql. uploaded_by and created_by
+   must therefore be UUID, not INTEGER, or PostgreSQL cannot implement
+   the foreign key constraints.
    ═══════════════════════════════════════════════════════════════════ */
 
 CREATE TABLE IF NOT EXISTS ci_product_sources (
@@ -11,7 +16,7 @@ CREATE TABLE IF NOT EXISTS ci_product_sources (
   source_url   TEXT,                    /* set when type=url */
   content_text TEXT,                    /* extracted text content */
   file_size    INTEGER,
-  uploaded_by  INTEGER REFERENCES users(id),
+  uploaded_by  UUID REFERENCES users(id),
   created_at   TIMESTAMPTZ DEFAULT NOW(),
   is_active    BOOLEAN DEFAULT TRUE
 );
@@ -23,7 +28,7 @@ CREATE TABLE IF NOT EXISTS competitive_research_cache (
   competitor_url  TEXT,
   competitor_name TEXT,
   result_json     JSONB,
-  created_by      INTEGER REFERENCES users(id),
+  created_by      UUID REFERENCES users(id),
   created_at      TIMESTAMPTZ DEFAULT NOW()
 );
 
