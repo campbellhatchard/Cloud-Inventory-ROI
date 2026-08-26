@@ -7,6 +7,17 @@
 
 const VERSION_HISTORY = [
   {
+    version: '5.6.2', date: '2026-08-26', tag: 'fix',
+    title: 'Value breakdown percentages fixed; next steps MAP-aware and deal-stage-aware',
+    changes: [
+      'Annual value breakdown bar chart: percentages were calculated as % of the largest driver (so the biggest bar always showed 100% and others were relative). Fixed to show % of total annual benefit, which is what the reader expects. The percentage label is now a separate column outside the bar fill div, so it cannot be clipped by overflow:hidden. Applies to both the executive view tab and the PDF print layout. CSS updated to a 4-column grid (label / bar / pct / value).',
+      'Bar chart labels cut off: the label text was rendered inside the bar fill div, which has overflow:hidden. Any label on a short bar was clipped or invisible. Moved all labels outside the fill into a dedicated column.',
+      'Recommended next steps: buildNextSteps() previously returned the same three hardcoded steps regardless of deal stage or whether an action plan existed. Now: (1) if an active Mutual Action Plan exists for the current company, open milestones are used as the next steps, sorted by due date with overdue items flagged. (2) If no MAP, steps are selected by deal stage: Discovery/Prospecting, Demo, Evaluation/POC, Proposal/Negotiation/Contracting, and Closed Won/Implementation each produce relevant, stage-specific steps. (3) Falls back to the original generic steps if no stage is set.',
+      'MAP next steps in PDF export: open MAP milestones are serialised into the print payload (vForPDF._mapSteps) so the PDF version of next steps also reflects the live plan, not just the in-app view.',
+      'print.html: added a self-contained _buildPrintNextSteps() function with the same MAP+stage logic, reading from sv._mapSteps passed through the URL payload.'
+    ]
+  },
+  {
     version: '5.6.1', date: '2026-08-26', tag: 'fix',
     title: 'Customer gate, scenario lookup, cleanup export, and JSZip bugs fixed',
     changes: [

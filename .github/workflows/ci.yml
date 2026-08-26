@@ -28,5 +28,11 @@ jobs:
         run: npm run migrate
       - name: Engine tests
         run: npm run test:engine
+      - name: Version consistency
+        run: node test/version-consistency.test.js
+      - name: Migration compatibility
+        run: node test/migration-schema-compat.test.js
+      - name: Phase 1 regression tests
+        run: node test/phase1.test.js
       - name: Route/integration tests
         run: npm run test:routes

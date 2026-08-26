@@ -1,58 +1,41 @@
-# Cloud Inventory ROI v5.6.1 Deployment Validation
+# Cloud Inventory ROI v5.6.2 Deployment Validation
 
-Source upload: `cloud-inventory-roi-v5_6_1.zip`  
-Validated package: `cloud-inventory-roi-v5.6.1-render-ready.zip`
+## Render deployment configuration
 
-## Packaging corrections applied
+- The Blueprint is defined by `render.yaml` at the repository root.
+- Render provisions the Node web service and PostgreSQL database.
+- The production build uses `npm ci --omit=dev --no-audit --no-fund`.
+- The service binds to Render's `PORT` on `0.0.0.0`.
+- `/health` verifies database connectivity and returns a non-success response when PostgreSQL is unavailable.
+- Database migrations run automatically before the server begins accepting traffic.
+- `SIGTERM` triggers graceful HTTP and database shutdown.
 
-- Removed leftover nested `cloud-inventory-roi-v4_0_0/` folder.
-- Aligned `package-lock.json` root metadata from `4.9.2` to `5.6.1`.
-- Preserved `render.yaml` production build target with `npm ci --omit=dev --no-audit --no-fund`.
-- Confirmed `.node-version` is `22.22.0`.
-- Confirmed `.npmrc` uses the public npm registry.
-- Confirmed migration `017_share_links_follow_latest.sql` keeps the scenario_base_id FK hotfix.
-- Confirmed migration `022_competitive_sources.sql` uses UUID for `uploaded_by` and `created_by`, matching `users.id`.
-- Replaced legacy `_reqAuthCompanies` references with `requireAuth` and ensured `requireAuth` is declared before protected routes.
-- Fixed browser inline JavaScript errors in `public/index.html`:
-  - error-log filter button quote escaping;
-  - error-log stack-trace button quote escaping;
-  - ESC modal comment opener.
-- Removed `node_modules`, `.git`, `.env`, `.env.local`, and OS metadata from the deployment ZIP.
+## Required values during Blueprint creation
 
-## Important lockfile handling
+Render prompts for these values because they are declared with `sync: false`:
 
-This release adds real npm dependencies, including `pptxgenjs` and `docx`. The uploaded lockfile was stale, so the PowerShell toolkit refreshes `package-lock.json` with:
+- `BOOTSTRAP_ADMIN_USERNAME`
+- `BOOTSTRAP_ADMIN_PASSWORD` (at least 12 characters)
+- `BOOTSTRAP_ADMIN_EMAIL`
 
-```powershell
-npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-```
+Production startup fails rather than using default administrator credentials when any required value is absent.
 
-Then it runs:
+## Optional integrations
 
-```powershell
-npm ci --omit=dev --no-audit --no-fund
-```
+Add these in the Render dashboard when the corresponding feature is needed:
 
-The updated lockfile is what gets committed and pushed to GitHub. Do not manually push the ZIP contents without running the toolkit, or Render may fail at `npm ci` because the lockfile would not yet include the new dependencies.
+- `ANTHROPIC_API_KEY`
+- `SENDGRID_API_KEY`
+- `FROM_EMAIL`
 
-## Validation checks completed in sandbox
+`APP_URL` is optional on Render because the application uses Render's external URL automatically.
 
-- ZIP/root structure: passed.
-- Render Blueprint structure: passed.
-- `package.json` / `package-lock.json` version metadata alignment: passed.
-- Migration 017 FK hotfix: passed.
-- Migration 022 UUID FK compatibility: passed.
-- Migrations present: 001 through 022.
-- `requireAuth` initialization-order validation: passed.
-- Legacy `_reqAuthCompanies` reference check: passed.
-- JavaScript syntax checks: passed; 60 files checked.
-- Inline HTML script syntax checks: passed; 12 scripts checked.
-- Browser inline fixes: passed.
-- ROI engine tests: 17 passed, 0 failed.
-- Version consistency: passed; package, APP_VERSION, and VERSION_HISTORY all report `5.6.1`.
-- Migration schema compatibility tests: 26 passed, 0 failed.
-- No `node_modules`, `.git`, `.env`, `.env.local`, or OS metadata included in the deployment ZIP.
+## Release validation
 
-## Sandbox caveat
+Before uploading or syncing the Blueprint:
 
-A full registry-backed lockfile regeneration could not be completed in this sandbox because the sandbox cannot reach npm reliably. The PowerShell toolkit performs that step on the deployment machine before cloning, committing, or pushing to GitHub.
+1. Run `npm ci` with Node.js 22.
+2. Run `npm run migrate` against a disposable PostgreSQL 16 database.
+3. Run `npm test` and the additional version, migration-compatibility, and regression tests used by CI.
+4. Confirm `package.json`, `package-lock.json`, the UI version, and version history all report `5.6.2`.
+5. After deployment, confirm `/health` reports version `5.6.2` and `database: connected`.

@@ -791,10 +791,12 @@ function renderExec() {
   ].filter(row => row.val > 0).sort((a,b) => b.val - a.val);
   const maxVal=Math.max(...valueRows.map(x=>x.val),1);
 
+  const totalVal = valueRows.reduce((s,row) => s + row.val, 0) || 1;
   const bars=valueRows.map(row=>`
     <div class="e-bar-row">
       <span class="e-bar-lbl">${row.label}</span>
       <div class="e-bar-track"><div class="e-bar-fill" style="width:${Math.round((row.val/maxVal)*100)}%;background:${row.color};"></div></div>
+      <span class="e-bar-pct" style="color:${row.color};">${Math.round(row.val/totalVal*100)}%</span>
       <span class="e-bar-val">${fmtFull(row.val)}</span>
     </div>`).join('');
 
@@ -1013,7 +1015,7 @@ function renderExec() {
       <div class="e-section"><div class="e-h2">Annual value by category</div>
         <div class="e-driver-lede">Your value is decomposed into independently-quantified drivers, each traceable to a metric you provided and modeled conservatively.</div>
         ${bars}
-        <div class="e-bar-total"><span style="flex:1">Total annual value</span><span>${fmtFull(r.annualBenefit)}</span></div>
+        <div class="e-bar-total"><span>Total annual value</span><div></div><span style="color:var(--navy);">100%</span><span>${fmtFull(r.annualBenefit)}</span></div>
       </div>
       ${typeof buildExecInfographics === 'function' ? buildExecInfographics(r, v) : ''}
       <div class="e-section">

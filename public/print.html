@@ -87,12 +87,13 @@ body{font-family:var(--font);background:#EAECEF;color:var(--gray-800);font-size:
 .why-txt{font-size:11px;color:var(--gray-700);line-height:1.7;}
 
 /* Charts */
-.wf-row{display:grid;grid-template-columns:175px 1fr 80px;align-items:center;gap:9px;margin-bottom:6px;}
+.wf-row{display:grid;grid-template-columns:175px 1fr 40px 80px;align-items:center;gap:6px;margin-bottom:6px;}
+.wf-pct{font-size:10.5px;font-weight:700;text-align:right;white-space:nowrap;}
 .wf-lbl{font-size:11px;color:var(--gray-600);text-align:right;}
 .wf-track{background:var(--gray-100);border-radius:4px;height:25px;overflow:hidden;}
-.wf-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:7px;}
+.wf-fill{height:100%;border-radius:4px;}
 .wf-val{font-size:11px;font-weight:700;color:var(--gray-800);text-align:right;}
-.wf-total{display:grid;grid-template-columns:175px 1fr 80px;gap:9px;border-top:2px solid var(--gray-200);padding-top:7px;margin-top:4px;}
+.wf-total{display:grid;grid-template-columns:175px 1fr 40px 80px;gap:6px;border-top:2px solid var(--gray-200);padding-top:7px;margin-top:4px;}
 
 /* Donut */
 .dnut{display:grid;grid-template-columns:190px 1fr;gap:1.25rem;align-items:center;}
@@ -292,13 +293,24 @@ function donutChart(r,sz=180){
 function waterfallBars(r){
   const bars=[{l:'Labor & productivity',v:r.laborSav,c:'#0089A6'},{l:'Write-off reduction',v:r.shrinkSav,c:'#2E7D32'},
     {l:'Carrying cost savings',v:r.carrySav,c:'#12786F'},{l:'OTIF protection',v:r.otifSav,c:'#A6791E'},
-    {l:'Turns: capital freed',v:r.turnsSav,c:'#6A4C93'},{l:'IT displaced',v:r.itSav,c:'#6A4C93'}]
+    {l:'Turns: capital freed',v:r.turnsSav,c:'#6A4C93'},{l:'IT displaced',v:r.itSav,c:'#45688A'}]
     .filter(b=>b.v>0).sort((a,b)=>b.v-a.v);
-  const mx=Math.max(...bars.map(b=>b.v),1);
+  /* mx = widest bar (always the top driver = 100% width for visual scaling)
+     tot = sum of all drivers = denominator for the PERCENTAGE LABEL
+     The percentage shown to the reader is "% of total annual benefit", not
+     "% of the largest bar" — that was the previous bug.                   */
+  const mx  = Math.max(...bars.map(b=>b.v), 1);
+  const tot = Math.max(bars.reduce((s,b)=>s+b.v, 0), 1);
   return bars.map(b=>{
-    const p=Math.round(b.v/mx*100);
-    return`<div class="wf-row"><span class="wf-lbl">${b.l}</span><div class="wf-track"><div class="wf-fill" style="width:${p}%;background:${b.c};">${p>22?`<span style="font-size:10px;font-weight:700;color:#fff;">${fp(p)}</span>`:''}</div></div><span class="wf-val">${f(b.v)}</span></div>`;
-  }).join('')+`<div class="wf-total"><span style="font-size:11px;font-weight:700;color:#1E2931;text-align:right;">Total</span><div></div><span style="font-size:13px;font-weight:800;color:#1E2931;text-align:right;">${ff(r.annualBenefit)}</span></div>`;
+    const barW = Math.round(b.v/mx*100);           /* visual bar width % */
+    const pct  = Math.round(b.v/tot*100);          /* label: % of total  */
+    return`<div class="wf-row">`
+      +`<span class="wf-lbl">${b.l}</span>`
+      +`<div class="wf-track"><div class="wf-fill" style="width:${barW}%;background:${b.c};"></div></div>`
+      +`<span class="wf-pct" style="color:${b.c};">${pct}%</span>`
+      +`<span class="wf-val">${f(b.v)}</span>`
+      +`</div>`;
+  }).join('')+`<div class="wf-total"><span style="font-size:11px;font-weight:700;color:#1E2931;">Total</span><div></div><span class="wf-pct" style="color:#1E2931;font-weight:700;">100%</span><span style="font-size:13px;font-weight:800;color:#1E2931;">${ff(r.annualBenefit)}</span></div>`;
 }
 
 function npvCurve(r,v){
@@ -383,7 +395,67 @@ function render(v,mode){
   const headlines=(typeof buildExecHeadlines==='function')?buildExecHeadlines(sv,r):[];
   const proofPts=(typeof PROOF_POINTS!=='undefined'&&PROOF_POINTS[sv.industry])||[];
   const criteria=(typeof buildDecisionCriteria==='function')?buildDecisionCriteria(sv):[];
-  const nextSteps=(typeof buildNextSteps==='function')?buildNextSteps():[];
+  /* ── Next steps: MAP milestones first, then stage-defaults ── */
+  function _buildPrintNextSteps(sv) {
+    const today = new Date();
+    const fmtD  = function(d) { return d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}); };
+    const addD  = function(n) { return new Date(today.getTime() + n * 86400000); };
+
+    /* 1. Open MAP milestones passed from the main app */
+    if (sv._mapSteps && sv._mapSteps.length) {
+      return sv._mapSteps
+        .sort(function(a,b) {
+          var da = a.dueDate ? new Date(a.dueDate) : null;
+          var db = b.dueDate ? new Date(b.dueDate) : null;
+          if (!da && !db) return 0; if (!da) return 1; if (!db) return -1;
+          return da - db;
+        })
+        .slice(0, 5)
+        .map(function(ms) {
+          var due = ms.dueDate ? new Date(ms.dueDate) : null;
+          var overdue = due && due < today;
+          return {
+            by:     due ? (overdue ? '⚠️ Overdue — ' : '') + fmtD(due) : 'To be scheduled',
+            action: ms.title || 'Open milestone',
+            detail: (ms.owner ? 'Owner: ' + ms.owner + '. ' : '') + (ms.notes || 'From your Mutual Action Plan.')
+          };
+        });
+    }
+
+    /* 2. Deal-stage defaults */
+    var stage = (sv.dealStage || '').toLowerCase().trim();
+    if (!stage || stage === 'discovery' || stage === 'prospecting') return [
+      { by: fmtD(addD(7)),  action: 'Validate ROI assumptions', detail: 'Share this business case with your champion. Confirm the three key inputs: inventory value, labour hours, and current write-off rate.' },
+      { by: fmtD(addD(14)), action: 'Technical discovery call', detail: 'Review ERP integration requirements, user roles, and site configuration.' },
+      { by: fmtD(addD(30)), action: 'Live product demonstration', detail: 'Tailored demo focused on your specific workflows — warehouse receiving, cycle counts, field inventory, and ERP sync.' },
+    ];
+    if (stage === 'demo' || stage === 'demonstration') return [
+      { by: fmtD(addD(5)),  action: 'Demo follow-up and Q&A', detail: 'Send meeting summary and address open technical questions. Identify additional stakeholders.' },
+      { by: fmtD(addD(14)), action: 'Pilot program proposal', detail: 'Agree on pilot scope (1–2 sites, 4–6 weeks), success metrics, and go-live timeline.' },
+      { by: fmtD(addD(21)), action: 'Champion business case review', detail: 'Walk your champion through this ROI document. Confirm the numbers are defensible for internal approvals.' },
+    ];
+    if (stage === 'evaluation' || stage === 'technical review' || stage === 'proof of concept') return [
+      { by: fmtD(addD(7)),  action: 'Complete technical evaluation', detail: 'Finalise integration architecture, security questionnaire, and IT sign-off.' },
+      { by: fmtD(addD(14)), action: 'Stakeholder alignment meeting', detail: 'Present ROI findings to economic buyer. Address objections with the sensitivity analysis.' },
+      { by: fmtD(addD(21)), action: 'Pilot proposal and SOW', detail: 'Deliver a written pilot proposal with scope, success metrics, investment, and proposed go-live date.' },
+    ];
+    if (stage === 'proposal' || stage === 'negotiation' || stage === 'verbal' || stage === 'contracting') return [
+      { by: fmtD(addD(5)),  action: 'Proposal review and Q&A', detail: 'Address outstanding commercial, legal, or technical questions. Provide redlines if needed.' },
+      { by: fmtD(addD(10)), action: 'Procurement and legal review', detail: 'Connect legal teams. Expedite any security or vendor approval processes.' },
+      { by: fmtD(addD(14)), action: 'Contract signature', detail: 'Confirm signature authority and obtain executed agreement. Initiate implementation scheduling.' },
+    ];
+    if (stage === 'closed won' || stage === 'won' || stage === 'implementation') return [
+      { by: fmtD(addD(3)),  action: 'Implementation kick-off call', detail: 'Confirm implementation team, ERP integration scope, site list, and target go-live date.' },
+      { by: fmtD(addD(14)), action: 'Data integration setup', detail: 'Complete ERP connector configuration, field mapping, and initial data validation.' },
+      { by: fmtD(addD(30)), action: 'User training and go-live', detail: 'Complete end-user training. Sign off on UAT. Execute go-live and begin capturing live ROI data.' },
+    ];
+    return [
+      { by: fmtD(addD(14)), action: 'Technical discovery call', detail: 'Review ERP integration requirements, user roles, and site configuration.' },
+      { by: fmtD(addD(30)), action: 'Live product demonstration', detail: 'Tailored demo focused on your specific workflows.' },
+      { by: fmtD(addD(45)), action: 'Pilot program proposal', detail: 'Agree on pilot scope, success metrics, and go-live timeline. Begin procurement process.' },
+    ];
+  }
+  const nextSteps = _buildPrintNextSteps(sv);
   const timeline=(typeof buildTimeline==='function')?buildTimeline():[];
   const ovNote=(typeof OVERLAP_DEDUCTION!=='undefined'&&r.overlapAdj>100)?`A ${Math.round(OVERLAP_DEDUCTION*100)}% overlap deduction (${ff(r.overlapAdj)}) applied to carrying cost savings. `:'';
 

@@ -354,15 +354,103 @@ function buildDecisionCriteria(v) {
    NEXT STEPS SECTION
    ───────────────────────────────────────────────────────────── */
 function buildNextSteps() {
-  const today = new Date();
-  const in2weeks = new Date(today.getTime() + 14*24*60*60*1000);
-  const in30days = new Date(today.getTime() + 30*24*60*60*1000);
-  const in45days = new Date(today.getTime() + 45*24*60*60*1000);
-  const fmt = d => d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  const today  = new Date();
+  const fmtD   = d => d.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
+  const addDays = n => new Date(today.getTime() + n * 86400000);
+  const v      = (typeof getVals === 'function') ? getVals() : {};
+  const stage  = (v.dealStage || '').toLowerCase().trim();
+  const company = v.company || 'the prospect';
+
+  /* ── 1. Check if a Mutual Action Plan exists for this company ── */
+  if (typeof _maps !== 'undefined' && Array.isArray(_maps) && _maps.length) {
+    const plan = _maps.find(function(m) {
+      return (m.company || '').toLowerCase() === company.toLowerCase() && m.is_active !== false;
+    });
+    if (plan) {
+      const open = (plan.milestones || [])
+        .filter(function(ms) { return ms.status !== 'done'; })
+        .sort(function(a,b) {
+          /* Sort: overdue first, then by dueDate ascending, undated last */
+          const da = a.dueDate ? new Date(a.dueDate) : null;
+          const db = b.dueDate ? new Date(b.dueDate) : null;
+          if (!da && !db) return 0;
+          if (!da) return 1;
+          if (!db) return -1;
+          return da - db;
+        })
+        .slice(0, 5); /* cap at 5 steps */
+
+      if (open.length) {
+        return open.map(function(ms) {
+          const due = ms.dueDate ? new Date(ms.dueDate) : null;
+          const isOverdue = due && due < today && ms.status !== 'done';
+          const byLabel = due
+            ? (isOverdue ? '⚠️ Overdue — ' : '') + fmtD(due)
+            : 'To be scheduled';
+          return {
+            by:     byLabel,
+            action: ms.title || 'Open milestone',
+            detail: (ms.owner ? 'Owner: ' + ms.owner + '. ' : '')
+                  + (ms.notes || ('From the Mutual Action Plan for ' + company + '.'))
+                  + (isOverdue ? ' This step is past its due date.' : '')
+          };
+        });
+      }
+      /* Plan exists but all milestones done — show a completion note + closing steps */
+      return [
+        { by: fmtD(addDays(7)),  action: 'All MAP milestones complete', detail: 'Your Mutual Action Plan for ' + company + ' shows all milestones completed. Confirm internal approvals and procurement process are on track.' },
+        { by: fmtD(addDays(14)), action: 'Finalise contract and sign', detail: 'Work with your champion to expedite procurement. Provide order form and any requested security / legal documents.' },
+        { by: fmtD(addDays(21)), action: 'Kick off implementation', detail: 'Schedule technical kick-off call. Confirm ERP integration scope, site list, and go-live target.' }
+      ];
+    }
+  }
+
+  /* ── 2. No MAP — fall back to deal-stage-aware default steps ── */
+  if (!stage || stage === 'discovery' || stage === 'prospecting') {
+    return [
+      { by: fmtD(addDays(7)),  action: 'Validate ROI assumptions', detail: 'Share this business case with your champion. Confirm the three key inputs: inventory value, labour hours, and current write-off rate.' },
+      { by: fmtD(addDays(14)), action: 'Technical discovery call', detail: 'Review ERP integration requirements, user roles, and site configuration. Refine ROI assumptions based on confirmed data.' },
+      { by: fmtD(addDays(30)), action: 'Live product demonstration', detail: 'Tailored demo focused on your specific workflows — warehouse receiving, cycle counts, field inventory, and ERP sync.' },
+    ];
+  }
+
+  if (stage === 'demo' || stage === 'demonstration') {
+    return [
+      { by: fmtD(addDays(5)),  action: 'Demo follow-up and Q&A', detail: 'Send meeting summary and address any open technical questions. Identify additional stakeholders to include in the evaluation.' },
+      { by: fmtD(addDays(14)), action: 'Pilot program proposal', detail: 'Agree on pilot scope (1–2 sites, 4–6 weeks), success metrics, and go-live timeline.' },
+      { by: fmtD(addDays(21)), action: 'Champion business case review', detail: 'Walk your champion through this ROI document. Confirm the numbers are defensible for internal approvals.' },
+    ];
+  }
+
+  if (stage === 'evaluation' || stage === 'technical review' || stage === 'proof of concept') {
+    return [
+      { by: fmtD(addDays(7)),  action: 'Complete technical evaluation', detail: 'Finalise integration architecture review, security questionnaire, and IT sign-off. Provide reference architecture documentation.' },
+      { by: fmtD(addDays(14)), action: 'Stakeholder alignment meeting', detail: 'Present ROI findings to economic buyer and any remaining approvers. Address objections with the sensitivity analysis.' },
+      { by: fmtD(addDays(21)), action: 'Pilot proposal and SOW', detail: 'Deliver a written pilot proposal with scope, success metrics, investment, and proposed go-live date.' },
+    ];
+  }
+
+  if (stage === 'proposal' || stage === 'negotiation' || stage === 'verbal' || stage === 'contracting') {
+    return [
+      { by: fmtD(addDays(5)),  action: 'Proposal review and Q&A', detail: 'Address any outstanding commercial, legal, or technical questions. Provide redlines or revised order form if needed.' },
+      { by: fmtD(addDays(10)), action: 'Procurement and legal review', detail: 'Connect your legal team with the prospect\'s procurement contact. Expedite any security or vendor approval processes.' },
+      { by: fmtD(addDays(14)), action: 'Contract signature', detail: 'Confirm signature authority and obtain executed agreement. Initiate internal booking and implementation scheduling.' },
+    ];
+  }
+
+  if (stage === 'closed won' || stage === 'won' || stage === 'implementation') {
+    return [
+      { by: fmtD(addDays(3)),  action: 'Implementation kick-off call', detail: 'Confirm implementation team, ERP integration scope, site list, and target go-live date. Distribute project plan.' },
+      { by: fmtD(addDays(14)), action: 'Data integration setup', detail: 'Complete ERP connector configuration, field mapping, and initial data validation in the staging environment.' },
+      { by: fmtD(addDays(30)), action: 'User training and go-live', detail: 'Complete end-user training sessions. Sign off on UAT. Execute go-live and begin capturing live ROI data.' },
+    ];
+  }
+
+  /* Default: generic high-quality steps matching the original */
   return [
-    { by: fmt(in2weeks), action: 'Technical discovery call', detail: 'Review ERP integration requirements, user roles, and site configuration. Refine ROI assumptions based on confirmed data.' },
-    { by: fmt(in30days), action: 'Live product demonstration', detail: 'Tailored demo focused on your specific workflows — warehouse receiving, cycle counts, field inventory, and ERP sync.' },
-    { by: fmt(in45days), action: 'Pilot program proposal', detail: 'Agree on pilot scope (1–2 sites, 4–6 weeks), success metrics, and go-live timeline. Begin procurement process.' },
+    { by: fmtD(addDays(14)), action: 'Technical discovery call', detail: 'Review ERP integration requirements, user roles, and site configuration. Refine ROI assumptions based on confirmed data.' },
+    { by: fmtD(addDays(30)), action: 'Live product demonstration', detail: 'Tailored demo focused on your specific workflows — warehouse receiving, cycle counts, field inventory, and ERP sync.' },
+    { by: fmtD(addDays(45)), action: 'Pilot program proposal', detail: 'Agree on pilot scope (1–2 sites, 4–6 weeks), success metrics, and go-live timeline. Begin procurement process.' },
   ];
 }
 

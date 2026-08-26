@@ -33,13 +33,17 @@ services:
       - key: NODE_ENV
         value: production
 
-      # ── Secrets — set these in the Render dashboard, not here ──────
-      # BOOTSTRAP_ADMIN_USERNAME   → set in Render dashboard
-      # BOOTSTRAP_ADMIN_PASSWORD   → set in Render dashboard (min 12 chars)
-      # BOOTSTRAP_ADMIN_EMAIL      → set in Render dashboard
-      # ANTHROPIC_API_KEY          → set in Render dashboard (AI features)
-      # SENDGRID_API_KEY           → set in Render dashboard (discovery emails)
-      # FROM_EMAIL                 → set in Render dashboard (e.g. noreply@cloudinventory.com)
+      # Render prompts for these values during the first Blueprint sync.
+      - key: BOOTSTRAP_ADMIN_USERNAME
+        sync: false
+      - key: BOOTSTRAP_ADMIN_PASSWORD
+        sync: false
+      - key: BOOTSTRAP_ADMIN_EMAIL
+        sync: false
+
+      # Optional integrations. Configure these later in the Render dashboard.
+      # ANTHROPIC_API_KEY enables AI features.
+      # SENDGRID_API_KEY and FROM_EMAIL enable email delivery.
 
       - key: ANTHROPIC_MODEL
         value: claude-sonnet-4-6
