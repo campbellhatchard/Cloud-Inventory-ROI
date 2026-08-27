@@ -386,7 +386,7 @@ const VE_CORE_QUESTIONS = {
     { id:'ve13', text:'How will you measure success post-implementation?', why:'Defines value-realization metrics for the business case.', type:'context' },
     /* Internal-only (rep assessment, not shown to prospects) */
     { id:'ve10', text:'Who could block or slow this decision, and why?', why:'Identifies detractors early (internal assessment).', type:'context', internal:true },
-    { id:'ve11', text:'What is your decision process and typical timeline for an investment like this?', why:'Drives the mutual action plan timeline.', type:'context', internal:true },
+    { id:'ve11', text:'What is your decision process and typical timeline for an investment like this?', why:'Drives the Joint Project Plan timeline.', type:'context', internal:true },
     { id:'ve12', text:'What does the budget or funding picture look like for this initiative?', why:'Qualifies budget authority and availability (internal).', type:'context', internal:true },
     { id:'ve14', text:'Who needs to see the business case, and in what format?', why:'Shapes deliverables and the exec-readout plan.', type:'context', internal:true },
   ]

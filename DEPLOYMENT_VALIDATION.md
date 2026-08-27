@@ -1,4 +1,4 @@
-# Cloud Inventory ROI v5.6.9 Deployment Validation
+# Cloud Inventory ROI v5.6.10 Deployment Validation
 
 ## Render deployment configuration
 
@@ -33,7 +33,7 @@ Add these in the Render dashboard when the corresponding feature is needed:
 
 ## Validation corrections applied
 
-This validated v5.6.9 release candidate preserves the locked v5.6.8 integrity controls and adds flexible Mutual Action Plan groupings. It keeps `requireAuth` initialized before every protected route; preserves explicit zero ramp assumptions in export/PDF paths; uses the ROI engine's `fieldInvSav` property; labels turns-based value as annual carrying-cost savings rather than balance-sheet working capital; keeps Medical Devices / Life Sciences defaults at zero until customer-specific assumptions are supplied; retains CI coverage for UI/startup regression guards; preserves the v5.6.8 prospect live-ROI controls; and adds the backwards-compatible `023_map_groups.sql` JSONB grouping migration plus quote-safe customer-plan attributes.
+This validated v5.6.10 release candidate preserves the locked v5.6.9 integrity controls while renaming the Mutual Action Plan experience to Joint Project Plan and strengthening customer-ready exports. It keeps `requireAuth` initialized once before every protected route; preserves explicit zero ramp assumptions; uses the ROI engine's `fieldInvSav` property; keeps turns-based value labelled as annual carrying-cost savings rather than balance-sheet working capital; keeps Medical Devices / Life Sciences customer-input-only; retains CI startup/UI regression coverage; preserves migration 023 and quote-safe customer-plan attributes; ensures the new customer purpose statement survives the live plan render; and adds confidentiality/copyright footers without changing the ROI calculation model.
 
 ## Release validation
 
@@ -42,5 +42,5 @@ Before uploading or syncing the Blueprint:
 1. Run `npm ci` with Node.js 22.
 2. Run `npm run migrate` against a disposable PostgreSQL 16 database.
 3. Run `npm test` and the additional version, migration-compatibility, and regression tests used by CI.
-4. Confirm `package.json`, `package-lock.json`, the UI version, and version history all report `5.6.9`.
-5. After deployment, confirm `/health` reports version `5.6.9` and `database: connected`.
+4. Confirm `package.json`, `package-lock.json`, the UI version, and version history all report `5.6.10`.
+5. After deployment, confirm `/health` reports version `5.6.10` and `database: connected`.

@@ -7,6 +7,17 @@
 
 const VERSION_HISTORY = [
   {
+    version: '5.6.10', date: '2026-08-27', tag: 'fix',
+    title: 'Joint Project Plans and customer-ready plan exports',
+    changes: [
+      'Renamed the internal and customer-facing Mutual Action Plan experience to Joint Project Plan while preserving existing plan data and links.',
+      'Added customer-facing context that explains how the shared plan validates the value case, reduces evaluation risk, and keeps actions, owners, and dependencies visible.',
+      'Added consistent Cloud Inventory copyright and confidentiality footers to customer PDFs, PowerPoints, shared plans, and Word battlecards.',
+      'Condensed Joint Project Plan PowerPoints so workstreams remain a table column instead of producing a separate slide for every group.',
+      'Fixed a server startup error caused by registering protected admin routes before the authentication middleware was initialized.'
+    ]
+  },
+  {
     version: '5.6.9', date: '2026-08-27', tag: 'feature',
     title: 'Flexible Mutual Action Plan ordering and customer-ready groupings',
     changes: [

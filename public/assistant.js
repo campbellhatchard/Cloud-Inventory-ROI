@@ -96,7 +96,7 @@
     'tab-comp':        'The rep is currently on the SENSITIVITY tab, adjusting assumptions to test scenarios.',
     'tab-sensitivity': 'The rep is currently on the SENSITIVITY tab.',
     'tab-compare':     'The rep is currently on the COMPARE tab, comparing multiple scenarios.',
-    'tab-map':         'The rep is currently on the MAP (mutual action plan) tab.',
+    'tab-map':         'The rep is currently on the Joint Project Plan tab.',
     'tab-stake':       'The rep is currently on the STAKEHOLDER MAP tab.',
     'tab-saved':       'The rep is currently on the SAVED SCENARIOS tab.',
     'tab-analytics':   'The rep is currently on the ANALYTICS tab.',

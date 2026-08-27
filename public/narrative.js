@@ -361,7 +361,7 @@ function buildNextSteps() {
   const stage  = (v.dealStage || '').toLowerCase().trim();
   const company = v.company || 'the prospect';
 
-  /* ── 1. Check if a Mutual Action Plan exists for this company ── */
+  /* ── 1. Check if a Joint Project Plan exists for this company ── */
   if (typeof _maps !== 'undefined' && Array.isArray(_maps) && _maps.length) {
     const plan = _maps.find(function(m) {
       return (m.company || '').toLowerCase() === company.toLowerCase() && m.is_active !== false;
@@ -391,14 +391,14 @@ function buildNextSteps() {
             by:     byLabel,
             action: ms.title || 'Open milestone',
             detail: (ms.owner ? 'Owner: ' + ms.owner + '. ' : '')
-                  + (ms.notes || ('From the Mutual Action Plan for ' + company + '.'))
+                  + (ms.notes || ('From the Joint Project Plan for ' + company + '.'))
                   + (isOverdue ? ' This step is past its due date.' : '')
           };
         });
       }
       /* Plan exists but all milestones done — show a completion note + closing steps */
       return [
-        { by: fmtD(addDays(7)),  action: 'All MAP milestones complete', detail: 'Your Mutual Action Plan for ' + company + ' shows all milestones completed. Confirm internal approvals and procurement process are on track.' },
+        { by: fmtD(addDays(7)),  action: 'All Joint Project Plan milestones complete', detail: 'Your Joint Project Plan for ' + company + ' shows all milestones completed. Confirm internal approvals and procurement process are on track.' },
         { by: fmtD(addDays(14)), action: 'Finalise contract and sign', detail: 'Work with your champion to expedite procurement. Provide order form and any requested security / legal documents.' },
         { by: fmtD(addDays(21)), action: 'Kick off implementation', detail: 'Schedule technical kick-off call. Confirm ERP integration scope, site list, and go-live target.' }
       ];

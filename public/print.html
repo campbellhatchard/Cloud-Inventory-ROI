@@ -417,7 +417,7 @@ function render(v,mode){
           return {
             by:     due ? (overdue ? '⚠️ Overdue — ' : '') + fmtD(due) : 'To be scheduled',
             action: ms.title || 'Open milestone',
-            detail: (ms.owner ? 'Owner: ' + ms.owner + '. ' : '') + (ms.notes || 'From your Mutual Action Plan.')
+            detail: (ms.owner ? 'Owner: ' + ms.owner + '. ' : '') + (ms.notes || 'From your Joint Project Plan.')
           };
         });
     }

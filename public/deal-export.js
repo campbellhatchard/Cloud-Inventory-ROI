@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════
    deal-export.js — Print/PDF + PowerPoint export for
-   Mutual Action Plans and Stakeholder Maps.
+   Joint Project Plans and Stakeholder Maps.
 
    Print/PDF: opens a clean, CI-branded print window → browser print
               dialog → Save as PDF or print.
@@ -53,9 +53,10 @@ function dePrintWindow(title, innerHtml, extraCss) {
     table{width:100%;border-collapse:collapse;margin:8px 0 16px}th{background:#1E2931;color:#fff;font-size:11px;text-align:left;padding:7px 9px}
     td{font-size:12px;padding:6px 9px;border-bottom:1px solid #F1F5F9;vertical-align:top}tr:nth-child(even) td{background:#F5F8FA}
     .foot{margin-top:28px;padding-top:12px;border-top:1px solid #E2E8F0;font-size:11px;color:#6B7A8D;text-align:center}
+    .customer-purpose{margin:0 0 14px;padding:10px 13px;background:#F0F9FF;border-left:3px solid #00A9CC;border-radius:0 7px 7px 0;font-size:12px;line-height:1.55;color:#475569}
     @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.no-print{display:none}}
     ${extraCss || ''}</style></head><body>${innerHtml}
-    <div class="foot">Generated ${deDate(new Date(),{month:'long',day:'numeric',year:'numeric'})} · Cloud Inventory ROI Business Case Builder</div>
+    <div class="foot">© ${new Date().getFullYear()} Cloud Inventory · Confidential and proprietary · Prepared for the intended recipient</div>
     <script>window.onload=function(){setTimeout(function(){window.print();},350);}<\/script></body></html>`;
     try {
       const blob = new Blob([html], { type: 'text/html' });
@@ -89,6 +90,7 @@ function dePrintWindow(title, innerHtml, extraCss) {
       .prog-fill { height: 100%; background: linear-gradient(90deg,#00A9CC,#2E7D32); }
       .meta-line { font-size: 12px; color: #64748B; margin-bottom: 3px; }
       .foot { margin-top: 28px; padding-top: 12px; border-top: 1px solid #E2E8F0; font-size: 11px; color: #6B7A8D; text-align: center; }
+      .customer-purpose { margin: 0 0 14px; padding: 10px 13px; background: #F0F9FF; border-left: 3px solid #00A9CC; border-radius: 0 7px 7px 0; font-size: 12px; line-height: 1.55; color: #475569; }
       .overdue { color: #C81E10; font-weight: 700; }
       .done td { color: #6B7A8D; }
       .quad { position: relative; width: 460px; height: 340px; border: 1.5px solid #CBD5E1; margin: 10px 0 8px; }
@@ -98,14 +100,14 @@ function dePrintWindow(title, innerHtml, extraCss) {
       @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display: none; } }
       ${extraCss || ''}
     </style></head><body>${innerHtml}
-    <div class="foot">Generated ${deDate(new Date(), { month:'long', day:'numeric', year:'numeric' })} · Cloud Inventory ROI Business Case Builder</div>
+    <div class="foot">© ${new Date().getFullYear()} Cloud Inventory · Confidential and proprietary · Prepared for the intended recipient</div>
     <script>window.onload=function(){setTimeout(function(){window.print();},350);};<\/script>
     </body></html>`);
   w.document.close();
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   MUTUAL ACTION PLAN — PRINT / PDF
+   JOINT PROJECT PLAN — PRINT / PDF
    variant: 'internal' | 'customer'
    ═══════════════════════════════════════════════════════════════════ */
 async function printActionPlan(variant) {
@@ -136,7 +138,10 @@ async function printActionPlan(variant) {
     rowsHtml += '</tbody></table>';
   });
 
-  const headTag = variant === 'customer' ? 'Mutual Action Plan' : 'Mutual Action Plan — Internal';
+  const headTag = variant === 'customer' ? 'Joint Project Plan' : 'Joint Project Plan — Internal';
+  const customerPurpose = variant === 'customer'
+    ? '<div class="customer-purpose"><strong>Why we are sharing this plan</strong><br>This shared plan gives both teams one clear view of the actions, owners, and dates that turn your operational priorities into a measurable business outcome. Keeping decisions and dependencies visible helps us reduce evaluation risk, validate the value case, and move confidently toward a successful rollout.</div>'
+    : '';
   const html = `
     <div class="doc-head">
       <img src="${window.location.origin}/ci-logo.png" onerror="this.style.display='none'"/>
@@ -144,7 +149,7 @@ async function printActionPlan(variant) {
     </div>
     <h1>${deEsc(m.title)}</h1>
     <div class="sub">${deEsc(m.company || '')}${m.target_close_date ? ' · Target close: ' + deDate(m.target_close_date, {month:'long',day:'numeric',year:'numeric'}) : ''}</div>
-    ${variant === 'customer' ? '<div class="meta-line" style="font-style:italic;color:#64748B;">A jointly-owned plan built on a data-driven business case grounded in your operational metrics.</div>' : ''}
+    ${customerPurpose}
     <div class="meta-line"><strong>Progress:</strong> ${done} of ${ms.length} complete (${pct}%)</div>
     <div class="prog-wrap"><div class="prog-fill" style="width:${pct}%;"></div></div>
     ${rowsHtml || '<p style="font-size:13px;color:#6B7A8D;">No milestones yet.</p>'}`;
@@ -152,7 +157,7 @@ async function printActionPlan(variant) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   MUTUAL ACTION PLAN — POWERPOINT
+   JOINT PROJECT PLAN — POWERPOINT
    ═══════════════════════════════════════════════════════════════════ */
 async function pptActionPlan(variant) {
   if (!(await deChk())) return;
@@ -180,38 +185,47 @@ async function pptActionPlan(variant) {
     /* Title slide */
     const s0 = pptx.addSlide();
     s0.background = { color: PPT.GRAY_BG };
+    pptConfidentialFooter(s0);
     s0.addShape('rect', { x: 0, y: 2.3, w: PPT.W, h: 1.0, fill: { color: PPT.NAVY } });
     s0.addImage({ path: PPT.LOGO, x: 0.4, y: 0.4, w: 1.15, h: 1.15 * 349/1000 });
-    s0.addText('Mutual Action Plan', { x: 0.5, y: 2.45, w: 9, h: 0.5, fontSize: 30, bold: true, color: PPT.WHITE, fontFace: PPT.FONT });
+    s0.addText('Joint Project Plan', { x: 0.5, y: 2.45, w: 9, h: 0.5, fontSize: 30, bold: true, color: PPT.WHITE, fontFace: PPT.FONT });
     s0.addText(m.title, { x: 0.5, y: 3.5, w: 9, h: 0.4, fontSize: 16, bold: true, color: PPT.NAVY, fontFace: PPT.FONT });
     s0.addText([
       { text: m.company || '', options: { fontSize: 13, color: PPT.GRAY_TXT } },
       { text: m.target_close_date ? '   ·   Target close: ' + deDate(m.target_close_date, {month:'long',day:'numeric',year:'numeric'}) : '', options: { fontSize: 13, color: PPT.GRAY_TXT } }
     ], { x: 0.5, y: 3.95, w: 9, h: 0.35, fontFace: PPT.FONT });
     s0.addText(`${done} of ${ms.length} milestones complete (${pct}%)`, { x: 0.5, y: 4.35, w: 9, h: 0.35, fontSize: 12, italic: true, color: PPT.CYAN, fontFace: PPT.FONT });
+    if (variant === 'customer') {
+      s0.addText('This jointly-owned plan aligns decisions, owners, and timing so we can validate the value case, reduce evaluation risk, and move confidently toward measurable operational improvement.', { x: 0.5, y: 4.85, w: 8.8, h: 0.55, fontSize: 11, color: PPT.GRAY_TXT, fontFace: PPT.FONT });
+    }
 
-    /* One slide per phase (or grouped) — table of milestones */
-    phases.filter(p => deMilestonesInGroup(ms, p).length).forEach(phase => {
+    /* Keep the deck compact: workstreams remain a column, not separate slide sections. */
+    const planRows = ms.map(x => {
+      const group = phases.find(p => p.id === x.groupId) || phases.find(p => p.name === x.phase) || { name: 'Plan' };
+      const overdue = x.status !== 'done' && x.dueDate && new Date(x.dueDate) < new Date();
+      return [
+        { text: group.name, options: { fontSize: 8.5, color: PPT.CYAN, bold: true } },
+        { text: x.title, options: { fontSize: 9.5, color: PPT.DARK_TXT } },
+        { text: ownerLabels[x.owner] || x.owner, options: { fontSize: 9, color: PPT.GRAY_TXT } },
+        { text: (x.dueDate ? deDate(x.dueDate) : '—') + (overdue ? ' ⚠' : ''), options: { fontSize: 9, color: overdue ? PPT.RED : PPT.GRAY_TXT } },
+        { text: x.status === 'done' ? 'Complete' : x.status === 'in_progress' ? 'In progress' : 'Pending', options: { fontSize: 9, color: x.status === 'done' ? PPT.GREEN : PPT.GRAY_TXT } }
+      ];
+    });
+    const rowsPerSlide = 11;
+    for (let start = 0; start < planRows.length || (start === 0 && !planRows.length); start += rowsPerSlide) {
       const rows = [[
-        { text: 'Milestone', options: { bold: true, color: PPT.WHITE, fill: { color: PPT.NAVY }, fontSize: 11 } },
-        { text: 'Owner', options: { bold: true, color: PPT.WHITE, fill: { color: PPT.NAVY }, fontSize: 11 } },
-        { text: 'Due', options: { bold: true, color: PPT.WHITE, fill: { color: PPT.NAVY }, fontSize: 11 } },
-        { text: 'Status', options: { bold: true, color: PPT.WHITE, fill: { color: PPT.NAVY }, fontSize: 11 } }
-      ]];
-      deMilestonesInGroup(ms, phase).forEach(x => {
-        const overdue = x.status !== 'done' && x.dueDate && new Date(x.dueDate) < new Date();
-        rows.push([
-          { text: x.title, options: { fontSize: 10, color: PPT.DARK_TXT } },
-          { text: ownerLabels[x.owner] || x.owner, options: { fontSize: 10, color: PPT.GRAY_TXT } },
-          { text: (x.dueDate ? deDate(x.dueDate) : '—') + (overdue ? ' ⚠' : ''), options: { fontSize: 10, color: overdue ? PPT.RED : PPT.GRAY_TXT } },
-          { text: x.status === 'done' ? '● Complete' : x.status === 'in_progress' ? '◐ In progress' : '○ Pending', options: { fontSize: 10, color: x.status === 'done' ? PPT.GREEN : PPT.GRAY_TXT } }
-        ]);
-      });
+        { text: 'Workstream', options: { bold: true, color: PPT.WHITE, fill: { color: PPT.NAVY }, fontSize: 9 } },
+        { text: 'Milestone', options: { bold: true, color: PPT.WHITE, fill: { color: PPT.NAVY }, fontSize: 9 } },
+        { text: 'Owner', options: { bold: true, color: PPT.WHITE, fill: { color: PPT.NAVY }, fontSize: 9 } },
+        { text: 'Due', options: { bold: true, color: PPT.WHITE, fill: { color: PPT.NAVY }, fontSize: 9 } },
+        { text: 'Status', options: { bold: true, color: PPT.WHITE, fill: { color: PPT.NAVY }, fontSize: 9 } }
+      ], ...planRows.slice(start, start + rowsPerSlide)];
+      if (rows.length === 1) rows.push([{ text: 'No milestones yet', options: { fontSize: 10, color: PPT.GRAY_TXT } }, '', '', '', '']);
       const s = pptx.addSlide();
       pptChrome(s, null);
-      pptTitle(s, phase.name);
-      s.addTable(rows, { x: 0.45, y: 1.6, w: 9.1, colW: [4.6, 1.7, 1.5, 1.3], border: { pt: 0.5, color: 'E0E4E8' }, autoPage: true });
-    });
+      pptTitle(s, start ? 'Joint Project Plan — continued' : 'Joint Project Plan milestones');
+      s.addTable(rows, { x: 0.35, y: 1.55, w: 9.3, colW: [1.35, 4.15, 1.25, 1.2, 1.35], border: { pt: 0.5, color: 'E0E4E8' } });
+    }
 
     const safe = (m.company || 'Plan').replace(/[^a-zA-Z0-9 \-_]/g, '').trim().replace(/\s+/g, '-') || 'Plan';
     await pptx.writeFile({ fileName: `Action-Plan-${safe}${variant === 'customer' ? '-Customer' : ''}-${new Date().toISOString().split('T')[0]}.pptx` });
@@ -676,6 +690,7 @@ async function roiMethodologyPPT() {
 
     /* Title slide */
     const s0 = pptx.addSlide(); s0.background = { color: PPT.GRAY_BG };
+    pptConfidentialFooter(s0);
     s0.addShape('rect',{x:0,y:2.3,w:PPT.W,h:1.0,fill:{color:PPT.NAVY}});
     s0.addImage({path:PPT.LOGO,x:0.4,y:0.4,w:1.15,h:1.15*349/1000});
     s0.addText('ROI Methodology & Calculation Detail',{x:0.5,y:2.42,w:9,h:0.55,fontSize:26,bold:true,color:PPT.WHITE,fontFace:PPT.FONT});
@@ -853,6 +868,7 @@ async function buildChampionPack() {
 
     /* ── Slide 1: The problem statement (in their words) ── */
     const s1 = pptx.addSlide(); s1.background = { color: PPT.NAVY };
+    pptConfidentialFooter(s1);
     s1.addImage({path:PPT.LOGO, x:0.4, y:0.25, w:1.0, h:1.0*349/1000, transparency:0});
     s1.addText('The case for Cloud Inventory', {
       x:0.5, y:1.0, w:9.0, h:0.5, fontSize:28, bold:true, color:PPT.WHITE, fontFace:PPT.FONT

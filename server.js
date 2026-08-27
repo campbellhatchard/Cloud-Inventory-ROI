@@ -17,6 +17,8 @@ const crypto     = require('crypto');
 const { getAppUrl } = require('./src/config');
 const helmet     = require('helmet');
 const rateLimit  = require('express-rate-limit');
+/* This middleware is used by early admin routes as well as later APIs. */
+const { requireAuth } = require('./src/middleware/auth');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -191,7 +193,7 @@ app.use('/api/scenarios', scenariosRouter);
 const helpRouter = require('./src/routes/help');
 app.use('/api/help', helpRouter);
 
-/* ── Mutual Action Plans ── */
+/* ── Joint Project Plans ── */
 const mapsRouter = require('./src/routes/maps');
 app.use('/api/maps', mapsRouter);
 
@@ -206,7 +208,6 @@ app.use('/api', require('./src/routes/analytics'));  // analytics + custom bench
    De-duplicated company names across scenarios, action plans and
    stakeholders for the current user, each with usage counts.
    Case-insensitive grouping; canonical spelling = most recent use.  */
-const { requireAuth } = require('./src/middleware/auth');
 app.get('/api/companies', requireAuth, async (req, res) => {
   try {
     const { rows } = await db().query(
@@ -772,7 +773,6 @@ app.get('/api/enhance/health', (req, res) => {
 });
 
 /* ── AI Enhance proxy — requires auth ── */
-
 app.post('/api/enhance', requireAuth, aiLimiter, async (req, res) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set.' });
@@ -1098,7 +1098,7 @@ app.post('/api/export/battlecard-docx', requireAuth, async (req, res) => {
     if (!competitorName) return res.status(400).json({ error: 'competitorName required' });
 
     const {
-      Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+      Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, Footer,
       HeadingLevel, WidthType, BorderStyle, ShadingType, TableLayoutType, VerticalAlign
     } = require('docx');
 
@@ -1171,7 +1171,17 @@ app.post('/api/export/battlecard-docx', requireAuth, async (req, res) => {
       }));
     }
 
-    const doc  = new Document({ sections: [{ children }] });
+    const doc  = new Document({ sections: [{
+      footers: {
+        default: new Footer({ children: [
+          new Paragraph({
+            children: [mkRun('© ' + new Date().getFullYear() + ' Cloud Inventory. Confidential and proprietary. Prepared for ' + esc(company || 'the intended recipient') + '.', { size: 16, color: '64748B' })],
+            alignment: 'center'
+          })
+        ] })
+      },
+      children
+    }] });
     const buf  = await Packer.toBuffer(doc);
     const safe = esc(competitorName).replace(/[^a-zA-Z0-9]/g, '-');
     const filename = `Battlecard-${safe}-${new Date().toISOString().split('T')[0]}.docx`;

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   map.js — Mutual Action Plan tab (rep view)
+   map.js — Joint Project Plan tab (rep view)
    Build a shared close plan, generate milestones with AI, share a live
    link with the prospect, track progress together.
    ═══════════════════════════════════════════════════════════════════ */
@@ -93,8 +93,8 @@ function renderMapList() {
   const me = user.username || '';
 
   if (!_maps.length) {
-    el.innerHTML = '<div class="empty-state"><p>No action plans yet. Create one to build a shared close plan with your prospect.</p>'
-      + '<button class="btn btn-cta" onclick="newMap()" style="margin-top:.75rem;">+ New action plan</button></div>';
+    el.innerHTML = '<div class="empty-state"><p>No Joint Project Plans yet. Create one to build a shared path to value with your prospect.</p>'
+      + '<button class="btn btn-cta" onclick="newMap()" style="margin-top:.75rem;">+ New Joint Project Plan</button></div>';
     return;
   }
 
@@ -212,9 +212,9 @@ function renderMapList() {
   if (isAdmin) {
     /* ── Admin: flat filtered table ── */
     el.innerHTML = '<div class="map-list-head">'
-      + '<div><h2 class="map-list-title">Mutual action plans</h2>'
+      + '<div><h2 class="map-list-title">Joint Project Plans</h2>'
       + '<p class="map-list-sub">All plans across all reps.</p></div>'
-      + '<button class="btn btn-cta" onclick="newMap()">+ New action plan</button>'
+      + '<button class="btn btn-cta" onclick="newMap()">+ New Joint Project Plan</button>'
       + '</div>'
       + statsHtml
       + overdueAlertHtml
@@ -225,16 +225,16 @@ function renderMapList() {
   } else {
     /* ── Rep: my plans + other reps (read-only) ── */
     el.innerHTML = '<div class="map-list-head">'
-      + '<div><h2 class="map-list-title">Mutual action plans</h2>'
-      + '<p class="map-list-sub">Your shared close plans with prospects.</p></div>'
-      + '<button class="btn btn-cta" onclick="newMap()">+ New action plan</button>'
+      + '<div><h2 class="map-list-title">Joint Project Plans</h2>'
+      + '<p class="map-list-sub">Your shared plans for validating value and moving the project forward.</p></div>'
+      + '<button class="btn btn-cta" onclick="newMap()">+ New Joint Project Plan</button>'
       + '</div>'
       + statsHtml
       + overdueAlertHtml
       + '<div class="map-section">'
       + '<div class="map-section-head"><span class="map-section-title">Your plans</span><span class="map-section-count">' + myMaps.length + '</span></div>'
       + (myMaps.length === 0
-        ? '<div class="empty-state"><p>No plans yet. Create your first action plan to get started.</p></div>'
+        ? '<div class="empty-state"><p>No plans yet. Create your first Joint Project Plan to get started.</p></div>'
         : myMaps.map(function(m){ return mapCard(m, false, true); }).join(''))
       + '</div>'
       + (otherMaps.length ? '<div class="map-section">'
@@ -250,7 +250,7 @@ function newMap() {
   _mapCurrent = {
     id: null,
     company: v.company && v.company !== 'Prospect' ? v.company : '',
-    title: 'Mutual Action Plan' + (v.company && v.company !== 'Prospect' ? ' — ' + v.company : ''),
+    title: 'Joint Project Plan' + (v.company && v.company !== 'Prospect' ? ' — ' + v.company : ''),
     target_close_date: null,
     token: null,
     milestones: [],
@@ -564,7 +564,7 @@ async function saveMap() {
     return;
   }
   const body = {
-    title:           document.getElementById('mapTitle').value.trim() || 'Mutual Action Plan',
+    title:           document.getElementById('mapTitle').value.trim() || 'Joint Project Plan',
     company:         _mapCurrent.company.trim(),
     targetCloseDate: document.getElementById('mapCloseDate').value || null,
     milestones:      _mapCurrent.milestones || [],
@@ -578,7 +578,7 @@ async function saveMap() {
   _mapCurrent.id = saved.id;
   _mapCurrent.token = saved.token || _mapCurrent.token;
   Object.assign(_mapCurrent, { title: saved.title, company: saved.company, target_close_date: saved.target_close_date });
-  showToast('Action plan saved.');
+  showToast('Joint Project Plan saved.');
   await loadMaps();
   const fresh = _maps.find(x => x.id === saved.id);
   if (fresh) { _mapCurrent = mapNormalizeStructure(JSON.parse(JSON.stringify(fresh))); }
@@ -605,14 +605,14 @@ function mapUrl() { return window.location.origin + '/prospect-map.html?token=' 
 function copyMapLink() { navigator.clipboard.writeText(mapUrl()).then(() => showToast('Link copied!')); }
 
 function emailMapLink() {
-  const subject = 'Our mutual action plan — ' + (_mapCurrent.company || 'next steps');
+  const subject = 'Our Joint Project Plan — ' + (_mapCurrent.company || 'next steps');
   const body = `Hi,
 
-Here's the live link to our shared action plan for ${_mapCurrent.company || 'your evaluation'}:
+Here's the live link to our shared Joint Project Plan for ${_mapCurrent.company || 'your evaluation'}:
 
 ${mapUrl()}
 
-It shows every step to ${_mapCurrent.target_close_date ? 'our target date of ' + new Date(_mapCurrent.target_close_date).toLocaleDateString('en-US',{month:'long',day:'numeric'}) : 'go-live'}, who owns each one, and where we are. You can check off items on your side as they complete — it updates in real time for both of us.
+It shows every step to ${_mapCurrent.target_close_date ? 'our target date of ' + new Date(_mapCurrent.target_close_date).toLocaleDateString('en-US',{month:'long',day:'numeric'}) : 'go-live'}, who owns each one, and where we are. It helps us validate the value case, remove dependencies early, and keep the evaluation focused on measurable operational improvement. You can check off items on your side as they complete — it updates in real time for both of us.
 
 Looking forward to working through this together.
 `;
@@ -634,7 +634,7 @@ async function aiGenerateMap() {
     mapNormalizeStructure(_mapCurrent);
     const groupNames = _mapCurrent.groups.map(g => g.name);
 
-    const prompt = `You are a B2B enterprise sales strategist. Create a mutual action plan for closing a Cloud Inventory (inventory management SaaS) deal with ${company}, a ${industry} company. Current deal stage: ${stage}. ${closeDate ? 'Target close date: ' + closeDate + '.' : ''} Implementation takes ~${impl} months after signature.
+    const prompt = `You are a B2B enterprise sales strategist. Create a Joint Project Plan for closing a Cloud Inventory (inventory management SaaS) deal with ${company}, a ${industry} company. Current deal stage: ${stage}. ${closeDate ? 'Target close date: ' + closeDate + '.' : ''} Implementation takes ~${impl} months after signature.
 
 Respond ONLY with a JSON array (no markdown fences, no preamble). Each element: {"phase": one of ${JSON.stringify(groupNames)}, "title": "specific actionable milestone under 12 words", "owner": "rep"|"prospect"|"joint", "weeksFromNow": number}. Create 10-14 milestones distributed across these groupings, covering: technical validation, business case sign-off, security review, legal/MSA redlines, procurement, executive alignment, and kickoff. Make prospect-owned items explicit (e.g. "Provide security questionnaire", "Confirm budget holder sign-off").`;
 

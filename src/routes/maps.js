@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   src/routes/maps.js — Mutual Action Plans
+   src/routes/maps.js — Joint Project Plans
    Rep endpoints (auth) + public prospect endpoints (token-gated).
    ═══════════════════════════════════════════════════════════════════ */
 const express   = require('express');
@@ -21,7 +21,7 @@ router.get('/public/:token', async (req, res) => {
       [String(req.params.token || '')]
     );
     if (!rows.length) return res.status(404).json({ error: 'Plan not found.' });
-    if (!rows[0].is_active) return res.status(410).json({ error: 'This action plan link is no longer active.' });
+    if (!rows[0].is_active) return res.status(410).json({ error: 'This Joint Project Plan link is no longer active.' });
     res.json(rows[0]);
   } catch (e) { res.status(500).json({ error: 'Failed to load plan.' }); }
 });
@@ -89,13 +89,13 @@ router.post('/', async (req, res) => {
   try {
     const { company, title, targetCloseDate, milestones, groups, scenarioId } = req.body || {};
     if (!company || !company.trim()) {
-      return res.status(400).json({ error: 'A company must be selected before saving an action plan.' });
+      return res.status(400).json({ error: 'A company must be selected before saving a Joint Project Plan.' });
     }
     const { rows } = await query(
       `INSERT INTO mutual_action_plans (owner_id, scenario_id, company, title, target_close_date, milestones, groups)
        VALUES ($1,$2,$3,$4,$5,$6,$7)
        RETURNING id, company, title, target_close_date, token, is_active, milestones, groups, created_at, updated_at`,
-      [req.user.id, scenarioId || null, (company||'').trim(), (title||'Mutual Action Plan').trim(),
+      [req.user.id, scenarioId || null, (company||'').trim(), (title||'Joint Project Plan').trim(),
        targetCloseDate || null, JSON.stringify(milestones || []), JSON.stringify(groups || [])]
     );
     await log({ userId: req.user.id, action: 'map.created', entityType: 'mutual_action_plan',

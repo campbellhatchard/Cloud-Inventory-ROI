@@ -10,7 +10,7 @@ A multi-user SaaS application for Cloud Inventory sales reps and Solution Engine
 - **Discovery guide** — Industry-specific question sets with a shareable prospect link so prospects can contribute their own data
 - **Executive view** — CFO-ready narrative, Three Whys framework, PDF and PowerPoint exports
 - **Solution Fit** — Pre-sales handoff document for Services / Solution Engineering
-- **Action plans** — Mutual action plan builder with milestone tracking and a shareable prospect link
+- **Joint Project Plans** — Joint project plan builder with milestone tracking and a shareable prospect link
 - **Stakeholder map** — Influence/support matrix with AI gap analysis
 - **Scenario templates** — Pre-populated starting points for 6 verticals
 - **Version history & diffing** — Every save creates a version; compare any two side by side
@@ -116,7 +116,7 @@ Push to the connected GitHub branch. Render installs with `npm ci` and starts `n
 │   ├── middleware/auth.js     # requireAuth middleware
 │   ├── routes/
 │   │   ├── auth.js            # Login, logout, forgot/reset password
-│   │   ├── maps.js            # Mutual action plans
+│   │   ├── maps.js            # Joint Project Plans
 │   │   ├── scenarios.js       # Scenarios CRUD, versions, outcome, resonance
 │   │   ├── stakeholders.js    # Stakeholder maps
 │   │   └── users.js           # User management (admin)
@@ -183,4 +183,4 @@ Edit `public/scenario-templates.js`, add an entry to `SCENARIO_TEMPLATES`:
 
 ## Version
 
-Current: **v5.6.9** — see Admin → Version history for full changelog.
+Current: **v5.6.10** — see Admin → Version history for full changelog.

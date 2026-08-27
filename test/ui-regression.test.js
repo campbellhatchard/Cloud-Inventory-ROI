@@ -185,7 +185,7 @@ test('prospect live ROI excludes unsupported benchmark dollars and labels covera
 });
 
 
-test('Mutual Action Plans support ordered custom groupings across editor and customer outputs', () => {
+test('Joint Project Plans support ordered custom groupings and customer-ready value messaging', () => {
   assert.match(mapEditor, /function addMapGroup\(/);
   assert.match(mapEditor, /function removeMapGroup\(/);
   assert.match(mapEditor, /function moveMapGroup\(/);
@@ -197,7 +197,14 @@ test('Mutual Action Plans support ordered custom groupings across editor and cus
   assert.match(mapRoutes, /m\.milestones, m\.groups/);
   assert.match(mapRoutes, /groups = COALESCE/);
   assert.match(dealExport, /deMapGroups\(m, ms\)/);
+  assert.match(dealExport, /Joint Project Plan/);
+  assert.match(dealExport, /Why we are sharing this plan/);
+  assert.match(dealExport, /rowsPerSlide = 11/);
+  assert.doesNotMatch(dealExport, /One slide per phase/);
   assert.match(prospectMap, /function planGroups\(ms\)/);
+  assert.match(prospectMap, /Joint Project Plan/);
+  assert.match(prospectMap, /Why we are sharing this plan/);
+  assert.match(prospectMap, /Confidential and proprietary/);
   assert.match(prospectMap, /actions for your team/);
   assert.match(prospectMap, /aria-label=/);
 
@@ -217,6 +224,24 @@ test('MAP grouping migration is additive and backwards-compatible', () => {
 test('customer MAP attribute escaping handles quotes safely', () => {
   assert.match(prospectMap, /replace\(\/"\/g,'&quot;'\)/);
   assert.match(prospectMap, /replace\(\/'\/g,'&#39;'\)/);
+});
+
+
+test('Joint Project Plan customer purpose survives the live render and quote escaping stays safe', () => {
+  const renderStart = prospectMap.indexOf("document.getElementById('content').innerHTML = `");
+  assert.ok(renderStart >= 0, 'customer plan render template missing');
+  const renderBlock = prospectMap.slice(renderStart, prospectMap.indexOf('`;', renderStart) + 2);
+  assert.match(renderBlock, /Why we are sharing this plan/);
+  assert.match(prospectMap, /replace\(\/"\/g,'&quot;'\)/);
+  assert.match(prospectMap, /replace\(\/'\/g,'&#39;'\)/);
+});
+
+test('v5.6.10 confidentiality footers do not weaken ROI output semantics', () => {
+  assert.match(dealExport, /Confidential and proprietary/);
+  assert.match(pptxExport, /function pptConfidentialFooter\(/);
+  assert.match(dealExport, /Inventory turns — annual carrying savings/);
+  assert.match(pptxExport, /Turns Carrying Savings/);
+  assert.match(dealExport, /v\.ramp1 \?\? 0\.4/);
 });
 
 test('CI retains UI and startup regression execution', () => {

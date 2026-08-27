@@ -713,7 +713,7 @@ body.livebar-off .sidebar-spacer{display:none;}
 .industry-filter-select:focus{border-color:var(--cyan);}
 #adminViewAllBtn.active{background:var(--navy);color:#fff;border-color:var(--navy);}
 
-/* ══ Mutual Action Plan (v2.2) ══ */
+/* ══ Joint Project Plan (v2.2) ══ */
 .map-progress{height:6px;background:var(--gray-100);border-radius:4px;overflow:hidden;margin-top:6px;max-width:340px;}
 .map-progress-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--green));border-radius:4px;}
 .map-phase-label{font-size:var(--fs-xs);font-weight:700;color:var(--cyan-dark);text-transform:uppercase;letter-spacing:.06em;margin:1rem 0 .4rem;padding-bottom:3px;border-bottom:2px solid var(--gray-100);}
@@ -2421,7 +2421,7 @@ input[placeholder="Industry avg"]:focus{background:var(--white);}
 .cleanup-success-title{font-size:17px;font-weight:700;color:var(--navy);margin-bottom:8px;}
 .cleanup-success-detail{font-size:13px;color:var(--gray-600);margin-bottom:16px;}
 
-/* ── Mutual Action Plan list view (v5.5.0) ── */
+/* ── Joint Project Plan list view (v5.5.0) ── */
 .map-list-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:1.25rem;}
 .map-list-title{font-size:18px;font-weight:600;color:var(--navy);margin-bottom:3px;}
 .map-list-sub{font-size:13px;color:var(--gray-500);}

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Mutual Action Plan — Cloud Inventory</title>
+<title>Joint Project Plan — Cloud Inventory</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -45,6 +45,8 @@ body{font-family:var(--font);background:var(--navy);min-height:100vh;padding:2re
 .ow-joint{background:rgba(46,125,50,.1);color:var(--green);}
 .overdue{color:var(--red)!important;font-weight:700;}
 .footer{padding:1rem 2rem;background:var(--g100);font-size:12px;color:var(--g600);display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;}
+.purpose{margin:0 0 1.15rem;padding:.85rem 1rem;background:#F0F9FF;border-left:3px solid var(--cyan);border-radius:0 7px 7px 0;color:var(--g700);font-size:14px;line-height:1.55;}
+.purpose strong{color:var(--navy);}
 .err-card{text-align:center;padding:3rem 2rem;}
 .err-card h2{color:var(--navy);font-size:19px;margin-bottom:8px;}
 .err-card p{color:var(--g400);font-size:14px;}
@@ -65,16 +67,16 @@ button{cursor:pointer;}
 <div class="wrap">
   <div class="logo-row">
     <img class="logo" src="ci-logo-negative.png" alt="Cloud Inventory" onerror="this.src='ci-logo.png'"/>
-    <div class="logo-sub">Mutual Action Plan</div>
+    <div class="logo-sub">Joint Project Plan</div>
   </div>
   <div class="card">
     <div class="accent"></div>
     <div id="content" class="body">
-      <div class="err-card"><p>Loading your action plan…</p></div>
+      <div class="err-card"><p>Loading your Joint Project Plan…</p></div>
     </div>
     <div class="footer" id="footer" style="display:none;">
       <span id="repInfo"></span>
-      <span>Powered by Cloud Inventory</span>
+      <span>© 2026 Cloud Inventory · Confidential and proprietary</span>
     </div>
   </div>
 </div>
@@ -93,8 +95,8 @@ async function load() {
   if (!token) { showError('Invalid link', 'This link is missing its access token. Ask your Cloud Inventory contact for a fresh link.'); return; }
   try {
     const res = await fetch('/api/maps/public/' + encodeURIComponent(token));
-    if (res.status === 410) { showError('Link no longer active', 'This action plan link has been revoked. Ask your Cloud Inventory contact for a new one.'); return; }
-    if (!res.ok) { showError('Plan not found', 'This link could not be matched to an action plan.'); return; }
+    if (res.status === 410) { showError('Link no longer active', 'This Joint Project Plan link has been revoked. Ask your Cloud Inventory contact for a new one.'); return; }
+    if (!res.ok) { showError('Plan not found', 'This link could not be matched to a Joint Project Plan.'); return; }
     plan = await res.json();
     render();
   } catch (e) {
@@ -134,6 +136,7 @@ function render() {
   document.getElementById('content').innerHTML = `
     <div class="title">${esc(plan.title)}</div>
     <div class="meta">${esc(plan.company || '')}${plan.target_close_date ? ' · Target: ' + fmtDate(plan.target_close_date, true) : ''}</div>
+    <div class="purpose"><strong>Why we are sharing this plan</strong><br>It gives both teams one clear view of the actions, owners, and dates that support a successful evaluation and rollout. By validating the business case and resolving dependencies together, we can reduce risk and focus on the operational value Cloud Inventory can deliver.</div>
     <div class="progress-wrap">
       <div class="progress-label"><span>Progress</span><span>${done} of ${ms.length} complete (${pct}%)</span></div>
       <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>

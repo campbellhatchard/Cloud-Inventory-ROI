@@ -124,6 +124,13 @@ function pptTrunc(str, max) {
   return str.length > max ? str.slice(0, max - 1).trim() + '…' : str;
 }
 
+function pptConfidentialFooter(slide) {
+  slide.addText(`© ${new Date().getFullYear()} Cloud Inventory · Confidential and proprietary`, {
+    x: 5.9, y: PPT.H - 0.42, w: 3.9, h: 0.22,
+    fontSize: 7.5, color: PPT.GRAY_TXT, align: 'right', fontFace: PPT.FONT
+  });
+}
+
 /* ── Shared slide chrome: logo + page number + light background ── */
 function pptChrome(slide, pageNum) {
   slide.background = { color: PPT.GRAY_BG };
@@ -134,6 +141,7 @@ function pptChrome(slide, pageNum) {
       fontSize: 9, bold: true, color: PPT.NAVY, fontFace: PPT.FONT
     });
   }
+  pptConfidentialFooter(slide);
 }
 /* Slide title in template style: cyan, bold, top-left below logo */
 function pptTitle(slide, text) {
@@ -170,6 +178,7 @@ async function exportToPowerPoint() {
     {
       const s = pptx.addSlide();
       s.background = { color: PPT.GRAY_BG };
+      pptConfidentialFooter(s);
       /* Right navy panel (template has an image; we use a clean navy block) */
       s.addShape('rect', { x: 5.7, y: 0, w: 4.3, h: PPT.H, fill: { color: PPT.NAVY } });
       /* Cyan dot grid accent on the navy panel */
