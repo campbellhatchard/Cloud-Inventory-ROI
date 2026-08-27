@@ -7,6 +7,23 @@
 
 const VERSION_HISTORY = [
   {
+    version: '5.6.15', date: '2026-08-27', tag: 'improvement',
+    title: 'Contract-term Deal Coach health assessment',
+    changes: [
+      'Christie and Deal Coach readiness now assess total benefit, investment, net value, NPV, and payback across the proposal contract term rather than relying on Year 1 ROI.',
+      'Updated champion materials with a warm, practical value-engineering voice focused on jointly validating the business case and route to value.',
+      'Established Christie’s Toronto consultant voice: supportive, direct, and clear about the difference between entered facts and suggested guidance.'
+    ]
+  },
+  {
+    version: '5.6.14', date: '2026-08-27', tag: 'improvement',
+    title: 'Compact customer workspace switcher',
+    changes: [
+      'Reworked the customer header into a compact, sticky Deal Context Bar with clearly labeled customer and scenario context.',
+      'Moved customer switching into a focused, consistently placed action that no longer competes with page-level workflow and export controls.'
+    ]
+  },
+  {
     version: '5.6.13', date: '2026-08-27', tag: 'feature',
     title: 'Christie AI Deal Coach',
     changes: [

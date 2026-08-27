@@ -118,10 +118,10 @@ function updateContextHeader() {
   const scenario = (document.getElementById('scenarioName')?.value || '').trim();
   if (!company) { bar.style.display = 'none'; return; }
   bar.style.display = 'flex';
-  bar.innerHTML = `<span class="ctx-icon">${ctxInitialsUX(company)}</span>
-    <span class="ctx-company">${escapeHtmlUX(company)}</span>` +
-    (scenario ? `<span class="ctx-sep">·</span><span class="ctx-scenario">${escapeHtmlUX(scenario)}</span>` : '') +
-    `<button class="ctx-switch" onclick="showCustomerGate()" title="Switch customer">Switch</button>`;
+  bar.innerHTML = `<span class="ctx-icon" aria-hidden="true">${ctxInitialsUX(company)}</span>
+    <span class="ctx-details"><span class="ctx-label">Customer workspace</span><span class="ctx-company">${escapeHtmlUX(company)}</span></span>` +
+    (scenario ? `<span class="ctx-sep">/</span><span class="ctx-scenario"><span>Scenario</span>${escapeHtmlUX(scenario)}</span>` : '') +
+    `<button class="ctx-switch" onclick="showCustomerGate()" title="Search and switch customer"><span aria-hidden="true">⇄</span> Switch customer</button>`;
 }
 function ctxInitialsUX(name) {
   return String(name || '').trim().split(/\s+/).slice(0, 2)

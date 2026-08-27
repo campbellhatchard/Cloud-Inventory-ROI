@@ -1,4 +1,4 @@
-# Cloud Inventory ROI v5.6.13 Deployment Validation
+# Cloud Inventory ROI v5.6.15 Deployment Validation
 
 ## Render deployment configuration
 
@@ -33,7 +33,7 @@ Add these in the Render dashboard when the corresponding feature is needed:
 
 ## Validation corrections applied
 
-This validated v5.6.13 release candidate preserves the locked v5.6.10 integrity controls while incorporating the v5.6.11 Executive Proposal, v5.6.12 Deal Coach, and v5.6.13 Christie AI Deal Coach workflows. It keeps `requireAuth` initialized once before every protected route; preserves explicit zero ramp assumptions and `fieldInvSav`; keeps turns-based value labelled as annual carrying-cost savings rather than balance-sheet working capital; keeps Medical Devices / Life Sciences customer-input-only; retains CI startup/UI regression coverage; preserves migrations 001–023 unchanged and quote-safe Joint Project Plan rendering; removes the nested v4 package contaminant; sends Proposal AI/Word calls through authenticated `apiFetch`; refreshes persisted stakeholder and Joint Project Plan context before Deal Coach scoring; preserves locally saved Proposal readiness; quote-escapes Champion Kit content; and sends Christie requests through the authenticated AI proxy using deal context without inventing customer facts.
+This validated v5.6.15 release candidate preserves the locked v5.6.13 integrity controls while adding the v5.6.14 compact sticky Deal Context Bar and the v5.6.15 contract-term Deal Coach economics and Christie consultant voice. It keeps `requireAuth` initialized once before every protected route; preserves explicit zero ramp assumptions and `fieldInvSav`; keeps turns-based value labelled as annual carrying-cost savings rather than balance-sheet working capital; keeps Medical Devices / Life Sciences customer-input-only; retains CI startup/UI regression coverage; preserves migrations 001–023 unchanged and quote-safe Joint Project Plan rendering; preserves authenticated Proposal AI/Word calls, persisted Proposal readiness, and refreshed buyer context; and evaluates Deal Coach commercial health using the proposal contract term while keeping Year 1 as context rather than the decision basis.
 
 ## Release validation
 
@@ -42,5 +42,5 @@ Before uploading or syncing the Blueprint:
 1. Run `npm ci` with Node.js 22.
 2. Run `npm run migrate` against a disposable PostgreSQL 16 database.
 3. Run `npm test` and the additional version, migration-compatibility, and regression tests used by CI.
-4. Confirm `package.json`, `package-lock.json`, the UI version, and version history all report `5.6.13`.
-5. After deployment, confirm `/health` reports version `5.6.13` and `database: connected`.
+4. Confirm `package.json`, `package-lock.json`, the UI version, and version history all report `5.6.15`.
+5. After deployment, confirm `/health` reports version `5.6.15` and `database: connected`.

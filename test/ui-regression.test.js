@@ -276,12 +276,12 @@ test('v5.6.12 Deal Coach refreshes buyer context and opens Proposal safely', () 
   assert.match(dealCoach, /function proposalReady\(\)/);
   assert.match(dealCoach, /const nextAction=n\.go==='proposal'\?'openProposal\(\)'/);
   assert.doesNotMatch(dealCoach, /n\.go==='proposal'\?'render\(\)'/);
-  assert.match(dealCoach, /const safeCompany=esc\(company\), safeBenefit=esc\(benefit\), safeRep=esc/);
+  assert.match(dealCoach, /const safeCompany=esc\(company\), safeBenefit=esc\(money\(e\.benefit\)\), safeCost=esc\(money\(e\.cost\)\), safeNet=esc\(money\(e\.net\)\), safeRep=esc/);
   assert.doesNotMatch(dealCoach, /<textarea[^]*\$\{company\}/);
 });
 
 test('v5.6.11-v5.6.13 feature files preserve locked customer and ROI controls', () => {
-  assert.match(index, /APP_VERSION="5\.6\.13"/);
+  assert.match(index, /APP_VERSION="5\.6\.15"/);
   assert.match(proposal, /36 months/);
   assert.match(proposal, /addDays\(30\)/);
   assert.match(dealCoach, /Joint Project Plan/);
@@ -303,4 +303,32 @@ test('v5.6.13 Christie AI Deal Coach uses authenticated deal context safely', ()
   assert.match(dealCoach, /Do not invent numbers, commitments, dates, or stakeholder facts/);
   assert.match(dealCoach, /esc\(answer\)\.replace\(\/\\n\/g,'<br>'\)/);
   assert.match(css, /\.coach-christie\{/);
+});
+
+
+test('v5.6.14 Deal Context Bar stays compact, sticky, and customer-focused', () => {
+  const ux = fs.readFileSync(path.join(root, 'public', 'ux-enhancements.js'), 'utf8');
+  assert.match(ux, /Customer workspace/);
+  assert.match(ux, /Search and switch customer/);
+  assert.match(css, /\.context-header\{[^}]*position:sticky/);
+  assert.match(css, /\.context-header \.ctx-label/);
+  assert.match(css, /\.context-header \.ctx-switch/);
+});
+
+test('v5.6.15 Deal Coach uses contract-term economics without weakening persisted context', () => {
+  assert.match(dealCoach, /function contractMonths\(\)/);
+  assert.match(dealCoach, /function contractEconomics\(v, r\)/);
+  assert.match(dealCoach, /paybackWithinTerm/);
+  assert.match(dealCoach, /contract economics are positive with payback in term/);
+  assert.match(dealCoach, /async function refreshContext\(v\)/);
+  assert.match(dealCoach, /async function render\(\)[^{]*\{[^}]*await refreshContext\(v\)/s);
+  assert.match(dealCoach, /const v=values\(\);\s*await refreshContext\(v\);/);
+  assert.match(dealCoach, /proposalPrepared:proposalReady\(\)/);
+  assert.doesNotMatch(dealCoach, /proposalPrepared:!!window\.proposalDraft/);
+  assert.match(dealCoach, /Toronto-based enterprise SaaS value-engineering consultant/);
+  assert.match(dealCoach, /Assess commercial health using contractEconomics only; Year 1 is context/);
+  assert.match(dealCoach, /safeCompany=esc\(company\)/);
+  assert.match(dealCoach, /safeBenefit=esc\(money\(e\.benefit\)\)/);
+  assert.match(dealCoach, /safeCost=esc\(money\(e\.cost\)\)/);
+  assert.match(dealCoach, /safeNet=esc\(money\(e\.net\)\)/);
 });

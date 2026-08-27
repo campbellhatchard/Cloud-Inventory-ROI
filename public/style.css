@@ -1751,13 +1751,9 @@ body.livebar-off .guided-nav{top:calc(var(--topbar-h) + 8px);}
    ═══════════════════════════════════════════════════════════ */
 
 /* ── Deal context bar (replaces the v3.2 cyan strip) ── */
-.context-header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--white);border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:14px 18px;margin-bottom:20px;font-size:var(--fs-base);box-shadow:var(--shadow-sm);}
-.context-header .ctx-icon{display:flex;align-items:center;justify-content:center;width:38px;height:38px;flex:0 0 38px;border-radius:10px;background:var(--navy);color:var(--cyan);font-size:var(--fs-sm);font-weight:700;font-style:normal;}
-.context-header .ctx-company{font-size:var(--fs-md);font-weight:700;color:var(--navy);letter-spacing:-.01em;}
-.context-header .ctx-sep{color:var(--gray-300);}
-.context-header .ctx-scenario{color:var(--gray-500);font-size:var(--fs-sm);}
-.context-header .ctx-switch{margin-left:auto;background:var(--white);border:1.5px solid var(--gray-200);color:var(--gray-600);border-radius:8px;font-size:var(--fs-xs);font-weight:600;padding:7px 14px;cursor:pointer;font-family:var(--font);transition:all .15s;}
-.context-header .ctx-switch:hover{background:var(--gray-50);border-color:var(--gray-300);color:var(--navy);}
+.context-header{display:flex;align-items:center;gap:10px;min-height:52px;flex-wrap:wrap;background:rgba(255,255,255,.97);border:1px solid var(--gray-200);border-radius:10px;padding:7px 12px;margin-bottom:16px;font-size:var(--fs-sm);box-shadow:0 2px 8px rgba(15,35,45,.06);position:sticky;top:calc(var(--topbar-h) + 8px);z-index:110;}
+.context-header .ctx-icon{display:flex;align-items:center;justify-content:center;width:30px;height:30px;flex:0 0 30px;border-radius:8px;background:var(--navy);color:var(--cyan);font-size:11px;font-weight:700;font-style:normal;}
+.context-header .ctx-details{display:flex;flex-direction:column;gap:1px;min-width:0;}.context-header .ctx-label{color:var(--gray-500);font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;line-height:1;}.context-header .ctx-company{font-size:13px;font-weight:700;color:var(--navy);letter-spacing:-.01em;line-height:1.25;}.context-header .ctx-sep{color:var(--gray-300);font-size:16px;}.context-header .ctx-scenario{display:flex;flex-direction:column;color:var(--gray-700);font-size:12px;font-weight:600;line-height:1.25;}.context-header .ctx-scenario span{font-size:9px;color:var(--gray-500);font-weight:700;letter-spacing:.07em;text-transform:uppercase;}.context-header .ctx-switch{margin-left:auto;display:inline-flex;align-items:center;gap:5px;background:var(--white);border:1px solid var(--gray-200);color:var(--gray-700);border-radius:7px;font-size:11px;font-weight:700;padding:6px 10px;cursor:pointer;font-family:var(--font);transition:all .15s;}.context-header .ctx-switch:hover{background:var(--cyan-pale);border-color:var(--cyan);color:var(--cyan-dark);}
 
 /* ── One stepper. The breadcrumb and boxed completeness meter fold into it. ── */
 .calc-breadcrumb{display:none!important;}
