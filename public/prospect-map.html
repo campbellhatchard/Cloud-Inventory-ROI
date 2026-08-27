@@ -24,7 +24,8 @@ body{font-family:var(--font);background:var(--navy);min-height:100vh;padding:2re
 .progress-label{display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--g600);margin-bottom:5px;}
 .progress-bar{height:10px;background:var(--g100);border-radius:6px;overflow:hidden;}
 .progress-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--green));border-radius:6px;transition:width .4s;}
-.phase{font-size:12px;font-weight:700;color:var(--cyan);text-transform:uppercase;letter-spacing:.06em;margin:1.4rem 0 .5rem;padding-bottom:4px;border-bottom:2px solid var(--g100);}
+.phase{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;font-weight:700;color:var(--cyan);text-transform:uppercase;letter-spacing:.06em;margin:1.4rem 0 .5rem;padding-bottom:4px;border-bottom:2px solid var(--g100);}
+.phase-count{font-size:10px;color:var(--g400);font-weight:600;letter-spacing:0;text-transform:none;}
 .ms{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--g200);border-radius:9px;margin-bottom:7px;background:#fff;}
 .ms.done{background:#F0FFF4;border-color:#A5D6A7;}
 .ms.done .ms-title{text-decoration:line-through;color:var(--g400);}
@@ -36,6 +37,9 @@ body{font-family:var(--font);background:var(--navy);min-height:100vh;padding:2re
 .ms-title{font-size:14px;font-weight:500;color:var(--g800);}
 .ms-sub{font-size:11px;color:var(--g400);margin-top:2px;}
 .ms-owner{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap;}
+.ms-status{display:inline-block;margin-left:6px;font-size:10px;font-weight:700;color:var(--g600);}
+.customer-summary{display:flex;gap:8px;flex-wrap:wrap;margin:-6px 0 16px;}
+.summary-chip{font-size:11px;padding:5px 9px;border-radius:99px;background:var(--g100);color:var(--g600);}
 .ow-rep{background:rgba(36,54,70,.1);color:var(--navy);}
 .ow-prospect{background:rgba(0,169,204,.12);color:#0089A6;}
 .ow-joint{background:rgba(46,125,50,.1);color:var(--green);}
@@ -54,6 +58,7 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(0,169,204,.18)
 :focus-visible{outline:2px solid #00A9CC;outline-offset:2px;border-radius:4px;}
 h1,h2,h3{letter-spacing:-.02em;text-wrap:pretty;}
 button{cursor:pointer;}
+@media(max-width:600px){body{padding:.75rem .5rem}.body{padding:1.25rem 1rem}.ms{align-items:flex-start;gap:8px;padding:10px 8px}.ms-owner{max-width:92px;white-space:normal;text-align:center}.footer{padding:1rem}.logo-row{margin-left:.25rem}}
 </style>
 </head>
 <body>
@@ -97,39 +102,65 @@ async function load() {
   }
 }
 
-function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function fmtDate(d, long) {
+  if (!d) return '';
+  const raw = String(d).split('T')[0];
+  return new Date(raw + 'T12:00:00').toLocaleDateString('en-US', long
+    ? {month:'long',day:'numeric',year:'numeric'} : {month:'short',day:'numeric'});
+}
+function isOverdue(m) {
+  if (!m.dueDate || m.status === 'done') return false;
+  const today = new Date();
+  const local = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+  return String(m.dueDate).split('T')[0] < local;
+}
+function planGroups(ms) {
+  const saved = Array.isArray(plan.groups) ? plan.groups.filter(g => g && g.id && g.name) : [];
+  if (saved.length) return saved;
+  const defaults = ['Evaluate','Validate','Business Case','Legal & Procurement','Launch'];
+  const names = defaults.filter(p => ms.some(m => m.phase === p));
+  ms.forEach(m => { if (m.phase && !names.includes(m.phase)) names.push(m.phase); });
+  return names.map((name,i) => ({id:'legacy-'+i,name}));
+}
 
 function render() {
   const ms = plan.milestones || [];
-  const phases = ['Evaluate','Validate','Business Case','Legal & Procurement','Launch'];
+  const groups = planGroups(ms);
   const done = ms.filter(m => m.status === 'done').length;
   const pct = ms.length ? Math.round(done / ms.length * 100) : 0;
   const ownerLabels = { rep: 'Cloud Inventory', prospect: 'Your team', joint: 'Joint' };
 
   document.getElementById('content').innerHTML = `
     <div class="title">${esc(plan.title)}</div>
-    <div class="meta">${esc(plan.company || '')}${plan.target_close_date ? ' · Target: ' + new Date(plan.target_close_date).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : ''}</div>
+    <div class="meta">${esc(plan.company || '')}${plan.target_close_date ? ' · Target: ' + fmtDate(plan.target_close_date, true) : ''}</div>
     <div class="progress-wrap">
       <div class="progress-label"><span>Progress</span><span>${done} of ${ms.length} complete (${pct}%)</span></div>
       <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
     </div>
-    ${phases.filter(p => ms.some(m => m.phase === p)).map(p => `
-      <div class="phase">${p}</div>
-      ${ms.filter(m => m.phase === p).map(m => {
+    <div class="customer-summary"><span class="summary-chip">${ms.filter(m=>['prospect','joint'].includes(m.owner)&&m.status!=='done').length} actions for your team</span><span class="summary-chip">${ms.filter(isOverdue).length} overdue</span></div>
+    ${groups.map(g => {
+      const items = ms.filter(m => m.groupId === g.id || (!m.groupId && m.phase === g.name));
+      if (!items.length) return '';
+      return `<div class="phase"><span>${esc(g.name)}</span><span class="phase-count">${items.filter(m=>m.status==='done').length}/${items.length} complete</span></div>
+      ${items.map(m => {
         const yours = ['prospect','joint'].includes(m.owner);
         const isDone = m.status === 'done';
-        const overdue = !isDone && m.dueDate && new Date(m.dueDate) < new Date();
+        const overdue = isOverdue(m);
+        const statusLabel = m.status === 'in_progress' ? 'In progress' : isDone ? 'Complete' : 'Pending';
         return `<div class="ms ${isDone ? 'done' : ''}">
-          <div class="ms-check ${isDone ? 'done' : ''} ${yours ? '' : 'locked'}"
+          <button type="button" class="ms-check ${isDone ? 'done' : ''} ${yours ? '' : 'locked'}"
                title="${yours ? 'Click to mark ' + (isDone ? 'not done' : 'done') : 'Owned by Cloud Inventory'}"
-               onclick="${yours ? `toggle('${m.id}','${isDone ? 'pending' : 'done'}')` : ''}">${isDone ? '✓' : ''}</div>
+               aria-label="${yours ? 'Mark ' + esc(m.title) + ' ' + (isDone ? 'not complete' : 'complete') : esc(m.title) + ', owned by Cloud Inventory'}"
+               ${yours?'':'disabled'} onclick="${yours ? `toggle('${m.id}','${isDone ? 'pending' : 'done'}')` : ''}">${isDone ? '✓' : ''}</button>
           <div class="ms-info">
             <div class="ms-title">${esc(m.title)}</div>
-            <div class="ms-sub ${overdue ? 'overdue' : ''}">${m.dueDate ? 'Due ' + new Date(m.dueDate).toLocaleDateString('en-US',{month:'short',day:'numeric'}) + (overdue ? ' — overdue' : '') : 'No date set'}</div>
+            <div class="ms-sub ${overdue ? 'overdue' : ''}">${m.dueDate ? 'Due ' + fmtDate(m.dueDate) + (overdue ? ' — overdue' : '') : 'No date set'}<span class="ms-status">${statusLabel}</span></div>
           </div>
           <span class="ms-owner ow-${m.owner}">${ownerLabels[m.owner] || m.owner}</span>
         </div>`;
-      }).join('')}`).join('')}
+      }).join('')}`;
+    }).join('')}
     <div class="hint">Items tagged "Your team" or "Joint" can be checked off by you — updates are shared live with ${esc(plan.rep_name || 'your Cloud Inventory contact')}.</div>`;
 
   const f = document.getElementById('footer');

@@ -13,6 +13,11 @@ const dealExport = fs.readFileSync(path.join(root, 'public', 'deal-export.js'), 
 const solutionFit = fs.readFileSync(path.join(root, 'public', 'solution-fit.js'), 'utf8');
 const compResearch = fs.readFileSync(path.join(root, 'public', 'comp-research.js'), 'utf8');
 const prospect = fs.readFileSync(path.join(root, 'public', 'prospect.html'), 'utf8');
+const mapEditor = fs.readFileSync(path.join(root, 'public', 'map.js'), 'utf8');
+const prospectMap = fs.readFileSync(path.join(root, 'public', 'prospect-map.html'), 'utf8');
+const mapRoutes = fs.readFileSync(path.join(root, 'src', 'routes', 'maps.js'), 'utf8');
+const ciWorkflow = fs.readFileSync(path.join(root, '.github', 'workflows', 'ci.yml'), 'utf8');
+const mapMigration = fs.readFileSync(path.join(root, 'migrations', '023_map_groups.sql'), 'utf8');
 const { readiness } = require(path.join(root, 'src', 'shared', 'handoff-readiness.js'));
 const { calcROI } = require(path.join(root, 'src', 'shared', 'roi-engine.js'));
 
@@ -177,4 +182,44 @@ test('prospect live ROI excludes unsupported benchmark dollars and labels covera
   const conservative = calcROI({...baseInput, mLabor:.14, mShrinkage:.21, mCarrying:.14, mOtif:.07, mIt:.35, mDowntime:.21, mExpedite:.175, mCount:.35, mThroughput:.21, mAccuracy:.245, mFieldLeakage:.21, mFieldCount:.35});
   assert.equal(base.annualBenefit, 104000);
   assert.equal(conservative.annualBenefit, 72800);
+});
+
+
+test('Mutual Action Plans support ordered custom groupings across editor and customer outputs', () => {
+  assert.match(mapEditor, /function addMapGroup\(/);
+  assert.match(mapEditor, /function removeMapGroup\(/);
+  assert.match(mapEditor, /function moveMapGroup\(/);
+  assert.match(mapEditor, /function moveMilestone\(/);
+  assert.match(mapEditor, /function moveMilestoneToGroup\(/);
+  assert.match(mapEditor, /id="mapAddGroup"/);
+  assert.match(mapEditor, /id="mapAddPosition"/);
+  assert.match(mapEditor, /groups:\s+_mapCurrent\.groups/);
+  assert.match(mapRoutes, /m\.milestones, m\.groups/);
+  assert.match(mapRoutes, /groups = COALESCE/);
+  assert.match(dealExport, /deMapGroups\(m, ms\)/);
+  assert.match(prospectMap, /function planGroups\(ms\)/);
+  assert.match(prospectMap, /actions for your team/);
+  assert.match(prospectMap, /aria-label=/);
+
+  const start = prospectMap.indexOf('<script>') + '<script>'.length;
+  const end = prospectMap.lastIndexOf('</script>');
+  assert.doesNotThrow(() => new vm.Script(prospectMap.slice(start, end), { filename:'prospect-map-inline.js' }));
+});
+
+test('MAP grouping migration is additive and backwards-compatible', () => {
+  assert.match(mapMigration, /ALTER TABLE mutual_action_plans/i);
+  assert.match(mapMigration, /ADD COLUMN IF NOT EXISTS groups JSONB NOT NULL DEFAULT '\[\]'::jsonb/i);
+  assert.doesNotMatch(mapMigration, /\bDROP\b/i);
+  assert.doesNotMatch(mapMigration, /\bDELETE\b/i);
+  assert.doesNotMatch(mapMigration, /\bTRUNCATE\b/i);
+});
+
+test('customer MAP attribute escaping handles quotes safely', () => {
+  assert.match(prospectMap, /replace\(\/"\/g,'&quot;'\)/);
+  assert.match(prospectMap, /replace\(\/'\/g,'&#39;'\)/);
+});
+
+test('CI retains UI and startup regression execution', () => {
+  assert.match(ciWorkflow, /UI and startup regression tests/);
+  assert.match(ciWorkflow, /node --test test\/ui-regression\.test\.js/);
 });

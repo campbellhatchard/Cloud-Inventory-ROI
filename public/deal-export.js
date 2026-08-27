@@ -23,7 +23,21 @@ function deEsc(s) {
 }
 function deDate(d, opts) {
   if (!d) return '';
-  return new Date(d).toLocaleDateString('en-US', opts || { month: 'short', day: 'numeric', year: 'numeric' });
+  const raw = String(d);
+  const date = /^\d{4}-\d{2}-\d{2}(?:T00:00:00(?:\.000)?Z)?$/.test(raw)
+    ? new Date(raw.slice(0, 10) + 'T12:00:00') : new Date(d);
+  return date.toLocaleDateString('en-US', opts || { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function deMapGroups(map, milestones) {
+  const saved = Array.isArray(map.groups) ? map.groups.filter(g => g && g.id && g.name) : [];
+  if (saved.length) return saved;
+  const defaults = ['Evaluate','Validate','Business Case','Legal & Procurement','Launch'];
+  const names = defaults.filter(name => milestones.some(m => m.phase === name));
+  milestones.forEach(m => { if (m.phase && !names.includes(m.phase)) names.push(m.phase); });
+  return names.map((name, i) => ({ id:'legacy-' + i, name }));
+}
+function deMilestonesInGroup(milestones, group) {
+  return milestones.filter(m => m.groupId === group.id || (!m.groupId && m.phase === group.name));
 }
 /* Open a clean print window with branded HTML and trigger print */
 function dePrintWindow(title, innerHtml, extraCss) {
@@ -105,12 +119,12 @@ async function printActionPlan(variant) {
     : { rep: 'Cloud Inventory', prospect: 'Customer', joint: 'Joint' };
   const statusLabels = { pending: 'Pending', in_progress: 'In progress', done: 'Complete' };
 
-  const phases = ['Evaluate','Validate','Business Case','Legal & Procurement','Launch'];
+  const phases = deMapGroups(m, ms);
   let rowsHtml = '';
-  phases.filter(p => ms.some(x => x.phase === p)).forEach(phase => {
-    rowsHtml += `<h2>${deEsc(phase)}</h2><table>
+  phases.filter(p => deMilestonesInGroup(ms, p).length).forEach(phase => {
+    rowsHtml += `<h2>${deEsc(phase.name)}</h2><table>
       <thead><tr><th style="width:46%;">Milestone</th><th style="width:18%;">Owner</th><th style="width:18%;">Due</th><th style="width:18%;">Status</th></tr></thead><tbody>`;
-    ms.filter(x => x.phase === phase).forEach(x => {
+    deMilestonesInGroup(ms, phase).forEach(x => {
       const overdue = x.status !== 'done' && x.dueDate && new Date(x.dueDate) < new Date();
       rowsHtml += `<tr class="${x.status==='done'?'done':''}">
         <td>${deEsc(x.title)}</td>
@@ -156,7 +170,7 @@ async function pptActionPlan(variant) {
     const ownerLabels = variant === 'customer'
       ? { rep: 'Cloud Inventory', prospect: 'Your team', joint: 'Joint' }
       : { rep: 'Cloud Inventory', prospect: 'Customer', joint: 'Joint' };
-    const phases = ['Evaluate','Validate','Business Case','Legal & Procurement','Launch'];
+    const phases = deMapGroups(m, ms);
 
     const pptx = new pptxgen();
     pptx.defineLayout({ name: 'CI', width: PPT.W, height: PPT.H });
@@ -177,14 +191,14 @@ async function pptActionPlan(variant) {
     s0.addText(`${done} of ${ms.length} milestones complete (${pct}%)`, { x: 0.5, y: 4.35, w: 9, h: 0.35, fontSize: 12, italic: true, color: PPT.CYAN, fontFace: PPT.FONT });
 
     /* One slide per phase (or grouped) — table of milestones */
-    phases.filter(p => ms.some(x => x.phase === p)).forEach(phase => {
+    phases.filter(p => deMilestonesInGroup(ms, p).length).forEach(phase => {
       const rows = [[
         { text: 'Milestone', options: { bold: true, color: PPT.WHITE, fill: { color: PPT.NAVY }, fontSize: 11 } },
         { text: 'Owner', options: { bold: true, color: PPT.WHITE, fill: { color: PPT.NAVY }, fontSize: 11 } },
         { text: 'Due', options: { bold: true, color: PPT.WHITE, fill: { color: PPT.NAVY }, fontSize: 11 } },
         { text: 'Status', options: { bold: true, color: PPT.WHITE, fill: { color: PPT.NAVY }, fontSize: 11 } }
       ]];
-      ms.filter(x => x.phase === phase).forEach(x => {
+      deMilestonesInGroup(ms, phase).forEach(x => {
         const overdue = x.status !== 'done' && x.dueDate && new Date(x.dueDate) < new Date();
         rows.push([
           { text: x.title, options: { fontSize: 10, color: PPT.DARK_TXT } },
@@ -195,7 +209,7 @@ async function pptActionPlan(variant) {
       });
       const s = pptx.addSlide();
       pptChrome(s, null);
-      pptTitle(s, phase);
+      pptTitle(s, phase.name);
       s.addTable(rows, { x: 0.45, y: 1.6, w: 9.1, colW: [4.6, 1.7, 1.5, 1.3], border: { pt: 0.5, color: 'E0E4E8' }, autoPage: true });
     });
 

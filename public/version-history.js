@@ -7,6 +7,18 @@
 
 const VERSION_HISTORY = [
   {
+    version: '5.6.9', date: '2026-08-27', tag: 'feature',
+    title: 'Flexible Mutual Action Plan ordering and customer-ready groupings',
+    changes: [
+      'Added custom action-plan groupings that can be created, renamed, reordered, and removed, including safe reassignment of milestones when a grouping is deleted.',
+      'Added accessible milestone move-up and move-down controls plus a grouping selector so milestones can be reordered within a section or moved across sections.',
+      'The Add milestone control now lets the rep choose the destination grouping and whether to insert at the beginning or end; every grouping also has an add-here shortcut.',
+      'Persisted grouping metadata through a new backwards-compatible database migration while automatically upgrading existing fixed-phase plans in the editor.',
+      'Updated the live customer plan, customer PDF, and customer PowerPoint to preserve custom grouping names and order.',
+      'Improved the customer view with actions-for-your-team and overdue summaries, per-group completion, explicit status labels, accessible completion buttons, mobile layout, and timezone-safe dates.'
+    ]
+  },
+  {
     version: '5.6.8', date: '2026-08-27', tag: 'fix',
     title: 'Prospect live ROI now counts only supported value drivers',
     changes: [

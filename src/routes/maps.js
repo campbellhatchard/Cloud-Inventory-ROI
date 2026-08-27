@@ -14,7 +14,7 @@ const router = express.Router();
 router.get('/public/:token', async (req, res) => {
   try {
     const { rows } = await query(
-      `SELECT m.id, m.company, m.title, m.target_close_date, m.milestones,
+      `SELECT m.id, m.company, m.title, m.target_close_date, m.milestones, m.groups,
               m.is_active, m.updated_at, u.username AS rep_name, u.email AS rep_email
        FROM mutual_action_plans m JOIN users u ON u.id = m.owner_id
        WHERE m.token = $1`,
@@ -66,7 +66,7 @@ router.get('/', async (req, res) => {
     let sql, params;
     if (showAll) {
       sql = `SELECT m.id, m.company, m.title, m.target_close_date, m.token, m.is_active,
-                    m.milestones, m.created_at, m.updated_at,
+                    m.milestones, m.groups, m.created_at, m.updated_at,
                     u.username AS owner_username
              FROM mutual_action_plans m
              JOIN users u ON u.id = m.owner_id
@@ -74,7 +74,7 @@ router.get('/', async (req, res) => {
       params = [];
     } else {
       sql = `SELECT id, company, title, target_close_date, token, is_active,
-                    milestones, created_at, updated_at
+                    milestones, groups, created_at, updated_at
              FROM mutual_action_plans WHERE owner_id = $1
              ORDER BY updated_at DESC LIMIT 50`;
       params = [req.user.id];
@@ -87,16 +87,16 @@ router.get('/', async (req, res) => {
 /* Create */
 router.post('/', async (req, res) => {
   try {
-    const { company, title, targetCloseDate, milestones, scenarioId } = req.body || {};
+    const { company, title, targetCloseDate, milestones, groups, scenarioId } = req.body || {};
     if (!company || !company.trim()) {
       return res.status(400).json({ error: 'A company must be selected before saving an action plan.' });
     }
     const { rows } = await query(
-      `INSERT INTO mutual_action_plans (owner_id, scenario_id, company, title, target_close_date, milestones)
-       VALUES ($1,$2,$3,$4,$5,$6)
-       RETURNING id, company, title, target_close_date, token, is_active, milestones, created_at, updated_at`,
+      `INSERT INTO mutual_action_plans (owner_id, scenario_id, company, title, target_close_date, milestones, groups)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)
+       RETURNING id, company, title, target_close_date, token, is_active, milestones, groups, created_at, updated_at`,
       [req.user.id, scenarioId || null, (company||'').trim(), (title||'Mutual Action Plan').trim(),
-       targetCloseDate || null, JSON.stringify(milestones || [])]
+       targetCloseDate || null, JSON.stringify(milestones || []), JSON.stringify(groups || [])]
     );
     await log({ userId: req.user.id, action: 'map.created', entityType: 'mutual_action_plan',
                 entityId: rows[0].id, detail: { company }, ipAddress: req.ip });
@@ -107,20 +107,22 @@ router.post('/', async (req, res) => {
 /* Update (title, date, milestones) */
 router.put('/:id', async (req, res) => {
   try {
-    const { company, title, targetCloseDate, milestones } = req.body || {};
+    const { company, title, targetCloseDate, milestones, groups } = req.body || {};
     if (company !== undefined && !String(company).trim()) {
       return res.status(400).json({ error: 'Company cannot be blank.' });
     }
     const { rows } = await query(
       `UPDATE mutual_action_plans
        SET company = COALESCE($1, company), title = COALESCE($2, title),
-           target_close_date = $3, milestones = COALESCE($4, milestones)
-       WHERE id = $5 AND owner_id = $6
-       RETURNING id, company, title, target_close_date, token, is_active, milestones, updated_at`,
+           target_close_date = $3, milestones = COALESCE($4, milestones),
+           groups = COALESCE($5, groups)
+       WHERE id = $6 AND owner_id = $7
+       RETURNING id, company, title, target_close_date, token, is_active, milestones, groups, updated_at`,
       [company !== undefined ? company.trim() : null,
        title   !== undefined ? title.trim()   : null,
        targetCloseDate || null,
        milestones !== undefined ? JSON.stringify(milestones) : null,
+       groups !== undefined ? JSON.stringify(groups) : null,
        req.params.id, req.user.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'Plan not found.' });

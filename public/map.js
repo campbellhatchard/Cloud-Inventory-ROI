@@ -12,6 +12,52 @@ const MAP_OWNERS = { rep: 'Cloud Inventory', prospect: 'Customer', joint: 'Joint
 
 function mapUid() { return 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
+function mapDefaultGroups() {
+  return MAP_PHASES.map((name, i) => ({ id: 'group-' + (i + 1), name }));
+}
+
+function mapNormalizeStructure(map) {
+  if (!map) return map;
+  map.milestones = Array.isArray(map.milestones) ? map.milestones : [];
+  let groups = Array.isArray(map.groups) ? map.groups.filter(g => g && g.id && String(g.name || '').trim()) : [];
+  if (!groups.length) {
+    const used = [];
+    MAP_PHASES.forEach(name => { if (!map.milestones.length || map.milestones.some(m => m.phase === name)) used.push(name); });
+    map.milestones.forEach(m => { if (m.phase && !used.includes(m.phase)) used.push(m.phase); });
+    groups = (used.length ? used : MAP_PHASES).map((name, i) => ({ id: 'group-' + (i + 1), name }));
+  }
+  map.groups = groups;
+  map.milestones.forEach(m => {
+    let group = groups.find(g => g.id === m.groupId) || groups.find(g => g.name === m.phase) || groups[0];
+    m.groupId = group.id;
+    m.phase = group.name; // backwards compatibility for older exports
+  });
+  mapRebuildMilestoneOrder(map);
+  return map;
+}
+
+function mapRebuildMilestoneOrder(map) {
+  map = map || _mapCurrent;
+  if (!map || !Array.isArray(map.groups)) return;
+  const current = map.milestones || [];
+  map.milestones = map.groups.flatMap(g => current.filter(m => m.groupId === g.id));
+}
+
+function mapGetGroups(map) {
+  mapNormalizeStructure(map);
+  return map.groups || [];
+}
+
+function captureMapHeaderFields() {
+  if (!_mapCurrent) return;
+  const title = document.getElementById('mapTitle');
+  const close = document.getElementById('mapCloseDate');
+  const company = document.getElementById('mapCompanyInput');
+  if (title) _mapCurrent.title = title.value;
+  if (close) _mapCurrent.target_close_date = close.value || null;
+  if (company && company.value.trim()) _mapCurrent.company = company.value.trim();
+}
+
 async function initMapTab() {
   if (window._authReady) await window._authReady;
   await loadMaps();
@@ -207,7 +253,8 @@ function newMap() {
     title: 'Mutual Action Plan' + (v.company && v.company !== 'Prospect' ? ' — ' + v.company : ''),
     target_close_date: null,
     token: null,
-    milestones: []
+    milestones: [],
+    groups: mapDefaultGroups()
   };
   renderMapEditor();
 }
@@ -215,7 +262,7 @@ function newMap() {
 async function openMap(id) {
   const m = _maps.find(x => x.id === id);
   if (!m) return;
-  _mapCurrent = JSON.parse(JSON.stringify(m));
+  _mapCurrent = mapNormalizeStructure(JSON.parse(JSON.stringify(m)));
   renderMapEditor();
 }
 
@@ -234,6 +281,7 @@ function renderMapEditor() {
   list.style.display = 'none';
   ed.style.display = 'block';
   const m = _mapCurrent;
+  mapNormalizeStructure(m);
 
   const shareBlock = m.id
     ? (m.token
@@ -285,9 +333,15 @@ function renderMapEditor() {
       </div>
     </div>
     <div class="card">
-      <div class="card-title" style="display:flex;align-items:center;">Milestones
-        <button class="btn btn-ghost btn-sm" style="margin-left:auto;" onclick="addMilestone()">+ Add milestone</button>
+      <div class="map-editor-head">
+        <div><div class="card-title">Milestones</div><div class="field-hint">Use the arrows to reorder, or change a milestone’s group.</div></div>
+        <div class="map-add-controls">
+          <select id="mapAddGroup" aria-label="Group for new milestone">${m.groups.map(g => `<option value="${escapeHtml(g.id)}">${escapeHtml(g.name)}</option>`).join('')}</select>
+          <select id="mapAddPosition" aria-label="Position for new milestone"><option value="end">At end</option><option value="start">At beginning</option></select>
+          <button class="btn btn-cta btn-sm" onclick="addMilestone()">+ Add milestone</button>
+        </div>
       </div>
+      <div class="map-group-create"><input id="mapNewGroupName" type="text" placeholder="New grouping name" maxlength="60" onkeydown="if(event.key==='Enter'){event.preventDefault();addMapGroup();}"/><button class="btn btn-ghost btn-sm" onclick="addMapGroup()">+ Add grouping</button></div>
       <div id="mapMilestones">${renderMilestones()}</div>
     </div>`;
 
@@ -357,37 +411,143 @@ function mapUpdateGate() {
 
 function renderMilestones() {
   const ms = _mapCurrent.milestones || [];
-  if (!ms.length) return '<div class="empty-state"><p>No milestones yet. Add them manually or generate a draft with AI.</p></div>';
-
-  return MAP_PHASES.filter(p => ms.some(x => x.phase === p)).map(phase => `
-    <div class="map-phase-label">${phase}</div>
-    ${ms.filter(x => x.phase === phase).map(x => {
+  const groups = mapGetGroups(_mapCurrent);
+  return groups.map((group, groupIndex) => {
+    const groupMs = ms.filter(x => x.groupId === group.id);
+    return `<section class="map-group" data-map-group="${escapeHtml(group.id)}">
+      <div class="map-group-head">
+        <span class="map-group-grip" aria-hidden="true">⋮⋮</span>
+        <input class="map-group-name" value="${escapeHtml(group.name)}" aria-label="Grouping name" onchange="renameMapGroup('${group.id}',this.value)"/>
+        <span class="map-group-count">${groupMs.length} milestone${groupMs.length===1?'':'s'}</span>
+        <div class="map-group-actions">
+          <button class="map-icon-btn" onclick="moveMapGroup('${group.id}',-1)" ${groupIndex===0?'disabled':''} title="Move grouping up" aria-label="Move ${escapeHtml(group.name)} up">↑</button>
+          <button class="map-icon-btn" onclick="moveMapGroup('${group.id}',1)" ${groupIndex===groups.length-1?'disabled':''} title="Move grouping down" aria-label="Move ${escapeHtml(group.name)} down">↓</button>
+          <button class="map-icon-btn map-icon-add" onclick="addMilestone('${group.id}','end')" title="Add milestone here">＋</button>
+          <button class="map-icon-btn map-icon-remove" onclick="removeMapGroup('${group.id}')" ${groups.length===1?'disabled':''} title="Remove grouping">×</button>
+        </div>
+      </div>
+      <div class="map-group-body">${groupMs.length ? groupMs.map((x, itemIndex) => {
       const overdue = x.status !== 'done' && x.dueDate && new Date(x.dueDate) < new Date();
       return `<div class="map-ms-row ${x.status === 'done' ? 'map-ms-done' : ''}">
+        <div class="map-ms-move">
+          <button onclick="moveMilestone('${x.id}',-1)" ${itemIndex===0?'disabled':''} aria-label="Move milestone up">↑</button>
+          <button onclick="moveMilestone('${x.id}',1)" ${itemIndex===groupMs.length-1?'disabled':''} aria-label="Move milestone down">↓</button>
+        </div>
         <select class="map-ms-status" onchange="msField('${x.id}','status',this.value)">
           ${['pending','in_progress','done'].map(st => `<option value="${st}" ${x.status===st?'selected':''}>${st==='pending'?'○ Pending':st==='in_progress'?'◐ In progress':'● Done'}</option>`).join('')}
         </select>
         <input type="text" class="map-ms-title" value="${escapeHtml(x.title)}" onchange="msField('${x.id}','title',this.value)"/>
+        <select class="map-ms-group" aria-label="Milestone grouping" onchange="moveMilestoneToGroup('${x.id}',this.value)">
+          ${groups.map(g => `<option value="${escapeHtml(g.id)}" ${x.groupId===g.id?'selected':''}>${escapeHtml(g.name)}</option>`).join('')}
+        </select>
         <select class="map-ms-owner" onchange="msField('${x.id}','owner',this.value)">
           ${Object.entries(MAP_OWNERS).map(([k,l]) => `<option value="${k}" ${x.owner===k?'selected':''}>${l}</option>`).join('')}
         </select>
         <input type="date" class="map-ms-date ${overdue?'map-ms-overdue':''}" value="${x.dueDate||''}" onchange="msField('${x.id}','dueDate',this.value)"/>
         <button class="btn btn-danger btn-sm" onclick="removeMilestone('${x.id}')">✕</button>
       </div>`;
-    }).join('')}`).join('');
+    }).join('') : '<div class="map-group-empty">No milestones in this grouping. Add one here or move an existing milestone into it.</div>'}</div>
+    </section>`;
+  }).join('');
 }
 
 function msField(id, field, value) {
   const x = (_mapCurrent.milestones || []).find(m => m.id === id);
   if (x) { x[field] = value; if (field === 'status') renderMapEditor(); }
 }
-function addMilestone() {
+function addMilestone(groupId, position) {
+  captureMapHeaderFields();
   _mapCurrent.milestones = _mapCurrent.milestones || [];
-  _mapCurrent.milestones.push({ id: mapUid(), phase: MAP_PHASES[0], title: '', owner: 'joint', dueDate: '', status: 'pending' });
+  const select = document.getElementById('mapAddGroup');
+  const posSelect = document.getElementById('mapAddPosition');
+  groupId = groupId || (select && select.value) || _mapCurrent.groups[0].id;
+  position = position || (posSelect && posSelect.value) || 'end';
+  const group = _mapCurrent.groups.find(g => g.id === groupId) || _mapCurrent.groups[0];
+  const item = { id: mapUid(), groupId: group.id, phase: group.name, title: '', owner: 'joint', dueDate: '', status: 'pending' };
+  const groupItems = _mapCurrent.milestones.filter(m => m.groupId === group.id);
+  if (position === 'start' && groupItems.length) {
+    const at = _mapCurrent.milestones.findIndex(m => m.id === groupItems[0].id);
+    _mapCurrent.milestones.splice(at, 0, item);
+  } else {
+    const last = groupItems[groupItems.length - 1];
+    const at = last ? _mapCurrent.milestones.findIndex(m => m.id === last.id) + 1 : _mapCurrent.milestones.length;
+    _mapCurrent.milestones.splice(at, 0, item);
+  }
+  mapRebuildMilestoneOrder();
   renderMapEditor();
 }
 function removeMilestone(id) {
   _mapCurrent.milestones = (_mapCurrent.milestones || []).filter(m => m.id !== id);
+  renderMapEditor();
+}
+
+function moveMilestone(id, delta) {
+  captureMapHeaderFields();
+  const item = _mapCurrent.milestones.find(m => m.id === id);
+  if (!item) return;
+  const groupItems = _mapCurrent.milestones.filter(m => m.groupId === item.groupId);
+  const from = groupItems.findIndex(m => m.id === id);
+  const to = from + delta;
+  if (to < 0 || to >= groupItems.length) return;
+  [groupItems[from], groupItems[to]] = [groupItems[to], groupItems[from]];
+  const byGroup = new Map(_mapCurrent.groups.map(g => [g.id, g.id === item.groupId ? groupItems : _mapCurrent.milestones.filter(m => m.groupId === g.id)]));
+  _mapCurrent.milestones = _mapCurrent.groups.flatMap(g => byGroup.get(g.id) || []);
+  renderMapEditor();
+}
+
+function moveMilestoneToGroup(id, groupId) {
+  captureMapHeaderFields();
+  const item = _mapCurrent.milestones.find(m => m.id === id);
+  const group = _mapCurrent.groups.find(g => g.id === groupId);
+  if (!item || !group) return;
+  item.groupId = group.id;
+  item.phase = group.name;
+  mapRebuildMilestoneOrder();
+  renderMapEditor();
+}
+
+function addMapGroup() {
+  captureMapHeaderFields();
+  const input = document.getElementById('mapNewGroupName');
+  const name = (input && input.value || '').trim();
+  if (!name) { showToast('Enter a grouping name.'); return; }
+  if (_mapCurrent.groups.some(g => g.name.toLowerCase() === name.toLowerCase())) { showToast('That grouping already exists.'); return; }
+  _mapCurrent.groups.push({ id: mapUid(), name: name.slice(0, 60) });
+  renderMapEditor();
+}
+
+function renameMapGroup(id, value) {
+  const group = _mapCurrent.groups.find(g => g.id === id);
+  const name = String(value || '').trim();
+  if (!group || !name) { renderMapEditor(); return; }
+  group.name = name.slice(0, 60);
+  _mapCurrent.milestones.filter(m => m.groupId === id).forEach(m => { m.phase = group.name; });
+}
+
+function moveMapGroup(id, delta) {
+  captureMapHeaderFields();
+  const from = _mapCurrent.groups.findIndex(g => g.id === id);
+  const to = from + delta;
+  if (from < 0 || to < 0 || to >= _mapCurrent.groups.length) return;
+  [_mapCurrent.groups[from], _mapCurrent.groups[to]] = [_mapCurrent.groups[to], _mapCurrent.groups[from]];
+  mapRebuildMilestoneOrder();
+  renderMapEditor();
+}
+
+function removeMapGroup(id) {
+  const groups = _mapCurrent.groups;
+  if (groups.length <= 1) { showToast('A plan needs at least one grouping.'); return; }
+  const at = groups.findIndex(g => g.id === id);
+  if (at < 0) return;
+  const group = groups[at];
+  const target = groups[at + 1] || groups[at - 1];
+  const count = _mapCurrent.milestones.filter(m => m.groupId === id).length;
+  const msg = count ? `Remove "${group.name}" and move its ${count} milestone${count===1?'':'s'} to "${target.name}"?` : `Remove the empty "${group.name}" grouping?`;
+  if (!confirm(msg)) return;
+  captureMapHeaderFields();
+  _mapCurrent.milestones.filter(m => m.groupId === id).forEach(m => { m.groupId = target.id; m.phase = target.name; });
+  groups.splice(at, 1);
+  mapRebuildMilestoneOrder();
   renderMapEditor();
 }
 
@@ -407,7 +567,8 @@ async function saveMap() {
     title:           document.getElementById('mapTitle').value.trim() || 'Mutual Action Plan',
     company:         _mapCurrent.company.trim(),
     targetCloseDate: document.getElementById('mapCloseDate').value || null,
-    milestones:      _mapCurrent.milestones || []
+    milestones:      _mapCurrent.milestones || [],
+    groups:          _mapCurrent.groups || []
   };
   const url    = _mapCurrent.id ? '/api/maps/' + _mapCurrent.id : '/api/maps';
   const method = _mapCurrent.id ? 'PUT' : 'POST';
@@ -420,7 +581,7 @@ async function saveMap() {
   showToast('Action plan saved.');
   await loadMaps();
   const fresh = _maps.find(x => x.id === saved.id);
-  if (fresh) { _mapCurrent = JSON.parse(JSON.stringify(fresh)); }
+  if (fresh) { _mapCurrent = mapNormalizeStructure(JSON.parse(JSON.stringify(fresh))); }
   renderMapEditor();
 }
 
@@ -470,10 +631,12 @@ async function aiGenerateMap() {
     const industry  = (typeof IND !== 'undefined' && IND[v.industry]) ? IND[v.industry].label : 'general';
     const stage     = v.dealStage || 'Discovery';
     const impl      = v.implMonths || 3;
+    mapNormalizeStructure(_mapCurrent);
+    const groupNames = _mapCurrent.groups.map(g => g.name);
 
     const prompt = `You are a B2B enterprise sales strategist. Create a mutual action plan for closing a Cloud Inventory (inventory management SaaS) deal with ${company}, a ${industry} company. Current deal stage: ${stage}. ${closeDate ? 'Target close date: ' + closeDate + '.' : ''} Implementation takes ~${impl} months after signature.
 
-Respond ONLY with a JSON array (no markdown fences, no preamble). Each element: {"phase": one of ${JSON.stringify(MAP_PHASES)}, "title": "specific actionable milestone under 12 words", "owner": "rep"|"prospect"|"joint", "weeksFromNow": number}. Create 10-14 milestones across all 5 phases covering: technical validation, business case sign-off, security review, legal/MSA redlines, procurement, executive alignment, and kickoff. Make prospect-owned items explicit (e.g. "Provide security questionnaire", "Confirm budget holder sign-off").`;
+Respond ONLY with a JSON array (no markdown fences, no preamble). Each element: {"phase": one of ${JSON.stringify(groupNames)}, "title": "specific actionable milestone under 12 words", "owner": "rep"|"prospect"|"joint", "weeksFromNow": number}. Create 10-14 milestones distributed across these groupings, covering: technical validation, business case sign-off, security review, legal/MSA redlines, procurement, executive alignment, and kickoff. Make prospect-owned items explicit (e.g. "Provide security questionnaire", "Confirm budget holder sign-off").`;
 
     const resp = await apiFetch('/api/enhance', {
       method: 'POST',
@@ -488,9 +651,11 @@ Respond ONLY with a JSON array (no markdown fences, no preamble). Each element: 
 
     _mapCurrent.milestones = items.map(it => {
       const due = new Date(); due.setDate(due.getDate() + Math.round((it.weeksFromNow || 1) * 7));
+      const group = _mapCurrent.groups.find(g => g.name === it.phase) || _mapCurrent.groups[0];
       return {
         id: mapUid(),
-        phase: MAP_PHASES.includes(it.phase) ? it.phase : MAP_PHASES[0],
+        groupId: group.id,
+        phase: group.name,
         title: String(it.title || '').slice(0, 120),
         owner: ['rep','prospect','joint'].includes(it.owner) ? it.owner : 'joint',
         dueDate: due.toISOString().split('T')[0],

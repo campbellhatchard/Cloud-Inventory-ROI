@@ -78,7 +78,7 @@ Without `SENDGRID_API_KEY` the app runs fully — emails are silently skipped.
 
 ## Database migrations
 
-Migrations live in `migrations/*.sql` (001–022). They run automatically on every server startup. The runner tracks applied migrations in `schema_migrations` and only runs new ones.
+Migrations live in `migrations/*.sql` (001–023). They run automatically on every server startup. The runner tracks applied migrations in `schema_migrations` and only runs new ones.
 
 ```bash
 npm run migrate   # run manually
@@ -121,7 +121,7 @@ Push to the connected GitHub branch. Render installs with `npm ci` and starts `n
 │   │   ├── stakeholders.js    # Stakeholder maps
 │   │   └── users.js           # User management (admin)
 │   └── shared/roi-engine.js   # ROI calculation engine
-├── migrations/                # SQL migration files (001–022)
+├── migrations/                # SQL migration files (001–023)
 ├── public/                    # Frontend (no build step)
 │   ├── index.html             # Main app shell
 │   ├── prospect.html          # Standalone prospect questionnaire
@@ -183,4 +183,4 @@ Edit `public/scenario-templates.js`, add an entry to `SCENARIO_TEMPLATES`:
 
 ## Version
 
-Current: **v5.6.8** — see Admin → Version history for full changelog.
+Current: **v5.6.9** — see Admin → Version history for full changelog.
