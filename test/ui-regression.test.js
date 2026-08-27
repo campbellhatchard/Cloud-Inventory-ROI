@@ -12,13 +12,24 @@ const pptxExport = fs.readFileSync(path.join(root, 'public', 'pptx-export.js'), 
 const dealExport = fs.readFileSync(path.join(root, 'public', 'deal-export.js'), 'utf8');
 const solutionFit = fs.readFileSync(path.join(root, 'public', 'solution-fit.js'), 'utf8');
 const compResearch = fs.readFileSync(path.join(root, 'public', 'comp-research.js'), 'utf8');
+const prospect = fs.readFileSync(path.join(root, 'public', 'prospect.html'), 'utf8');
 const { readiness } = require(path.join(root, 'src', 'shared', 'handoff-readiness.js'));
+const { calcROI } = require(path.join(root, 'src', 'shared', 'roi-engine.js'));
 
 test('all inline application scripts parse', () => {
   const scripts = [...index.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)];
   assert.ok(scripts.length > 0, 'expected inline scripts in index.html');
   scripts.forEach((match, i) => {
     assert.doesNotThrow(() => new vm.Script(match[1], { filename: `index-inline-${i + 1}.js` }));
+  });
+});
+
+
+test('all inline prospect-link scripts parse', () => {
+  const scripts = [...prospect.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)];
+  assert.ok(scripts.length > 0, 'expected inline scripts in prospect.html');
+  scripts.forEach((match, i) => {
+    assert.doesNotThrow(() => new vm.Script(match[1], { filename: `prospect-inline-${i + 1}.js` }));
   });
 });
 
@@ -119,11 +130,10 @@ test('ROI output surfaces preserve explicit zero ramps and field-inventory prope
 
 test('turns savings are not mislabeled as balance-sheet working capital', () => {
   const printHtml = fs.readFileSync(path.join(root, 'public', 'print.html'), 'utf8');
-  const prospect = fs.readFileSync(path.join(root, 'public', 'prospect.html'), 'utf8');
   assert.match(dealExport, /Inventory turns — annual carrying savings/);
   assert.match(pptxExport, /Turns Carrying Savings/);
   assert.match(printHtml, /Turns carrying savings/);
-  assert.match(prospect, /Turns: annual carrying savings/);
+  assert.match(prospect, /label:'Inventory carrying \/ turns',\s+sav:'inventoryCarrySav'/);
   assert.doesNotMatch(prospect, /label:'Working capital freed',\s+sav:'turnsSav'/);
 });
 
@@ -135,4 +145,36 @@ test('Medical Devices / Life Sciences remains customer-input-only', () => {
   assert.match(prospect, /retail:\s+\{ revenue:0, users:0, labor:0, inventory:0/);
   assert.match(provenance, /Customer inputs required\./);
   assert.doesNotMatch(prospect, /retail:\s+\{ revenue:60e6/);
+});
+
+test('prospect live ROI excludes unsupported benchmark dollars and labels coverage accurately', () => {
+  assert.match(prospect, /users:\s+answered\.userCount\s+\|\| 0/);
+  assert.match(prospect, /inventory:\s+answered\.inventoryValue\s+\|\| 0/);
+  assert.match(prospect, /revenue:\s+answered\.revenue\s+\|\| 0/);
+  assert.match(prospect, /otifRisk:\s+0/);
+  assert.match(prospect, /q\.syncConv === 'hoursPerWeek'/);
+  assert.match(prospect, /laborWastePct:\s+\(answered\.laborWastePct \|\| 0\) \/ 100/);
+  assert.match(prospect, /sav:'inventoryCarrySav'/);
+  assert.match(prospect, />Data coverage</);
+  assert.doesNotMatch(prospect, /More answers narrow the range/);
+
+  const baseInput = {
+    modelVersion:27, users:10, labor:52000, mLabor:.20, laborWastePct:0,
+    effectiveShrinkBase:0, mShrinkage:.30, inventory:0, mCarrying:.20,
+    carryRate:.25, invTurnsCurrent:0, invTurnsBenchmark:10,
+    revenue:0, otifBaseline:0, otifTarget:0, mOtif:.10, otifRisk:0,
+    itCost:0, mIt:.50, downtimeEventsYr:0, downtimeHrsPerEvent:0,
+    downtimeCostPerHr:0, mDowntime:.30, expediteSpendYr:0, mExpedite:.25,
+    countDaysYr:0, countPeople:0, mCount:.50, ordersPerYr:0,
+    costPerOrder:0, pickRateGainPct:0, mThroughput:.30,
+    orderErrorPct:0, costPerError:0, mAccuracy:.35,
+    hasFieldInventory:false, fieldInvValue:0, fieldLeakageRate:0,
+    fieldLocations:0, fieldReconcileCost:0, fieldReconcilePerYr:1,
+    mFieldLeakage:.30, mFieldCount:.50, invest:90000, otc:0,
+    discRate:.10, implMonths:3, ramp1:.40, ramp2:.75, ramp3:1
+  };
+  const base = calcROI(baseInput);
+  const conservative = calcROI({...baseInput, mLabor:.14, mShrinkage:.21, mCarrying:.14, mOtif:.07, mIt:.35, mDowntime:.21, mExpedite:.175, mCount:.35, mThroughput:.21, mAccuracy:.245, mFieldLeakage:.21, mFieldCount:.35});
+  assert.equal(base.annualBenefit, 104000);
+  assert.equal(conservative.annualBenefit, 72800);
 });

@@ -7,6 +7,18 @@
 
 const VERSION_HISTORY = [
   {
+    version: '5.6.8', date: '2026-08-27', tag: 'fix',
+    title: 'Prospect live ROI now counts only supported value drivers',
+    changes: [
+      'Removed silent inventory and revenue defaults from the prospect-link headline so unanswered drivers contribute zero instead of inflating an early estimate.',
+      'Corrected the one-answer example from $598k–$854k to $72.8k–$104k when only ten users are supplied.',
+      'Made the driver breakdown fully reconcile to annual benefit, including inventory carrying, count labor, throughput, order accuracy, and field inventory components.',
+      'Fixed percentage handling and now converts hours-per-week answers into a percent of a 40-hour week consistently with the rep Discovery workflow.',
+      'Renamed Estimate confidence to Data coverage and replaced the inaccurate range-narrowing claim with clear supported-driver language.',
+      'Changed locked-driver prompts to say additional data can add supported drivers without promising a significant value increase.'
+    ]
+  },
+  {
     version: '5.6.7', date: '2026-08-27', tag: 'fix',
     title: 'AI competitive research now inherits Battlecard selections',
     changes: [

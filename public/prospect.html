@@ -972,16 +972,29 @@ const IND_DEFAULTS = {
   default:       { revenue:80e6, users:40, labor:52000, inventory:10e6, mLabor:0.20, mShrinkage:0.30, mCarrying:0.20, carryRate:0.25, mOtif:0.10, otifRisk:0.02, mIt:0.50, invTurnsBenchmark:10, discRate:0.10 },
 };
 
-/* Driver definitions for the breakdown */
+/* Driver definitions for the breakdown. Every component that can contribute
+   to annualBenefit is represented so the visible rows reconcile to the
+   headline. `needs` are prospect inputs, not benchmark assumptions. */
 const ROI_DRIVERS = [
   { key:'labor',    label:'Labor productivity',     sav:'laborSav',    needs:['users'] },
-  { key:'shrink',   label:'Shrinkage reduction',    sav:'shrinkSav',   needs:['annualWriteOff'] },
-  { key:'otif',     label:'OTIF / order accuracy',  sav:'otifSav',     needs:['revenue','otifBaseline'] },
-  { key:'turns',    label:'Turns: annual carrying savings',  sav:'turnsSav',    needs:['inventoryValue','invTurnsCurrent'] },
+  { key:'shrink',   label:'Shrinkage reduction',    sav:'shrinkSav',   anyNeeds:['annualWriteOff','inventoryValue'] },
+  { key:'otif',     label:'OTIF / order accuracy',  sav:'otifSav',     needs:['revenue','otifBaseline','otifTarget'] },
+  { key:'turns',    label:'Inventory carrying / turns', sav:'inventoryCarrySav', needs:['inventoryValue'] },
   { key:'expedite', label:'Expedite spend',         sav:'expediteSav', needs:['expediteSpendYr'] },
   { key:'downtime', label:'Downtime reduction',     sav:'downtimeSav', needs:['downtimeEventsYr','downtimeHrsPerEvent','downtimeCostPerHr'] },
   { key:'it',       label:'IT cost displacement',   sav:'itSav',       needs:['itCost'] },
+  { key:'count',    label:'Count and reconciliation labor', sav:'countSav', needs:['countDaysYr','countPeople'] },
+  { key:'throughput', label:'Warehouse throughput', sav:'throughputSav', needs:['ordersPerYr','costPerOrder','pickRateGainPct'] },
+  { key:'accuracy', label:'Order-error reduction', sav:'accuracySav', needs:['ordersPerYr','orderErrorPct','costPerError'] },
+  { key:'field', label:'Field inventory control', sav:'fieldInvSav', anyNeeds:['fieldInvValue','fieldLocations'] },
 ];
+
+function prospectDriverUnlocked(driver, answered) {
+  const mapped = { users:'userCount', inventoryValue:'inventoryValue' };
+  const has = n => Number(answered[mapped[n] || n]) > 0;
+  if (driver.anyNeeds) return driver.anyNeeds.some(has);
+  return (driver.needs || []).every(has);
+}
 
 function buildROIInputs() {
   const ind = (sessionData && sessionData.industry) || 'default';
@@ -995,11 +1008,12 @@ function buildROIInputs() {
       if (!q.sync) return;
       const raw = prospectAnswers[q.id];
       if (!isRealAnswer(raw)) return;
-      const n = parseFloat(raw);
+      let n = parseFloat(raw);
       if (isNaN(n)) return;
-      /* percent fields: stored as 0-100, engine expects fraction for some, raw for others */
-      const pctFields = ['laborWastePct','otifBaseline','otifTarget','discRate','currentAccuracy','orderErrorPct','fieldLeakageRate'];
-      answered[q.sync] = pctFields.includes(q.sync) ? n : n;
+      /* Keep answers in their display units. Convert hours/week questions to
+         percent of a 40-hour week exactly as the rep workflow does. */
+      if (q.syncConv === 'hoursPerWeek') n = Math.min(100, Math.round((n / 40) * 100));
+      answered[q.sync] = n;
     });
   });
 
@@ -1007,30 +1021,32 @@ function buildROIInputs() {
   const inp = {
     modelVersion: 27,
     /* Labor */
-    users:         answered.userCount       || def.users,
+    users:         answered.userCount       || 0,
     labor:         answered.labor           || def.labor,
     mLabor:        def.mLabor,
-    laborWastePct: answered.laborWastePct   || 0,
+    laborWastePct: (answered.laborWastePct || 0) / 100,
     /* Shrinkage */
     mShrinkage:    def.mShrinkage,
     shrinkRate:    0.03,
     annualWriteOff: answered.annualWriteOff || 0,
     effectiveShrinkBase: answered.annualWriteOff > 0
       ? answered.annualWriteOff
-      : (answered.inventoryValue || def.inventory) * 0.03,
+      : (answered.inventoryValue || 0) * 0.03,
     /* Carrying */
-    inventory:     answered.inventoryValue  || def.inventory,
+    inventory:     answered.inventoryValue  || 0,
     mCarrying:     def.mCarrying,
     carryRate:     def.carryRate,
     /* Turns */
     invTurnsCurrent:   answered.invTurnsCurrent  || 0,
     invTurnsBenchmark: def.invTurnsBenchmark,
     /* OTIF */
-    revenue:       answered.revenue         || def.revenue,
+    revenue:       answered.revenue         || 0,
     otifBaseline:  answered.otifBaseline    || 0,
     otifTarget:    answered.otifTarget      || 0,
     mOtif:         def.mOtif,
-    otifRisk:      def.otifRisk,
+    /* Do not silently create prospect-facing value from a revenue-risk
+       benchmark when the prospect has not entered baseline and target. */
+    otifRisk:      0,
     /* IT */
     itCost:        answered.itCost          || 0,
     mIt:           def.mIt,
@@ -1042,18 +1058,25 @@ function buildROIInputs() {
     /* Expedite */
     expediteSpendYr: answered.expediteSpendYr || 0,
     mExpedite:     0.25,
+    /* Counts */
+    countDaysYr:   answered.countDaysYr || 0,
+    countPeople:   answered.countPeople || 0,
+    mCount:        0.50,
     /* Orders */
     ordersPerYr:   answered.ordersPerYr     || 0,
     costPerOrder:  answered.costPerOrder    || 0,
-    pickRateGainPct: 0,
+    pickRateGainPct: (answered.pickRateGainPct || 0) / 100,
     mThroughput:   0.30,
-    orderErrorPct: answered.orderErrorPct   || 0,
+    orderErrorPct: (answered.orderErrorPct || 0) / 100,
     costPerError:  answered.costPerError    || 0,
     mAccuracy:     0.35,
     /* Field inventory */
     hasFieldInventory: sessionData && !!sessionData.has_field_inventory,
-    fieldInvValue: 0, fieldLeakageRate: 0, fieldLocations: 0,
+    fieldInvValue: answered.fieldInvValue || 0,
+    fieldLeakageRate: answered.fieldLeakageRate || 0,
+    fieldLocations: answered.fieldLocations || 0,
     fieldReconcileCost: 0, fieldReconcilePerYr: 1,
+    mFieldLeakage: 0.30, mFieldCount: 0.50,
     /* Investment — use a reasonable placeholder for payback calc */
     invest:        90000, otc: 0,
     discRate:      answered.discRate ? answered.discRate / 100 : def.discRate,
@@ -1067,12 +1090,6 @@ function computeLiveROI() {
   if (typeof calcROI !== 'function') return null;
   try {
     const { inp, answered } = buildROIInputs();
-    /* Count how many key fields came from the prospect */
-    const keyFields = ['userCount','revenue','annualWriteOff','inventoryValue','invTurnsCurrent',
-                       'otifBaseline','expediteSpendYr','downtimeCostPerHr','itCost'];
-    const prospectFieldCount = keyFields.filter(f => answered[f] > 0).length;
-    const hasEnough = prospectFieldCount >= 1;  /* show after first real answer */
-
     /* Base case */
     const base = calcROI(inp);
     /* Conservative: scale all recovery assumptions to 70% */
@@ -1080,8 +1097,14 @@ function computeLiveROI() {
       mLabor: inp.mLabor * 0.7, mShrinkage: inp.mShrinkage * 0.7,
       mCarrying: inp.mCarrying * 0.7, mOtif: inp.mOtif * 0.7,
       mIt: inp.mIt * 0.7, mDowntime: inp.mDowntime * 0.7, mExpedite: inp.mExpedite * 0.7,
+      mCount: inp.mCount * 0.7, mThroughput: inp.mThroughput * 0.7,
+      mAccuracy: inp.mAccuracy * 0.7, mFieldLeakage: inp.mFieldLeakage * 0.7,
+      mFieldCount: inp.mFieldCount * 0.7,
     };
     const cons = calcROI(consInp);
+
+    const prospectFieldCount = ROI_DRIVERS.filter(d => prospectDriverUnlocked(d, answered)).length;
+    const hasEnough = prospectFieldCount >= 1 && base.annualBenefit > 0;
 
     return { base, cons, answered, prospectFieldCount, hasEnough, inp };
   } catch(e) {
@@ -1115,15 +1138,8 @@ function renderValuePanel() {
   const totalBase = base.annualBenefit || 1;
   const driverRows = ROI_DRIVERS.map(d => {
     const amount = base[d.sav] || 0;
-    const hasInputs = d.needs.every(n => {
-      const mapped = { users:'userCount', revenue:'revenue', annualWriteOff:'annualWriteOff',
-        inventoryValue:'inventoryValue', invTurnsCurrent:'invTurnsCurrent',
-        otifBaseline:'otifBaseline', expediteSpendYr:'expediteSpendYr',
-        downtimeEventsYr:'downtimeEventsYr', downtimeHrsPerEvent:'downtimeHrsPerEvent',
-        downtimeCostPerHr:'downtimeCostPerHr', itCost:'itCost' };
-      return answered[mapped[n] || n] > 0;
-    });
-    const locked = !hasInputs && amount < 1000;
+    const hasInputs = prospectDriverUnlocked(d, answered);
+    const locked = !hasInputs;
     const pct = Math.round((amount / totalBase) * 100);
 
     return `<div class="roi-driver-row">
@@ -1133,16 +1149,9 @@ function renderValuePanel() {
     </div>`;
   }).join('');
 
-  /* Nudge: which locked driver would add most value */
-  const lockedDrivers = ROI_DRIVERS.filter(d => {
-    return d.needs.some(n => {
-      const mapped = { inventoryValue:'inventoryValue', invTurnsCurrent:'invTurnsCurrent',
-        expediteSpendYr:'expediteSpendYr', downtimeCostPerHr:'downtimeCostPerHr', itCost:'itCost' };
-      return !answered[mapped[n] || n] || answered[mapped[n] || n] < 1;
-    });
-  });
+  const lockedDrivers = ROI_DRIVERS.filter(d => !prospectDriverUnlocked(d, answered));
   const nudgeHtml = lockedDrivers.length
-    ? `<div class="roi-nudge"><strong>${lockedDrivers.length} area${lockedDrivers.length!==1?'s':''} not yet calculated</strong> — answering about ${lockedDrivers[0].label.toLowerCase()} could unlock a significant additional driver.</div>`
+    ? `<div class="roi-nudge"><strong>${lockedDrivers.length} area${lockedDrivers.length!==1?'s':''} need data</strong> — additional answers can add supported value drivers to this estimate.</div>`
     : '';
 
   /* Confidence bar */
@@ -1169,9 +1178,7 @@ function renderValuePanel() {
       nudgeCard.style.display = 'block';
       nudgeCard.innerHTML = '<strong>' + lockedDrivers.length + ' area'
         + (lockedDrivers.length !== 1 ? 's' : '')
-        + ' not yet calculated</strong> — answering about '
-        + lockedDrivers[0].label.toLowerCase()
-        + ' could unlock a significant additional driver.';
+        + ' need data</strong> — additional answers can add supported value drivers to this estimate.';
     } else {
       nudgeCard.style.display = 'none';
     }
@@ -1186,7 +1193,7 @@ function renderValuePanel() {
     </div>
     <div class="roi-range-label">estimated annual benefit</div>
     ${inactionHtml}
-    <div class="roi-disclaimer">Conservative to base range. Your Cloud Inventory rep will build the verified version from your answers.</div>
+    <div class="roi-disclaimer">Based only on value drivers supported by answers entered so far. The range applies 70%–100% of the starting recovery assumptions.</div>
 
     <div style="border-top:1px solid var(--gray-100);margin:12px -16px;padding:12px 16px 0;">
       <div class="roi-driver-head">Where the value comes from</div>
@@ -1194,9 +1201,9 @@ function renderValuePanel() {
     </div>
 
     <div style="border-top:1px solid var(--gray-100);margin:12px -16px 0;padding:12px 16px 0;">
-      <div class="roi-conf-head">Estimate confidence</div>
+      <div class="roi-conf-head">Data coverage</div>
       <div class="roi-conf-bar"><div class="roi-conf-fill" style="width:${confPct}%"></div></div>
-      <div class="roi-conf-label">Based on <strong>${answeredQ} of ${allQ}</strong> answers. More answers narrow the range.</div>
+      <div class="roi-conf-label"><strong>${answeredQ} of ${allQ}</strong> questions answered · ${prospectFieldCount} supported value driver${prospectFieldCount===1?'':'s'}. More answers can add drivers; they do not automatically guarantee value.</div>
     </div>
   `;
 }
