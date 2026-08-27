@@ -16,6 +16,8 @@ const prospect = fs.readFileSync(path.join(root, 'public', 'prospect.html'), 'ut
 const mapEditor = fs.readFileSync(path.join(root, 'public', 'map.js'), 'utf8');
 const prospectMap = fs.readFileSync(path.join(root, 'public', 'prospect-map.html'), 'utf8');
 const mapRoutes = fs.readFileSync(path.join(root, 'src', 'routes', 'maps.js'), 'utf8');
+const proposal = fs.readFileSync(path.join(root, 'public', 'proposal.js'), 'utf8');
+const dealCoach = fs.readFileSync(path.join(root, 'public', 'deal-coach.js'), 'utf8');
 const ciWorkflow = fs.readFileSync(path.join(root, '.github', 'workflows', 'ci.yml'), 'utf8');
 const mapMigration = fs.readFileSync(path.join(root, 'migrations', '023_map_groups.sql'), 'utf8');
 const { readiness } = require(path.join(root, 'src', 'shared', 'handoff-readiness.js'));
@@ -247,4 +249,58 @@ test('v5.6.10 confidentiality footers do not weaken ROI output semantics', () =>
 test('CI retains UI and startup regression execution', () => {
   assert.match(ciWorkflow, /UI and startup regression tests/);
   assert.match(ciWorkflow, /node --test test\/ui-regression\.test\.js/);
+});
+
+
+test('v5.6.11 Executive Proposal uses authenticated AI and Word export contracts', () => {
+  assert.match(index, /id="tab-proposal"/);
+  assert.match(index, /<script src="proposal\.js"><\/script>/);
+  assert.match(proposal, /apiFetch\('\/api\/enhance'/);
+  assert.match(proposal, /messages:\[\{ role:'user', content:prompt \}\]/);
+  assert.doesNotMatch(proposal, /fetch\('\/api\/enhance'/);
+  assert.match(proposal, /apiFetch\('\/api\/export\/proposal-docx'/);
+  assert.doesNotMatch(proposal, /fetch\('\/api\/export\/proposal-docx'/);
+  assert.match(proposal, /window\.proposalHasDraft/);
+  assert.match(server, /app\.post\('\/api\/export\/proposal-docx', requireAuth,/);
+  assert.match(server, /Executive-Proposal-\$\{safe\}\.docx/);
+  assert.match(server, /Confidential and proprietary/);
+});
+
+test('v5.6.12 Deal Coach refreshes buyer context and opens Proposal safely', () => {
+  assert.match(index, /id="nav-coach"/);
+  assert.match(index, /id="tab-coach"/);
+  assert.match(index, /<script src="deal-coach\.js"><\/script>/);
+  assert.match(dealCoach, /async function refreshContext\(v\)/);
+  assert.match(dealCoach, /apiFetch\('\/api\/maps\?all=true'\)/);
+  assert.match(dealCoach, /\/api\/stakeholders/);
+  assert.match(dealCoach, /function proposalReady\(\)/);
+  assert.match(dealCoach, /const nextAction=n\.go==='proposal'\?'openProposal\(\)'/);
+  assert.doesNotMatch(dealCoach, /n\.go==='proposal'\?'render\(\)'/);
+  assert.match(dealCoach, /const safeCompany=esc\(company\), safeBenefit=esc\(benefit\), safeRep=esc/);
+  assert.doesNotMatch(dealCoach, /<textarea[^]*\$\{company\}/);
+});
+
+test('v5.6.11-v5.6.13 feature files preserve locked customer and ROI controls', () => {
+  assert.match(index, /APP_VERSION="5\.6\.13"/);
+  assert.match(proposal, /36 months/);
+  assert.match(proposal, /addDays\(30\)/);
+  assert.match(dealCoach, /Joint Project Plan/);
+  assert.match(dealCoach, /Champion kit/);
+  assert.match(ciWorkflow, /UI and startup regression tests/);
+  assert.match(prospectMap, /replace\(\/"\/g,'&quot;'\)/);
+  assert.match(prospectMap, /replace\(\/'\/g,'&#39;'\)/);
+});
+
+test('v5.6.13 Christie AI Deal Coach uses authenticated deal context safely', () => {
+  assert.match(dealCoach, /Christie, your AI Deal Coach/);
+  assert.match(dealCoach, /async function ask\(question\)/);
+  assert.match(dealCoach, /apiFetch\('\/api\/enhance'/);
+  assert.doesNotMatch(dealCoach, /fetch\('\/api\/enhance'/);
+  assert.match(dealCoach, /messages:\[\{role:'user',content:prompt\}\]/);
+  assert.match(dealCoach, /proposalPrepared:proposalReady\(\)/);
+  assert.match(dealCoach, /await refreshContext\(v\)/);
+  assert.match(dealCoach, /customer facts\/entered assumptions/);
+  assert.match(dealCoach, /Do not invent numbers, commitments, dates, or stakeholder facts/);
+  assert.match(dealCoach, /esc\(answer\)\.replace\(\/\\n\/g,'<br>'\)/);
+  assert.match(css, /\.coach-christie\{/);
 });

@@ -1194,6 +1194,60 @@ app.post('/api/export/battlecard-docx', requireAuth, async (req, res) => {
     res.status(500).json({ error: 'Word export failed: ' + err.message });
   }
 });
+/* Customer-ready executive proposal.  The browser sends only the fields the
+   rep has reviewed in the proposal workspace; this creates a real editable
+   Word file instead of converting a PDF or HTML printout. */
+app.post('/api/export/proposal-docx', requireAuth, async (req, res) => {
+  try {
+    const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, Footer,
+      HeadingLevel, WidthType, BorderStyle, ShadingType, TableLayoutType, AlignmentType } = require('docx');
+    const clean = (value, max = 1600) => String(value == null ? '' : value).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, max);
+    const list = (value, limit = 12) => Array.isArray(value) ? value.slice(0, limit) : [];
+    const company = clean(req.body.company, 160) || 'Prospect';
+    const title = clean(req.body.title, 220) || (company + ' executive proposal');
+    const text = (value, opts = {}) => new TextRun({ text: clean(value), font: 'Calibri', size: 21, ...opts });
+    const para = (value, opts = {}) => new Paragraph({ children: [text(value, opts.run || {})], ...opts });
+    const heading = value => new Paragraph({ text: clean(value), heading: HeadingLevel.HEADING_2, spacing: { before: 250, after: 90 } });
+    const bullets = values => list(values).map(item => new Paragraph({ children:[text(typeof item === 'string' ? item : '')], bullet:{level:0}, spacing:{after:60} }));
+    const table = (values, left, right) => new Table({ rows: list(values).map(row => new TableRow({ children:[
+      new TableCell({ children:[para(row[left], { run:{ bold:true } })], width:{size:4300,type:WidthType.DXA}, shading:{type:ShadingType.CLEAR,fill:'F8FAFC'}, borders:{bottom:{style:BorderStyle.SINGLE,size:1,color:'E2E8F0'}} }),
+      new TableCell({ children:[para(row[right])], width:{size:4700,type:WidthType.DXA}, borders:{bottom:{style:BorderStyle.SINGLE,size:1,color:'E2E8F0'}} })
+    ] })), width:{size:9000,type:WidthType.DXA}, layout:TableLayoutType.FIXED, columnWidths:[4300,4700] });
+    const meta = [
+      { label:'Prepared for', value:company }, { label:'Prepared by', value:clean(req.body.preparedBy,160) || 'Cloud Inventory' },
+      { label:'Solution', value:clean(req.body.solution,180) }, { label:'Contract term', value:clean(req.body.contractTerm,80) },
+      { label:'Proposal date', value:clean(req.body.proposalDate,40) }, { label:'Valid through', value:clean(req.body.validThrough,40) }
+    ];
+    const children = [
+      para('CLOUD INVENTORY', { alignment:AlignmentType.LEFT, run:{bold:true,size:22,color:'007B94'} }),
+      para('Commercial proposal', { run:{bold:true,size:22,color:'00A9CC'}, spacing:{before:160,after:80} }),
+      para(title, { run:{bold:true,size:40,color:'1E2931'}, spacing:{after:110} }),
+      para('Prepared for ' + company, { run:{size:24,color:'475569'}, spacing:{after:160} }),
+      table(meta, 'label', 'value'),
+      heading('Executive summary'), para(req.body.situation),
+      new Paragraph({ text:'Our recommendation', heading:HeadingLevel.HEADING_3, spacing:{before:150,after:50} }), para(req.body.recommendation),
+      new Paragraph({ text:'Expected outcome', heading:HeadingLevel.HEADING_3, spacing:{before:150,after:50} }), para(req.body.outcome, { shading:{type:ShadingType.CLEAR,fill:'E5F7FA'}, border:{left:{style:BorderStyle.SINGLE,size:12,color:'00A9CC'}}, indent:{left:160}, spacing:{before:100,after:100} }),
+      heading('The value case'),
+      new Paragraph({ text:'Why act', heading:HeadingLevel.HEADING_3 }), para(req.body.whyAct),
+      new Paragraph({ text:'Why Cloud Inventory', heading:HeadingLevel.HEADING_3 }), para(req.body.whyCloud),
+      new Paragraph({ text:'Why now', heading:HeadingLevel.HEADING_3 }), para(req.body.whyNow),
+      heading('Solution and investment'), new Paragraph({ text:'In scope', heading:HeadingLevel.HEADING_3 }), ...bullets(req.body.scope),
+      new Paragraph({ text:'Commercial investment', heading:HeadingLevel.HEADING_3, spacing:{before:140,after:60} }), table(req.body.investment, 'label', 'value'),
+      new Paragraph({ text:'Delivery approach', heading:HeadingLevel.HEADING_3, spacing:{before:140,after:50} }), para(req.body.timeline),
+      heading('Success and next steps'), new Paragraph({ text:'How we will measure success', heading:HeadingLevel.HEADING_3, spacing:{after:60} }), table(req.body.success, 'metric', 'target'),
+      new Paragraph({ text:'Recommended next steps', heading:HeadingLevel.HEADING_3, spacing:{before:140,after:60} }), ...bullets(req.body.nextSteps)
+    ];
+    const doc = new Document({ sections:[{ footers:{ default:new Footer({ children:[new Paragraph({ children:[text('© ' + new Date().getFullYear() + ' Cloud Inventory · Confidential and proprietary · Prepared for ' + company, {size:16,color:'64748B'})], alignment:AlignmentType.CENTER })] }) }, children }] });
+    const buffer = await Packer.toBuffer(doc);
+    const safe = company.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'Prospect';
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="Executive-Proposal-${safe}.docx"`);
+    res.send(buffer);
+  } catch (err) {
+    console.error('proposal-docx error:', err.message);
+    res.status(500).json({ error:'Word export failed.' });
+  }
+});
 
 /* Natural-language question over aggregate deal data (Admin Analytics).
    Two-step: (1) AI picks which pre-written query/queries answer the

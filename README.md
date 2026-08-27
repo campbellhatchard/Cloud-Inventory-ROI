@@ -9,6 +9,8 @@ A multi-user SaaS application for Cloud Inventory sales reps and Solution Engine
 - **ROI Calculator** — Live-updating model with 10 value drivers (labor, shrinkage, carrying cost, inventory turns, OTIF, downtime, expediting, field inventory, IT displacement, WMS levers)
 - **Discovery guide** — Industry-specific question sets with a shareable prospect link so prospects can contribute their own data
 - **Executive view** — CFO-ready narrative, Three Whys framework, PDF and PowerPoint exports
+- **Executive Proposal** — customer-ready editable proposal workspace with AI narrative refinement, PDF and Word export
+- **Deal Coach** — scenario-aware close-plan workspace linking value, stakeholders, proposal, Joint Project Plan, and Christie AI coaching
 - **Solution Fit** — Pre-sales handoff document for Services / Solution Engineering
 - **Joint Project Plans** — Joint project plan builder with milestone tracking and a shareable prospect link
 - **Stakeholder map** — Influence/support matrix with AI gap analysis
@@ -183,4 +185,4 @@ Edit `public/scenario-templates.js`, add an entry to `SCENARIO_TEMPLATES`:
 
 ## Version
 
-Current: **v5.6.10** — see Admin → Version history for full changelog.
+Current: **v5.6.13** — see Admin → Version history for full changelog.

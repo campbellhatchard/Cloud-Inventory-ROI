@@ -87,7 +87,7 @@ function persistSaved(arr)   { savedScenarios = arr; updateSavedBadge(); }
 /* ════════════════════════════════════════
    Navigation
    ════════════════════════════════════════ */
-const ALL_TABS = ['calc','disc','comp','exec','saved','compare','sensitivity','analytics','map','stake','solfit','admincustomers','admin','help','impact','profile'];
+const ALL_TABS = ['calc','disc','comp','exec','proposal','coach','saved','compare','sensitivity','analytics','map','stake','solfit','admincustomers','admin','help','impact','profile'];
 
 function switchTab(name) {
   ALL_TABS.forEach(n => {
@@ -104,6 +104,7 @@ function switchTab(name) {
   if (name === 'sensitivity') renderSensitivity();
   if (name === 'analytics')   renderAnalytics();
   if (name === 'admin')       adminUnlocked && renderAdminEditor();
+  if (name === 'coach')       renderDealCoach();
   if (name === 'disc' && typeof clearDiscNotif === 'function') clearDiscNotif();
   if (window.innerWidth <= 900) closeSidebar();
   trackEvent('tab_view', { tab: name });

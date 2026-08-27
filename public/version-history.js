@@ -7,6 +7,33 @@
 
 const VERSION_HISTORY = [
   {
+    version: '5.6.13', date: '2026-08-27', tag: 'feature',
+    title: 'Christie AI Deal Coach',
+    changes: [
+      'Added Christie, a context-aware AI Deal Coach inside Deal Coach with deal-health, meeting-preparation, and follow-up prompts.',
+      'Christie uses the current value case, stakeholder map, executive proposal, and Joint Project Plan while clearly separating facts from suggested guidance.',
+      'Added copyable AI coaching responses and repaired proposal AI enhancement to use the authenticated AI proxy.'
+    ]
+  },
+  {
+    version: '5.6.12', date: '2026-08-27', tag: 'feature',
+    title: 'Deal Coach and buyer-consensus workflow',
+    changes: [
+      'Added Deal Coach, a scenario-aware command center that prioritizes the next action required to advance the opportunity.',
+      'Connected stakeholder coverage, executive proposal, value case, and Joint Project Plan into a single proposal-to-close workflow.',
+      'Added forwardable champion email and internal sponsor brief templates that inherit the modeled value case.'
+    ]
+  },
+  {
+    version: '5.6.11', date: '2026-08-27', tag: 'feature',
+    title: 'Executive proposal workspace and editable Word output',
+    changes: [
+      'Added a branded Executive Proposal workspace with calculator and narrative defaults, editable content, and local draft saving.',
+      'Added AI case enhancement plus customer-ready PDF and editable Word proposal exports with confidentiality and copyright footers.',
+      'Defaulted proposal commercial terms to a 36-month term and 30-day validity while keeping both fields editable.'
+    ]
+  },
+  {
     version: '5.6.10', date: '2026-08-27', tag: 'fix',
     title: 'Joint Project Plans and customer-ready plan exports',
     changes: [
