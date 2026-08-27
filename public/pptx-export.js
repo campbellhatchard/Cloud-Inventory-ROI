@@ -20,6 +20,7 @@ const PPT = {
   ORANGE2:   'A6791E',
   RED:       'C81E10',
   GRAY_BG:   'F1F5F9',
+  GRAY_LT:   'E0E4E8',
   GRAY_TXT:  '64748B',
   DARK_TXT:  '1E293B',
   WHITE:     'FFFFFF',
@@ -58,6 +59,65 @@ function pptIndustryLabel(key) {
 function pptDiscAnswer(id) {
   return (typeof discoveryAnswers !== 'undefined' && discoveryAnswers[id]) ? String(discoveryAnswers[id]).trim() : '';
 }
+
+/* The browser bundle publishes `PptxGenJS`; older app code used `pptxgen`.
+   Normalize that name once and make every export share the same dependency loader. */
+let pptxReadyPromise = null;
+function normalizePptxGlobal() {
+  if (typeof window.pptxgen !== 'function' && typeof window.PptxGenJS === 'function') {
+    window.pptxgen = window.PptxGenJS;
+  }
+  return typeof window.pptxgen === 'function';
+}
+function loadPptxDependency(src, readyCheck) {
+  return new Promise(function(resolve, reject) {
+    if (readyCheck()) { resolve(); return; }
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.onload = function() {
+      if (readyCheck()) resolve();
+      else reject(new Error('Loaded ' + src + ' but its browser global is unavailable'));
+    };
+    script.onerror = function() { reject(new Error('Unable to load ' + src)); };
+    document.head.appendChild(script);
+  });
+}
+async function ensurePptxReady() {
+  if (typeof window.JSZip === 'function' && normalizePptxGlobal()) return true;
+  if (!pptxReadyPromise) {
+    pptxReadyPromise = (async function() {
+      if (typeof window.JSZip !== 'function') {
+        try {
+          await loadPptxDependency('/jszip.min.js', function() { return typeof window.JSZip === 'function'; });
+        } catch (_) {
+          await loadPptxDependency('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js', function() { return typeof window.JSZip === 'function'; });
+        }
+      }
+      if (!normalizePptxGlobal()) {
+        try {
+          await loadPptxDependency('/pptxgen.min.js', normalizePptxGlobal);
+        } catch (_) {
+          await loadPptxDependency('https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.min.js', normalizePptxGlobal);
+        }
+      }
+      if (typeof window.JSZip !== 'function' || !normalizePptxGlobal()) {
+        throw new Error('PowerPoint runtime is incomplete');
+      }
+    })();
+  }
+  try {
+    await pptxReadyPromise;
+    return true;
+  } catch (err) {
+    pptxReadyPromise = null;
+    console.error('PowerPoint runtime failed to load:', err);
+    if (typeof showToast === 'function') showToast('PowerPoint library failed to load. Check your connection and try again.');
+    return false;
+  }
+}
+window.ensurePptxReady = ensurePptxReady;
+
 /* Truncate long text so slides stay readable */
 function pptTrunc(str, max) {
   if (!str) return '';
@@ -87,10 +147,7 @@ function pptTitle(slide, text) {
    MAIN EXPORT FUNCTION
    ═══════════════════════════════════════════════════════════════════ */
 async function exportToPowerPoint() {
-  if (typeof pptxgen === 'undefined') {
-    showToast('PowerPoint library not loaded — check your connection and refresh.');
-    return;
-  }
+  if (!(await ensurePptxReady())) return;
   const btn = document.getElementById('pptxExportBtn');
   const btnOriginal = btn ? btn.innerHTML : '';
   if (btn) { btn.disabled = true; btn.textContent = 'Building deck…'; }

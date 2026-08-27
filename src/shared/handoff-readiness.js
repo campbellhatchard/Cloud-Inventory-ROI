@@ -31,7 +31,7 @@
     /* Business context */
     req(!!o.customer, 'Customer / prospect');
     req(!!o.solutionEngineer, 'Solution Engineer');
-    req(!!o.products, 'Cloud Inventory product(s)');
+    req(Array.isArray(o.products) ? o.products.length > 0 : !!o.products, 'Cloud Inventory product(s)');
     req(!!o.locations, 'Locations / operating scope');
     req(!!o.users, 'Estimated users');
     req(!!o.problem, 'Business problem');

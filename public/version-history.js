@@ -7,6 +7,53 @@
 
 const VERSION_HISTORY = [
   {
+    version: '5.6.7', date: '2026-08-27', tag: 'fix',
+    title: 'AI competitive research now inherits Battlecard selections',
+    changes: [
+      'Fixed the state mismatch that caused AI Research to report no Cloud Inventory source after a rep selected CIP or MEP on the Battlecard tab.',
+      'The selected Cloud Inventory solution now supplies its approved curated battlecard positioning as a valid first-party AI research source.',
+      'The selected competitor now carries into AI Research automatically, including the MEP-specific RFgen/RF-SMART and low-code options.',
+      'Competitor website defaults and product-specific competitor lists now stay aligned with the selected CIP or MEP motion.',
+      'Added regression coverage and browser verification for the MEP plus ERP Mobility / Scanning research workflow.'
+    ]
+  },
+  {
+    version: '5.6.6', date: '2026-08-27', tag: 'feature',
+    title: 'Rapid-entry Solution Fit workflow for high-volume SE discovery',
+    changes: [
+      'Redesigned Solution Fit around compact tables, visible completion counts, missing-only review, section badges, and keyboard-friendly progression.',
+      'Added three reusable engagement templates plus one-click recommended defaults for process scope, architecture, integration, ownership, and operating model.',
+      'Automatically reuses known calculator, scenario, discovery, stakeholder, and signed-in-user data while showing the source beside each populated value.',
+      'Added locations and operating scope, stakeholder contact pickers, collapsed optional contact details, interface direction and frequency, and exception-only notes.',
+      'Added one-click bulk actions to mark all in-scope workflows demonstrated or full fit, with reliable saving and regression coverage.',
+      'Corrected readiness logic so an empty product list cannot count as complete and added accessible tab semantics and responsive rapid-entry styling.'
+    ]
+  },
+  {
+    version: '5.6.5', date: '2026-08-26', tag: 'fix',
+    title: 'PowerPoint exports restored and narrative action labels cleaned up',
+    changes: [
+      'Restored the main business-case PowerPoint download plus the Champion Pack, role one-pager, and ROI Methodology PowerPoint exports.',
+      'Added the missing JSZip browser dependency and normalized the PptxGenJS browser constructor used by every export.',
+      'Added a reliable local-first runtime loader with CDN fallback so exports can recover if an initial script request fails.',
+      'Corrected unsupported PowerPoint color formats and added the missing light-gray theme token used by the Champion Pack.',
+      'Replaced escaped Reset and AI Enhance label codes with their intended icons on first page load.',
+      'Added regression coverage for dependency order, constructor normalization, PowerPoint color validity, and clean narrative labels.'
+    ]
+  },
+  {
+    version: '5.6.4', date: '2026-08-26', tag: 'fix',
+    title: 'Application-wide UI recovery and responsive calculator polish',
+    changes: [
+      'Restored the complete Model Confidence visual system: progress bar, status legend, grouped chips, state colors, spacing, and mobile wrapping.',
+      'Fixed three malformed lines in the main startup script that stopped later initialization code from running, leaving multiple screens partially rendered.',
+      'Recovered desktop styles for sensitivity charts, saved-scenario stage filters, analytics KPI cards, and executive scenario controls.',
+      'Separated floating actions from calculator content on desktop and removed duplicate floating save/export actions on smaller screens.',
+      'Repaired mobile navigation, the two-metric KPI bar, and the horizontal calculator stepper; verified all primary pages without horizontal overflow.',
+      'Added a UI regression test that parses every inline script and checks the recovered component and responsive style contracts.'
+    ]
+  },
+  {
     version: '5.6.3', date: '2026-08-26', tag: 'fix',
     title: 'ROI calculation integrity, timeline, overlap, and assumption controls',
     changes: [

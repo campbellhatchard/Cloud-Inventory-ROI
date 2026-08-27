@@ -16,7 +16,7 @@
   const PRODUCTS = ['MEP','CIP','CPP','Platform'];
   const blankProcess = (name, i) => ({ id:`P-${String(i+1).padStart(3,'0')}`, name, selected:false, demoStatus:'Not reviewed', fit:'Not reviewed', notes:'' });
   const blankState = () => ({
-    opportunity:{customer:'',solutionEngineer:'',solutionEngineerId:'',stage:'Discovery',products:[],productsOther:'',goLive:'',users:'',problem:'',outcome:'',
+    opportunity:{customer:'',solutionEngineer:'',solutionEngineerId:'',stage:'Discovery',products:[],productsOther:'',goLive:'',users:'',locations:'',problem:'',outcome:'',
       businessOwnerName:'',businessOwnerTitle:'',businessOwnerEmail:'',businessOwnerPhone:'',
       technicalOwnerName:'',technicalOwnerTitle:'',technicalOwnerEmail:'',technicalOwnerPhone:''},
     architecture:{relationship:'',erp:'',version:'',otherSystems:'',integrationMethod:'',integrationOwner:'',integrationNotes:'',
@@ -32,6 +32,26 @@
   let S = blankState();
   let customerId = null, customerName = '', canWrite = false, exists = false;
   let openGapId = null, activeTab = 'context', saveTimer = null, dirty = false;
+  let showMissingOnly = false, activeTemplate = 'field', knownStakeholders = [];
+  let knownSources = {}, sfKeyboardBound = false, sfActionsDelegated = false;
+
+  const SOLUTION_TEMPLATES = {
+    field: {
+      label:'Field inventory deployment', products:['MEP','CIP'],
+      relationship:'Hybrid', integrationMethod:'Cloud Inventory REST API', integrationOwner:'Shared', partner:'No', offline:'Yes',
+      processes:['Receiving','Inventory Movement','Field Inventory','Returns','Printing / Labeling']
+    },
+    warehouse: {
+      label:'Warehouse modernization', products:['CIP'],
+      relationship:'Integrated to system of record', integrationMethod:'Cloud Inventory REST API', integrationOwner:'Shared', partner:'No', offline:'No',
+      processes:['Receiving','Putaway','Inventory Movement','Picking','Packing','Shipping','Cycle Counting','Replenishment']
+    },
+    erp: {
+      label:'ERP inventory extension', products:['CIP','Platform'],
+      relationship:'Integrated to system of record', integrationMethod:'Cloud Inventory REST API', integrationOwner:'Shared', partner:'No', offline:'Unknown',
+      processes:['Receiving','Inventory Movement','Shipping','Cycle Counting','Returns']
+    }
+  };
 
   const esc = v => String(v==null?'':v).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
@@ -75,6 +95,8 @@
       const data = await resp.json();
       customerName = data.customerName || '';
       exists = !!data.exists;
+      knownSources = {};
+      activeTemplate = inferTemplate();
       S = mergeState(blankState(), data.data || {});
       migrateState(S);
       /* Seed customer name into opportunity if empty. */
@@ -84,10 +106,16 @@
       if (!S.opportunity.solutionEngineer && (u.role === 'se' || u.role === 'admin')) {
         S.opportunity.solutionEngineer = u.username || u.name || '';
         S.opportunity.solutionEngineerId = u.id || '';
+        knownSources['opportunity.solutionEngineer'] = 'Signed-in user';
+      } else if (S.opportunity.solutionEngineer && S.opportunity.solutionEngineer === (u.username || u.name)) {
+        knownSources['opportunity.solutionEngineer'] = 'Signed-in user';
       }
       await loadSEList();
       /* Permission: can this user write? (server is authoritative; we mirror for UI). */
       canWrite = await resolveCanWrite();
+      await loadKnownStakeholders();
+      const prefilled = await applyKnownData({ mutate:!exists, save:false });
+      if (prefilled && !exists && canWrite) scheduleSave();
       return true;
     } catch (e) { console.error('loadHandoff error:', e.message); renderGate('Could not load the handoff — check your connection.'); return false; }
   }
@@ -103,10 +131,15 @@
     if (o.technicalOwner && !o.technicalOwnerName) o.technicalOwnerName = o.technicalOwner;
     ['businessOwnerName','businessOwnerTitle','businessOwnerEmail','businessOwnerPhone',
      'technicalOwnerName','technicalOwnerTitle','technicalOwnerEmail','technicalOwnerPhone',
-     'solutionEngineerId','productsOther'].forEach(k=>{ if(o[k]===undefined) o[k]=''; });
+     'solutionEngineerId','productsOther','locations'].forEach(k=>{ if(o[k]===undefined) o[k]=''; });
     const a = s.architecture || (s.architecture = {});
     if (a.hasCustomizations === undefined) a.hasCustomizations = '';
     if (!Array.isArray(a.customizations)) a.customizations = [];
+    if (!Array.isArray(s.interfaces)) s.interfaces = [];
+    s.interfaces.forEach(it=>{
+      if (it.direction === undefined) it.direction = 'Bidirectional';
+      if (it.trigger === undefined) it.trigger = 'Near real time';
+    });
   }
 
   let _seList = [];
@@ -121,6 +154,121 @@
     try { return (window.ciAuth && window.ciAuth.getUser) ? (window.ciAuth.getUser() || {}) : {}; }
     catch (e) { return {}; }
   }
+
+  function inferTemplate() {
+    try {
+      const v = typeof getVals === 'function' ? getVals() : {};
+      if (v.hasFieldInventory || String(v.solution || '').toLowerCase() === 'mep') return 'field';
+      if (String(v.competitor || '').toLowerCase().includes('erp')) return 'erp';
+    } catch (e) {}
+    return 'warehouse';
+  }
+  function recommendedQuarter(monthsAhead) {
+    const d = new Date();
+    d.setMonth(d.getMonth() + (monthsAhead || 6));
+    return 'Q' + (Math.floor(d.getMonth() / 3) + 1) + ' ' + d.getFullYear();
+  }
+  function isBlank(v) { return v === undefined || v === null || (Array.isArray(v) ? !v.length : !String(v).trim()); }
+  function sourceTag(path) {
+    return knownSources[path] ? `<span class="sf-field-source">${esc(knownSources[path])}</span>` : '';
+  }
+  function setKnown(path, value, source, mutate) {
+    if (isBlank(value)) return false;
+    const current = val(S, path);
+    if (!isBlank(current)) {
+      if (String(current) === String(value)) knownSources[path] = source;
+      return false;
+    }
+    if (!mutate) return false;
+    setVal(S, path, value);
+    knownSources[path] = source;
+    return true;
+  }
+  async function loadKnownStakeholders() {
+    knownStakeholders = [];
+    if (!customerName) return;
+    try {
+      const resp = await apiFetch('/api/stakeholders?company=' + encodeURIComponent(customerName));
+      if (resp && resp.ok) knownStakeholders = await resp.json();
+    } catch (e) { console.warn('Solution Fit stakeholder prefill unavailable:', e.message); }
+  }
+  async function applyKnownData(options) {
+    options = options || {};
+    const mutate = options.mutate !== false;
+    const save = options.save === true;
+    let changed = 0;
+    let v = {};
+    try { v = typeof getVals === 'function' ? getVals() : {}; } catch (e) {}
+    const da = typeof discoveryAnswers !== 'undefined' ? discoveryAnswers : {};
+    const stageMap = { Demo:'Technical validation', Proposal:'Proposal', Negotiation:'Proposal', Discovery:'Discovery', 'Closed Won':'Closed' };
+    const solution = String(v.solution || '').toLowerCase();
+    const product = solution === 'mep' ? 'MEP' : solution === 'cip' ? 'CIP' : '';
+    const whyAct = document.getElementById('why_act')?.value?.trim() || '';
+    const add = (path, value, source) => { if (setKnown(path, value, source, mutate)) changed++; };
+    add('opportunity.customer', customerName || v.company, 'Customer');
+    add('opportunity.users', v.users > 0 ? String(v.users) : '', 'Calculator');
+    if (mutate && !exists && stageMap[v.dealStage]) {
+      S.opportunity.stage = stageMap[v.dealStage]; knownSources['opportunity.stage'] = 'Scenario'; changed++;
+    } else add('opportunity.stage', stageMap[v.dealStage] || '', 'Scenario');
+    add('opportunity.locations', v.fieldLocations > 0 ? `${v.fieldLocations} field location${v.fieldLocations===1?'':'s'}` : '', 'Calculator');
+    add('opportunity.problem', whyAct, 'Executive narrative');
+    add('opportunity.outcome', da.ve13 || '', 'Discovery');
+    add('architecture.erp', da.ic_d2 || da.dq12 || '', 'Discovery');
+    if (product && !S.opportunity.products.length && mutate) {
+      S.opportunity.products = [product]; knownSources['opportunity.products'] = 'Calculator'; changed++;
+    } else if (product && S.opportunity.products.includes(product)) knownSources['opportunity.products'] = 'Calculator';
+
+    if (!knownStakeholders.length) await loadKnownStakeholders();
+    const business = knownStakeholders.find(x=>x.role==='economic_buyer') || knownStakeholders.find(x=>x.role==='champion');
+    const technical = knownStakeholders.find(x=>x.role==='technical_buyer');
+    if (business) {
+      add('opportunity.businessOwnerName', business.name, 'Stakeholders');
+      add('opportunity.businessOwnerTitle', business.title, 'Stakeholders');
+    }
+    if (technical) {
+      add('opportunity.technicalOwnerName', technical.name, 'Stakeholders');
+      add('opportunity.technicalOwnerTitle', technical.title, 'Stakeholders');
+    }
+    if (save && changed) scheduleSave();
+    return changed;
+  }
+
+  function templateDefaultCount() {
+    const t = SOLUTION_TEMPLATES[activeTemplate];
+    if (!t) return 0;
+    let n = 0;
+    if (isBlank(S.opportunity.goLive)) n++;
+    if (!S.opportunity.products.length) n++;
+    if (isBlank(S.architecture.relationship)) n++;
+    if (isBlank(S.architecture.integrationMethod)) n++;
+    if (isBlank(S.architecture.integrationOwner)) n++;
+    if (isBlank(S.partner.involved)) n++;
+    if (isBlank(S.drivers.offline) || S.drivers.offline==='Unknown') n++;
+    if (!S.processes.some(p=>p.selected) && t.processes.length) n++;
+    return n;
+  }
+  function applyTemplateDefaults() {
+    const t = SOLUTION_TEMPLATES[activeTemplate];
+    if (!t) return 0;
+    let changed = 0;
+    const apply = (path, value) => {
+      if (!isBlank(val(S,path))) return;
+      setVal(S,path,value); knownSources[path] = 'Recommended'; changed++;
+    };
+    apply('opportunity.goLive', recommendedQuarter(6));
+    if (!S.opportunity.products.length) { S.opportunity.products = t.products.slice(); knownSources['opportunity.products'] = 'Template'; changed++; }
+    apply('architecture.relationship', t.relationship);
+    apply('architecture.integrationMethod', t.integrationMethod);
+    apply('architecture.integrationOwner', t.integrationOwner);
+    apply('partner.involved', t.partner);
+    if (isBlank(S.drivers.offline) || S.drivers.offline==='Unknown') { S.drivers.offline=t.offline; knownSources['drivers.offline']='Template'; changed++; }
+    if (!S.processes.some(p=>p.selected)) {
+      S.processes.forEach(p=>{ p.selected = t.processes.includes(p.name); });
+      changed++;
+    }
+    return changed;
+  }
+
   async function resolveCanWrite() {
     /* SEs and admins can write; AEs are read + print. Read the role from the
        app's auth cache (exposed as window.ciAuth.getUser). */
@@ -224,11 +372,16 @@
     /* Tab labels with gap count badge */
     const gapCount = S.gaps.length;
     const missingCount = r.miss ? r.miss.length : 0;
+    const demoMissing = S.processes.filter(p=>p.selected && (p.demoStatus==='Not reviewed' || p.fit==='Not reviewed')).length;
+    const integrationMissing = r.miss.filter(x=>/integration|system of record|ERP|relationship/i.test(x.label)).length;
+    const defaultCount = templateDefaultCount();
+    const templateOptions = Object.entries(SOLUTION_TEMPLATES).map(([key,t])=>`<option value="${key}" ${key===activeTemplate?'selected':''}>${esc(t.label)}</option>`).join('');
+    const productsSummary = fmtProducts(S.opportunity);
     const tabs = [
       { k:'context',     l:'Context' },
-      { k:'checklist',   l:'Demo &amp; Fit' },
+      { k:'checklist',   l:'Demo &amp; Fit', badge:demoMissing || null, badgeCls:demoMissing?'sf-tab-badge-warn':'' },
       { k:'gaps',        l:'Gaps',        badge: gapCount || null },
-      { k:'integration', l:'Integration' },
+      { k:'integration', l:'Integration', badge:integrationMissing || null, badgeCls:integrationMissing?'sf-tab-badge-warn':'' },
       { k:'handoff',     l:'Readiness',   badge: missingCount || null, badgeCls:'sf-tab-badge-warn' }
     ];
     app.innerHTML = `
@@ -236,21 +389,34 @@
         <div class="sf-topbar-left">
           <span class="sf-ctx-name">${esc(customerName || S.opportunity.customer || 'Customer')}</span>
           ${S.opportunity.stage ? `<span class="sf-stage-pill">${esc(S.opportunity.stage)}</span>` : ''}
+          ${productsSummary!=='—' ? `<span class="sf-stage-pill">${esc(productsSummary)}${S.opportunity.users?` · ${esc(S.opportunity.users)} users`:''}</span>` : ''}
           ${!canWrite ? '<span class="sf-ro-badge">Read-only</span>' : ''}
         </div>
-        <div class="sf-topbar-right" id="sfSaveStateMini"></div>
+        <div class="sf-topbar-actions">
+          ${canWrite ? '<button class="btn btn-ghost btn-sm sf-topbar-btn" data-sfaction="refreshKnown">Refresh known data</button>' : ''}
+          ${canWrite && defaultCount ? `<button class="btn btn-primary btn-sm" data-sfaction="applyDefaults">Apply ${defaultCount} recommended default${defaultCount===1?'':'s'}</button>` : ''}
+          <div class="sf-topbar-right" id="sfSaveStateMini"></div>
+        </div>
       </div>
       <div class="sf-readiness-bar" id="sfReadinessBar"></div>
-      <div class="sf-tabs">
-        ${tabs.map(t=>`<button class="sf-tab ${activeTab===t.k?'active':''}" data-sftab="${t.k}">${t.l}${t.badge?`<span class="sf-tab-badge ${t.badgeCls||''}">${t.badge}</span>`:''}</button>`).join('')}
+      <div class="sf-tabs" role="tablist" aria-label="Solution Fit sections">
+        ${tabs.map(t=>`<button class="sf-tab ${activeTab===t.k?'active':''}" role="tab" aria-selected="${activeTab===t.k?'true':'false'}" data-sftab="${t.k}">${t.l}${t.badge?`<span class="sf-tab-badge ${t.badgeCls||''}">${t.badge}</span>`:''}</button>`).join('')}
       </div>
-      <div class="sf-panes">
+      <div class="sf-entry-toolbar">
+        <div class="sf-entry-tools-left">
+          <label class="sf-template-label">Template <select id="sfTemplateSelect">${templateOptions}</select></label>
+          <button class="btn btn-ghost btn-sm ${showMissingOnly?'active':''}" id="sfMissingToggle" aria-pressed="${showMissingOnly}">${showMissingOnly?'Show all fields':'Show missing only'}</button>
+        </div>
+        <div class="sf-entry-hint"><kbd>Tab</kbd> next field · <kbd>Ctrl</kbd> + <kbd>S</kbd> save · only exceptions need notes</div>
+      </div>
+      <div class="sf-panes ${showMissingOnly?'sf-missing-only':''}">
         <div class="sf-pane" data-sfpane="context">${renderContext()}</div>
         <div class="sf-pane" data-sfpane="checklist">${renderChecklist()}</div>
         <div class="sf-pane" data-sfpane="gaps">${renderGaps()}</div>
         <div class="sf-pane" data-sfpane="integration">${renderIntegration()}</div>
         <div class="sf-pane" data-sfpane="handoff">${renderReadinessTab(r)}</div>
-      </div>`;
+      </div>
+      <div class="sf-next-row"><button class="btn btn-primary" id="sfNextSection">${activeTab==='handoff'?'Review handoff':'Next section →'}</button></div>`;
     wireTabs();
     wireBindings();
     showActivePane();
@@ -263,20 +429,24 @@
     const el = $('sfReadinessBar');
     if (!el) return;
     const pct = score || 0;
+    const current = computeReadiness();
+    const missing = Array.isArray(miss) ? miss : current.miss;
+    const completed = current.done.length;
+    const total = completed + current.miss.length;
     const label = status==='ready' ? 'Ready to hand off'
                 : status==='conditional' ? 'Conditional — some items still open'
                 : 'Not ready — key fields missing';
     const barColor = status==='ready' ? 'var(--green)' : status==='conditional' ? '#D97706' : 'var(--red)';
-    const blocker = miss && miss.length
-      ? `<span class="sf-rbar-blocker">${miss.length} item${miss.length!==1?'s':''} to resolve</span>`
+    const blocker = missing && missing.length
+      ? `<span class="sf-rbar-blocker">${missing.length} item${missing.length!==1?'s':''} to resolve</span>`
       : '';
     el.innerHTML = `
       <div class="sf-rbar-inner">
         <div class="sf-rbar-track"><div class="sf-rbar-fill" style="width:${pct}%;background:${barColor};"></div></div>
         <div class="sf-rbar-info">
-          <span class="sf-rbar-pct" style="color:${barColor}">${pct}%</span>
-          <span class="sf-rbar-label">${esc(label)}</span>
+          <span class="sf-rbar-summary"><strong>${completed} of ${total} required checks complete</strong> · ${esc(label)}</span>
           ${blocker}
+          <span class="sf-rbar-pct" style="color:${barColor}">${pct}%</span>
         </div>
       </div>`;
     /* Also mirror save state label here */
@@ -301,7 +471,7 @@
 
   /* ── Tab 1: Context (opportunity / architecture / partner) ──────── */
   /* Section accordion helper — tracks open state in openSections set */
-  const _openSections = new Set(['opp','arch','partner']);
+  const _openSections = new Set(['opp']);
   function sfSection(id, icon, title, filledOf, content) {
     const open = _openSections.has(id);
     const pct = filledOf ? filledOf[0] + '/' + filledOf[1] : null;
@@ -325,30 +495,35 @@
   }
   function renderContext() {
     const o=S.opportunity, a=S.architecture, p=S.partner;
-    const f = (label, path, ph='') => `<div class="sf-field"><label>${esc(label)}</label><input data-sfbind="${path}" value="${esc(val(S,path))}" placeholder="${esc(ph)}"></div>`;
-    const ta = (label, path, ph='') => `<div class="sf-field"><label>${esc(label)}</label><textarea data-dictate data-sfbind="${path}" placeholder="${esc(ph)}">${esc(val(S,path))}</textarea></div>`;
-    const sel = (label, path, opts) => `<div class="sf-field"><label>${esc(label)}</label><select data-sfbind="${path}">${opts.map(x=>`<option ${val(S,path)===x?'selected':''}>${esc(x)}</option>`).join('')}</select></div>`;
+    const f = (label, path, ph='') => `<div class="sf-field" data-sfmissing="${isBlank(val(S,path))}"><label>${esc(label)}${sourceTag(path)}</label><input data-sfbind="${path}" value="${esc(val(S,path))}" placeholder="${esc(ph)}"></div>`;
+    const ta = (label, path, ph='') => `<div class="sf-field" data-sfmissing="${isBlank(val(S,path))}"><label>${esc(label)}${sourceTag(path)}</label><textarea data-dictate data-sfbind="${path}" placeholder="${esc(ph)}">${esc(val(S,path))}</textarea></div>`;
+    const sel = (label, path, opts) => `<div class="sf-field" data-sfmissing="${isBlank(val(S,path))}"><label>${esc(label)}${sourceTag(path)}</label><select data-sfbind="${path}">${opts.map(x=>`<option ${val(S,path)===x?'selected':''}>${esc(x)}</option>`).join('')}</select></div>`;
 
     /* Solution Engineer dropdown from SE + Admin users. */
     const seOpts = ['<option value="">— Select —</option>'].concat(
       _seList.map(u => `<option value="${esc(u.name)}" ${o.solutionEngineer===u.name?'selected':''}>${esc(u.name)}${u.role==='admin'?' (Admin)':''}</option>`)
     ).join('');
-    const seField = `<div class="sf-field"><label>Solution Engineer</label><select data-sfbind="opportunity.solutionEngineer">${seOpts}</select></div>`;
+    const seField = `<div class="sf-field" data-sfmissing="${isBlank(o.solutionEngineer)}"><label>Solution Engineer${sourceTag('opportunity.solutionEngineer')}</label><select data-sfbind="opportunity.solutionEngineer">${seOpts}</select></div>`;
 
     /* Products checkboxes + Other. */
     const prodChecks = PRODUCTS.map(pr => `<label class="sf-check"><input type="checkbox" data-sfprod="${esc(pr)}" ${o.products.includes(pr)?'checked':''}><span>${esc(pr)}</span></label>`).join('');
     const otherChecked = o.products.includes('Other');
-    const productsField = `<div class="sf-field"><label>Cloud Inventory product(s)</label>
+    const productsField = `<div class="sf-field" data-sfmissing="${!o.products.length}"><label>Cloud Inventory product(s)${sourceTag('opportunity.products')}</label>
       <div class="sf-checks">${prodChecks}<label class="sf-check"><input type="checkbox" data-sfprod="Other" ${otherChecked?'checked':''}><span>Other</span></label></div>
       <div id="sfProductsOther" class="${otherChecked?'':'sf-hidden'}" style="margin-top:8px;"><input data-sfbind="opportunity.productsOther" value="${esc(o.productsOther)}" placeholder="Describe other product(s)"></div>
     </div>`;
 
-    /* Owner blocks: name / title / email / phone. */
-    const ownerBlock = (title, k) => `<div class="sf-owner">
+    /* Owners reuse Stakeholder Map entries; optional contact details stay collapsed. */
+    const ownerBlock = (title, k) => {
+      const currentName = o[k+'Name'];
+      const stakeholderOptions = ['<option value="">Enter manually</option>'].concat(knownStakeholders.map(s=>`<option value="${esc(s.id)}" ${s.name===currentName?'selected':''}>${esc(s.name)}${s.title?' · '+esc(s.title):''}</option>`)).join('');
+      return `<div class="sf-owner" data-sfmissing="${isBlank(currentName)}">
       <div class="sf-owner-title">${esc(title)}</div>
+      ${knownStakeholders.length ? `<div class="sf-field sf-owner-picker"><label>Choose from Stakeholders${sourceTag('opportunity.'+k+'Name')}</label><select data-sfownerselect="${k}">${stakeholderOptions}</select></div>` : ''}
       <div class="sf-row2">${f('Name','opportunity.'+k+'Name')}${f('Title','opportunity.'+k+'Title')}</div>
-      <div class="sf-row2">${f('Email (optional)','opportunity.'+k+'Email')}${f('Phone (optional)','opportunity.'+k+'Phone')}</div>
+      <details class="sf-owner-optional"><summary>Optional email and phone</summary><div class="sf-row2">${f('Email','opportunity.'+k+'Email')}${f('Phone','opportunity.'+k+'Phone')}</div></details>
     </div>`;
+    };
 
     /* Known customizations rows. */
     const customRows = a.customizations.map((c,i)=>`<div class="sf-custom-row" data-sfcustidx="${i}">
@@ -358,25 +533,23 @@
       <button class="btn btn-danger btn-sm" data-sfcustdel="${i}" title="Remove">×</button>
     </div>`).join('');
 
-    const oppFilled = countFilled(['opportunity.customer','opportunity.solutionEngineer','opportunity.stage','opportunity.goLive','opportunity.problem','opportunity.outcome']);
+    const oppFilled = countFilled(['opportunity.customer','opportunity.solutionEngineer','opportunity.stage','opportunity.goLive','opportunity.users','opportunity.locations','opportunity.problem','opportunity.outcome']) + (o.products.length?1:0);
     const archFilled = countFilled(['architecture.relationship','architecture.erp','architecture.integrationMethod','architecture.integrationOwner']);
     const partFilled = countFilled(['partner.involved','partner.company','partner.contactName']);
 
     const oppBody = `
-      <div class="sf-row3">
+      <div class="sf-grid4">
         ${sel('Stage','opportunity.stage',['Discovery','Technical validation','Proposal','Closed'])}
         ${f('Target go-live','opportunity.goLive','e.g. Q1 2027')}
         ${f('Estimated users','opportunity.users','e.g. 45')}
+        ${f('Locations / operating scope','opportunity.locations','e.g. 3 warehouses + 18 field sites')}
       </div>
       ${productsField}
       <div class="sf-row2">
         ${ta('Business problem','opportunity.problem','What is the customer trying to solve?')}
         ${ta('Desired outcome','opportunity.outcome','What does success look like?')}
       </div>
-      <div class="sf-row2" style="margin-top:4px;">
-        ${seField}
-        <div></div>
-      </div>
+      <div class="sf-row2 sf-se-row">${seField}<div class="sf-entry-note">Known customer data is filled automatically. Review sourced and recommended values before handoff.</div></div>
       <div class="sf-subsection-label">Contacts</div>
       <div class="sf-row2">${ownerBlock('Business owner','businessOwner')}${ownerBlock('Technical owner','technicalOwner')}</div>`;
 
@@ -406,7 +579,7 @@
         <div class="sf-row2">${f('Contact name','partner.contactName')}${f('Email','partner.email')}</div>
       </div>`;
 
-    return sfSection('opp','opp','Opportunity',[oppFilled,6],oppBody)
+    return sfSection('opp','opp','Opportunity',[oppFilled,9],oppBody)
          + sfSection('arch','arch','System of record & architecture',[archFilled,4],archBody)
          + sfSection('partner','partner','Partner involvement',[partFilled,3],partnerBody);
   }
@@ -433,26 +606,23 @@
       + '<div class="sf-cstat"><span class="sf-cstat-n sf-cstat-green">' + demoed + '</span><span class="sf-cstat-l">Demonstrated</span></div>'
       + '<div class="sf-cstat"><span class="sf-cstat-n ' + (gaps?'sf-cstat-red':'') + '">' + gaps + '</span><span class="sf-cstat-l">Gaps / partial</span></div>'
       + '</div>'
-      + '<button class="btn btn-accent btn-sm sf-add-process" data-sfaction="addProcess">&#xff0b; Add process</button>'
+      + '<div class="sf-bulk-actions"><span>Apply to in-scope:</span>'
+      + '<button type="button" id="sfBulkDemoBtn" class="btn btn-ghost btn-sm">Demonstrated</button>'
+      + '<button type="button" id="sfBulkFitBtn" class="btn btn-ghost btn-sm">Full fit</button>'
+      + '<button type="button" class="btn btn-accent btn-sm sf-add-process" data-sfaction="addProcess">&#xff0b; Add process</button></div>'
       + '</div>'
-      + '<div class="sf-process-grid">' + S.processes.map(function(p,i){return renderProcessCard(p,i);}).join('') + '</div>';
+      + '<div class="sf-table-wrap"><table class="sf-table sf-process-table"><thead><tr><th style="width:44px">Scope</th><th>Workflow</th><th style="width:170px">Demo status</th><th style="width:150px">Fit</th><th>Exception note</th></tr></thead><tbody>'
+      + S.processes.map(function(p,i){return renderProcessRow(p,i);}).join('') + '</tbody></table></div>';
   }
-  function renderProcessCard(p,i) {
+  function renderProcessRow(p,i) {
     var showNote = p.fit==='Partial fit'||p.fit==='Gap'||p.fit==='Unknown'||p.demoStatus==='Discussed only'||p.demoStatus==='Not demonstrated';
-    var hasBadges = p.selected && (p.demoStatus!=='Not reviewed' || p.fit!=='Not reviewed');
-    return '<div class="sf-proc ' + (p.selected?'sel':'') + '" data-sfproc="' + i + '">'
-      + '<div class="sf-proc-top">'
-      + '<label class="sf-proc-head"><input type="checkbox" data-sfpsel="' + i + '" ' + (p.selected?'checked':'') + '><span class="sf-proc-name">' + esc(p.name) + '</span></label>'
-      + (hasBadges ? '<div class="sf-proc-badges">' + demoBadge(p.demoStatus) + fitBadge(p.fit) + '</div>' : '')
-      + '</div>'
-      + (p.selected ? '<div class="sf-proc-detail">'
-        + '<div class="sf-row2">'
-        + '<div class="sf-field"><label>Demo status</label><select data-sfpdemo="' + i + '">' + ['Not reviewed','Demonstrated','Discussed only','Not demonstrated','Not applicable'].map(function(x){return '<option ' + (p.demoStatus===x?'selected':'') + '>' + esc(x) + '</option>';}).join('') + '</select></div>'
-        + '<div class="sf-field"><label>Fit assessment</label><select data-sfpfit="' + i + '">' + ['Not reviewed','Full fit','Partial fit','Gap','Unknown'].map(function(x){return '<option ' + (p.fit===x?'selected':'') + '>' + esc(x) + '</option>';}).join('') + '</select></div>'
-        + '</div>'
-        + (showNote ? '<div class="sf-field"><label>Note for handoff</label><textarea data-dictate data-sfpnote="' + i + '" placeholder="Evidence, exception, or workaround for Services.">' + esc(p.notes) + '</textarea></div>' : '')
-        + '</div>' : '')
-      + '</div>';
+    return '<tr class="' + (p.selected?'sf-process-selected':'') + '" data-sfproc="' + i + '">'
+      + '<td class="sf-process-scope"><input type="checkbox" aria-label="Include ' + esc(p.name) + '" data-sfpsel="' + i + '" ' + (p.selected?'checked':'') + '></td>'
+      + '<td><strong class="sf-proc-name">' + esc(p.name) + '</strong></td>'
+      + '<td><select class="sf-table-input" data-sfpdemo="' + i + '" ' + (p.selected?'':'disabled') + '>' + ['Not reviewed','Demonstrated','Discussed only','Not demonstrated','Not applicable'].map(function(x){return '<option ' + (p.demoStatus===x?'selected':'') + '>' + esc(x) + '</option>';}).join('') + '</select></td>'
+      + '<td><select class="sf-table-input" data-sfpfit="' + i + '" ' + (p.selected?'':'disabled') + '>' + ['Not reviewed','Full fit','Partial fit','Gap','Unknown'].map(function(x){return '<option ' + (p.fit===x?'selected':'') + '>' + esc(x) + '</option>';}).join('') + '</select></td>'
+      + '<td>' + (p.selected && showNote ? '<input class="sf-table-input" data-sfpnote="' + i + '" value="' + esc(p.notes) + '" placeholder="Evidence, exception, or workaround">' : '<span class="sf-table-muted">' + (p.selected?'Only needed for exceptions':'—') + '</span>') + '</td>'
+      + '</tr>';
   }
 
   /* ── Tab 3: Gap register ────────────────────────────────────────── */
@@ -523,7 +693,7 @@
       + '<div class="sf-card-head"><h3>Additional interfaces</h3><button class="btn btn-ghost btn-sm" data-sfaction="addInterface">+ Add interface</button></div>'
       + '<div class="sf-table-wrap">'
       + (hasInterfaces
-        ? '<table class="sf-table"><thead><tr><th style="width:70px">ID</th><th>Source</th><th>Target</th><th>Object / purpose</th><th style="width:140px">Method</th><th style="width:120px">Owner</th><th style="width:36px"></th></tr></thead>'
+        ? '<table class="sf-table"><thead><tr><th style="width:70px">ID</th><th>Source</th><th>Target</th><th>Object / purpose</th><th style="width:140px">Method</th><th style="width:130px">Direction</th><th style="width:130px">Frequency</th><th style="width:120px">Owner</th><th style="width:36px"></th></tr></thead>'
           + '<tbody id="sfIntBody">' + S.interfaces.map(function(it,idx){return renderIntRow(it,idx);}).join('') + '</tbody></table>'
         : '<div class="sf-empty-state" id="sfIntBody"><p>No additional interfaces recorded. The primary integration is captured in Context &rarr; Architecture.</p></div>')
       + '</div></div>'
@@ -544,6 +714,8 @@
       + '<td><input class="sf-table-input" data-sfifield="target" value="'+esc(it.target)+'" placeholder="Target system"></td>'
       + '<td><input class="sf-table-input" data-sfifield="object" value="'+esc(it.object)+'" placeholder="What is being exchanged?"></td>'
       + '<td><select class="sf-table-input" data-sfifield="method">'+['REST API','SOAP / web service','File','Database','Middleware / iPaaS','Connector','Other','TBD'].map(function(x){return '<option '+(x===it.method?'selected':'')+'>'+x+'</option>';}).join('')+'</select></td>'
+      + '<td><select class="sf-table-input" data-sfifield="direction">'+['Bidirectional','Inbound to CI','Outbound from CI','TBD'].map(function(x){return '<option '+(x===it.direction?'selected':'')+'>'+x+'</option>';}).join('')+'</select></td>'
+      + '<td><select class="sf-table-input" data-sfifield="trigger">'+['Near real time','Scheduled batch','On demand','TBD'].map(function(x){return '<option '+(x===it.trigger?'selected':'')+'>'+x+'</option>';}).join('')+'</select></td>'
       + '<td><select class="sf-table-input" data-sfifield="owner">'+['Cloud Inventory','Customer','Partner','Shared','TBD'].map(function(x){return '<option '+(x===it.owner?'selected':'')+'>'+x+'</option>';}).join('')+'</select></td>'
       + '<td><button class="btn btn-danger btn-sm" data-sfintdel="'+idx+'" title="Delete">&#215;</button></td>'
       + '</tr>';
@@ -608,7 +780,7 @@
     </div>
     <h2 class="hd-h2">Business context</h2>
     <p><strong>Solution Engineer:</strong> ${esc(o.solutionEngineer||'—')} &nbsp;·&nbsp; <strong>Stage:</strong> ${esc(o.stage||'—')}</p>
-    <p><strong>Products:</strong> ${esc(fmtProducts(o))} &nbsp;·&nbsp; <strong>Users:</strong> ${esc(o.users||'—')} &nbsp;·&nbsp; <strong>Target go-live:</strong> ${esc(o.goLive||'—')}</p>
+    <p><strong>Products:</strong> ${esc(fmtProducts(o))} &nbsp;·&nbsp; <strong>Users:</strong> ${esc(o.users||'—')} &nbsp;·&nbsp; <strong>Locations:</strong> ${esc(o.locations||'—')} &nbsp;·&nbsp; <strong>Target go-live:</strong> ${esc(o.goLive||'—')}</p>
     <p><strong>Business owner:</strong> ${esc(fmtOwner(o,'businessOwner'))} &nbsp;·&nbsp; <strong>Technical owner:</strong> ${esc(fmtOwner(o,'technicalOwner'))}</p>
     <p><strong>Business problem:</strong> ${esc(o.problem||'—')}</p>
     <p><strong>Desired outcome:</strong> ${esc(o.outcome||'—')}</p>
@@ -650,7 +822,7 @@
     <p><strong>Current challenge:</strong> ${esc(o.problem||'To be confirmed')}</p>
     <p><strong>Desired outcome:</strong> ${esc(o.outcome||'To be confirmed')}</p>
     <h2 class="hd-h2">Proposed solution context</h2>
-    <p><strong>Cloud Inventory product(s):</strong> ${esc(fmtProducts(o) || 'To be confirmed')} &nbsp;·&nbsp; <strong>Estimated users:</strong> ${esc(o.users||'To be confirmed')}</p>
+    <p><strong>Cloud Inventory product(s):</strong> ${esc(fmtProducts(o) || 'To be confirmed')} &nbsp;·&nbsp; <strong>Estimated users:</strong> ${esc(o.users||'To be confirmed')} &nbsp;·&nbsp; <strong>Operating scope:</strong> ${esc(o.locations||'To be confirmed')}</p>
     <p><strong>System relationship:</strong> ${esc(a.relationship||'To be confirmed')} &nbsp;·&nbsp; <strong>System of record:</strong> ${esc(a.erp||'To be confirmed')} &nbsp;·&nbsp; <strong>Version:</strong> ${esc(a.version||'To be confirmed')}</p>
     ${a.relationship!=='Standalone'?`<p><strong>Expected integration approach:</strong> ${esc(a.integrationMethod||'To be confirmed')} &nbsp;·&nbsp; <strong>Expected delivery responsibility:</strong> ${esc(a.integrationOwner||'To be confirmed')}</p>`:''}
     ${p.involved==='Yes'?`<p><strong>Partner participation:</strong> ${esc(p.company||'Partner to be confirmed')} ${p.role?`(${esc(p.role)})`:''}</p>`:''}
@@ -719,7 +891,10 @@
   function wireTabs(){
     document.querySelectorAll('.sf-tab').forEach(t=>t.onclick=()=>{
       activeTab=t.dataset.sftab;
-      document.querySelectorAll('.sf-tab').forEach(x=>x.classList.toggle('active',x===t));
+      document.querySelectorAll('.sf-tab').forEach(x=>{
+        x.classList.toggle('active',x===t);
+        x.setAttribute('aria-selected', x===t ? 'true' : 'false');
+      });
       showActivePane();
       if(activeTab==='handoff'){
         const r=computeReadiness();
@@ -729,6 +904,12 @@
     });
   }
   function showActivePane(){ document.querySelectorAll('.sf-pane').forEach(p=>p.style.display = p.dataset.sfpane===activeTab?'block':'none'); }
+  function goNextSection(){
+    const order = ['context','checklist','gaps','integration','handoff'];
+    const next = order[Math.min(order.indexOf(activeTab) + 1, order.length - 1)];
+    const tab = document.querySelector(`[data-sftab="${next}"]`);
+    if (tab) tab.click();
+  }
 
   function wireBindings(){
     /* Section accordions (context tab) */
@@ -748,6 +929,18 @@
     document.querySelectorAll('[data-sfbind]').forEach(el=>{
       el.addEventListener('input', ()=>{ setVal(S, el.dataset.sfbind, el.value); onEdit(el.dataset.sfbind); });
     });
+    document.querySelectorAll('[data-sfownerselect]').forEach(el=>el.addEventListener('change',()=>{
+      const person = knownStakeholders.find(x=>String(x.id)===String(el.value));
+      if (!person) return;
+      const k = el.dataset.sfownerselect;
+      S.opportunity[k+'Name'] = person.name || '';
+      S.opportunity[k+'Title'] = person.title || '';
+      knownSources['opportunity.'+k+'Name'] = 'Stakeholders';
+      knownSources['opportunity.'+k+'Title'] = 'Stakeholders';
+      const pane=document.querySelector('[data-sfpane="context"]');
+      if(pane){ pane.innerHTML=renderContext(); wireBindings(); }
+      scheduleSave();
+    }));
     /* process cards */
     document.querySelectorAll('[data-sfpsel]').forEach(el=>el.addEventListener('change',e=>{ const i=+el.dataset.sfpsel; S.processes[i].selected=e.target.checked; if(!e.target.checked){S.processes[i].demoStatus='Not reviewed';S.processes[i].fit='Not reviewed';} rerenderChecklist(); scheduleSave(); }));
     document.querySelectorAll('[data-sfpdemo]').forEach(el=>el.addEventListener('change',e=>{ S.processes[+el.dataset.sfpdemo].demoStatus=e.target.value; rerenderChecklist(); scheduleSave(); }));
@@ -761,9 +954,25 @@
     document.querySelectorAll('[data-sfifield]').forEach(el=>el.addEventListener('input',e=>{ const row=el.closest('[data-sfint]'); const it=S.interfaces[+row.dataset.sfint]; if(it){ it[el.dataset.sfifield]=e.target.value; scheduleSave(); } }));
     document.querySelectorAll('[data-sfintdel]').forEach(el=>el.onclick=()=>{ S.interfaces.splice(+el.dataset.sfintdel,1); rerenderIntegration(); scheduleSave(); });
     /* actions */
-    document.querySelectorAll('[data-sfaction]').forEach(el=>el.onclick=()=>handleAction(el.dataset.sfaction));
+    if (!sfActionsDelegated) {
+      sfActionsDelegated = true;
+      document.addEventListener('click', e=>{
+        const actionEl = e.target.closest('#sfApp [data-sfaction]');
+        if (actionEl) handleAction(actionEl.dataset.sfaction);
+      });
+    }
     /* handoff doc type toggle (allowed read-only too) */
     document.querySelectorAll('[data-sfdoc]').forEach(el=>el.onclick=()=>setDocType(el.dataset.sfdoc));
+    const templateSelect = $('sfTemplateSelect');
+    if (templateSelect) templateSelect.onchange = ()=>{ activeTemplate=templateSelect.value; renderApp(); };
+    const missingToggle = $('sfMissingToggle');
+    if (missingToggle) missingToggle.onclick = ()=>{ showMissingOnly=!showMissingOnly; renderApp(); };
+    const nextSection = $('sfNextSection');
+    if (nextSection) nextSection.onclick = goNextSection;
+    const bulkDemo = $('sfBulkDemoBtn');
+    if (bulkDemo) bulkDemo.onclick = ()=>handleAction('bulkDemo');
+    const bulkFit = $('sfBulkFitBtn');
+    if (bulkFit) bulkFit.onclick = ()=>handleAction('bulkFit');
     /* conditional UI on context selects */
     const reRenderContext = () => { const pane=document.querySelector('[data-sfpane="context"]'); if(pane){pane.innerHTML=renderContext(); wireBindings();} };
     const rel=document.querySelector('[data-sfbind="architecture.relationship"]');
@@ -787,6 +996,15 @@
     document.querySelectorAll('[data-sfcustdel]').forEach(el=>el.onclick=()=>{ S.architecture.customizations.splice(+el.dataset.sfcustdel,1); reRenderContext(); scheduleSave(); });
     if(!canWrite) disableInputs();
     if(typeof SFDictation!=='undefined' && SFDictation.supported && canWrite) SFDictation.enhanceAll(document.getElementById('sfApp'));
+    if (!sfKeyboardBound) {
+      sfKeyboardBound = true;
+      document.addEventListener('keydown', e=>{
+        const sfTab = document.getElementById('tab-solfit');
+        if (!sfTab || sfTab.style.display==='none') return;
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==='s') { e.preventDefault(); clearTimeout(saveTimer); saveHandoff(); }
+        if ((e.ctrlKey || e.metaKey) && e.key==='Enter') { e.preventDefault(); goNextSection(); }
+      });
+    }
   }
   function onEdit(path){ scheduleSave(); }
 
@@ -794,20 +1012,36 @@
   function rerenderGaps(){ const pane=document.querySelector('[data-sfpane="gaps"]'); if(pane){pane.innerHTML=renderGaps(); wireBindings(); if(!canWrite)disableInputs();} }
   function rerenderIntegration(){ const pane=document.querySelector('[data-sfpane="integration"]'); if(pane){pane.innerHTML=renderIntegration(); wireBindings(); if(!canWrite)disableInputs();} }
 
-  function handleAction(a){
+  async function handleAction(a){
     /* Print and copy are allowed for everyone with read access (AEs included). */
     if(a==='printDoc'){ printHandoffDoc(); return; }
     if(a==='copyDoc'){ copyDocText(); return; }
     /* All other actions mutate state → require write access. */
     if(!canWrite){ if(typeof showToast==='function') showToast('Read-only — a Solution Engineer completes the handoff.'); return; }
+    if(a==='bulkDemo'){
+      let count=0; S.processes.forEach(p=>{ if(p.selected){ p.demoStatus='Demonstrated'; count++; } });
+      rerenderChecklist(); scheduleSave(); if(typeof showToast==='function') showToast(`${count} in-scope workflow${count===1?'':'s'} marked demonstrated.`); return;
+    }
+    if(a==='bulkFit'){
+      let count=0; S.processes.forEach(p=>{ if(p.selected){ p.fit='Full fit'; p.notes=''; count++; } });
+      rerenderChecklist(); scheduleSave(); if(typeof showToast==='function') showToast(`${count} in-scope workflow${count===1?'':'s'} marked full fit.`); return;
+    }
     if(a==='addProcess'){ const n=prompt('New process name:'); if(n&&n.trim()){ S.processes.push(blankProcess(n.trim(),S.processes.length)); S.processes.at(-1).selected=true; rerenderChecklist(); scheduleSave(); } }
     else if(a==='addGap'){ S.gaps.push(newGap({})); openGapId=S.gaps.at(-1).id; rerenderGaps(); scheduleSave(); }
-    else if(a==='addInterface'){ S.interfaces.push({id:nextIntId(),source:'',target:'',object:'',method:'TBD',direction:'Bidirectional',trigger:'',volume:'',owner:'TBD'}); rerenderIntegration(); scheduleSave(); }
+    else if(a==='addInterface'){ S.interfaces.push({id:nextIntId(),source:'',target:'',object:'',method:'TBD',direction:'Bidirectional',trigger:'Near real time',volume:'',owner:'TBD'}); rerenderIntegration(); scheduleSave(); }
     else if(a==='addCustomization'){ S.architecture.customizations.push(blankCustomization()); const pane=document.querySelector('[data-sfpane="context"]'); if(pane){pane.innerHTML=renderContext(); wireBindings();} scheduleSave(); }
+    else if(a==='refreshKnown'){
+      const changed = await applyKnownData({mutate:true,save:false});
+      if (changed) { scheduleSave(); renderApp(); if(typeof showToast==='function') showToast(`${changed} known value${changed===1?'':'s'} added.`); }
+      else if(typeof showToast==='function') showToast('Known customer data is already up to date.');
+    }
+    else if(a==='applyDefaults'){
+      const changed = applyTemplateDefaults();
+      if (changed) { scheduleSave(); renderApp(); if(typeof showToast==='function') showToast(`${changed} recommended default${changed===1?'':'s'} applied — review before handoff.`); }
+    }
     else if(a==='printDoc'){ printHandoffDoc(); }
     else if(a==='copyDoc'){ copyDocText(); }
   }
-
   function disableInputs(){
     document.querySelectorAll('#sfApp input, #sfApp select, #sfApp textarea').forEach(el=>{ el.setAttribute('disabled','disabled'); });
     /* Hide only the mutating controls. Print, copy, and the doc-type toggle

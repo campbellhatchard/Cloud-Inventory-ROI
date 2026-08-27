@@ -316,7 +316,7 @@ function renderSensitivity() {
             <div class="sens-bar-left">
               <div class="sens-fill neg-fill" style="width:${lowPct}%"></div>
             </div>
-            <div class="sens-center">${fmtFull(base.npv5)}</div>
+            <div class="sens-center" aria-hidden="true"></div>
             <div class="sens-bar-right">
               <div class="sens-fill pos-fill" style="width:${highPct}%"></div>
             </div>
@@ -571,7 +571,7 @@ Thank you for taking the time to explore Cloud Inventory with us. As promised, I
 
 EXECUTIVE SUMMARY FOR ${(v.company || 'YOUR COMPANY').toUpperCase()}
 
-Based on your inputs — ${Math.round(v.users)} inventory users, ${fmtFull(v.inventory)} in warehouse inventory value on hand, and ${fmtFull(v.revenue)} in revenue — here is what Cloud Inventory could deliver for your ${indLabel} operations:
+Based on your inputs — ${Math.round(v.users)} inventory users, ${fmtFull(v.inventory)} in annual inventory value, and ${fmtFull(v.revenue)} in revenue — here is what Cloud Inventory could deliver for your ${indLabel} operations:
 
   • Annual benefit:       ${fmtFull(r.annualBenefit)}
   • Year 1 ROI:          ${fmtPct(r.roi)}

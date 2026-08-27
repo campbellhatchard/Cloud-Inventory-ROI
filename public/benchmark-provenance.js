@@ -28,7 +28,7 @@ const BENCHMARK_SOURCES = {
 /* Industry keys whose entire benchmark set is provisional (not yet validated
    against real deployment data). These trigger a visible rep-facing banner. */
 const PLACEHOLDER_INDUSTRIES = {
-  retail: 'Medical Devices / Life Sciences has no bundled benchmark values in v5.6.3; customer-specific assumptions are required.'
+  retail: 'Medical Devices / Life Sciences has no bundled benchmark values in v5.6.7; customer-specific assumptions are required.'
 };
 
 function isPlaceholderIndustry(key) {
@@ -61,7 +61,7 @@ function benchmarkProvenanceLines(industryKey) {
     return `${s.label} — ${tierTxt}. ${s.basis}`;
   });
   if (isPlaceholderIndustry(industryKey)) {
-    lines.unshift('NOTE: No bundled benchmark values are provided for this industry in v5.6.3. Use customer-specific assumptions and validate them before external use.');
+    lines.unshift('NOTE: This industry\u2019s benchmark set is provisional and pending validation. Figures should be confirmed with the customer before external use.');
   }
   return lines;
 }

@@ -39,10 +39,68 @@ function switchCompTab(tab) {
 function renderCompResearch() {
   var el = document.getElementById('compResearchApp');
   if (!el) return;
+  _syncBattlecardResearchContext();
   var isAdmin = (window.ciAuth && window.ciAuth.getUser().role === 'admin');
   el.innerHTML = _buildResearchUI(isAdmin);
   _bindResearchEvents();
+  crOnCompSel();
   _loadCISourceInfo();
+}
+
+/* Carry the product and competitor selected on the Battlecard tab into AI
+   Research. A selected CIP/MEP motion is already a valid first-party source:
+   the curated battlecard contains the approved product positioning and proof
+   points. Reps can still replace it with a URL or uploaded document. */
+function _battlecardResearchContext() {
+  var solEl = document.getElementById('compSolutionFilter');
+  var compEl = document.getElementById('compSelect');
+  var solutionKey = (solEl && solEl.value) || 'cip';
+  var competitorKey = (compEl && compEl.value) || '';
+  var competitor = (typeof COMP !== 'undefined' && competitorKey) ? COMP[competitorKey] : null;
+  return {
+    solutionKey: solutionKey,
+    solutionName: solutionKey === 'mep' ? 'Mobile Enterprise Platform (MEP)' : 'Cloud Inventory Platform (CIP)',
+    competitorKey: competitorKey,
+    competitor: competitor
+  };
+}
+
+function _curatedProductSource(ctx) {
+  var rows = [];
+  if (ctx.competitor) {
+    rows = (ctx.competitor.adv || []).concat(ctx.competitor.whyWin || []);
+  }
+  var positioning = ctx.solutionKey === 'mep'
+    ? 'Mobile Enterprise Platform mobilizes governed enterprise workflows across ERPs, APIs, databases, devices, locations, and intermittent connectivity. It supports online and offline execution, no-code configuration, role-based experiences, and cross-system workflows.'
+    : 'Cloud Inventory Platform provides inventory execution across warehouse, production, field, and distributed operations while preserving the ERP as system of record. It supports configurable workflows, scan-verified transactions, multi-location operations, and API-first integration.';
+  return {
+    type: 'battlecard',
+    name: ctx.solutionName + ' curated battlecard',
+    text: [ctx.solutionName, positioning, rows.length ? 'Approved differentiation:\n- ' + rows.join('\n- ') : ''].filter(Boolean).join('\n\n'),
+    solutionKey: ctx.solutionKey
+  };
+}
+
+function _syncBattlecardResearchContext() {
+  var ctx = _battlecardResearchContext();
+  if (!_cr.ciSource || _cr.ciSource.type === 'battlecard') {
+    _cr.ciSource = _curatedProductSource(ctx);
+  }
+}
+
+function _researchCompetitorOptions() {
+  var ctx = _battlecardResearchContext();
+  var html = '<option value="">— Choose competitor —</option>';
+  if (typeof COMP !== 'undefined') {
+    Object.keys(COMP).forEach(function(key) {
+      var c = COMP[key];
+      if (c && (!c.solution || c.solution === ctx.solutionKey)) {
+        html += '<option value="' + escapeHtml(key) + '"' + (key === ctx.competitorKey ? ' selected' : '') + '>' + escapeHtml(c.name) + '</option>';
+      }
+    });
+  }
+  html += '<option value="other">Other (enter name below)</option>';
+  return html;
 }
 
 function _buildResearchUI(isAdmin) {
@@ -86,14 +144,7 @@ function _buildResearchUI(isAdmin) {
   + '<div class="cr-src-body">'
   + '<div class="cr-src-section-lbl" style="margin-bottom:8px;">Select competitor</div>'
   + '<select id="crCompSel" class="cr-select" onchange="crOnCompSel()" style="margin-bottom:12px;">'
-  + '<option value="">— Choose competitor —</option>'
-  + '<option value="oracle">Oracle WMS</option>'
-  + '<option value="sap">SAP WM / Extended WH Mgmt</option>'
-  + '<option value="rf">RFgen / RF-SMART</option>'
-  + '<option value="lowcode">Microsoft Power Apps / Mendix / Appian</option>'
-  + '<option value="deposco">Deposco / Infios WMS</option>'
-  + '<option value="fishbowl">Fishbowl / Cin7 / inFlow</option>'
-  + '<option value="other">Other (enter name below)</option>'
+  + _researchCompetitorOptions()
   + '</select>'
   + '<div id="crCompNameWrap" style="display:none;margin-bottom:10px;">'
   + '<label class="cr-field-lbl">Competitor name</label>'
@@ -177,17 +228,36 @@ function _bindResearchEvents() {
 async function _loadCISourceInfo() {
   try {
     var resp = await apiFetch('/api/competitive/ci-source');
-    if (!resp || !resp.ok) { _setCIStatusMissing(); return; }
+    if (!resp || !resp.ok) {
+      if (_cr.ciSource) {
+        _renderCIActive(_cr.ciSource.name, 'doc', 'Selected on Battlecard · approved product positioning');
+        _setStatus('crCiStatus', 'Ready', 'cr-status-ready');
+        crCheckReady();
+      } else {
+        _setCIStatusMissing();
+      }
+      return;
+    }
     var data = await resp.json();
-    if (data) {
+    if (data && (!_cr.ciSource || _cr.ciSource.type !== 'battlecard')) {
       _cr.ciSource = { type: 'canonical', name: data.source_name, url: data.source_url || null };
       _renderCIActive(data.source_name, data.source_type === 'url' ? 'web' : 'pdf',
         'Canonical source \u00b7 set by admin \u00b7 ' + new Date(data.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}));
       _setStatus('crCiStatus', 'Ready', 'cr-status-ready');
+    } else if (_cr.ciSource) {
+      _renderCIActive(_cr.ciSource.name, 'doc', 'Selected on Battlecard · approved product positioning');
+      _setStatus('crCiStatus', 'Ready', 'cr-status-ready');
     } else {
       _setCIStatusMissing();
     }
-  } catch(e) { _setCIStatusMissing(); }
+  } catch(e) {
+    if (_cr.ciSource) {
+      _renderCIActive(_cr.ciSource.name, 'doc', 'Selected on Battlecard · approved product positioning');
+      _setStatus('crCiStatus', 'Ready', 'cr-status-ready');
+    } else {
+      _setCIStatusMissing();
+    }
+  }
   crCheckReady();
 }
 
@@ -244,10 +314,13 @@ function crOnCompSel() {
     rf:     'https://www.rfgen.com/',
     lowcode:'https://powerplatform.microsoft.com/en-us/power-apps/',
     deposco:'https://www.deposco.com/',
-    fishbowl:'https://www.fishbowlinventory.com/'
+    fishbowl:'https://www.fishbowlinventory.com/',
+    mep_rfgen:'https://www.rfgen.com/',
+    mep_lowcode:'https://powerplatform.microsoft.com/en-us/power-apps/'
   };
   var urlEl = document.getElementById('crCompUrl');
-  if (urlEl && urls[val]) urlEl.value = urls[val];
+  if (urlEl && urls[val] && !urlEl.value) urlEl.value = urls[val];
+  if (val && val !== 'other') _setStatus('crCompStatus', 'Ready', 'cr-status-ready');
   crCheckReady();
 }
 
@@ -255,6 +328,7 @@ function _compDisplayName() {
   var sel = document.getElementById('crCompSel');
   var v   = sel ? sel.value : '';
   if (v === 'other') return (document.getElementById('crCompName') || {}).value || 'Competitor';
+  if (typeof COMP !== 'undefined' && COMP[v]) return COMP[v].name;
   var labels = { oracle:'Oracle WMS', sap:'SAP WM', rf:'RFgen / RF-SMART', lowcode:'Microsoft Power Apps / Mendix', deposco:'Deposco / Infios WMS', fishbowl:'Fishbowl / Cin7' };
   return labels[v] || v || 'Competitor';
 }
@@ -319,10 +393,9 @@ function _activeSourceHtml(name, iconType, meta, clearFn) {
 }
 
 function crClearCI() {
-  _cr.ciSource = null;
-  var wrap = document.getElementById('crCiActiveWrap');
-  if (wrap) wrap.style.display = 'none';
-  _setCIStatusMissing();
+  _cr.ciSource = _curatedProductSource(_battlecardResearchContext());
+  _renderCIActive(_cr.ciSource.name, 'doc', 'Selected on Battlecard · approved product positioning');
+  _setStatus('crCiStatus', 'Ready', 'cr-status-ready');
   crCheckReady();
 }
 

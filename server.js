@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   server.js  —  Cloud Inventory ROI Builder  v2.9.2
+   server.js  —  Cloud Inventory ROI Builder  v5.6.7
    Database-backed multi-user edition — production hardened
 
    Security layers applied (Phase 10):
@@ -29,9 +29,22 @@ app.get('/roi-engine.js', (req, res) => {
   res.type('application/javascript');
   res.sendFile(path.join(__dirname, 'src', 'shared', 'roi-engine.js'));
 });
+/* PowerPoint browser runtime. PptxGenJS expects JSZip as a separate global. */
+app.get('/jszip.min.js', (req, res) => {
+  const p = path.join(__dirname, 'node_modules', 'jszip', 'dist', 'jszip.min.js');
+  res.type('application/javascript');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.sendFile(p, err => {
+    if (err && !res.headersSent) {
+      console.warn('jszip.min.js not found in node_modules, falling back to CDN redirect');
+      res.redirect('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
+    }
+  });
+});
+
 /* Serve pptxgenjs from npm package — no CDN needed */
 app.get('/pptxgen.min.js', (req, res) => {
-  const p = require('path').join(__dirname, 'node_modules', 'pptxgenjs', 'dist', 'pptxgen.min.js');
+  const p = path.join(__dirname, 'node_modules', 'pptxgenjs', 'dist', 'pptxgen.min.js');
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'public, max-age=86400'); /* cache 1 day */
   res.sendFile(p, function(err) {

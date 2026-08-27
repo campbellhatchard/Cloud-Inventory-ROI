@@ -34,5 +34,7 @@ jobs:
         run: node test/migration-schema-compat.test.js
       - name: Phase 1 regression tests
         run: node test/phase1.test.js
+      - name: UI and startup regression tests
+        run: node --test test/ui-regression.test.js
       - name: Route/integration tests
         run: npm run test:routes

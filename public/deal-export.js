@@ -16,40 +16,7 @@
 
 /* ── Small shared helpers ── */
 async function deChk(lib) {
-  /* If pptxgen already loaded, proceed immediately */
-  if (typeof pptxgen !== 'undefined') return true;
-  /* Try lazy-loading the CDN bundle */
-  try {
-    await new Promise(function(resolve, reject) {
-      if (typeof pptxgen !== 'undefined') { resolve(); return; }
-      var s = document.querySelector('script[src*="pptxgen"]');
-      if (s) {
-        /* Script tag exists but may not have fired onload yet — poll briefly */
-        var tries = 0;
-        var t = setInterval(function() {
-          if (typeof pptxgen !== 'undefined') { clearInterval(t); resolve(); }
-          else if (++tries > 30) { clearInterval(t); reject(new Error('timeout')); }
-        }, 200);
-      } else {
-        /* Load from CDN (bundles JSZip internally — required for pptxgen to work) */
-        var script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.min.js';
-        script.onload = resolve;
-        script.onerror = function() {
-          /* Fallback: try local npm route if CDN is unavailable */
-          var s2 = document.createElement('script');
-          s2.src = '/pptxgen.min.js';
-          s2.onload = resolve; s2.onerror = reject;
-          document.head.appendChild(s2);
-        };
-        document.head.appendChild(script);
-      }
-    });
-    return typeof pptxgen !== 'undefined';
-  } catch(e) {
-    showToast('PowerPoint library failed to load. Check your connection and try again.');
-    return false;
-  }
+  return typeof ensurePptxReady === 'function' && await ensurePptxReady();
 }
 function deEsc(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -874,10 +841,10 @@ async function buildChampionPack() {
     const s1 = pptx.addSlide(); s1.background = { color: PPT.NAVY };
     s1.addImage({path:PPT.LOGO, x:0.4, y:0.25, w:1.0, h:1.0*349/1000, transparency:0});
     s1.addText('The case for Cloud Inventory', {
-      x:0.5, y:1.0, w:9.0, h:0.5, fontSize:28, bold:true, color:'#FFFFFF', fontFace:PPT.FONT
+      x:0.5, y:1.0, w:9.0, h:0.5, fontSize:28, bold:true, color:PPT.WHITE, fontFace:PPT.FONT
     });
     s1.addText(company + ' — internal business case', {
-      x:0.5, y:1.55, w:9.0, h:0.3, fontSize:13, color:'rgba(255,255,255,0.65)', fontFace:PPT.FONT
+      x:0.5, y:1.55, w:9.0, h:0.3, fontSize:13, color:'B5BDC1', fontFace:PPT.FONT
     });
     /* Problem statement */
     const problems = [
@@ -887,13 +854,13 @@ async function buildChampionPack() {
       v.downtimeEventsYr > 0 ? `${v.downtimeEventsYr} downtime events/year` : null,
     ].filter(Boolean).slice(0,3);
     if (problems.length) {
-      s1.addText('Current situation:', {x:0.5, y:2.3, w:9, h:0.3, fontSize:12, bold:true, color:'#FFFFFF', fontFace:PPT.FONT});
+      s1.addText('Current situation:', {x:0.5, y:2.3, w:9, h:0.3, fontSize:12, bold:true, color:PPT.WHITE, fontFace:PPT.FONT});
       problems.forEach((p,i) => {
-        s1.addText('• ' + p, {x:0.7, y:2.7 + i*0.35, w:8.6, h:0.3, fontSize:11.5, color:'rgba(255,255,255,0.85)', fontFace:PPT.FONT});
+        s1.addText('• ' + p, {x:0.7, y:2.7 + i*0.35, w:8.6, h:0.3, fontSize:11.5, color:'DDE2E5', fontFace:PPT.FONT});
       });
     }
     s1.addText('Prepared by your Cloud Inventory rep for internal use', {
-      x:0.5, y:PPT.H - 0.35, w:9, h:0.25, fontSize:8, color:'rgba(255,255,255,0.35)', fontFace:PPT.FONT
+      x:0.5, y:PPT.H - 0.35, w:9, h:0.25, fontSize:8, color:'69747A', fontFace:PPT.FONT
     });
 
     /* ── Slide 2: The financial case ── */
@@ -990,7 +957,7 @@ async function exportOnePager() {
         label:'CFO', icon:'💰',
         headline: 'Financial case for Cloud Inventory',
         focus: ['Payback period', 'Year 1 ROI', '3-yr NPV', 'Capital freed by turns improvement'],
-        color: '#0089A6',
+        color: '0089A6',
         emphasis: [
           ['Conservative annual benefit', fmtMoney(r.annualBenefit * 0.7)],
           ['Base case annual benefit',    fmtMoney(r.annualBenefit)],
@@ -1006,7 +973,7 @@ async function exportOnePager() {
         label:'VP Operations', icon:'⚙️',
         headline: 'Operational case for Cloud Inventory',
         focus: ['Labor savings', 'OTIF improvement', 'Shrinkage reduction', 'Downtime avoided'],
-        color: '#2E7D32',
+        color: '2E7D32',
         emphasis: [
           ['Annual labor savings',       fmtMoney(r.laborSav)],
           ['Shrinkage / write-off reduction', fmtMoney(r.shrinkSav)],
@@ -1021,7 +988,7 @@ async function exportOnePager() {
         label:'CEO / Executive Sponsor', icon:'🎯',
         headline: 'Strategic case for Cloud Inventory',
         focus: ['Total value', 'Competitive position', 'Risk reduction', 'Speed to value'],
-        color: '#45688A',
+        color: '45688A',
         emphasis: [
           ['Annual recurring value',     fmtMoney(r.annualBenefit)],
           ['5-year NPV',                 fmtMoney(r.npv5)],
@@ -1036,7 +1003,7 @@ async function exportOnePager() {
         label:'CIO / IT', icon:'💻',
         headline: 'Technical case for Cloud Inventory',
         focus: ['Integration', 'IT cost displacement', 'Security', 'Architecture'],
-        color: '#6A4C93',
+        color: '6A4C93',
         emphasis: [
           ['Annual IT cost displaced',   fmtMoney(r.itSav)],
           ['Integration approach',       'ERP-agnostic REST API'],
@@ -1051,7 +1018,7 @@ async function exportOnePager() {
         label:'Executive', icon:'👥',
         headline: 'Business case for Cloud Inventory',
         focus: ['ROI', 'Payback', 'Benefit breakdown', 'Next steps'],
-        color: '#1E2931',
+        color: '1E2931',
         emphasis: [
           ['Annual benefit',             fmtMoney(r.annualBenefit)],
           ['Year 1 ROI',                 fmtPct(r.roi)],
@@ -1074,16 +1041,16 @@ async function exportOnePager() {
     /* Left column: brand + headline + key metrics */
     s.addShape('rect', {x:0, y:0, w:4.2, h:PPT.H, fill:{color:aud.color}});
     s.addImage({path:PPT.LOGO, x:0.3, y:0.25, w:1.0, h:1.0*349/1000});
-    s.addText(aud.icon + ' ' + aud.label, {x:0.3, y:1.0, w:3.6, h:0.4, fontSize:13, bold:true, color:'rgba(255,255,255,0.7)', fontFace:PPT.FONT});
-    s.addText(aud.headline, {x:0.3, y:1.45, w:3.6, h:0.7, fontSize:18, bold:true, color:'#FFFFFF', fontFace:PPT.FONT, wrap:true});
-    s.addText(company, {x:0.3, y:2.2, w:3.6, h:0.3, fontSize:12, color:'rgba(255,255,255,0.7)', fontFace:PPT.FONT});
+    s.addText(aud.icon + ' ' + aud.label, {x:0.3, y:1.0, w:3.6, h:0.4, fontSize:13, bold:true, color:'BEC4C8', fontFace:PPT.FONT});
+    s.addText(aud.headline, {x:0.3, y:1.45, w:3.6, h:0.7, fontSize:18, bold:true, color:PPT.WHITE, fontFace:PPT.FONT, wrap:true});
+    s.addText(company, {x:0.3, y:2.2, w:3.6, h:0.3, fontSize:12, color:'BEC4C8', fontFace:PPT.FONT});
 
     /* Key metrics table in left column */
     aud.emphasis.forEach(([k,v2], i) => {
       const y = 2.75 + i * 0.52;
       if (y > 6.8) return;
-      s.addText(k, {x:0.3, y, w:3.6, h:0.22, fontSize:9, color:'rgba(255,255,255,0.65)', fontFace:PPT.FONT});
-      s.addText(v2, {x:0.3, y:y+0.22, w:3.6, h:0.26, fontSize:13, bold:true, color:'#FFFFFF', fontFace:PPT.FONT});
+      s.addText(k, {x:0.3, y, w:3.6, h:0.22, fontSize:9, color:'B5BDC1', fontFace:PPT.FONT});
+      s.addText(v2, {x:0.3, y:y+0.22, w:3.6, h:0.26, fontSize:13, bold:true, color:PPT.WHITE, fontFace:PPT.FONT});
     });
 
     /* Right column: narrative */
@@ -1097,10 +1064,10 @@ async function exportOnePager() {
     const ab = r.annualBenefit || 0;
     if (ab > 0) {
       const yBox = 2.7;
-      s.addShape('roundRect', {x:4.5, y:yBox, w:5.2, h:1.1, fill:{color:'#FFF0EB'}, line:{color:'#C24A1E', pt:1}, rectRadius:0.08});
-      s.addText('Cost of delayed decision', {x:4.7, y:yBox+0.08, w:4.8, h:0.3, fontSize:10, bold:true, color:'#C24A1E', fontFace:PPT.FONT});
+      s.addShape('roundRect', {x:4.5, y:yBox, w:5.2, h:1.1, fill:{color:'FFF0EB'}, line:{color:PPT.ORANGE, pt:1}, rectRadius:0.08});
+      s.addText('Cost of delayed decision', {x:4.7, y:yBox+0.08, w:4.8, h:0.3, fontSize:10, bold:true, color:PPT.ORANGE, fontFace:PPT.FONT});
       s.addText(fmtMoney(ab/12) + ' per month  ·  ' + fmtMoney(ab/2) + ' per 6-month delay', {
-        x:4.7, y:yBox+0.42, w:4.8, h:0.5, fontSize:11, color:'#C24A1E', fontFace:PPT.FONT, wrap:true
+        x:4.7, y:yBox+0.42, w:4.8, h:0.5, fontSize:11, color:PPT.ORANGE, fontFace:PPT.FONT, wrap:true
       });
     }
 
