@@ -187,4 +187,4 @@ Edit `public/scenario-templates.js`, add an entry to `SCENARIO_TEMPLATES`:
 
 ## Version
 
-Current: **v5.7.4** — see Admin → Version history for full changelog.
+Current: **v5.7.6** — see Admin → Version history for full changelog.

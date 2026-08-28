@@ -106,9 +106,10 @@ function saveThreeWhys(options = {}) {
 
 async function persistThreeWhys() {
   clearTimeout(threeWhysSaveTimer);
-  if (!window._calcScenarioId) return;
-  if (threeWhysSaveInFlight) { threeWhysSaveQueued = true; return; }
+  if (!window._calcScenarioId) return false;
+  if (threeWhysSaveInFlight) { threeWhysSaveQueued = true; return false; }
   threeWhysSaveInFlight = true;
+  let saved = false;
   const scenarioId = window._calcScenarioId;
   const status = document.getElementById('aiEnhanceStatus');
   try {
@@ -121,6 +122,9 @@ async function persistThreeWhys() {
       })
     });
     if (!resp || !resp.ok) throw new Error('Narrative autosave failed');
+    const result = await resp.json();
+    if (result && result.id) window._calcScenarioId = result.id;
+    saved = true;
     if (status && !aiGenerating) status.textContent = '✓ Narrative saved';
   } catch (e) {
     console.warn('Three Whys autosave failed:', e.message);
@@ -131,6 +135,25 @@ async function persistThreeWhys() {
       threeWhysSaveQueued = false;
       persistThreeWhys();
     }
+  }
+  return saved;
+}
+
+async function saveExecutiveView() {
+  saveThreeWhys({ persist: false });
+  if (!window._calcScenarioId) {
+    showToast('Save the scenario first to retain this executive view.');
+    return saveScenario();
+  }
+  const status = document.getElementById('aiEnhanceStatus');
+  if (status) status.textContent = 'Saving executive narrative…';
+  const saved = await persistThreeWhys();
+  if (saved) {
+    if (status) status.textContent = '✓ Executive view saved';
+    showToast('Executive view saved.');
+  } else {
+    if (status) status.textContent = '⚠ Save is already in progress or could not be completed';
+    showToast('Executive view save is pending — please try again.');
   }
 }
 

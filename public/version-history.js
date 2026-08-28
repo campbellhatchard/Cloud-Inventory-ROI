@@ -7,6 +7,29 @@
 
 const VERSION_HISTORY = [
   {
+    version: '5.7.6', date: '2026-08-28', tag: 'fix',
+    title: 'Three Whys remain attached to the current scenario version',
+    summary: 'After a versioned save, the newly created scenario version becomes active immediately so later Executive View autosaves survive logout and reload.',
+    changes: [
+      'Updated the active scenario ID from the server response after every successful versioned save',
+      'Prevented Three Whys autosave from writing to the prior, non-current scenario version',
+      'Refreshed the scenario/version picker after the new active version is established',
+      'Added regression coverage for the save, logout, and current-version reload sequence'
+    ]
+  },
+  {
+    version: '5.7.5', date: '2026-08-28', tag: 'feature',
+    title: 'Stronger champion objection handling and explicit Executive View save',
+    summary: 'The champion deck now prepares internal advocates for finance, executive, operations, IT, security, adoption, and value-realization questions, while the Executive View has a dedicated narrative save action.',
+    changes: [
+      'Expanded the Champion Pack from five objection prompts to twelve practical questions with customer-safe answers',
+      'Separated financial and executive objections from operations and IT objections for easier internal presentation',
+      'Used the modeled contract economics, conservative case, cost of delay, implementation period, and payback where relevant',
+      'Removed an overly absolute subscription-cancellation claim and replaced it with governance and value-realization guidance',
+      'Added a prominent Save executive view action that immediately persists the Three Whys without creating an unnecessary scenario version'
+    ]
+  },
+  {
     version: '5.7.4', date: '2026-08-28', tag: 'fix',
     title: 'Stable ROI product switching and persistent executive narrative',
     summary: 'Product selection is now presentation-only, customer Field Inventory state loads before ROI calculation, and Three Whys text autosaves across navigation and authenticated sessions.',

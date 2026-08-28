@@ -844,8 +844,8 @@ function showBusinessCaseShareModal(url, company) {
 
 /* ═══════════════════════════════════════════════════════════════════
    Champion enablement pack
-   A 3-slide internal deck the champion takes to their own committee
-   + an Objection FAQ for the 8 questions CFOs always ask.
+   A concise internal deck the champion takes to their own committee,
+   including practical answers to financial, operational, and IT questions.
    ═══════════════════════════════════════════════════════════════════ */
 
 async function buildChampionPack() {
@@ -915,28 +915,60 @@ async function buildChampionPack() {
     s2.addText('Conservative case scales all recovery assumptions to 70%. Investment cost is fixed.',
       {x:0.5, y:PPT.H-0.45, w:9, h:0.2, fontSize:8, color:PPT.GRAY_TXT, italic:true, fontFace:PPT.FONT});
 
-    /* ── Slide 3: Objection FAQ ── */
-    const s3 = pptx.addSlide(); s3.background = { color: PPT.GRAY_BG };
-    pptChrome(s3, 3);
-    pptTitle(s3, 'Questions your colleagues will ask');
-    const faqs = [
-      ['"Are these numbers real?"',
-       `${typeof discoveryAnswers!=='undefined' && Object.keys(discoveryAnswers).filter(k=>!k.endsWith('_by')&&discoveryAnswers[k]).length > 0 ? 'Most figures came from our own data — submitted through Cloud Inventory\'s discovery process, not vendor estimates.' : 'Core inputs are based on our operational data. Conservative scenario applies 70% of stated recovery rates.'}`],
-      ['How does this compare to doing nothing?',
-       r.annualBenefit > 0 ? `Every month we delay costs us approximately ${fmtMoney(r.annualBenefit/12)} in recoverable value.` : 'Every month without the system, current losses continue unremediated.'],
-      ['What if the ROI doesn\'t materialise?',
-       'Conservative case still delivers positive ROI. Implementation is phased — if Month 1 targets aren\'t met, we catch it early.'],
-      ['How long until we see results?',
-       `Go-live in ${v.implMonths || 3} months. Efficiency ramp over ${3} months post go-live. Payback from contract signing: ${r.payback ? r.payback.toFixed(1) + ' months' : 'TBD'}.`],
-      ['What\'s the risk if we change our mind?',
-       'Cloud Inventory is a SaaS subscription — no large upfront capital. Exit is a subscription cancellation, not a write-off.'],
+    const discoveryCount = typeof discoveryAnswers !== 'undefined'
+      ? Object.keys(discoveryAnswers).filter(k => !k.endsWith('_by') && discoveryAnswers[k]).length
+      : 0;
+    const conservativeOutcome = consR.totalContractRoi > 0
+      ? `The conservative case remains positive at ${fmtPct(consR.totalContractRoi)} total-contract ROI.`
+      : 'The conservative case identifies the assumptions that must be validated before approval.';
+    const paybackText = r.contractPayback
+      ? `${r.contractPayback.toFixed(1)} months from signing`
+      : 'not achieved within the modeled contract term';
+
+    function addChampionFaqSlide(title, number, faqs) {
+      const slide = pptx.addSlide(); slide.background = { color: PPT.GRAY_BG };
+      pptChrome(slide, number);
+      pptTitle(slide, title);
+      let yPos = 0.82;
+      faqs.forEach(([q, a]) => {
+        slide.addText(q, {x:0.5, y:yPos, w:9, h:0.22, fontSize:9.5, bold:true, color:PPT.NAVY, fontFace:PPT.FONT, margin:0});
+        slide.addText(a, {x:0.7, y:yPos+0.23, w:8.6, h:0.34, fontSize:8.6, color:PPT.GRAY_TXT, fontFace:PPT.FONT, margin:0, breakLine:false, fit:'shrink'});
+        yPos += 0.69;
+      });
+    }
+
+    /* ── Slides 3–4: champion objection handling ── */
+    const financialFaqs = [
+      ['Are these numbers credible?',
+       discoveryCount > 0 ? `${discoveryCount} discovery responses inform the case. Inputs should still be confirmed by the accountable operational and finance owners before approval.` : 'The model separates company inputs, calculations, and assumptions. The accountable operational and finance owners should validate the material inputs before approval.'],
+      ['How conservative is the business case?',
+       `The downside case uses 70% of the base recovery assumptions while holding investment fixed. ${conservativeOutcome}`],
+      ['Are benefits being counted twice?',
+       'The model reports benefits by driver and removes overlap where inventory carrying-cost and inventory-turn improvements represent the same underlying value.'],
+      ['What does delaying the decision cost?',
+       r.annualBenefit > 0 ? `The current model indicates approximately ${fmtMoney(r.annualBenefit/12)} of recoverable value per month. Delay should be weighed against that continuing cost, not treated as a zero-cost option.` : 'Current operating losses and avoidable work continue during delay. Confirm the monthly cost of inaction before deciding that waiting is the lower-risk option.'],
+      ['When should we expect payback?',
+       `Modeled payback is ${paybackText}, including an estimated ${v.implMonths || 3}-month implementation period and phased value ramp.`],
+      ['What if the expected value is not realized?',
+       'Use agreed baseline measures, owners, and checkpoints in the Joint Project Plan. If early indicators lag, address adoption, process, data, or scope issues before the gap compounds.']
     ];
-    let yPos = 0.85;
-    faqs.forEach(([q, a]) => {
-      s3.addText(q, {x:0.5, y:yPos, w:9, h:0.28, fontSize:10, bold:true, color:PPT.NAVY, fontFace:PPT.FONT});
-      s3.addText(a, {x:0.7, y:yPos+0.28, w:8.6, h:0.35, fontSize:9.5, color:PPT.GRAY_TXT, fontFace:PPT.FONT});
-      yPos += 0.7;
-    });
+    addChampionFaqSlide('Questions your finance and executive colleagues will ask', 3, financialFaqs);
+
+    const deliveryFaqs = [
+      ['Why not use our ERP or current tools?',
+       'The ERP remains the system of record. Cloud Inventory provides the frontline execution, mobile workflows, and transaction accuracy needed to keep that record current across warehouses and field locations.'],
+      ['How disruptive will implementation be?',
+       'Implementation should be phased around priority workflows, integrations, and user groups. The Joint Project Plan makes dependencies, owners, validation steps, and readiness decisions visible before rollout.'],
+      ['What will IT need to support?',
+       'IT should validate architecture, identity, integration, security, data ownership, and support responsibilities. The Solution Fit handoff captures known requirements and unresolved items for technical review.'],
+      ['How do we address security and governance?',
+       'Complete the normal security, privacy, access-control, data-retention, and vendor-risk reviews. Record evidence and approvals in the Joint Project Plan rather than treating security as an informal assumption.'],
+      ['Will frontline teams adopt it?',
+       'Adoption depends on workflow fit, usability, leadership sponsorship, training, and measurable accountability. Pilot the highest-value workflows and use real user feedback before scaling.'],
+      ['How will we prove value after go-live?',
+       'Agree on baselines and targets for the selected drivers, assign a business owner to each measure, and review actual results at defined checkpoints against the approved business case.']
+    ];
+    addChampionFaqSlide('Questions your operations and IT colleagues will ask', 4, deliveryFaqs);
 
     const safe = company.replace(/[^a-zA-Z0-9 \-_]/g,'').trim().replace(/\s+/g,'-') || 'Champion';
     await pptx.writeFile({ fileName: `Champion-Pack-${safe}-${new Date().toISOString().split('T')[0]}.pptx` });

@@ -1205,11 +1205,16 @@ async function _doSave(v, dataBlob, baseId, note) {
       return;
     }
     const saved = await resp.json();
+    /* Saving creates a new immutable version. Subsequent Executive View
+       autosaves must target that new current row, not the version just left. */
+    window._calcScenarioId = saved.id;
+    window._scenarioLoaded = true;
     showToast(`Saved v${saved.version} — "${saved.name}"`);
     /* Only now — after a confirmed successful save — is the form clean. */
     if (typeof clearCalcDirty === 'function') clearCalcDirty();
     trackEvent('scenario_saved', { company: v.company, version: saved.version });
     await fetchScenarios();
+    if (typeof refreshCalcScenarioPicker === 'function') refreshCalcScenarioPicker();
   } catch(e) {
     console.error('_doSave error:', e.message);
     showToast('Save failed — check your connection.');

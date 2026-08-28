@@ -301,7 +301,7 @@ test('v5.6.12 Deal Coach refreshes buyer context and opens Proposal safely', () 
 });
 
 test('v5.6.11-v5.6.13 feature files preserve locked customer and ROI controls', () => {
-  assert.match(index, /APP_VERSION="5\.7\.4"/);
+  assert.match(index, /APP_VERSION="5\.7\.6"/);
   assert.match(proposal, /contractTerm:\s*\(v\.contractMonths \|\| 36\) \+ ' months'/);
   assert.match(proposal, /addDays\(30\)/);
   assert.match(dealCoach, /Joint Project Plan/);
@@ -436,7 +436,7 @@ test('v5.7.2 Prospect-Link Help uses a validated token and server-side prospect-
 });
 
 test('v5.7.2 keeps locked JPP, Proposal, Deal Coach and financial semantics while adding AI persistence', () => {
-  assert.match(index, /APP_VERSION="5\.7\.4"/);
+  assert.match(index, /APP_VERSION="5\.7\.6"/);
   assert.match(dealCoach, /async function refreshContext\(v\)/);
   assert.match(dealCoach, /proposalPrepared:proposalReady\(\)/);
   assert.match(dealCoach, /await refreshContext\(v\)/);
@@ -500,7 +500,7 @@ test('executive Three Whys autosave to the active scenario and AI output saves i
   assert.match(app, /await persistThreeWhys\(\)/);
   assert.match(apiClient, /await window\.persistThreeWhys\(\)/);
   assert.match(scenarioRoutes, /router\.patch\('\/:id\/narrative'/);
-  assert.match(scenarioRoutes, /SET data = data \|\| \$1::jsonb, updated_at = NOW\(\)/);
+  assert.match(scenarioRoutes, /SET data = s\.data \|\| \$1::jsonb, updated_at = NOW\(\)/);
 });
 
 test('Customer Workspace remains in document flow and cannot cover page actions', () => {
@@ -508,4 +508,41 @@ test('Customer Workspace remains in document flow and cannot cover page actions'
   assert.doesNotMatch(css, /\.context-header\{[^}]*position:sticky;/);
   assert.doesNotMatch(css, /\.context-header\{[^}]*top:calc\(var\(--topbar-h\)/);
   assert.ok(index.indexOf('id="contextHeader"') < index.indexOf('id="tab-calc"'));
+});
+
+test('v5.7.5 Champion Pack expands objection handling without weakening financial semantics', () => {
+  assert.match(index, /id="championPackBtn"[\s\S]*4-slide internal deck/);
+  for (const question of [
+    'Are these numbers credible?', 'How conservative is the business case?',
+    'Are benefits being counted twice?', 'What does delaying the decision cost?',
+    'Why not use our ERP or current tools?', 'How disruptive will implementation be?',
+    'How do we address security and governance?', 'Will frontline teams adopt it?',
+    'How will we prove value after go-live?'
+  ]) assert.match(dealExport, new RegExp(question.replace(/[?]/g, '\\?')));
+  assert.match(dealExport, /Inventory turns — annual carrying savings/);
+  assert.match(dealExport, /v\.ramp1 \?\? 0\.4/);
+  assert.doesNotMatch(dealExport, /Exit is a subscription cancellation/);
+});
+
+test('v5.7.5-v5.7.6 Executive View saves against the current scenario version', () => {
+  assert.match(index, /id="saveExecutiveViewBtn"/);
+  assert.match(narrative, /async function saveExecutiveView\(\)/);
+  assert.match(narrative, /const result = await resp\.json\(\)/);
+  assert.match(narrative, /window\._calcScenarioId = result\.id/);
+  assert.match(narrative, /window\.persistThreeWhys = persistThreeWhys/);
+  assert.match(narrative, /apiFetch\('\/api\/enhance'/);
+  assert.doesNotMatch(narrative, /fetch\('\/api\/enhance'/);
+
+  const saveStart = app.indexOf('async function _doSave');
+  const loadStart = app.indexOf('async function loadScenario', saveStart);
+  const saveFn = app.slice(saveStart, loadStart);
+  assert.match(saveFn, /window\._calcScenarioId = saved\.id/);
+  assert.ok(saveFn.indexOf('window._calcScenarioId = saved.id') < saveFn.indexOf('await fetchScenarios()'));
+  assert.match(saveFn, /refreshCalcScenarioPicker/);
+
+  assert.match(scenarioRoutes, /router\.patch\('\/:id\/narrative'/);
+  assert.match(scenarioRoutes, /current_target AS/);
+  assert.match(scenarioRoutes, /WHERE s\.is_current = TRUE/);
+  assert.match(scenarioRoutes, /RETURNING s\.id, s\.updated_at/);
+  assert.match(scenarioRoutes, /totalContractRoi:\s+r\.totalContractRoi/);
 });

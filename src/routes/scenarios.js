@@ -169,11 +169,20 @@ router.patch('/:id/narrative', async (req, res) => {
 
   try {
     const { rows } = await query(
-      `UPDATE scenarios
-       SET data = data || $1::jsonb, updated_at = NOW()
-       WHERE id = $2 AND deleted_at IS NULL
-         AND (owner_id = $3 OR $3 = ANY(shared_with) OR $4)
-       RETURNING id, updated_at`,
+      `WITH requested AS (
+         SELECT base_id FROM scenarios WHERE id = $2 AND deleted_at IS NULL
+       ), current_target AS (
+         SELECT s.id
+         FROM scenarios s JOIN requested r ON r.base_id = s.base_id
+         WHERE s.is_current = TRUE AND s.deleted_at IS NULL
+           AND (s.owner_id = $3 OR $3 = ANY(s.shared_with) OR $4)
+         LIMIT 1
+       )
+       UPDATE scenarios s
+       SET data = s.data || $1::jsonb, updated_at = NOW()
+       FROM current_target t
+       WHERE s.id = t.id
+       RETURNING s.id, s.updated_at`,
       [JSON.stringify(narrative), req.params.id, req.user.id, req.user.role === 'admin']
     );
     if (!rows.length) return res.status(404).json({ error: 'Scenario not found or access denied.' });
