@@ -118,6 +118,11 @@
   async function logout() {
     /* Route through the same unsaved-changes gate as tab switching. */
     if (typeof window.confirmDiscardChanges === 'function' && !window.confirmDiscardChanges()) return;
+    /* Narrative edits autosave independently from full scenario versioning.
+       Wait for the final write while the authenticated session is still valid. */
+    if (typeof window.persistThreeWhys === 'function') {
+      try { await window.persistThreeWhys(); } catch(e) {}
+    }
     if (typeof window.clearCalcDirty === 'function') window.clearCalcDirty();
     try {
       await apiFetch('/api/auth/logout', { method: 'POST' });

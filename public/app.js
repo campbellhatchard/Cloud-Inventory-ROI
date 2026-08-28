@@ -304,7 +304,10 @@ function getVals() {
     laborWastePct:       g('laborWastePct') / 100,  // measured productivity waste (Option B)
     currentAccuracy:     g('currentAccuracy'),        // measured inventory accuracy % (Option A)
     /* ── Field inventory levers (opt-in) ── */
-    hasFieldInventory:   window._hasFieldInventory || false,
+    /* The customer flag is the source of truth. The visible switch mirrors it;
+       keeping this independent from the selected product prevents MEP/CIP from
+       silently adding or removing value drivers. */
+    hasFieldInventory:   window._hasFieldInventory === true,
     fieldInvValue:       g('fieldInvValue'),
     fieldLeakageRate:    g('fieldLeakageRate'),
     mFieldLeakage:       g('mFieldLeakage') / 100,
@@ -1215,6 +1218,11 @@ async function _doSave(v, dataBlob, baseId, note) {
 
 async function loadScenario(id) {
   try {
+    /* Finish any pending narrative write against the scenario being left
+       before changing the active scenario id. */
+    if (window._calcScenarioId && typeof persistThreeWhys === 'function') {
+      await persistThreeWhys();
+    }
     let scenario = savedScenarios.find(x => x.id === id);
     let inputs   = null;
     let fullData = null;
@@ -1227,21 +1235,25 @@ async function loadScenario(id) {
     if (scenario) scenario.inputs = inputs;
     await fetchScenarios();
     if (!inputs) { showToast('Scenario data not found.'); return; }
+    /* Establish scenario identity and its customer-level feature flags before
+       loadFromObject recalculates ROI. Previously the prior customer's flag
+       could be used for that first calculation; a later product selection then
+       exposed the corrected number and looked like the product changed ROI. */
+    window._calcScenarioId = id;
+    const cid = (scenario && scenario.customerId)
+             || (fullData && fullData.customer_id)
+             || (inputs && inputs.customerId)
+             || null;
+    if (typeof loadFieldInventoryFlag === 'function') {
+      if (cid) await loadFieldInventoryFlag(cid);
+      else {
+        window._hasFieldInventory = inputs.hasFieldInventory === true;
+        if (typeof applyFieldInventoryState === 'function') applyFieldInventoryState(window._hasFieldInventory);
+      }
+    }
     if (typeof loadFromObject === 'function') loadFromObject(inputs);
     window._scenarioLoaded = true;
-    window._calcScenarioId = id;
     if (typeof refreshCalcScenarioPicker === 'function') refreshCalcScenarioPicker();
-    /* Load the field inventory flag — check both the cache (scenario.customerId)
-       and the full API response (fullData.customer_id). The cache path is taken
-       when inputs were already in savedScenarios; fullData is only set when we
-       fetched from the API. Either way we need the customer_id. */
-    if (typeof loadFieldInventoryFlag === 'function') {
-      const cid = (scenario && scenario.customerId)
-               || (fullData && fullData.customer_id)
-               || (inputs && inputs.customerId)
-               || null;
-      loadFieldInventoryFlag(cid);
-    }
     /* Remember which customer this scenario belongs to, so the Solution Fit
        tab can attach to it. */
     window.currentScenarioCustomerId = (scenario && scenario.customerId) || null;
@@ -1404,7 +1416,8 @@ function applySolutionEmphasis() {
       const lbl = t.closest('.field-group-label'); if (lbl) lbl.classList.add('driver-emphasis');
     });
   }
-  if (typeof recalc === 'function') recalc();
+  /* Product selection changes guidance and labels only. ROI is driven solely
+     by the entered assumptions and explicitly enabled value drivers. */
 }
 
 function clearForm() {

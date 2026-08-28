@@ -5,6 +5,7 @@
    POST   /api/scenarios               — save (new or new version)
    GET    /api/scenarios/:id           — single scenario
    GET    /api/scenarios/:id/versions  — all versions for a base_id
+   PATCH  /api/scenarios/:id/narrative — autosave executive Three Whys
    PATCH  /api/scenarios/:id/share     — share with other users
    DELETE /api/scenarios/:id           — soft-delete one version
    DELETE /api/scenarios/group/:baseId — soft-delete all versions of a group
@@ -146,6 +147,40 @@ router.get('/:id/versions', async (req, res) => {
   } catch (err) {
     console.error('Get versions error:', err.message);
     res.status(500).json({ error: 'Failed to load versions.' });
+  }
+});
+
+/* ═══════════════════════════════════════
+   PATCH /api/scenarios/:id/narrative
+   Autosave the editable executive narrative in place. This deliberately does
+   not create a scenario version for every keystroke; explicit scenario saves
+   remain the versioning boundary.
+   ═══════════════════════════════════════ */
+router.patch('/:id/narrative', async (req, res) => {
+  const body = req.body || {};
+  const narrative = {
+    threeWhysAct: typeof body.threeWhysAct === 'string' ? body.threeWhysAct.trim() : '',
+    threeWhysCi:  typeof body.threeWhysCi  === 'string' ? body.threeWhysCi.trim()  : '',
+    threeWhysNow: typeof body.threeWhysNow === 'string' ? body.threeWhysNow.trim() : ''
+  };
+  if (Object.values(narrative).some(value => value.length > 8000)) {
+    return res.status(400).json({ error: 'Narrative sections must be 8,000 characters or fewer.' });
+  }
+
+  try {
+    const { rows } = await query(
+      `UPDATE scenarios
+       SET data = data || $1::jsonb, updated_at = NOW()
+       WHERE id = $2 AND deleted_at IS NULL
+         AND (owner_id = $3 OR $3 = ANY(shared_with) OR $4)
+       RETURNING id, updated_at`,
+      [JSON.stringify(narrative), req.params.id, req.user.id, req.user.role === 'admin']
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Scenario not found or access denied.' });
+    res.json({ saved: true, id: rows[0].id, updatedAt: rows[0].updated_at });
+  } catch (err) {
+    console.error('Autosave scenario narrative error:', err.message);
+    res.status(500).json({ error: 'Failed to save executive narrative.' });
   }
 });
 

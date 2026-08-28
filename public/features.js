@@ -99,6 +99,7 @@ function loadFromObject(i) {
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
   set('scenarioName', i.name);   set('companyName', i.company);
   set('repName', i.rep);         set('industry', i.industry);
+  set('solution', i.solution || 'cip');
   set('competitor', i.competitor || '');
   if (typeof setCurrency === 'function') setCurrency(i.currency || 'USD');
   set('revenue', i.revenue);     set('userCount', i.users);

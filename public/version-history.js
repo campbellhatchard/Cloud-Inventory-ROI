@@ -7,6 +7,27 @@
 
 const VERSION_HISTORY = [
   {
+    version: '5.7.4', date: '2026-08-28', tag: 'fix',
+    title: 'Stable ROI product switching and persistent executive narrative',
+    summary: 'Product selection is now presentation-only, customer Field Inventory state loads before ROI calculation, and Three Whys text autosaves across navigation and authenticated sessions.',
+    changes: [
+      'Prevented MEP/CIP selection from directly recalculating or changing ROI assumptions',
+      'Loaded customer Field Inventory state before the first scenario ROI calculation',
+      'Restored the saved Cloud Inventory solution when loading a scenario',
+      'Added server-backed, debounced Three Whys autosave for keyboard edits',
+      'Saved AI-enhanced Three Whys immediately and flushed pending edits before scenario changes or logout'
+    ]
+  },
+  {
+    version: '5.7.3', date: '2026-08-28', tag: 'fix',
+    title: 'Customer Workspace no longer covers page actions',
+    changes: [
+      'Kept the Customer Workspace bar available at the top of each applicable screen while returning it to normal document flow.',
+      'Removed the sticky high-layer positioning that allowed the bar to cover page titles, exports, and other action buttons while scrolling.',
+      'Added regression coverage to prevent the workspace bar from becoming an overlay again.'
+    ]
+  },
+  {
     version: '5.7.2', date: '2026-08-28', tag: 'feature',
     title: 'Persistent, field-aware AI experiences',
     changes: [

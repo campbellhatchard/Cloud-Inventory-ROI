@@ -1,4 +1,4 @@
-# Cloud Inventory ROI v5.7.2 Deployment Validation
+# Cloud Inventory ROI v5.7.4 Deployment Validation
 
 ## Render deployment configuration
 
@@ -32,7 +32,7 @@ Add these in the Render dashboard when the corresponding feature is needed:
 
 ## Validation corrections applied
 
-This validated v5.7.2 release candidate is rebuilt from the locked live v5.6.15 production tree. It preserves the established startup, financial-semantic, export, customer-safety, Proposal, Joint Project Plan, and Deal Coach controls while adding the intended v5.6.16 and v5.7.0–v5.7.2 capabilities: authoritative customer/scenario refresh, configurable contract-term economics, evidence-driven BuyCycle coaching, and independent persistent AI sessions for Christie, the internal Assistant, Internal Field Help, and Prospect-Link Question Help.
+This validated v5.7.4 release candidate is rebuilt from the locked live v5.7.2 production tree. It preserves the established startup, financial-semantic, export, customer-safety, Proposal, Joint Project Plan, Deal Coach, contract-term ROI, BuyCycle, and AI-session controls while adding the intended v5.7.3 and v5.7.4 fixes: the Customer Workspace remains in normal document flow, solution selection is presentation-only, customer Field Inventory state loads before the first ROI calculation, saved solution selection is restored, and editable Three Whys narrative text autosaves to the active scenario with pending writes flushed before scenario changes or logout.
 
 The validated candidate keeps `requireAuth` initialized once before every protected route; preserves explicit zero ramp assumptions and `fieldInvSav`; keeps turns-based value labelled as annual carrying-cost savings rather than balance-sheet working capital; keeps Medical Devices / Life Sciences customer-input-only; retains CI startup/UI regression coverage; preserves migrations 001–023 unchanged; preserves quote-safe Joint Project Plan rendering and authenticated Proposal AI/Word calls; refreshes persisted stakeholder/JPP context before Deal Coach scoring; clears authenticated AI session state on logout/expiry; routes the internal Assistant through authenticated `apiFetch`; and rebuilds prospect AI field context server-side through an explicit prospect-safe allow-list. The obsolete nested `cloud-inventory-roi-v4_0_0` package directory is excluded from the validated release.
 

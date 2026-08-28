@@ -301,7 +301,7 @@ test('v5.6.12 Deal Coach refreshes buyer context and opens Proposal safely', () 
 });
 
 test('v5.6.11-v5.6.13 feature files preserve locked customer and ROI controls', () => {
-  assert.match(index, /APP_VERSION="5\.7\.2"/);
+  assert.match(index, /APP_VERSION="5\.7\.4"/);
   assert.match(proposal, /contractTerm:\s*\(v\.contractMonths \|\| 36\) \+ ' months'/);
   assert.match(proposal, /addDays\(30\)/);
   assert.match(dealCoach, /Joint Project Plan/);
@@ -326,11 +326,12 @@ test('v5.6.13 Christie AI Deal Coach uses authenticated deal context safely', ()
 });
 
 
-test('v5.6.14 Deal Context Bar stays compact, sticky, and customer-focused', () => {
+test('v5.7.3 Deal Context Bar stays compact, customer-focused, and in document flow', () => {
   const ux = fs.readFileSync(path.join(root, 'public', 'ux-enhancements.js'), 'utf8');
   assert.match(ux, /Customer workspace/);
   assert.match(ux, /Search and switch customer/);
-  assert.match(css, /\.context-header\{[^}]*position:sticky/);
+  assert.match(css, /\.context-header\{[^}]*position:relative;[^}]*z-index:1/);
+  assert.doesNotMatch(css, /\.context-header\{[^}]*position:sticky/);
   assert.match(css, /\.context-header \.ctx-label/);
   assert.match(css, /\.context-header \.ctx-switch/);
 });
@@ -435,7 +436,7 @@ test('v5.7.2 Prospect-Link Help uses a validated token and server-side prospect-
 });
 
 test('v5.7.2 keeps locked JPP, Proposal, Deal Coach and financial semantics while adding AI persistence', () => {
-  assert.match(index, /APP_VERSION="5\.7\.2"/);
+  assert.match(index, /APP_VERSION="5\.7\.4"/);
   assert.match(dealCoach, /async function refreshContext\(v\)/);
   assert.match(dealCoach, /proposalPrepared:proposalReady\(\)/);
   assert.match(dealCoach, /await refreshContext\(v\)/);
@@ -477,4 +478,34 @@ test('pre-v5.7 shared business cases receive contract metrics without rewriting 
   assert.match(server, /const r = calcROIShared\(shareData\)/);
   assert.match(server, /totalContractRoi: r\.totalContractRoi/);
   assert.match(server, /res\.json\(\{ company: rows\[0\]\.company, title: rows\[0\]\.title, data: shareData \}\)/);
+});
+
+/* v5.7.3-v5.7.4 regression coverage */
+
+test('solution selection is presentation-only and cannot change ROI inputs', () => {
+  const start = app.indexOf('function applySolutionEmphasis()');
+  const end = app.indexOf('\nfunction clearForm()', start);
+  const fn = app.slice(start, end);
+  assert.ok(start >= 0 && end > start);
+  assert.doesNotMatch(fn, /recalc\s*\(/);
+  assert.doesNotMatch(fn, /_hasFieldInventory\s*=/);
+  assert.match(app, /await loadFieldInventoryFlag\(cid\)/);
+  assert.ok(app.indexOf('await loadFieldInventoryFlag(cid)') < app.indexOf("loadFromObject(inputs)"));
+});
+
+test('executive Three Whys autosave to the active scenario and AI output saves immediately', () => {
+  assert.match(narrative, /setTimeout\(persistThreeWhys, 700\)/);
+  assert.match(narrative, /\/api\/scenarios\/.*\/narrative/);
+  assert.match(narrative, /await persistThreeWhys\(\)/);
+  assert.match(app, /await persistThreeWhys\(\)/);
+  assert.match(apiClient, /await window\.persistThreeWhys\(\)/);
+  assert.match(scenarioRoutes, /router\.patch\('\/:id\/narrative'/);
+  assert.match(scenarioRoutes, /SET data = data \|\| \$1::jsonb, updated_at = NOW\(\)/);
+});
+
+test('Customer Workspace remains in document flow and cannot cover page actions', () => {
+  assert.match(css, /\.context-header\{[^}]*position:relative;[^}]*z-index:1;/);
+  assert.doesNotMatch(css, /\.context-header\{[^}]*position:sticky;/);
+  assert.doesNotMatch(css, /\.context-header\{[^}]*top:calc\(var\(--topbar-h\)/);
+  assert.ok(index.indexOf('id="contextHeader"') < index.indexOf('id="tab-calc"'));
 });

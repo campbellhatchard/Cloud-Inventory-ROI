@@ -67,6 +67,9 @@ const THREE_WHYS_LIBRARY = {
    ───────────────────────────────────────────────────────────── */
 let threeWhys = { act: '', ci: '', now: '' };
 let aiGenerating = false;
+let threeWhysSaveTimer = null;
+let threeWhysSaveInFlight = false;
+let threeWhysSaveQueued = false;
 
 /* ─────────────────────────────────────────────────────────────
    Load defaults for selected industry
@@ -89,11 +92,46 @@ function loadThreeWhysDefaults() {
   });
 }
 
-function saveThreeWhys() {
+function saveThreeWhys(options = {}) {
   ['act','ci','now'].forEach(key => {
     const el = document.getElementById('why_'+key);
     if (el) threeWhys[key] = el.value;
   });
+  if (options.persist === false) return;
+  clearTimeout(threeWhysSaveTimer);
+  if (!window._calcScenarioId) return;
+  if (options.immediate) persistThreeWhys();
+  else threeWhysSaveTimer = setTimeout(persistThreeWhys, 700);
+}
+
+async function persistThreeWhys() {
+  clearTimeout(threeWhysSaveTimer);
+  if (!window._calcScenarioId) return;
+  if (threeWhysSaveInFlight) { threeWhysSaveQueued = true; return; }
+  threeWhysSaveInFlight = true;
+  const scenarioId = window._calcScenarioId;
+  const status = document.getElementById('aiEnhanceStatus');
+  try {
+    const resp = await apiFetch('/api/scenarios/' + scenarioId + '/narrative', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        threeWhysAct: threeWhys.act,
+        threeWhysCi: threeWhys.ci,
+        threeWhysNow: threeWhys.now
+      })
+    });
+    if (!resp || !resp.ok) throw new Error('Narrative autosave failed');
+    if (status && !aiGenerating) status.textContent = '✓ Narrative saved';
+  } catch (e) {
+    console.warn('Three Whys autosave failed:', e.message);
+    if (status && !aiGenerating) status.textContent = '⚠ Narrative not saved — retrying after your next edit';
+  } finally {
+    threeWhysSaveInFlight = false;
+    if (threeWhysSaveQueued) {
+      threeWhysSaveQueued = false;
+      persistThreeWhys();
+    }
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -178,6 +216,7 @@ Return ONLY valid JSON in this exact format with no other text:
         threeWhys[key] = parsed[key];
       }
     });
+    await persistThreeWhys();
     if (status) status.textContent = '✅ AI personalization complete — review and edit as needed.';
     if (status) setTimeout(()=>{ status.textContent=''; }, 4000);
     showToast('✨ Three Whys enhanced by AI!');
@@ -584,6 +623,7 @@ function buildNarrativeSections(v, r) {
 
 /* Expose data objects on window for cross-<script> access (print.html). */
 if (typeof window !== 'undefined') {
+  window.persistThreeWhys = persistThreeWhys;
   if (typeof THREE_WHYS_LIBRARY !== 'undefined') window.THREE_WHYS_LIBRARY = THREE_WHYS_LIBRARY;
   if (typeof AUDIENCE_CONFIG !== 'undefined') window.AUDIENCE_CONFIG = AUDIENCE_CONFIG;
 }
