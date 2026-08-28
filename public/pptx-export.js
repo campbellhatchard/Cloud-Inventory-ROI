@@ -251,12 +251,12 @@ async function exportToPowerPoint() {
         x: 5.85, y: 1.8, w: 3.4, h: 0.3,
         fontSize: 13, color: PPT.WHITE, fontFace: PPT.FONT
       });
-      s.addText(pptFmtPct(r.roi) + ' ROI', {
+      s.addText(pptFmtPct(r.totalContractRoi) + ' ROI', {
         x: 5.85, y: 2.1, w: 3.4, h: 0.85,
         fontSize: 46, bold: true, color: PPT.WHITE, fontFace: PPT.FONT
       });
       s.addText(
-        `Year-1 return with ${pptFmtPayback(r.paybackFromSigning)} payback from signing, ` +
+        `Total ${r.contractMonths}-month return with ${pptFmtPayback(r.contractPayback)} payback from signing, ` +
         `through improved cash flow, service levels, and risk reduction.`, {
         x: 5.85, y: 2.95, w: 3.4, h: 0.85,
         fontSize: 11.5, color: PPT.WHITE, fontFace: PPT.FONT, valign: 'top'
@@ -424,16 +424,16 @@ async function exportToPowerPoint() {
         x: 6.35, y: 1.9, w: 2.9, h: 0.35,
         fontSize: 17, bold: true, color: PPT.CYAN, fontFace: PPT.FONT
       });
-      s.addText(pptFmtPct(r.roi) + ' Year-1 return', {
+      s.addText(pptFmtPct(r.totalContractRoi) + ` total ${r.contractMonths}-month ROI`, {
         x: 6.35, y: 2.28, w: 2.9, h: 0.35,
         fontSize: 15, bold: true, color: PPT.DARK_TXT, fontFace: PPT.FONT
       });
       const kv = [
-        ['Annual benefit',   pptFmtMoney(r.annualBenefit)],
-        ['Year-1 benefit',   pptFmtMoney(r.year1Benefit)],
-        ['NPV (3-year)',     pptFmtMoney(r.npv3)],
-        ['NPV (5-year)',     pptFmtMoney(r.npv5)],
-        ['Payback',          pptFmtPayback(r.paybackFromSigning)]
+        ['Total benefit',    pptFmtMoney(r.totalContractBenefit)],
+        ['Total investment', pptFmtMoney(r.totalContractInvestment)],
+        ['Net benefit',      pptFmtMoney(r.totalContractNetBenefit)],
+        ['Contract NPV',     pptFmtMoney(r.totalContractNpv)],
+        ['Payback',          pptFmtPayback(r.contractPayback)]
       ];
       kv.forEach(([k, val], i) => {
         const y = 2.75 + i * 0.38;

@@ -290,6 +290,7 @@ function getVals() {
     currency: (typeof getCurrency === 'function') ? getCurrency() : 'USD',
     revenue: g('revenue'), users: g('userCount'), labor: g('laborCost'),
     inventory: inventoryVal, itCost: g('itCost'), invest: g('invest'),
+    contractMonths: Math.max(1, Math.min(60, valueOrDefault('contractMonths', 36))),
     psvc, hw, train, otc: psvc+hw+train,
     discRate: g('discRate')/100,
     mLabor: metricPct('m_labor','labor'), mShrinkage: metricPct('m_shrinkage','shrinkage'),
@@ -424,9 +425,10 @@ function recalc() {
     lb('lb-npv5',    fmt(0), lbClass(0));
   } else {
     lb('lb-benefit', fmt(r.annualBenefit), lbClass(r.annualBenefit));
-    lb('lb-roi',     r.roi?fmtPct(r.roi):'—', lbClass(r.roi));
-    lb('lb-npv3',    fmt(r.npv3), lbClass(r.npv3));
-    lb('lb-npv5',    fmt(r.npv5), lbClass(r.npv5));
+    lb('lb-roi',     r.totalContractRoi===null?'—':fmtPct(r.totalContractRoi), lbClass(r.totalContractRoi));
+    lb('lb-npv3',    fmt(r.totalContractNetBenefit), lbClass(r.totalContractNetBenefit));
+    lb('lb-npv5',    fmt(r.totalContractNpv), lbClass(r.totalContractNpv));
+    const roiLabel = el('lb-roi-label'); if (roiLabel) roiLabel.textContent = `Total ${r.contractMonths}-month ROI`;
   }
 
   const paySignStr  = r.paybackFromSigning  === null ? '—' : r.paybackFromSigning  >= 60 ? '60+ mo' : r.paybackFromSigning.toFixed(1)  + ' mo';
@@ -439,10 +441,10 @@ function recalc() {
   if (el('roiGrid')) el('roiGrid').innerHTML = `
     <div class="result-card r-hero"><div class="r-label">Annual benefit (steady-state)</div><div class="r-value">${fmtFull(r.annualBenefit)}</div></div>
     <div class="result-card ${rClass(r.netY1)}"><div class="r-label">Net benefit year 1${rampNote ? '<br><span style="font-size:10px;font-weight:400;opacity:.8">'+rampNote+'</span>' : ''}</div><div class="r-value">${fmtFull(r.netY1)}</div></div>
-    <div class="result-card r-blue"><div class="r-label">Year 1 ROI</div><div class="r-value">${fmtPct(r.roi)}</div></div>
-    <div class="result-card r-neu"><div class="r-label">Payback from signing<br><span style="font-size:10px;font-weight:400;color:var(--gray-400)">From go-live: ${payLiveStr}</span></div><div class="r-value">${paySignStr}</div></div>
-    <div class="result-card ${rClass(r.npv3)}"><div class="r-label">3-yr NPV (${fmtPct(v.discRate*100)})</div><div class="r-value">${fmtFull(r.npv3)}</div></div>
-    <div class="result-card ${rClass(r.npv5)}"><div class="r-label">5-yr NPV (${fmtPct(v.discRate*100)})</div><div class="r-value">${fmtFull(r.npv5)}</div></div>
+    <div class="result-card r-blue"><div class="r-label">Total ${r.contractMonths}-month contract ROI</div><div class="r-value">${fmtPct(r.totalContractRoi)}</div></div>
+    <div class="result-card ${rClass(r.totalContractNetBenefit)}"><div class="r-label">Total contract net benefit</div><div class="r-value">${fmtFull(r.totalContractNetBenefit)}</div></div>
+    <div class="result-card r-neu"><div class="r-label">Payback from signing</div><div class="r-value">${r.contractPayback===null?'Not in term':r.contractPayback.toFixed(1)+' mo'}</div></div>
+    <div class="result-card ${rClass(r.totalContractNpv)}"><div class="r-label">Contract NPV (${fmtPct(v.discRate*100)})</div><div class="r-value">${fmtFull(r.totalContractNpv)}</div></div>
     <div class="result-card r-pos" title="Economic value of recovered capacity; cashable only when overtime, contractors, or headcount cost is avoided"><div class="r-label">Labor capacity value</div><div class="r-value">${fmtFull(r.laborSav)}</div></div>
     <div class="result-card r-pos" title="Write-off baseline (${fmtFull(v.effectiveShrinkBase)}) × ${fmtPct(v.mShrinkage*100)} reduction"><div class="r-label">Write-off reduction</div><div class="r-value">${fmtFull(r.shrinkSav)}</div></div>
     <div class="result-card r-pos" title="Incremental carrying-cost benefit after removing overlap with turns"><div class="r-label">Additional carrying-cost savings</div><div class="r-value">${fmtFull(r.carrySav)}</div></div>
@@ -450,6 +452,35 @@ function recalc() {
     ${r.capitalFreed > 0 ? `<div class="result-card r-neu" title="Balance-sheet opportunity; not added directly to annual ROI"><div class="r-label">Working capital identified</div><div class="r-value">${fmtFull(r.capitalFreed)}</div></div>` : ''}
     <div class="result-card r-blue" title="${v.otifBaseline > 0 && v.otifTarget > 0 ? 'OTIF gap '+v.otifBaseline+'%→'+v.otifTarget+'% × revenue × improvement' : 'Revenue × at-risk % assumption'}"><div class="r-label">OTIF protection</div><div class="r-value">${fmtFull(r.otifSav)}</div></div>
     <div class="result-card r-pos"><div class="r-label">IT displaced</div><div class="r-value">${fmtFull(r.itSav)}</div></div>`;
+
+  const contractEl = el('contractEconomics');
+  if (contractEl && Array.isArray(r.contractYears)) {
+    const heads = r.contractYears.map(y => `<th>Year ${y.year}${y.months<12?`<br><small>${y.months} months</small>`:''}</th>`).join('');
+    const cells = (key, formatter, cls) => r.contractYears.map(y => `<td class="${cls?cls(y[key]):''}">${formatter(y[key])}</td>`).join('');
+    contractEl.innerHTML = `<div class="contract-economics card">
+      <div class="contract-summary-head"><div><div class="card-title">Complete ${r.contractMonths}-month contract economics</div><div class="field-hint">Annual, cumulative, and total-contract views use the same implementation and ramp assumptions.</div></div><div class="contract-term-pill">${r.contractMonths} months</div></div>
+      <div class="contract-total-grid">
+        <div><span>Total contract benefit</span><strong>${fmtFull(r.totalContractBenefit)}</strong></div>
+        <div><span>Total investment</span><strong>${fmtFull(r.totalContractInvestment)}</strong></div>
+        <div><span>Net economic benefit</span><strong>${fmtFull(r.totalContractNetBenefit)}</strong></div>
+        <div class="contract-total-roi"><span>Total contract ROI</span><strong>${fmtPct(r.totalContractRoi)}</strong></div>
+        <div><span>Payback</span><strong>${r.contractPayback===null?'Not achieved in term':r.contractPayback.toFixed(1)+' months'}</strong></div>
+      </div>
+      <div class="contract-table-wrap"><table class="contract-table"><thead><tr><th class="left">Annual economics</th>${heads}</tr></thead><tbody>
+        <tr><td class="left">Gross benefit</td>${cells('grossBenefit',fmtFull)}</tr>
+        <tr><td class="left">Investment</td>${cells('investment',fmtFull)}</tr>
+        <tr><td class="left">Net benefit</td>${cells('netBenefit',fmtFull,x=>x>=0?'pos':'neg')}</tr>
+        <tr><td class="left">Annual ROI</td>${cells('annualRoi',fmtPct)}</tr>
+        <tr><td class="left">Payback status</td>${cells('paybackStatus',x=>x)}</tr>
+      </tbody></table></div>
+      <div class="contract-table-wrap"><table class="contract-table"><thead><tr><th class="left">Cumulative economics</th>${heads}</tr></thead><tbody>
+        <tr><td class="left">Cumulative benefit</td>${cells('cumulativeBenefit',fmtFull)}</tr>
+        <tr><td class="left">Cumulative investment</td>${cells('cumulativeInvestment',fmtFull)}</tr>
+        <tr><td class="left">Cumulative net benefit</td>${cells('cumulativeNetBenefit',fmtFull,x=>x>=0?'pos':'neg')}</tr>
+        <tr><td class="left">Cumulative ROI</td>${cells('cumulativeRoi',fmtPct)}</tr>
+      </tbody></table></div>
+    </div>`;
+  }
 
   // Implementation hint — always show
   const implHint = el('implHint');
@@ -665,11 +696,11 @@ function buildPreviewScenarioTable(baseV) {
           <th style="background:#2E7D32;">Aggressive (130%)</th>
         </tr></thead>
         <tbody>
-          <tr><td class="left">Annual benefit</td>${scenarios.map(s=>`<td class="pos">${fmtFull(s.r.annualBenefit)}</td>`).join('')}</tr>
-          <tr><td class="left">Year 1 ROI</td>${scenarios.map(s=>`<td style="font-weight:600;color:#0089A6;">${fmtPct(s.r.roi)}</td>`).join('')}</tr>
-          <tr><td class="left">Payback period</td>${scenarios.map(s=>`<td>${payStr(s.r.payback)}</td>`).join('')}</tr>
-          <tr><td class="left">3-yr NPV</td>${scenarios.map(s=>`<td class="${s.r.npv3>=0?'pos':'neg'}">${fmtFull(s.r.npv3)}</td>`).join('')}</tr>
-          <tr><td class="left">5-yr NPV</td>${scenarios.map(s=>`<td class="${s.r.npv5>=0?'pos':'neg'}">${fmtFull(s.r.npv5)}</td>`).join('')}</tr>
+          <tr><td class="left">Total ${baseV.contractMonths}-month benefit</td>${scenarios.map(s=>`<td class="pos">${fmtFull(s.r.totalContractBenefit)}</td>`).join('')}</tr>
+          <tr><td class="left">Total contract ROI</td>${scenarios.map(s=>`<td style="font-weight:600;color:#0089A6;">${fmtPct(s.r.totalContractRoi)}</td>`).join('')}</tr>
+          <tr><td class="left">Payback period</td>${scenarios.map(s=>`<td>${payStr(s.r.contractPayback)}</td>`).join('')}</tr>
+          <tr><td class="left">Contract net benefit</td>${scenarios.map(s=>`<td class="${s.r.totalContractNetBenefit>=0?'pos':'neg'}">${fmtFull(s.r.totalContractNetBenefit)}</td>`).join('')}</tr>
+          <tr><td class="left">Contract NPV</td>${scenarios.map(s=>`<td class="${s.r.totalContractNpv>=0?'pos':'neg'}">${fmtFull(s.r.totalContractNpv)}</td>`).join('')}</tr>
         </tbody>
       </table>
       <p class="e-footnote">Conservative = 70% of base improvement %; Aggressive = 130%. Investment costs are fixed across all three scenarios.</p>
@@ -978,9 +1009,9 @@ function renderExec() {
       ${modeBadge}${prospectLogoHtml}${confNote}
     </div>
     <div class="e-kpis">
-      <div class="e-kpi"><div class="e-kv g">${fmtFull(r.annualBenefit)}</div><div class="e-kl">Annual benefit (steady-state)</div></div>
-      <div class="e-kpi"><div class="e-kv b">${fmtPct(r.roi)}</div><div class="e-kl">Year 1 ROI (ramp-adjusted)</div></div>
-      <div class="e-kpi"><div class="e-kv ${r.npv3>=0?'g':'r'}">${fmtFull(r.npv3)}</div><div class="e-kl">3-yr NPV (${fmtPct(v.discRate*100)})</div></div>
+      <div class="e-kpi"><div class="e-kv b">${fmtPct(r.totalContractRoi)}</div><div class="e-kl">Total ${r.contractMonths}-month contract ROI</div></div>
+      <div class="e-kpi"><div class="e-kv g">${fmtFull(r.totalContractNetBenefit)}</div><div class="e-kl">Net economic benefit</div></div>
+      <div class="e-kpi"><div class="e-kv ${r.totalContractNpv>=0?'g':'r'}">${fmtFull(r.totalContractNpv)}</div><div class="e-kl">Contract NPV (${fmtPct(v.discRate*100)})</div></div>
       <div class="e-kpi"><div class="e-kv">${paySignStr}</div><div class="e-kl">Payback from signing (${payLiveStr} from go-live)</div></div>
     </div>
     ${provenanceBanner}
@@ -1026,18 +1057,11 @@ function renderExec() {
       </div>
       ${typeof buildExecInfographics === 'function' ? buildExecInfographics(r, v) : ''}
       <div class="e-section">
-        <div class="e-h2">5-year cash flow & NPV (discount rate: ${fmtPct(v.discRate*100)})</div>
-        <table class="e-tbl">
-          <thead><tr><th class="left">Year</th><th>Annual benefit</th><th>Total investment</th><th>Net cash flow</th><th>Present value</th><th>Cumulative NPV</th></tr></thead>
-          <tbody>
-            <tr class="otc-note"><td class="left">Year 0 — one-time costs</td><td></td><td class="neg">(${fmtFull(v.otc)})</td><td></td><td></td><td></td></tr>
-            ${cfRows}
-          </tbody>
-          <tfoot>
-            <tr class="tfoot-row"><td class="left">3-year total</td><td>${fmtFull(r.totalBenefit3)}</td><td class="neg">(${fmtFull(r.totalCost3)})</td><td class="${r.totalBenefit3-r.totalCost3>=0?'pos':'neg'}">${fmtFull(r.totalBenefit3-r.totalCost3)}</td><td></td><td class="${r.npv3>=0?'pos':'neg'}">${fmtFull(r.npv3)}</td></tr>
-            <tr class="tfoot-row"><td class="left">5-year total</td><td>${fmtFull(r.totalBenefit5)}</td><td class="neg">(${fmtFull(r.totalCost5)})</td><td class="${r.totalBenefit5-r.totalCost5>=0?'pos':'neg'}">${fmtFull(r.totalBenefit5-r.totalCost5)}</td><td></td><td class="${r.npv5>=0?'pos':'neg'}">${fmtFull(r.npv5)}</td></tr>
-          </tfoot>
-        </table>
+        <div class="e-h2">Annual and cumulative ${r.contractMonths}-month contract economics</div>
+        <table class="e-tbl"><thead><tr><th class="left">Period</th><th>Gross benefit</th><th>Investment</th><th>Net benefit</th><th>Annual ROI</th><th>Cumulative net</th><th>Cumulative ROI</th><th>Payback status</th></tr></thead><tbody>
+          ${r.contractYears.map(y=>`<tr><td class="left">Year ${y.year}${y.months<12?' ('+y.months+' mo)':''}</td><td>${fmtFull(y.grossBenefit)}</td><td>${fmtFull(y.investment)}</td><td class="${y.netBenefit>=0?'pos':'neg'}">${fmtFull(y.netBenefit)}</td><td>${fmtPct(y.annualRoi)}</td><td class="${y.cumulativeNetBenefit>=0?'pos':'neg'}">${fmtFull(y.cumulativeNetBenefit)}</td><td>${fmtPct(y.cumulativeRoi)}</td><td>${y.paybackStatus}</td></tr>`).join('')}
+        </tbody><tfoot><tr class="tfoot-row"><td class="left">Total ${r.contractMonths}-month contract</td><td>${fmtFull(r.totalContractBenefit)}</td><td>${fmtFull(r.totalContractInvestment)}</td><td class="${r.totalContractNetBenefit>=0?'pos':'neg'}">${fmtFull(r.totalContractNetBenefit)}</td><td>—</td><td>${fmtFull(r.totalContractNetBenefit)}</td><td>${fmtPct(r.totalContractRoi)}</td><td>${r.contractPayback===null?'Not achieved in term':r.contractPayback.toFixed(1)+' months'}</td></tr></tfoot></table>
+        <div class="e-callout" style="margin-top:10px;"><strong>Contract NPV:</strong> ${fmtFull(r.totalContractNpv)} at ${fmtPct(v.discRate*100)} discount rate.</div>
         <p class="e-footnote">${overlapNote}Labor productivity is presented as capacity value and becomes cash savings only when overtime, contractor, or headcount cost is avoided. OTIF value applies the stated realization rate to the revenue-risk gap; it is not booked as gross revenue. NPV discounts at ${fmtPct(v.discRate*100)}/yr. One-time costs (services: ${fmtFull(v.psvc)}, hardware: ${fmtFull(v.hw)}, training: ${fmtFull(v.train)}) are year-0 outflows. Benefits follow the configured implementation and monthly ramp across the full model horizon.</p>
       </div>
       <div class="e-section">
@@ -1050,7 +1074,7 @@ function renderExec() {
             <tr><td>Training & change management</td><td>One-time</td><td>${fmtFull(v.train)}</td></tr>
             <tr><td>Cloud Inventory annual subscription</td><td>Recurring/yr</td><td>${fmtFull(v.invest)}</td></tr>
           </tbody>
-          <tfoot><tr><td>Total year 1 investment</td><td></td><td>${fmtFull(r.totalInvestY1)}</td></tr></tfoot>
+          <tfoot><tr><td>Total ${r.contractMonths}-month investment</td><td></td><td>${fmtFull(r.totalContractInvestment)}</td></tr></tfoot>
         </table>
       </div>
       ${compSection}${proofSection}
@@ -1136,7 +1160,15 @@ async function saveScenario() {
     npv5:               r.npv5,
     payback:            r.payback,
     paybackFromSigning: r.paybackFromSigning,
-    year1Benefit:       r.year1Benefit
+    year1Benefit:       r.year1Benefit,
+    contractMonths:     r.contractMonths,
+    contractYears:      r.contractYears,
+    totalContractBenefit: r.totalContractBenefit,
+    totalContractInvestment: r.totalContractInvestment,
+    totalContractNetBenefit: r.totalContractNetBenefit,
+    totalContractRoi:   r.totalContractRoi,
+    totalContractNpv:   r.totalContractNpv,
+    contractPayback:    r.contractPayback
   };
 
   const existing = savedScenarios.find(s => s.company === v.company && s.name === v.name && s.isCurrent);
@@ -1184,15 +1216,16 @@ async function _doSave(v, dataBlob, baseId, note) {
 async function loadScenario(id) {
   try {
     let scenario = savedScenarios.find(x => x.id === id);
-    let inputs   = scenario?.inputs;
+    let inputs   = null;
     let fullData = null;
-    if (!inputs) {
-      const resp = await apiFetch('/api/scenarios/' + id);
-      if (!resp || !resp.ok) { showToast('Could not load scenario.'); return; }
-      fullData = await resp.json();
-      inputs = fullData.data;
-      if (scenario) scenario.inputs = inputs;
-    }
+    /* Scenario selection must load the authoritative server record rather
+       than a possibly stale in-memory copy from an earlier customer view. */
+    const resp = await apiFetch('/api/scenarios/' + id);
+    if (!resp || !resp.ok) { showToast('Could not load scenario.'); return; }
+    fullData = await resp.json();
+    inputs = fullData.data;
+    if (scenario) scenario.inputs = inputs;
+    await fetchScenarios();
     if (!inputs) { showToast('Scenario data not found.'); return; }
     if (typeof loadFromObject === 'function') loadFromObject(inputs);
     window._scenarioLoaded = true;
@@ -1397,7 +1430,7 @@ function clearForm() {
    'ordersPerYr','costPerOrder','pickRateGainPct','m_throughput','orderErrorPct','costPerError','m_accuracy'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
-  const defaults={laborCost:55000,invest:80000,discRate:10,
+  const defaults={laborCost:55000,invest:80000,discRate:10,contractMonths:36,
     implMonths:3,ramp1:40,ramp2:75,ramp3:100};
   Object.entries(defaults).forEach(([id,v])=>{ const el=document.getElementById(id); if(el) el.value=v; });
   document.getElementById('benchBadge').style.display='none';

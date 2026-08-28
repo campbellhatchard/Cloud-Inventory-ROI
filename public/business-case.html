@@ -123,13 +123,13 @@ function render(payload){
     return `<tr>
       <td style="font-weight:600;color:${s.col};">${esc(s.lbl)}</td>
       <td>${fmtMoney(ab_s)}</td>
-      <td>${d.roi !== null ? Math.round(Number(d.roi) * s.scale) + '%' : '—'}</td>
+      <td>${d.totalContractRoi !== null && d.totalContractRoi !== undefined ? Math.round(Number(d.totalContractRoi) * s.scale) + '%' : '—'}</td>
     </tr>`;
   }).join('');
   const scenTable = ab > 0 ? `
     <div class="card">
       <h2>Scenario range</h2>
-      <table><thead><tr><th style="text-align:left;">Scenario</th><th>Annual benefit</th><th>Est. ROI</th></tr></thead>
+      <table><thead><tr><th style="text-align:left;">Scenario</th><th>Annual benefit</th><th>Est. total contract ROI</th></tr></thead>
       <tbody>${scenRows}</tbody></table>
       <div style="font-size:11px;color:var(--gray-500);font-style:italic;margin-top:8px;">Conservative and aggressive cases scale improvement recovery assumptions only. Investment costs are fixed.</div>
     </div>` : '';
@@ -143,21 +143,23 @@ function render(payload){
     <div class="sub">A data-driven business case built from operational data supplied by ${esc(company)} and modeled conservatively. Prepared by Cloud Inventory.</div>
     ${provBanner}
     <div class="kpis">
-      <div class="kpi"><div class="kpi-val">${fmtMoney(d.annualBenefit)}</div><div class="kpi-lbl">Annual benefit</div></div>
-      <div class="kpi"><div class="kpi-val">${fmtPct(d.roi)}</div><div class="kpi-lbl">First-year ROI</div></div>
-      <div class="kpi"><div class="kpi-val">${d.payback? (Number(d.payback).toFixed(1)+' mo') : '—'}</div><div class="kpi-lbl">Payback</div></div>
+      <div class="kpi"><div class="kpi-val">${fmtPct(d.totalContractRoi)}</div><div class="kpi-lbl">Total ${d.contractMonths||36}-month ROI</div></div>
+      <div class="kpi"><div class="kpi-val">${fmtMoney(d.totalContractNetBenefit)}</div><div class="kpi-lbl">Net economic benefit</div></div>
+      <div class="kpi"><div class="kpi-val">${d.contractPayback? (Number(d.contractPayback).toFixed(1)+' mo') : 'Not in term'}</div><div class="kpi-lbl">Payback</div></div>
     </div>
     ${inaction}
     <div class="card">
       <h2>Financial summary</h2>
       <table><tbody>
-        <tr><td>Total annual benefit</td><td>${fmtMoney(d.annualBenefit)}</td></tr>
-        <tr><td>First-year ROI</td><td>${fmtPct(d.roi)}</td></tr>
-        <tr><td>Payback period</td><td>${d.payback? Number(d.payback).toFixed(1)+' months':'—'}</td></tr>
-        <tr><td>Net present value (3-year)</td><td>${fmtMoney(d.npv3)}</td></tr>
-        <tr><td>Net present value (5-year)</td><td>${fmtMoney(d.npv5)}</td></tr>
+        <tr><td>Total contract benefit</td><td>${fmtMoney(d.totalContractBenefit)}</td></tr>
+        <tr><td>Total contract investment</td><td>${fmtMoney(d.totalContractInvestment)}</td></tr>
+        <tr><td>Total contract net benefit</td><td>${fmtMoney(d.totalContractNetBenefit)}</td></tr>
+        <tr><td>Total ${d.contractMonths||36}-month contract ROI</td><td>${fmtPct(d.totalContractRoi)}</td></tr>
+        <tr><td>Payback period</td><td>${d.contractPayback? Number(d.contractPayback).toFixed(1)+' months':'Not achieved during contract term'}</td></tr>
+        <tr><td>Contract NPV</td><td>${fmtMoney(d.totalContractNpv)}</td></tr>
       </tbody></table>
     </div>
+    ${Array.isArray(d.contractYears)&&d.contractYears.length?`<div class="card"><h2>Annual and cumulative economics</h2><table><thead><tr><th style="text-align:left">Period</th><th>Annual benefit</th><th>Annual net</th><th>Annual ROI</th><th>Cumulative net</th><th>Cumulative ROI</th></tr></thead><tbody>${d.contractYears.map(y=>`<tr><td>Year ${y.year}${y.months<12?' ('+y.months+' months)':''}</td><td>${fmtMoney(y.grossBenefit)}</td><td>${fmtMoney(y.netBenefit)}</td><td>${fmtPct(y.annualRoi)}</td><td>${fmtMoney(y.cumulativeNetBenefit)}</td><td>${fmtPct(y.cumulativeRoi)}</td></tr>`).join('')}</tbody></table></div>`:''}
     ${scenTable}
     <div class="foot">This analysis uses figures provided by ${esc(company)} where available, supplemented by industry benchmarks where prospect data was not supplied. It is a conservative estimate for evaluation purposes and is not a guarantee of results. · cloudinventory.com</div>
   `;

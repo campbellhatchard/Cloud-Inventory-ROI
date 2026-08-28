@@ -18,6 +18,17 @@ const prospectMap = fs.readFileSync(path.join(root, 'public', 'prospect-map.html
 const mapRoutes = fs.readFileSync(path.join(root, 'src', 'routes', 'maps.js'), 'utf8');
 const proposal = fs.readFileSync(path.join(root, 'public', 'proposal.js'), 'utf8');
 const dealCoach = fs.readFileSync(path.join(root, 'public', 'deal-coach.js'), 'utf8');
+const aiSession = fs.readFileSync(path.join(root, 'public', 'ai-session.js'), 'utf8');
+const assistant = fs.readFileSync(path.join(root, 'public', 'assistant.js'), 'utf8');
+const prospectAssistant = fs.readFileSync(path.join(root, 'public', 'prospect-assistant.js'), 'utf8');
+const apiClient = fs.readFileSync(path.join(root, 'public', 'src', 'client', 'api.js'), 'utf8');
+const app = fs.readFileSync(path.join(root, 'public', 'app.js'), 'utf8');
+const companies = fs.readFileSync(path.join(root, 'public', 'companies.js'), 'utf8');
+const customerGate = fs.readFileSync(path.join(root, 'public', 'customer-gate.js'), 'utf8');
+const ux = fs.readFileSync(path.join(root, 'public', 'ux-enhancements.js'), 'utf8');
+const printView = fs.readFileSync(path.join(root, 'public', 'print.html'), 'utf8');
+const narrative = fs.readFileSync(path.join(root, 'public', 'narrative.js'), 'utf8');
+const scenarioRoutes = fs.readFileSync(path.join(root, 'src', 'routes', 'scenarios.js'), 'utf8');
 const ciWorkflow = fs.readFileSync(path.join(root, '.github', 'workflows', 'ci.yml'), 'utf8');
 const mapMigration = fs.readFileSync(path.join(root, 'migrations', '023_map_groups.sql'), 'utf8');
 const { readiness } = require(path.join(root, 'src', 'shared', 'handoff-readiness.js'));
@@ -37,6 +48,14 @@ test('all inline prospect-link scripts parse', () => {
   assert.ok(scripts.length > 0, 'expected inline scripts in prospect.html');
   scripts.forEach((match, i) => {
     assert.doesNotThrow(() => new vm.Script(match[1], { filename: `prospect-inline-${i + 1}.js` }));
+  });
+});
+
+test('all inline executive print scripts parse', () => {
+  const scripts = [...printView.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)];
+  assert.ok(scripts.length > 0, 'expected inline scripts in print.html');
+  scripts.forEach((match, i) => {
+    assert.doesNotThrow(() => new vm.Script(match[1], { filename: `print-inline-${i + 1}.js` }));
   });
 });
 
@@ -256,7 +275,7 @@ test('v5.6.11 Executive Proposal uses authenticated AI and Word export contracts
   assert.match(index, /id="tab-proposal"/);
   assert.match(index, /<script src="proposal\.js"><\/script>/);
   assert.match(proposal, /apiFetch\('\/api\/enhance'/);
-  assert.match(proposal, /messages:\[\{ role:'user', content:prompt \}\]/);
+  assert.match(proposal, /messages:\s*\[\{\s*role:'user',\s*content:/);
   assert.doesNotMatch(proposal, /fetch\('\/api\/enhance'/);
   assert.match(proposal, /apiFetch\('\/api\/export\/proposal-docx'/);
   assert.doesNotMatch(proposal, /fetch\('\/api\/export\/proposal-docx'/);
@@ -274,15 +293,16 @@ test('v5.6.12 Deal Coach refreshes buyer context and opens Proposal safely', () 
   assert.match(dealCoach, /apiFetch\('\/api\/maps\?all=true'\)/);
   assert.match(dealCoach, /\/api\/stakeholders/);
   assert.match(dealCoach, /function proposalReady\(\)/);
-  assert.match(dealCoach, /const nextAction=n\.go==='proposal'\?'openProposal\(\)'/);
+  assert.match(dealCoach, /n\.go==='proposal'\?'openProposal\(\)'/);
   assert.doesNotMatch(dealCoach, /n\.go==='proposal'\?'render\(\)'/);
   assert.match(dealCoach, /const safeCompany=esc\(company\), safeBenefit=esc\(money\(e\.benefit\)\), safeCost=esc\(money\(e\.cost\)\), safeNet=esc\(money\(e\.net\)\), safeRep=esc/);
   assert.doesNotMatch(dealCoach, /<textarea[^]*\$\{company\}/);
+  assert.match(dealCoach, /\$\{safeCompany\} is evaluating Cloud Inventory/);
 });
 
 test('v5.6.11-v5.6.13 feature files preserve locked customer and ROI controls', () => {
-  assert.match(index, /APP_VERSION="5\.6\.15"/);
-  assert.match(proposal, /36 months/);
+  assert.match(index, /APP_VERSION="5\.7\.2"/);
+  assert.match(proposal, /contractTerm:\s*\(v\.contractMonths \|\| 36\) \+ ' months'/);
   assert.match(proposal, /addDays\(30\)/);
   assert.match(dealCoach, /Joint Project Plan/);
   assert.match(dealCoach, /Champion kit/);
@@ -296,12 +316,12 @@ test('v5.6.13 Christie AI Deal Coach uses authenticated deal context safely', ()
   assert.match(dealCoach, /async function ask\(question\)/);
   assert.match(dealCoach, /apiFetch\('\/api\/enhance'/);
   assert.doesNotMatch(dealCoach, /fetch\('\/api\/enhance'/);
-  assert.match(dealCoach, /messages:\[\{role:'user',content:prompt\}\]/);
+  assert.match(dealCoach, /messages:prior\.concat\(\[\{role:'user',content:prompt\}\]\)/);
   assert.match(dealCoach, /proposalPrepared:proposalReady\(\)/);
   assert.match(dealCoach, /await refreshContext\(v\)/);
-  assert.match(dealCoach, /customer facts\/entered assumptions/);
-  assert.match(dealCoach, /Do not invent numbers, commitments, dates, or stakeholder facts/);
-  assert.match(dealCoach, /esc\(answer\)\.replace\(\/\\n\/g,'<br>'\)/);
+  assert.match(dealCoach, /Challenge assumptions and never manufacture facts/);
+  assert.match(dealCoach, /never manufacture facts/i);
+  assert.match(dealCoach, /esc\(state\.lastResponse\)\.replace\(\/\\n\/g,'<br>'\)/);
   assert.match(css, /\.coach-christie\{/);
 });
 
@@ -325,10 +345,136 @@ test('v5.6.15 Deal Coach uses contract-term economics without weakening persiste
   assert.match(dealCoach, /const v=values\(\);\s*await refreshContext\(v\);/);
   assert.match(dealCoach, /proposalPrepared:proposalReady\(\)/);
   assert.doesNotMatch(dealCoach, /proposalPrepared:!!window\.proposalDraft/);
-  assert.match(dealCoach, /Toronto-based enterprise SaaS value-engineering consultant/);
-  assert.match(dealCoach, /Assess commercial health using contractEconomics only; Year 1 is context/);
+  assert.match(dealCoach, /Toronto-based consultant/);
+  assert.match(dealCoach, /Contract-term economics.not Year 1 ROI.drive economic health/s);
   assert.match(dealCoach, /safeCompany=esc\(company\)/);
   assert.match(dealCoach, /safeBenefit=esc\(money\(e\.benefit\)\)/);
   assert.match(dealCoach, /safeCost=esc\(money\(e\.cost\)\)/);
   assert.match(dealCoach, /safeNet=esc\(money\(e\.net\)\)/);
+});
+
+
+test('v5.6.16 customer and scenario switching refreshes authoritative server context', () => {
+  assert.match(customerGate, /async function showCustomerGate\(\)/);
+  assert.match(customerGate, /await loadCompanies\(\)/);
+  assert.match(customerGate, /await fetchScenarios\(\)/);
+  assert.match(companies, /always[\s\S]*refresh rather than trusting an earlier in-memory list/);
+  assert.match(companies, /await fetchScenarios\(\)/);
+  assert.match(app, /const resp = await apiFetch\('\/api\/scenarios\/' \+ id\)/);
+  assert.match(app, /await fetchScenarios\(\)/);
+  assert.match(ux, /onCalcScenarioPick\(this\.value\)/);
+  assert.match(ux, /openCurrentVersionHistory\(\)/);
+});
+
+test('v5.7.0 contract term drives annual cumulative and total-contract economics', () => {
+  assert.match(index, /id="contractMonths" value="36"/);
+  assert.match(index, /id="contractEconomics"/);
+  assert.match(app, /Total .*month contract ROI/);
+  assert.match(app, /Annual economics/);
+  assert.match(app, /Cumulative economics/);
+  assert.match(app, /totalContractNetBenefit/);
+  assert.match(printView, /Total .*month ROI/);
+  assert.match(printView, /Annual, cumulative, and total-contract economics/);
+  assert.match(pptxExport, /totalContractRoi/);
+  assert.match(dealExport, /Total contract ROI/);
+  const c18 = calcROI({ modelVersion:27, contractMonths:18, users:10, labor:50000, mLabor:.2,
+    effectiveShrinkBase:0,mShrinkage:0,inventory:0,mCarrying:0,carryRate:.25,invTurnsCurrent:0,invTurnsBenchmark:10,
+    revenue:0,otifBaseline:0,otifTarget:0,mOtif:0,otifRisk:0,itCost:0,mIt:0,discRate:.1,invest:12000,otc:6000,
+    implMonths:0,ramp1:1,ramp2:1,ramp3:1 });
+  assert.equal(c18.contractYears.length, 2);
+  assert.equal(c18.contractYears[1].months, 6);
+  assert.equal(c18.totalContractInvestment, 24000);
+});
+
+test('v5.7.1 Christie challenges BuyCycle position from buyer evidence without treating CRM as authority', () => {
+  assert.match(dealCoach, /Stated BuyCycle position/);
+  assert.match(dealCoach, /Buyer evidence and commitments observed/);
+  assert.match(dealCoach, /crmStageForReferenceOnly/);
+  assert.match(dealCoach, /CRM BOUNDARY/);
+  assert.match(dealCoach, /Seller activity alone never proves advancement/);
+  assert.match(dealCoach, /Next 3 Buying-Progress Actions/);
+  assert.match(dealCoach, /Customer Commitment Sought/);
+  assert.match(dealCoach, /The available information is insufficient to validate the stated BuyCycle position/);
+  assert.match(dealCoach, /CUSTOMER-FACING EXCEPTION/);
+  assert.doesNotMatch(dealCoach, /The CRM stage is wrong/);
+});
+
+test('v5.7.2 AI experiences preserve isolated session state and clear it on logout or expiry', () => {
+  assert.ok(index.indexOf('ai-session.js') < index.indexOf('assistant.js'));
+  assert.ok(prospect.indexOf('ai-session.js') < prospect.indexOf('prospect-assistant.js'));
+  for (const scope of ['assistant','internal_help','coach','prospect_help']) {
+    assert.match(aiSession + assistant + dealCoach + prospectAssistant, new RegExp(`["']${scope}["']`));
+  }
+  assert.match(aiSession, /sessionStorage\.setItem/);
+  assert.match(aiSession, /function identity\(kind, explicit\)/);
+  assert.match(aiSession, /kind==='prospect_help'/);
+  assert.match(aiSession, /clearAll/);
+  assert.match(apiClient, /CIAIState\.clearAll/);
+  assert.match(assistant, /Information used for this AI response has changed/);
+  assert.match(dealCoach, /coachSavedHtml/);
+  assert.match(dealCoach, /coachClearAI/);
+});
+
+test('v5.7.2 internal Assistant uses the authenticated AI proxy', () => {
+  assert.match(assistant, /apiFetch\('\/api\/enhance'/);
+  assert.doesNotMatch(assistant, /fetch\('\/api\/enhance'/);
+});
+
+test('v5.7.2 Prospect-Link Help uses a validated token and server-side prospect-safe allow-list', () => {
+  assert.match(prospectAssistant, /fieldContext/);
+  assert.match(prospectAssistant, /relevantPriorInputs/);
+  assert.match(prospectAssistant, /contextClassification:'Prospect-Safe'/);
+  assert.match(prospectAssistant, /state\.fields\[id\]/);
+  assert.match(server, /app\.post\('\/api\/prospect-assist', aiLimiter/);
+  assert.match(server, /isValidDiscoveryToken\(token\)/);
+  assert.match(server, /Prospect-safe architecture boundary/);
+  assert.match(server, /contextClassification: 'Prospect-Safe'/);
+  assert.match(server, /fieldContext\.relevantPriorInputs/);
+  assert.match(server, /const safeField = fieldContext[\s\S]*?audience: 'Prospect'/);
+  assert.match(server, /You have no access to internal strategy, coaching, risk, champion, economic-buyer/);
+});
+
+test('v5.7.2 keeps locked JPP, Proposal, Deal Coach and financial semantics while adding AI persistence', () => {
+  assert.match(index, /APP_VERSION="5\.7\.2"/);
+  assert.match(dealCoach, /async function refreshContext\(v\)/);
+  assert.match(dealCoach, /proposalPrepared:proposalReady\(\)/);
+  assert.match(dealCoach, /await refreshContext\(v\)/);
+  assert.match(dealCoach, /\$\{safeCompany\} is evaluating Cloud Inventory/);
+  assert.match(prospectMap, /replace\(\/"\/g,'&quot;'\)/);
+  assert.match(prospectMap, /replace\(\/'\/g,'&#39;'\)/);
+  assert.match(ciWorkflow, /UI and startup regression tests/);
+});
+
+
+test('v5.7 contract-term metrics remain server-authoritative when scenarios are saved', () => {
+  for (const field of ['contractMonths','contractYears','totalContractBenefit','totalContractInvestment','totalContractNetBenefit','totalContractRoi','totalContractNpv','contractPayback']) {
+    assert.match(scenarioRoutes, new RegExp(field.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&') + ':'));
+  }
+  assert.match(scenarioRoutes, /const r = calcROI\(data\)/);
+  assert.match(scenarioRoutes, /const dataWithMetrics = \{ \.\.\.data, \.\.\.metrics \}/);
+});
+
+test('all authenticated internal AI surfaces use apiFetch rather than bare fetch', () => {
+  assert.match(assistant, /apiFetch\('\/api\/enhance'/);
+  assert.match(proposal, /apiFetch\('\/api\/enhance'/);
+  assert.match(narrative, /apiFetch\('\/api\/enhance'/);
+  assert.doesNotMatch(assistant, /fetch\('\/api\/enhance'/);
+  assert.doesNotMatch(proposal, /fetch\('\/api\/enhance'/);
+  assert.doesNotMatch(narrative, /fetch\('\/api\/enhance'/);
+});
+
+test('prospect AI message history is role-normalized and size-bounded server-side', () => {
+  assert.match(server, /const safeMessages = messages\.slice\(-8\)\.map/);
+  assert.match(server, /role: m && m\.role === 'assistant' \? 'assistant' : 'user'/);
+  assert.match(server, /content: allowedText\(m && m\.content, 2000\)/);
+  assert.match(server, /messages: safeMessages/);
+});
+
+
+test('pre-v5.7 shared business cases receive contract metrics without rewriting history', () => {
+  assert.match(server, /const \{ calcROI: calcROIShared \} = require\('\.\/src\/shared\/roi-engine'\)/);
+  assert.match(server, /Backwards compatibility for shares created from pre-v5\.7 scenarios/);
+  assert.match(server, /const r = calcROIShared\(shareData\)/);
+  assert.match(server, /totalContractRoi: r\.totalContractRoi/);
+  assert.match(server, /res\.json\(\{ company: rows\[0\]\.company, title: rows\[0\]\.title, data: shareData \}\)/);
 });

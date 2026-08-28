@@ -48,6 +48,8 @@
       _v[k] = clamp(_v[k], 0, 100);
     }
     _v.implMonths = clamp(_v.implMonths, 0, 60);
+    const parsedContractMonths = parseInt(v.contractMonths, 10);
+    _v.contractMonths = Number.isFinite(parsedContractMonths) ? clamp(parsedContractMonths, 1, 60) : 36;
     const ramp = (value, fallback) => {
       if (value === undefined || value === null || value === '') return fallback;
       const n = parseFloat(value);
@@ -259,6 +261,63 @@
   let cum = -v.otc;
   cashflows.forEach(c => { cum += c.pv; c.cumPV = cum; });
 
+  /* Contract-term economics — the authoritative customer-facing view.
+     Annual subscription is attributed evenly by month so partial contract
+     years contain only their actual months of recurring investment. */
+  const contractMonths = v.contractMonths;
+  const contractYearCount = Math.ceil(contractMonths / 12);
+  const monthlyRecurring = v.invest / 12;
+  let contractCumBenefit = 0, contractCumInvestment = 0, contractPayback = null;
+  let contractNpv = 0;
+  const monthlyDiscount = Math.pow(1 + dr, 1 / 12) - 1;
+  const contractYears = [];
+  for (let year = 1; year <= contractYearCount; year++) {
+    const start = (year - 1) * 12;
+    const end = Math.min(year * 12, contractMonths);
+    const months = end - start;
+    const grossBenefit = monthlyProfile.slice(start, end).reduce((sum, month) => sum + month.benefit, 0);
+    const investment = monthlyRecurring * months + (year === 1 ? v.otc : 0);
+    const netBenefit = grossBenefit - investment;
+    contractCumBenefit += grossBenefit;
+    contractCumInvestment += investment;
+    const cumulativeNetBenefit = contractCumBenefit - contractCumInvestment;
+    contractYears.push({
+      year, months, startMonth: start + 1, endMonth: end,
+      grossBenefit, investment, netBenefit,
+      annualRoi: investment > 0 ? (netBenefit / investment) * 100 : null,
+      cumulativeBenefit: contractCumBenefit,
+      cumulativeInvestment: contractCumInvestment,
+      cumulativeNetBenefit,
+      cumulativeRoi: contractCumInvestment > 0 ? (cumulativeNetBenefit / contractCumInvestment) * 100 : null,
+      paybackStatus: ''
+    });
+  }
+  let runningBenefit = 0, runningInvestment = v.otc;
+  contractNpv = -v.otc;
+  for (let month = 1; month <= contractMonths; month++) {
+    const mBenefit = monthlyProfile[month - 1] ? monthlyProfile[month - 1].benefit : 0;
+    runningBenefit += mBenefit;
+    runningInvestment += monthlyRecurring;
+    contractNpv += (mBenefit - monthlyRecurring) / Math.pow(1 + monthlyDiscount, month);
+    if (contractPayback === null && runningBenefit >= runningInvestment) {
+      const prevBenefit = runningBenefit - mBenefit;
+      const prevInvestment = runningInvestment - monthlyRecurring;
+      const prevGap = prevInvestment - prevBenefit;
+      const monthlyGain = mBenefit - monthlyRecurring;
+      contractPayback = monthlyGain > 0 ? Math.max(0, month - 1 + prevGap / monthlyGain) : month;
+    }
+  }
+  contractYears.forEach(row => {
+    if (contractPayback === null || contractPayback > contractMonths) row.paybackStatus = 'Payback not achieved during contract term';
+    else if (contractPayback > row.endMonth) row.paybackStatus = 'Payback not yet achieved';
+    else if (contractPayback >= row.startMonth - 1) row.paybackStatus = 'Payback achieved in Month ' + contractPayback.toFixed(1);
+    else row.paybackStatus = 'Investment already recovered';
+  });
+  const totalContractBenefit = contractCumBenefit;
+  const totalContractInvestment = contractCumInvestment;
+  const totalContractNetBenefit = totalContractBenefit - totalContractInvestment;
+  const totalContractRoi = totalContractInvestment > 0 ? (totalContractNetBenefit / totalContractInvestment) * 100 : null;
+
   return {
     laborSav, shrinkSav,
     carrySav, carrySavGross, turnsSav, inventoryCarrySav, capitalFreed, otifSav, itSav,
@@ -280,7 +339,11 @@
     totalBenefit5: yearBenefits.reduce((sum, value) => sum + value, 0),
     yearBenefits,
     cashflows,
-    monthlyProfile, implMonths: impl, ramp1, ramp2, ramp3
+    monthlyProfile, implMonths: impl, ramp1, ramp2, ramp3,
+    contractMonths, contractYearCount, contractYears,
+    totalContractBenefit, totalContractInvestment, totalContractNetBenefit,
+    totalContractRoi, totalContractNpv: contractNpv,
+    contractPayback: contractPayback !== null && contractPayback <= contractMonths ? contractPayback : null
   };
 }
 

@@ -135,7 +135,7 @@ function loadFromObject(i) {
   // generic pass-through loop (that omission caused a double-division bug where
   // reloading a scenario turned 40% into 0.4%, then 0.004%, etc.).
   ['annualWriteOff','otifBaseline','otifTarget','invTurnsCurrent','invTurnsBenchmark',
-   'implMonths',
+   'implMonths','contractMonths',
    'currentAccuracy','ordersPerYr','costPerOrder','costPerError',
    'downtimeEventsYr','downtimeHrsPerEvent','downtimeCostPerHr',
    'expediteSpendYr','countDaysYr','countPeople',

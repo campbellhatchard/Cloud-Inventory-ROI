@@ -13,15 +13,15 @@
     const library = typeof THREE_WHYS_LIBRARY !== 'undefined' ? (THREE_WHYS_LIBRARY[v.industry] || THREE_WHYS_LIBRARY.default || {}) : {};
     const why = typeof threeWhys !== 'undefined' ? threeWhys : {};
     const company = v.company || 'Prospect';
-    const benefit = money(r.annualBenefit || 0);
-    const payback = r.payback == null ? 'a clearly defined payback period' : (Number(r.payback).toFixed(1) + ' months');
+    const benefit = money(r.totalContractBenefit || 0);
+    const payback = r.contractPayback == null ? 'not achieved during the proposed term' : (Number(r.contractPayback).toFixed(1) + ' months');
     const solution = label(v.solution);
     return {
       company, preparedBy: v.rep || 'Cloud Inventory', proposalDate: iso(new Date()), validThrough: addDays(30),
-      title: company + ' inventory execution proposal', solution, contractTerm: '36 months',
+      title: company + ' inventory execution proposal', solution, contractTerm: (v.contractMonths || 36) + ' months',
       situation: 'Today, inventory teams are balancing accuracy, service levels, and labor capacity across disconnected workflows. This proposal is designed to create a practical path to measurable, governed execution improvement.',
       recommendation: 'Deploy ' + solution + ' to connect inventory workflows, give frontline teams reliable mobile execution, and provide leaders a measurable operating model.',
-      outcome: 'Based on the current business case, the opportunity is estimated to deliver ' + benefit + ' in annual benefit with an expected payback of ' + payback + '.',
+      outcome: 'Over the proposed ' + (v.contractMonths || 36) + '-month term, the modeled business case generates ' + benefit + ' in total economic benefit against ' + money(r.totalContractInvestment || 0) + ' in total investment, producing ' + money(r.totalContractNetBenefit || 0) + ' in net economic benefit, a total contract ROI of ' + (r.totalContractRoi == null ? 'N/A' : Math.round(r.totalContractRoi) + '%') + ', and estimated payback of ' + payback + '.',
       whyAct: why.act || library.act || 'Manual inventory processes create avoidable cost, delay, and risk that compounds as operations scale.',
       whyCloud: why.ci || library.ci || 'Cloud Inventory connects people, systems, and inventory workflows in one governed execution layer.',
       whyNow: why.now || library.now || 'A focused evaluation now turns the value hypothesis into a validated plan with accountable outcomes.',
@@ -33,7 +33,8 @@
       ].filter(row => row.value !== '$0'),
       timeline: 'A focused implementation plan is typically structured over ' + (v.implMonths || 3) + ' months, with scope confirmation, configuration, validation, and launch readiness.',
       success: [
-        { metric: 'Annual business benefit', target: benefit },
+        { metric: 'Total contract economic benefit', target: benefit },
+        { metric: 'Total contract ROI', target: r.totalContractRoi == null ? 'N/A' : Math.round(r.totalContractRoi) + '%' },
         { metric: 'Payback period', target: payback },
         { metric: 'Inventory accuracy', target: v.currentAccuracy ? Math.min(99.9, Number(v.currentAccuracy) + 2).toFixed(1) + '% or better' : 'Baseline and improve during discovery' },
         { metric: 'Service / OTIF performance', target: v.otifTarget ? Number(v.otifTarget).toFixed(1) + '% target' : 'Confirm baseline and target together' }
@@ -79,13 +80,9 @@
     if (b) { b.disabled = true; b.textContent = 'Enhancing…'; }
     try {
       const d = getDraft();
-      const prompt = `Strengthen this Cloud Inventory proposal for ${d.company}. Return JSON only with keys situation, recommendation, outcome, whyAct, whyCloud, whyNow. Make it specific, credible, concise, and customer-facing. Do not invent metrics. Current content: ${JSON.stringify({situation:d.situation,recommendation:d.recommendation,outcome:d.outcome,whyAct:d.whyAct,whyCloud:d.whyCloud,whyNow:d.whyNow})}`;
-      const response = await apiFetch('/api/enhance', { method:'POST', body:JSON.stringify({ max_tokens:1000, messages:[{ role:'user', content:prompt }] }) });
-      if (!response || !response.ok) throw new Error('AI request failed');
-      const body = await response.json();
-      const text = (body.content || []).filter(c => c && c.type === 'text').map(c => c.text || '').join('').trim();
-      if (!text) throw new Error('Empty AI response');
-      const parsed = JSON.parse(text.replace(/^```json\s*|\s*```$/g, '').trim());
+      const response = await apiFetch('/api/enhance', { method:'POST', body:JSON.stringify({ max_tokens:900, messages:[{role:'user',content:`Strengthen this Cloud Inventory proposal for ${d.company}. Return JSON only with keys situation, recommendation, outcome, whyAct, whyCloud, whyNow. Make it specific, credible, concise, and customer-facing. Do not invent metrics. Current content: ${JSON.stringify({situation:d.situation,recommendation:d.recommendation,outcome:d.outcome,whyAct:d.whyAct,whyCloud:d.whyCloud,whyNow:d.whyNow})}`}] }) });
+      const body = await response.json(); const text = body.text || body.result || (body.content || []).filter(x=>x.type==='text').map(x=>x.text).join('') || '';
+      const parsed = typeof text === 'string' ? JSON.parse(text.replace(/^```json\s*|\s*```$/g, '')) : text;
       ['situation','recommendation','outcome','whyAct','whyCloud','whyNow'].forEach(key => { if (parsed[key]) d[key] = String(parsed[key]); });
       window.proposalDraft = d; saveDraft(); render(); if (typeof showToast === 'function') showToast('Proposal narrative enhanced. Review and edit before sharing.');
     } catch (err) { console.error(err); if (typeof showToast === 'function') showToast('AI enhancement could not be completed. Your proposal is unchanged.'); }

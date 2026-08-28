@@ -246,7 +246,17 @@ router.post('/', async (req, res) => {
           roi:           r.roi           || 0,
           npv3:          r.npv3          || 0,
           npv5:          r.npv5          || 0,
-          payback:       r.paybackFromSigning != null ? r.paybackFromSigning : null
+          payback:       r.paybackFromSigning != null ? r.paybackFromSigning : null,
+          /* v5.7+: contract-term economics are customer-facing headline metrics,
+             so they must be server-authoritative just like the legacy ROI fields. */
+          contractMonths:          r.contractMonths,
+          contractYears:           r.contractYears,
+          totalContractBenefit:    r.totalContractBenefit,
+          totalContractInvestment: r.totalContractInvestment,
+          totalContractNetBenefit: r.totalContractNetBenefit,
+          totalContractRoi:        r.totalContractRoi,
+          totalContractNpv:        r.totalContractNpv,
+          contractPayback:         r.contractPayback
         };
         /* Detect drift vs. what the client sent (>$1 or >0.5% considered drift) */
         const clientBenefit = Number(data.annualBenefit) || 0;
@@ -262,9 +272,17 @@ router.post('/', async (req, res) => {
         metrics = {
           annualBenefit: Number(data.annualBenefit) || 0,
           roi:           Number(data.roi)           || 0,
-          npv3:          Number(data.npv3)          || 0,
-          npv5:          Number(data.npv5)          || 0,
-          payback:       data.paybackFromSigning || data.payback || null
+          npv3:          Number(data.npv3)           || 0,
+          npv5:          Number(data.npv5)           || 0,
+          payback:       data.paybackFromSigning || data.payback || null,
+          contractMonths:          Number(data.contractMonths) || 36,
+          contractYears:           Array.isArray(data.contractYears) ? data.contractYears : [],
+          totalContractBenefit:    Number(data.totalContractBenefit) || 0,
+          totalContractInvestment: Number(data.totalContractInvestment) || 0,
+          totalContractNetBenefit: Number(data.totalContractNetBenefit) || 0,
+          totalContractRoi:        data.totalContractRoi == null ? null : Number(data.totalContractRoi),
+          totalContractNpv:        Number(data.totalContractNpv) || 0,
+          contractPayback:         data.contractPayback == null ? null : Number(data.contractPayback)
         };
         recomputeDiscrepancy = { recomputeError: e.message };
       }

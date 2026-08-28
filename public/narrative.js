@@ -128,10 +128,12 @@ PROSPECT CONTEXT:
 - Warehouse inventory value on hand: ${fmtFull(v.inventory)}
 - Current solution being displaced: ${compName}
 - Deal stage: ${v.dealStage || 'Discovery'}
-- Annual benefit identified: ${fmtFull(r.annualBenefit)}
-- Year 1 ROI: ${fmtPct(r.roi)}
-- 3-year NPV: ${fmtFull(r.npv3)}
-- Payback period: ${r.payback ? r.payback.toFixed(1)+' months' : 'under 12 months'}
+- Contract term: ${r.contractMonths} months
+- Total contract benefit: ${fmtFull(r.totalContractBenefit)}
+- Total contract investment: ${fmtFull(r.totalContractInvestment)}
+- Total contract ROI: ${fmtPct(r.totalContractRoi)}
+- Contract NPV: ${fmtFull(r.totalContractNpv)}
+- Payback period: ${r.contractPayback ? r.contractPayback.toFixed(1)+' months' : 'not achieved during contract term'}
 
 PRIMARY AUDIENCE: ${audienceCfg.label} — ${audienceCfg.description}
 TONE INSTRUCTION: ${audienceCfg.aiInstruction}
@@ -158,9 +160,8 @@ Return ONLY valid JSON in this exact format with no other text:
     // Proxy through server.js — API key stays on the server, never in the browser.
     // Model is not sent — server.js selects it via the ANTHROPIC_MODEL env var
     // (defaults to claude-sonnet-4-6), so this client code never goes stale.
-    const resp = await fetch('/api/enhance', {
+    const resp = await apiFetch('/api/enhance', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         max_tokens: 1000,
         messages: [{ role: 'user', content: prompt }]
@@ -257,8 +258,8 @@ function buildExecHeadlines(v, r) {
       audience: 'CFO',
       icon: '💰',
       color: '#0089A6',
-      headline: `${fmtFull(r.npv5)} in net present value over 5 years`,
-      detail: `A total year-1 investment of ${fmtFull(r.totalInvestY1)} generates ${fmtFull(r.annualBenefit)} in annual recurring benefit — a ${fmtPct(r.roi)} first-year return with payback ${payStr}. The 5-year NPV of ${fmtFull(r.npv5)} at a ${fmtPct(v.discRate*100)} discount rate delivers strong risk-adjusted returns that meet or exceed most capital allocation hurdle rates.`
+      headline: `${fmtFull(r.totalContractNetBenefit)} in net economic benefit over ${r.contractMonths} months`,
+      detail: `The modeled ${r.contractMonths}-month contract generates ${fmtFull(r.totalContractBenefit)} in economic benefit against ${fmtFull(r.totalContractInvestment)} in investment — a ${fmtPct(r.totalContractRoi)} total contract return with payback ${r.contractPayback?r.contractPayback.toFixed(1)+' months':'not achieved during the term'}. Contract NPV is ${fmtFull(r.totalContractNpv)} at a ${fmtPct(v.discRate*100)} discount rate.`
     },
     {
       key: 'coo',

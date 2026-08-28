@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   server.js  —  Cloud Inventory ROI Builder  v5.6.9
+   server.js  —  Cloud Inventory ROI Builder  v5.7.2
    Database-backed multi-user edition — production hardened
 
    Security layers applied (Phase 10):
@@ -19,6 +19,7 @@ const helmet     = require('helmet');
 const rateLimit  = require('express-rate-limit');
 /* This middleware is used by early admin routes as well as later APIs. */
 const { requireAuth } = require('./src/middleware/auth');
+const { calcROI: calcROIShared } = require('./src/shared/roi-engine');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -1194,6 +1195,7 @@ app.post('/api/export/battlecard-docx', requireAuth, async (req, res) => {
     res.status(500).json({ error: 'Word export failed: ' + err.message });
   }
 });
+
 /* Customer-ready executive proposal.  The browser sends only the fields the
    rep has reviewed in the proposal workspace; this creates a real editable
    Word file instead of converting a PDF or HTML printout. */
@@ -1683,7 +1685,27 @@ app.get('/api/business-case-shares/:token', async (req, res) => {
                last_viewed = NOW()
            WHERE id = $1`, [rows[0].id]).catch(() => {});
     res.set('Cache-Control', 'no-store');
-    res.json({ company: rows[0].company, title: rows[0].title, data: rows[0].data });
+    /* Backwards compatibility for shares created from pre-v5.7 scenarios:
+       derive the new contract-term headline metrics from the stored inputs at
+       read time without mutating the historical scenario record. */
+    let shareData = rows[0].data || {};
+    try {
+      const r = calcROIShared(shareData);
+      shareData = {
+        ...shareData,
+        contractMonths: r.contractMonths,
+        contractYears: r.contractYears,
+        totalContractBenefit: r.totalContractBenefit,
+        totalContractInvestment: r.totalContractInvestment,
+        totalContractNetBenefit: r.totalContractNetBenefit,
+        totalContractRoi: r.totalContractRoi,
+        totalContractNpv: r.totalContractNpv,
+        contractPayback: r.contractPayback
+      };
+    } catch (err) {
+      console.warn('Business-case contract recompute failed:', err.message);
+    }
+    res.json({ company: rows[0].company, title: rows[0].title, data: shareData });
   } catch (err) { res.status(500).json({ error: 'Failed to load business case.' }); }
 });
 
@@ -1826,7 +1848,7 @@ app.post('/api/scenario-shares/:id/revoke', requireAuth, async (req, res) => {
    server-side to ensure it cannot be overridden by the client. */
 app.post('/api/prospect-assist', aiLimiter, async (req, res) => {
   try {
-    const { token, messages } = req.body || {};
+    const { token, messages, fieldContext } = req.body || {};
     if (!token || !messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: 'token and messages required.' });
     }
@@ -1834,22 +1856,48 @@ app.post('/api/prospect-assist', aiLimiter, async (req, res) => {
     if (!await isValidDiscoveryToken(token)) {
       return res.status(403).json({ error: 'Invalid or expired session.' });
     }
+    /* Prospect-safe architecture boundary: construct a new object from an
+       explicit allow-list. Unknown/internal keys are never forwarded. */
+    const allowedText = (v, max = 500) => typeof v === 'string' ? v.slice(0, max) : '';
+    const safeField = fieldContext && typeof fieldContext === 'object' ? {
+      audience: 'Prospect',
+      screen: allowedText(fieldContext.screen, 80),
+      section: allowedText(fieldContext.section, 120),
+      field: allowedText(fieldContext.field, 100),
+      fieldLabel: allowedText(fieldContext.fieldLabel, 200),
+      question: allowedText(fieldContext.question, 600),
+      description: allowedText(fieldContext.description, 800),
+      inputType: allowedText(fieldContext.inputType, 40),
+      units: allowedText(fieldContext.units, 80),
+      existingValue: allowedText(fieldContext.existingValue, 200),
+      relevantPriorInputs: Array.isArray(fieldContext.relevantPriorInputs)
+        ? fieldContext.relevantPriorInputs.slice(0, 5).map(x => ({
+            question: allowedText(x && x.question, 300),
+            answer: allowedText(x && x.answer, 200)
+          })).filter(x => x.question && x.answer)
+        : [],
+      allowedContext: 'Explain the active questionnaire field using only this prospect-safe object.',
+      contextClassification: 'Prospect-Safe'
+    } : null;
     /* Hard-coded system prompt — client cannot override it. */
     const system = [
-      'You are a helpful assistant on a business operations questionnaire page.',
-      'A prospect is completing questions about their inventory and operations.',
-      'ONLY answer questions about the questionnaire: what terms mean, what a good',
-      'answer looks like, or where to find a number. Do NOT discuss Cloud Inventory',
-      'products, pricing, ROI calculations, or the sales process. Do NOT benchmark',
-      'or advise on what numbers "should" be. If asked anything outside this scope,',
-      'say politely that you can only help with the questionnaire and suggest they',
-      'contact their Cloud Inventory representative. Be concise and friendly.'
+      'You are concise, neutral, customer-friendly field Help for a business operations questionnaire.',
+      'Answer in the context of the ACTIVE FIELD CONTEXT below. Explain what the field means, why the information is requested, what to include or exclude, the relevant unit and period, and where the prospect might find it.',
+      'Never invent an answer, benchmark, persuade, sell, calculate ROI, discuss products, or reveal sales methodology. Clearly distinguish known facts, supported estimates, assumptions, and unknowns. If unknown, suggest a best supported estimate, an internal source or colleague, or leaving it unknown when allowed.',
+      'Use relevant prior inputs only when they materially clarify this field. Preserve the active-field meaning for follow-up questions.',
+      'You have no access to internal strategy, coaching, risk, champion, economic-buyer, stakeholder classification, competitive, forecast, qualification, closing, discount, notes, or comments. If asked outside questionnaire Help, politely redirect to the Cloud Inventory contact.',
+      'ACTIVE FIELD CONTEXT: ' + JSON.stringify(safeField || { audience:'Prospect', contextClassification:'Prospect-Safe', question:'No active field was supplied.' })
     ].join(' ');
+    const safeMessages = messages.slice(-8).map(m => ({
+      role: m && m.role === 'assistant' ? 'assistant' : 'user',
+      content: allowedText(m && m.content, 2000)
+    })).filter(m => m.content);
+    if (!safeMessages.length) return res.status(400).json({ error: 'messages required.' });
     const payload = {
       model: ANTHROPIC_MODEL,
       max_tokens: 500,
       system,
-      messages: messages.slice(-8)
+      messages: safeMessages
     };
     const aiResp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',

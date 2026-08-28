@@ -35,6 +35,7 @@
          Guard against re-entrancy so multiple in-flight 401s don't stack. */
       if (!window.__ciSessionExpiring) {
         window.__ciSessionExpiring = true;
+        if (window.CIAIState) window.CIAIState.clearAll();
         sessionStorage.removeItem('ci_token');
         sessionStorage.removeItem('ci_user');
         /* Remember the current view so login can return the rep to it. */
@@ -121,6 +122,7 @@
     try {
       await apiFetch('/api/auth/logout', { method: 'POST' });
     } catch(e) {}
+    if (window.CIAIState) window.CIAIState.clearAll();
     sessionStorage.removeItem('ci_token');
     sessionStorage.removeItem('ci_user');
     window.location.href = '/login.html';

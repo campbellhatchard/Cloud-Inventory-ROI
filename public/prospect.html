@@ -1579,10 +1579,12 @@ document.addEventListener('DOMContentLoaded', init);
 .asst-chip-sm:hover{border-color:var(--cyan);color:var(--cyan);background:var(--white);}
 
 /* Prospect assistant: bottom-left (back-to-top is bottom-right) */
+.asst-context{display:flex;flex-direction:column;gap:3px;padding:9px 12px;border-bottom:1px solid #E7EDF2;background:#fff;font-size:11px;color:#6B7A8D}.asst-context strong{color:#1E2931}.ai-stale{margin:8px 10px;padding:9px 10px;border:1px solid #F5C66A;border-radius:8px;background:#FFF8E6;color:#8A4B08;font-size:12px;line-height:1.4}
 .passt-fab{bottom:22px;left:22px;}
 .passt-panel{bottom:22px;left:22px;right:auto;transform-origin:bottom left;}
 @media(max-width:600px){.passt-panel{left:0;right:0;border-radius:0;transform-origin:bottom center;}}
 </style>
+<script src="ai-session.js"></script>
 <script src="prospect-assistant.js"></script>
 </body>
 </html>

@@ -6,8 +6,8 @@
    scenario name / company — so "what does this mean?" resolves without
    the rep having to name the field.
 
-   Session guarantee: history is scoped to THIS page load only.
-   No localStorage, no sessionStorage — nothing carries between sessions.
+   State is isolated by AI experience and retained for the authenticated
+   browser session. Navigation never regenerates or clears prior responses.
 
    Security: calls go through /api/enhance (server-side proxy). API key
    never reaches the browser. Auth-gated + rate-limited on the server.
@@ -121,8 +121,11 @@
     industry:'Industry', competitor:'Primary competitor'
   };
 
-  /* ── State: page-load scoped only. Nothing persists. ─────────── */
-  var history  = [];   // cleared on every page load (module-level var)
+  /* ── Independent session state for Assistant and field Help. ─── */
+  var assistantState = window.CIAIState ? window.CIAIState.load('assistant') : {history:[]};
+  var helpState = window.CIAIState ? window.CIAIState.load('internal_help') : {history:[],fields:{}};
+  var mode = 'assistant';
+  var history  = assistantState.history || [];
   var lastFocusedField = null;   // most recently focused input id
   var busy = false;
 
@@ -166,7 +169,15 @@
   /* ── Field focus tracking ─────────────────────────────────────── */
   function trackFocus(e) {
     var t = e.target;
-    if (t && t.id && FIELD_LABELS[t.id]) lastFocusedField = t.id;
+    if (t && t.id && (FIELD_LABELS[t.id] || t.closest('.field'))) {
+      if (mode === 'internal_help') saveCurrent();
+      lastFocusedField = t.id;
+      helpState.activeField = t.id;
+      helpState.fields = helpState.fields || {};
+      helpState.fields[t.id] = helpState.fields[t.id] || { history:[], lastResponse:'', stale:false };
+      if (mode === 'internal_help') { history = helpState.fields[t.id].history || []; renderConversation(); }
+      if (window.CIAIState) window.CIAIState.save('internal_help', helpState);
+    }
   }
   document.addEventListener('focusin', trackFocus, true);
 
@@ -224,9 +235,11 @@
     panel.setAttribute('aria-label', 'Assistant');
     panel.innerHTML =
       '<div class="asst-head">' +
-        '<div class="asst-title"><span class="asst-dot"></span>Assistant</div>' +
+        '<div class="asst-title"><span class="asst-dot"></span><span id="asstTitle">AI Assistant</span></div>' +
         '<button class="asst-close" aria-label="Close">&times;</button>' +
       '</div>' +
+      '<div class="ai-mode-tabs"><button id="asstMode" class="active">Assistant</button><button id="helpMode">Field Help</button><button id="asstRefresh">Refresh</button><button id="asstClear">Clear</button></div>' +
+      '<div id="asstContext" class="asst-context"></div>' +
       '<div class="asst-body" id="asstBody"></div>' +
       '<div class="asst-persist" id="asstPersist"></div>' +
       '<div class="asst-input">' +
@@ -239,7 +252,11 @@
     document.body.appendChild(panel);
 
     panel.querySelector('.asst-close').onclick = closePanel;
-    panel.querySelector('#asstSend').onclick = send;
+    panel.querySelector('#asstMode').onclick = function(){ switchMode('assistant'); };
+    panel.querySelector('#helpMode').onclick = function(){ switchMode('internal_help'); };
+    panel.querySelector('#asstRefresh').onclick = function(){ send(true, 'Refresh the prior response using the latest application information.'); };
+    panel.querySelector('#asstClear').onclick = clearCurrent;
+    panel.querySelector('#asstSend').onclick = function(){ send(false); };
     var ta = panel.querySelector('#asstTa');
     ta.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
@@ -248,9 +265,18 @@
       ta.style.height = 'auto';
       ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
     });
-    renderWelcome();
+    renderConversation();
     renderPersistentChips();
   }
+
+  function helpFieldState(){var id=lastFocusedField||helpState.activeField||'__none__';helpState.fields=helpState.fields||{};helpState.fields[id]=helpState.fields[id]||{history:[],lastResponse:'',stale:false};return helpState.fields[id];}
+  function stateForMode(){ return mode === 'internal_help' ? helpFieldState() : assistantState; }
+  function saveCurrent(){ var s=stateForMode(); s.history=history; s.lastResponse=history.filter(function(x){return x.role==='assistant';}).slice(-1)[0]?.content||''; if(window.CIAIState)window.CIAIState.save(mode,mode==='internal_help'?helpState:s); }
+  function switchMode(next){ saveCurrent(); mode=next; history=(stateForMode().history||[]); document.getElementById('asstMode').classList.toggle('active',mode==='assistant');document.getElementById('helpMode').classList.toggle('active',mode==='internal_help');document.getElementById('asstTitle').textContent=mode==='internal_help'?'Internal Field Help':'AI Assistant';renderConversation();renderPersistentChips(); }
+  function clearCurrent(){ history=[]; var s=stateForMode();s.history=[];s.lastResponse='';s.stale=false;saveCurrent();renderConversation(); }
+  function fieldContext(){var id=lastFocusedField||helpState.activeField||'',field=id&&document.getElementById(id),wrap=field&&field.closest('.field'),label=wrap&&wrap.querySelector('label'),pane=document.querySelector('.pane.active'),section=field&&field.closest('.card,.accordion,.sf-section'),type=field?(field.type||field.tagName):'',units='';if(/revenue|cost|value|writeoff|invest|spend/i.test(id))units='Currency';else if(/pct|rate|otif|accuracy|ramp|discount/i.test(id))units='Percentage';return {audience:'Internal User',screen:pane?.id||'',section:section?.querySelector('.card-title,.acc-title,h2,h3')?.textContent?.trim()||'',field:id,fieldLabel:(label?.textContent||FIELD_LABELS[id]||id).trim(),question:(label?.textContent||FIELD_LABELS[id]||'').trim(),description:field?.getAttribute('title')||wrap?.querySelector('.field-hint')?.textContent?.trim()||'',inputType:type,units,existingValue:field?.value||'',relevantPriorInputs:[],allowedContext:'Application usage and field explanation',contextClassification:'Internal'};}
+  function currentContextObject(){return mode==='internal_help'?fieldContext():{screen:document.querySelector('.pane.active')?.id||'',field:lastFocusedField||'',company:(document.getElementById('companyName')||{}).value||'',scenario:(document.getElementById('scenarioName')||{}).value||''};}
+  function renderConversation(){var body=document.getElementById('asstBody'),ctx=document.getElementById('asstContext'),s=stateForMode();if(!body)return;if(ctx)ctx.innerHTML=mode==='internal_help'?(fieldContext().field?'<strong>'+esc(fieldContext().fieldLabel)+'</strong><span>'+esc(fieldContext().screen.replace('tab-',''))+'</span>':'<span>Focus a field for exact guidance.</span>'):'';if(!history.length){body.innerHTML='';renderWelcome();return;}body.innerHTML=(s.stale?'<div class="ai-stale">Information used for this AI response has changed. Refresh the analysis to incorporate the latest information.</div>':'')+history.map(function(m){return '<div class="asst-msg '+(m.role==='user'?'asst-user':'asst-bot')+'"><div class="asst-bubble">'+(m.role==='assistant'?mdToHtml(m.content):esc(m.content))+'</div></div>';}).join('');body.scrollTop=body.scrollHeight;}
 
   function renderWelcome() {
     var body = document.getElementById('asstBody');
@@ -260,7 +286,7 @@
     }).join('');
     body.innerHTML =
       '<div class="asst-msg asst-bot"><div class="asst-bubble">' +
-        'Hi — I can help with fields, calculations, and how to use the app. ' +
+        (mode==='internal_help'?'Focus a field and I’ll explain what it means, why it matters, and what belongs there. ':'Hi — I can help with calculations and how to use the app. ') +
         'Click a field first and then ask what it means, or try:' +
       '</div></div>' +
       '<div class="asst-chips">' + chips + '</div>';
@@ -276,7 +302,8 @@
   function renderPersistentChips() {
     var bar = document.getElementById('asstPersist');
     if (!bar) return;
-    bar.innerHTML = PERSISTENT_CHIPS.map(function (q) {
+    var chips=mode==='internal_help'?['What does this field mean, why does it matter, and what should I enter?','What source should I use for this field?']:PERSISTENT_CHIPS;
+    bar.innerHTML = chips.map(function (q) {
       return '<button class="asst-chip asst-chip-sm">' + esc(q) + '</button>';
     }).join('');
     Array.prototype.forEach.call(bar.querySelectorAll('.asst-chip'), function (c) {
@@ -291,6 +318,7 @@
   function openPanel() {
     var p = document.getElementById('asstPanel');
     if (p) {
+      var s=stateForMode(),fp=window.CIAIState&&window.CIAIState.fingerprint(currentContextObject());if(s.lastResponse&&s.contextFingerprint&&s.contextFingerprint!==fp)s.stale=true;renderConversation();
       p.classList.add('open');
       setTimeout(function () {
         var ta = document.getElementById('asstTa');
@@ -313,11 +341,12 @@
     return wrap;
   }
 
-  async function send() {
+  async function send(refresh, forcedQuestion) {
     if (busy) return;
     var ta = document.getElementById('asstTa');
-    var q = (ta && ta.value || '').trim();
+    var q = forcedQuestion || (ta && ta.value || '').trim();
     if (!q) return;
+    if(refresh){history=[];var rs=stateForMode();rs.history=[];rs.stale=false;}
     if (!history.length) {
       var b = document.getElementById('asstBody');
       if (b) b.innerHTML = '';
@@ -325,6 +354,7 @@
     ta.value = ''; ta.style.height = 'auto';
     addMsg('user', esc(q));
     history.push({ role: 'user', content: q });
+    saveCurrent();
 
     busy = true;
     var sendBtn = document.getElementById('asstSend');
@@ -334,24 +364,26 @@
     try {
       /* Build the system prompt fresh each time so it always has the
          current context (tab, focused field, company, guided mode). */
-      var systemPrompt = buildSystemPrompt() + getContext();
+      var contextObject=currentContextObject(), s=stateForMode(), fp=window.CIAIState&&window.CIAIState.fingerprint(contextObject);
+      if(s.lastResponse&&s.contextFingerprint&&s.contextFingerprint!==fp)s.stale=true;
+      var systemPrompt = buildSystemPrompt() + getContext() + (mode==='internal_help'?'\n\nFIELD CONTEXT OBJECT:\n'+JSON.stringify(contextObject)+'\nAnswer what this exact field means, why it matters, and what the user should enter. Prefer this targeted context over generic Help.':'');
 
-      var resp = await fetch('/api/enhance', {
+      var resp = await apiFetch('/api/enhance', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           max_tokens: 700,
           system: systemPrompt,
           messages: history.slice(-10)
         })
       });
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      if (!resp || !resp.ok) throw new Error('AI request failed');
       var data = await resp.json();
       var text = (data.content && data.content[0] && data.content[0].text) || '';
       if (!text) throw new Error('empty');
       if (thinking) thinking.remove();
       addMsg('bot', mdToHtml(text));
       history.push({ role: 'assistant', content: text });
+      s.context=contextObject;s.contextFingerprint=fp;s.stale=false;saveCurrent();
     } catch (e) {
       if (thinking) thinking.remove();
       addMsg('bot', '<span class="asst-err">Couldn\'t reach the assistant. Please try again.</span>');

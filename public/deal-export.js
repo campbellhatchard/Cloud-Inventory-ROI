@@ -627,13 +627,12 @@ async function roiMethodologyPDF() {
 
     <h2>4. Return calculation</h2>
     <table class="kv"><tbody>
-      <tr><td>Total annual benefit (steady-state)</td><td>${M(r.annualBenefit)}</td></tr>
-      <tr><td>Year-1 benefit (ramp-adjusted)</td><td>${M(r.year1Benefit)}</td></tr>
-      <tr><td>Total investment (Year 1)</td><td>${M(r.totalInvestY1 || (v.invest+v.otc))}</td></tr>
-      <tr><td><strong>Year-1 ROI</strong></td><td><strong>${m.PC(r.roi/100)}</strong></td></tr>
-      <tr><td>Payback period</td><td>${r.payback? r.payback.toFixed(1)+' months':'—'}</td></tr>
-      <tr><td>NPV (3-year @ ${m.PC(v.discRate)})</td><td>${M(r.npv3)}</td></tr>
-      <tr><td>NPV (5-year @ ${m.PC(v.discRate)})</td><td>${M(r.npv5)}</td></tr>
+      <tr><td>Total ${r.contractMonths}-month benefit</td><td>${M(r.totalContractBenefit)}</td></tr>
+      <tr><td>Total contract investment</td><td>${M(r.totalContractInvestment)}</td></tr>
+      <tr><td>Total contract net benefit</td><td>${M(r.totalContractNetBenefit)}</td></tr>
+      <tr><td><strong>Total contract ROI</strong></td><td><strong>${m.PC(r.totalContractRoi/100)}</strong></td></tr>
+      <tr><td>Payback period</td><td>${r.contractPayback? r.contractPayback.toFixed(1)+' months':'Not achieved during contract term'}</td></tr>
+      <tr><td>Contract NPV @ ${m.PC(v.discRate)}</td><td>${M(r.totalContractNpv)}</td></tr>
     </tbody></table>
 
     <p class="disc">Figures are based on data provided by ${esc(company)} and modeled conservatively with ramp-up and overlap adjustments. This analysis is an estimate for evaluation purposes and is not a guarantee of results.</p>`;
@@ -730,13 +729,12 @@ async function roiMethodologyPPT() {
     /* Return + assumptions slide */
     const s2 = pptx.addSlide(); pptChrome(s2,3); pptTitle(s2,'Return & Assumptions');
     const kv = [
-      ['Total annual benefit', M(r.annualBenefit)],
-      ['Year-1 benefit (ramp-adjusted)', M(r.year1Benefit)],
-      ['Total investment (Year 1)', M(r.totalInvestY1 || (v.invest+v.otc))],
-      ['Year-1 ROI', m.PC(r.roi/100)],
-      ['Payback', r.payback? r.payback.toFixed(1)+' months':'—'],
-      ['NPV (3-year)', M(r.npv3)],
-      ['NPV (5-year)', M(r.npv5)],
+      [`Total ${r.contractMonths}-month benefit`, M(r.totalContractBenefit)],
+      ['Total contract investment', M(r.totalContractInvestment)],
+      ['Total contract net benefit', M(r.totalContractNetBenefit)],
+      ['Total contract ROI', m.PC(r.totalContractRoi/100)],
+      ['Payback', r.contractPayback? r.contractPayback.toFixed(1)+' months':'Not in term'],
+      ['Contract NPV', M(r.totalContractNpv)],
     ];
     kv.forEach((row,i)=>{
       const y=1.6+i*0.42;
@@ -899,12 +897,12 @@ async function buildChampionPack() {
     pptTitle(s2, 'The financial case');
     const consR = calcROI({...v, mLabor:v.mLabor*0.7, mShrinkage:v.mShrinkage*0.7, mCarrying:v.mCarrying*0.7, mOtif:v.mOtif*0.7, mIt:v.mIt*0.7});
     const metrics = [
-      ['Conservative benefit', fmtMoney(consR.annualBenefit) + '/yr'],
-      ['Base case benefit',    fmtMoney(r.annualBenefit) + '/yr'],
-      ['Year 1 ROI',          fmtPct(r.roi)],
-      ['Payback from signing', r.payback ? r.payback.toFixed(1) + ' months' : '—'],
-      ['3-yr NPV',            fmtMoney(r.npv3)],
-      ['Annual investment',   fmtMoney(v.invest) + '/yr'],
+      ['Conservative contract benefit', fmtMoney(consR.totalContractBenefit)],
+      ['Base contract benefit', fmtMoney(r.totalContractBenefit)],
+      [`Total ${r.contractMonths}-month ROI`, fmtPct(r.totalContractRoi)],
+      ['Payback from signing', r.contractPayback ? r.contractPayback.toFixed(1) + ' months' : 'Not in term'],
+      ['Contract NPV', fmtMoney(r.totalContractNpv)],
+      ['Total contract investment', fmtMoney(r.totalContractInvestment)],
     ];
     s2.addTable(
       [
@@ -986,14 +984,14 @@ async function exportOnePager() {
       cfo: {
         label:'CFO', icon:'💰',
         headline: 'Financial case for Cloud Inventory',
-        focus: ['Payback period', 'Year 1 ROI', '3-yr NPV', 'Capital freed by turns improvement'],
+        focus: ['Total contract ROI', 'Payback period', 'Contract NPV', 'Capital freed by turns improvement'],
         color: '0089A6',
         emphasis: [
           ['Conservative annual benefit', fmtMoney(r.annualBenefit * 0.7)],
           ['Base case annual benefit',    fmtMoney(r.annualBenefit)],
-          ['Year 1 ROI',                 fmtPct(r.roi)],
-          ['Payback from signing',        r.payback ? r.payback.toFixed(1) + ' months' : '—'],
-          ['3-year NPV',                 fmtMoney(r.npv3)],
+          [`Total ${r.contractMonths}-month ROI`, fmtPct(r.totalContractRoi)],
+          ['Payback from signing', r.contractPayback ? r.contractPayback.toFixed(1) + ' months' : 'Not in term'],
+          ['Contract NPV', fmtMoney(r.totalContractNpv)],
           ['Annual subscription',        fmtMoney(v.invest) + '/yr'],
           ['One-time implementation',    fmtMoney(v.otc)],
         ],
@@ -1021,11 +1019,11 @@ async function exportOnePager() {
         color: '45688A',
         emphasis: [
           ['Annual recurring value',     fmtMoney(r.annualBenefit)],
-          ['5-year NPV',                 fmtMoney(r.npv5)],
+          ['Contract NPV',               fmtMoney(r.totalContractNpv)],
           ['Speed to go-live',           (v.implMonths || 3) + ' months'],
-          ['Payback from signing',        r.payback ? r.payback.toFixed(1) + ' months' : '—'],
+          ['Payback from signing',        r.contractPayback ? r.contractPayback.toFixed(1) + ' months' : 'Not in term'],
           ['Working capital freed',       fmtMoney(r.capitalFreed || 0)],
-          ['Year 1 ROI',                 fmtPct(r.roi)],
+          [`Total ${r.contractMonths}-month ROI`, fmtPct(r.totalContractRoi)],
         ],
         note: 'Cloud Inventory is deployed 5–10× faster than SAP or Oracle WMS alternatives, with a fraction of the implementation risk.'
       },
@@ -1050,11 +1048,11 @@ async function exportOnePager() {
         focus: ['ROI', 'Payback', 'Benefit breakdown', 'Next steps'],
         color: '1E2931',
         emphasis: [
-          ['Annual benefit',             fmtMoney(r.annualBenefit)],
-          ['Year 1 ROI',                 fmtPct(r.roi)],
-          ['Payback from signing',        r.payback ? r.payback.toFixed(1) + ' months' : '—'],
-          ['3-year NPV',                 fmtMoney(r.npv3)],
-          ['Annual investment',          fmtMoney(v.invest) + '/yr'],
+          ['Total contract benefit',     fmtMoney(r.totalContractBenefit)],
+          [`Total ${r.contractMonths}-month ROI`, fmtPct(r.totalContractRoi)],
+          ['Payback from signing',        r.contractPayback ? r.contractPayback.toFixed(1) + ' months' : 'Not in term'],
+          ['Contract NPV',               fmtMoney(r.totalContractNpv)],
+          ['Total contract investment',  fmtMoney(r.totalContractInvestment)],
           ['Go-live timeline',           (v.implMonths || 3) + ' months'],
         ],
         note: 'Analysis uses ' + company + ' operational data where available, supplemented by ' + ind + ' benchmarks.'

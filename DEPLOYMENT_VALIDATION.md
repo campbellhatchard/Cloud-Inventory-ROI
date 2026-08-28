@@ -1,4 +1,4 @@
-# Cloud Inventory ROI v5.6.15 Deployment Validation
+# Cloud Inventory ROI v5.7.2 Deployment Validation
 
 ## Render deployment configuration
 
@@ -30,17 +30,19 @@ Add these in the Render dashboard when the corresponding feature is needed:
 
 `APP_URL` is optional on Render because the application uses Render's external URL automatically.
 
-
 ## Validation corrections applied
 
-This validated v5.6.15 release candidate preserves the locked v5.6.13 integrity controls while adding the v5.6.14 compact sticky Deal Context Bar and the v5.6.15 contract-term Deal Coach economics and Christie consultant voice. It keeps `requireAuth` initialized once before every protected route; preserves explicit zero ramp assumptions and `fieldInvSav`; keeps turns-based value labelled as annual carrying-cost savings rather than balance-sheet working capital; keeps Medical Devices / Life Sciences customer-input-only; retains CI startup/UI regression coverage; preserves migrations 001–023 unchanged and quote-safe Joint Project Plan rendering; preserves authenticated Proposal AI/Word calls, persisted Proposal readiness, and refreshed buyer context; and evaluates Deal Coach commercial health using the proposal contract term while keeping Year 1 as context rather than the decision basis.
+This validated v5.7.2 release candidate is rebuilt from the locked live v5.6.15 production tree. It preserves the established startup, financial-semantic, export, customer-safety, Proposal, Joint Project Plan, and Deal Coach controls while adding the intended v5.6.16 and v5.7.0–v5.7.2 capabilities: authoritative customer/scenario refresh, configurable contract-term economics, evidence-driven BuyCycle coaching, and independent persistent AI sessions for Christie, the internal Assistant, Internal Field Help, and Prospect-Link Question Help.
+
+The validated candidate keeps `requireAuth` initialized once before every protected route; preserves explicit zero ramp assumptions and `fieldInvSav`; keeps turns-based value labelled as annual carrying-cost savings rather than balance-sheet working capital; keeps Medical Devices / Life Sciences customer-input-only; retains CI startup/UI regression coverage; preserves migrations 001–023 unchanged; preserves quote-safe Joint Project Plan rendering and authenticated Proposal AI/Word calls; refreshes persisted stakeholder/JPP context before Deal Coach scoring; clears authenticated AI session state on logout/expiry; routes the internal Assistant through authenticated `apiFetch`; and rebuilds prospect AI field context server-side through an explicit prospect-safe allow-list. The obsolete nested `cloud-inventory-roi-v4_0_0` package directory is excluded from the validated release.
 
 ## Release validation
 
-Before uploading or syncing the Blueprint:
+Before deployment:
 
-1. Run `npm ci` with Node.js 22.
-2. Run `npm run migrate` against a disposable PostgreSQL 16 database.
-3. Run `npm test` and the additional version, migration-compatibility, and regression tests used by CI.
-4. Confirm `package.json`, `package-lock.json`, the UI version, and version history all report `5.6.15`.
-5. After deployment, confirm `/health` reports version `5.6.15` and `database: connected`.
+1. Run `npm ci --omit=dev --no-audit --no-fund` with Node.js 22.
+2. Confirm migrations remain exactly 001–023 and run `npm run migrate` against a disposable PostgreSQL 16 database when available.
+3. Run ROI engine, version consistency, migration compatibility, Phase-1, UI/startup, and route/integration tests.
+4. Confirm `package.json`, `package-lock.json`, the UI version, and version history all report `5.7.2`.
+5. Confirm the repository delta matches only the validated release files and contains no nested project, `.git`, `node_modules`, or `.env` artifacts.
+6. After deployment, confirm `/health` reports version `5.7.2` and `database: connected`.

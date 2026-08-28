@@ -28,7 +28,7 @@ const BENCHMARK_SOURCES = {
 /* Industry keys whose entire benchmark set is provisional (not yet validated
    against real deployment data). These trigger a visible rep-facing banner. */
 const PLACEHOLDER_INDUSTRIES = {
-  retail: 'Medical Devices / Life Sciences has no bundled benchmark values in v5.6.15; customer-specific assumptions are required.'
+  retail: 'Medical Devices / Life Sciences has no bundled benchmark values in v5.7.2; customer-specific assumptions are required.'
 };
 
 function isPlaceholderIndustry(key) {

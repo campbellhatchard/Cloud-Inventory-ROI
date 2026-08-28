@@ -7,6 +7,48 @@
 
 const VERSION_HISTORY = [
   {
+    version: '5.7.2', date: '2026-08-28', tag: 'feature',
+    title: 'Persistent, field-aware AI experiences',
+    changes: [
+      'Added isolated session state for Christie, AI Assistant, Internal Field Help, and Prospect-Link Question Help so navigation no longer erases responses or follow-up context.',
+      'Added explicit Continue, Refresh, Regenerate, and Clear behaviour; returning to a screen restores prior content without making an AI request.',
+      'Added stale-information notices that preserve the prior response while telling the user when underlying context has changed.',
+      'Added per-field Help histories and structured Field Context Objects with the exact screen, section, question, input type, units, current value, and only relevant prior inputs.',
+      'Enforced a server-side prospect-safe allow-list so internal strategy, coaching, stakeholder classifications, risks, forecasts, and notes cannot enter Prospect-Link AI context.',
+      'AI session state is cleared on logout and authenticated-session expiry to prevent content crossing user sessions.'
+    ]
+  },
+  {
+    version: '5.7.1', date: '2026-08-28', tag: 'feature',
+    title: 'Evidence-driven BuyCycle coaching',
+    changes: [
+      'Added a dedicated advisory BuyCycle Stage 0–7 position and buyer-evidence workspace inside Christie, separate from CRM deal stage.',
+      'Christie now challenges the stated position against buyer commitments and stage exit evidence, and distinguishes seller activity from genuine buyer progress.',
+      'Added structured Three Whys, value evidence, stakeholder, risk, coaching, and next-commitment guidance based on the supplied sales methodology.',
+      'Added a customer-facing safety mode that removes internal stage, qualification, risk, champion, and competitive coaching from prospect communications.'
+    ]
+  },
+  {
+    version: '5.7.0', date: '2026-08-28', tag: 'feature',
+    title: 'Contract-term ROI and complete economic story',
+    changes: [
+      'Added an editable contract term in months, defaulting to 36, with deterministic support for 1–60 months and prorated partial contract years.',
+      'Added simultaneous annual, cumulative, and total-contract economics, including explicit ROI labels and payback status for every displayed contract year.',
+      'Made Total Contract ROI the headline metric across the live KPI bar, calculator, executive view, proposal, customer PDF, PowerPoint, and shared business case.',
+      'Added contract benefit, investment, net benefit, NPV, ROI, and payback outputs using the configured implementation period and monthly benefit ramp.',
+      'Added regression coverage for 36-month and 18-month contracts, including partial-year benefit and investment calculations.'
+    ]
+  },
+  {
+    version: '5.6.16', date: '2026-08-27', tag: 'fix',
+    title: 'Fresh customer and scenario context',
+    changes: [
+      'Customer switching now refreshes customer and scenario lists before selection, and every selected scenario reloads its authoritative server data.',
+      'Moved scenario switching and previous-version access into the persistent Customer Workspace bar so they are available across the deal workflow.',
+      'Repaired the calculator Versions control so it correctly resolves the active scenario and opens server-fetched version history.'
+    ]
+  },
+  {
     version: '5.6.15', date: '2026-08-27', tag: 'improvement',
     title: 'Contract-term Deal Coach health assessment',
     changes: [

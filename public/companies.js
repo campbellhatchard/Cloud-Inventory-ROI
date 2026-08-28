@@ -116,13 +116,9 @@ function _companyCleanup() {
    continue. Uses the in-memory savedScenarios cache — no API call.
    onContinue() is called when the user chooses to stay put.            */
 async function promptScenarioForCompany(company, onContinue) {
-  /* Ensure scenarios are loaded before we filter — they may not be if the
-     user just logged in and selected a customer before fetchScenarios completed */
-  if (typeof savedScenarios === 'undefined' || savedScenarios.length === 0) {
-    if (typeof fetchScenarios === 'function') {
-      try { await fetchScenarios(); } catch(e) {}
-    }
-  }
+  /* This is the decision point for loading a customer's scenario, so always
+     refresh rather than trusting an earlier in-memory list. */
+  if (typeof fetchScenarios === 'function') { try { await fetchScenarios(); } catch(e) {} }
   const matches = (typeof savedScenarios !== 'undefined' ? savedScenarios : [])
     .filter(s => s.company && s.company.toLowerCase() === company.toLowerCase()
                  && s.isCurrent !== false);

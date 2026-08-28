@@ -91,6 +91,24 @@ function run() {
     zeroDiscount.npv3,
     zeroDiscount.totalBenefit3 - zeroDiscount.totalCost3
   ));
+
+  const c36 = calcROI({ ...BASE, modelVersion:27, contractMonths:36 });
+  check('36-month term creates three annual and cumulative periods', c36.contractYears.length === 3);
+  check('contract benefit equals sum of displayed annual benefits', approx(c36.totalContractBenefit,
+    c36.contractYears.reduce((sum, y) => sum + y.grossBenefit, 0)));
+  check('contract investment equals one-time plus three annual subscriptions', approx(c36.totalContractInvestment, BASE.otc + BASE.invest * 3));
+  check('total contract ROI follows net divided by investment', approx(c36.totalContractRoi,
+    c36.totalContractNetBenefit / c36.totalContractInvestment * 100));
+
+  const c18 = calcROI({ ...BASE, modelVersion:27, contractMonths:18 });
+  check('18-month term creates a six-month partial second year', c18.contractYears.length === 2 && c18.contractYears[1].months === 6);
+  check('partial-year recurring investment is prorated to six months', approx(c18.contractYears[1].investment, BASE.invest / 2));
+  check('partial-year benefit uses only months 13 through 18', approx(c18.contractYears[1].grossBenefit,
+    c18.monthlyProfile.slice(12,18).reduce((sum,m)=>sum+m.benefit,0)));
+  check('payback is either within selected contract or explicitly absent', c18.contractPayback === null || c18.contractPayback <= 18);
+  check('blank contract term defaults to 36 months', calcROI({ ...BASE, modelVersion:27, contractMonths:'' }).contractMonths === 36);
+  check('zero contract term clamps to 1 month rather than silently becoming 36', calcROI({ ...BASE, modelVersion:27, contractMonths:0 }).contractMonths === 1);
+  check('contract term caps at 60 months', calcROI({ ...BASE, modelVersion:27, contractMonths:999 }).contractMonths === 60);
   return { pass:_pass, fail:_fail };
 }
 console.log('ROI engine tests:');

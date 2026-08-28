@@ -118,9 +118,13 @@ function updateContextHeader() {
   const scenario = (document.getElementById('scenarioName')?.value || '').trim();
   if (!company) { bar.style.display = 'none'; return; }
   bar.style.display = 'flex';
+  const scenarios = (typeof savedScenarios !== 'undefined' && Array.isArray(savedScenarios))
+    ? savedScenarios.filter(s => s && s.company === company && s.isCurrent !== false) : [];
+  const activeId = window._calcScenarioId || '';
+  const scenarioControl = scenarios.length ? `<label class="ctx-scenario-picker"><span>Scenario</span><select onchange="onCalcScenarioPick(this.value)" title="Switch scenario for this customer">${scenarios.map(s => `<option value="${escapeHtmlUX(s.id)}"${s.id===activeId?' selected':''}>${escapeHtmlUX(s.name || 'Untitled')}${s.version?' (v'+s.version+')':''}</option>`).join('')}</select></label>${activeId?`<button class="ctx-versions" onclick="openCurrentVersionHistory()" title="View previous versions of this scenario">🕘 Versions</button>`:''}` : (scenario ? `<span class="ctx-scenario"><span>Scenario</span>${escapeHtmlUX(scenario)}</span>` : '');
   bar.innerHTML = `<span class="ctx-icon" aria-hidden="true">${ctxInitialsUX(company)}</span>
     <span class="ctx-details"><span class="ctx-label">Customer workspace</span><span class="ctx-company">${escapeHtmlUX(company)}</span></span>` +
-    (scenario ? `<span class="ctx-sep">/</span><span class="ctx-scenario"><span>Scenario</span>${escapeHtmlUX(scenario)}</span>` : '') +
+    (scenarioControl ? `<span class="ctx-sep">/</span>${scenarioControl}` : '') +
     `<button class="ctx-switch" onclick="showCustomerGate()" title="Search and switch customer"><span aria-hidden="true">⇄</span> Switch customer</button>`;
 }
 function ctxInitialsUX(name) {

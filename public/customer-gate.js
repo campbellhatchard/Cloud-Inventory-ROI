@@ -64,7 +64,7 @@ async function initCalcTab() {
 }
 
 /* ── Gate visibility ── */
-function showCustomerGate() {
+async function showCustomerGate() {
   if (_calcDirty && !confirmDiscardChanges()) return;
   /* The gate lives inside the calculator pane. If Switch is clicked from
      another tab (e.g. Discovery), move to the calculator first so the gate
@@ -79,6 +79,10 @@ function showCustomerGate() {
   if (gate) gate.style.display = 'block';
   if (body) body.style.display = 'none';
   if (switchBtn) switchBtn.style.display = 'none';
+  /* Customer switching is a refresh boundary: do not offer a stale cached
+     customer list or scenario counts after another rep has updated a deal. */
+  if (typeof loadCompanies === 'function') { try { await loadCompanies(); } catch(e) {} }
+  if (typeof fetchScenarios === 'function') { try { await fetchScenarios(); } catch(e) {} }
   cgRenderList('');
   cgRenderRecent();
   /* Chrome ignores autocomplete=off on lone text inputs and will autofill the
