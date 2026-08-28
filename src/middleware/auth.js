@@ -59,7 +59,7 @@ async function requireAuth(req, res, next) {
 
     const { rows } = await query(
       `SELECT s.id AS session_id, s.expires_at,
-              u.id, u.username, u.email, u.role,
+              u.id, u.username, u.email, u.role, u.roles,
               u.first_login, u.is_active
        FROM sessions s
        JOIN users u ON u.id = s.user_id
@@ -88,6 +88,7 @@ async function requireAuth(req, res, next) {
       username:   row.username,
       email:      row.email,
       role:       row.role,
+      roleKeys:   Array.isArray(row.roles) && row.roles.length ? row.roles : [row.role],
       firstLogin: row.first_login,
       sessionId:  row.session_id
     };
@@ -111,11 +112,25 @@ function requireRole(role) {
     if (!req.user) {
       return res.status(401).json({ error: 'Authentication required.' });
     }
-    if (req.user.role !== role) {
+    if (req.user.role !== role && !(req.user.roleKeys || []).includes(role)) {
       return res.status(403).json({
         error: `Access denied. Requires role: ${role}.`,
         code: 'INSUFFICIENT_ROLE'
       });
+    }
+    next();
+  };
+}
+
+function hasRole(user, role) {
+  return !!user && (user.role === role || (user.roleKeys || []).includes(role));
+}
+
+function requireAnyRole(...roles) {
+  return (req, res, next) => {
+    if (!req.user) return res.status(401).json({ error: 'Authentication required.' });
+    if (!roles.some(role => hasRole(req.user, role))) {
+      return res.status(403).json({ error: 'Access denied.', code: 'INSUFFICIENT_ROLE' });
     }
     next();
   };
@@ -170,4 +185,4 @@ async function deleteSession(rawToken) {
   await query('DELETE FROM sessions WHERE token_hash = $1', [tokenHash]);
 }
 
-module.exports = { requireAuth, requireRole, signToken, createSession, deleteSession, extractToken };
+module.exports = { requireAuth, requireRole, requireAnyRole, hasRole, signToken, createSession, deleteSession, extractToken };

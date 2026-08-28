@@ -14,6 +14,8 @@
 /* canRead(user, customerOwnerId) — may the user view/print this handoff? */
 function canRead(user, customerOwnerId) {
   if (!user) return false;
+  const roles = user.roleKeys || [];
+  if (roles.includes('sales_manager')) return true;
   if (user.role === 'admin' || user.role === 'se') return true;   // cross-customer
   if (user.role === 'rep') return customerOwnerId === user.id;     // own customers only
   return false;
@@ -29,7 +31,9 @@ function canWrite(user, customerOwnerId) {
 
 /* Whether a user has cross-customer visibility (for list/scoping widening). */
 function isCrossCustomer(user) {
-  return !!user && (user.role === 'admin' || user.role === 'se');
+  if (!user) return false;
+  const roles = user.roleKeys || [];
+  return user.role === 'admin' || user.role === 'se' || roles.includes('sales_manager');
 }
 
 module.exports = { canRead, canWrite, isCrossCustomer };

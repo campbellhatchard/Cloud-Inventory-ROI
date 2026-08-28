@@ -4,7 +4,7 @@
 const express   = require('express');
 const { query } = require('../db');
 const { log }   = require('../audit');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, hasRole } = require('../middleware/auth');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -15,8 +15,8 @@ const ROLES = ['champion','economic_buyer','technical_buyer','influencer','block
 router.get('/', async (req, res) => {
   try {
     const { company } = req.query;
-    const isAdmin = req.user.role === 'admin';
-    const showAll = isAdmin && req.query.all === 'true';
+    const canViewTeam = hasRole(req.user, 'admin') || hasRole(req.user, 'sales_manager');
+    const showAll = canViewTeam && req.query.all === 'true';
     let sql, params;
     if (showAll) {
       sql = `SELECT s.id, s.company, s.name, s.title, s.role, s.influence,
@@ -41,8 +41,8 @@ router.get('/', async (req, res) => {
 /* Distinct companies for the picker — admins see all reps' companies */
 router.get('/companies', async (req, res) => {
   try {
-    const isAdmin = req.user.role === 'admin';
-    const showAll = isAdmin && req.query.all === 'true';
+    const canViewTeam = hasRole(req.user, 'admin') || hasRole(req.user, 'sales_manager');
+    const showAll = canViewTeam && req.query.all === 'true';
     let sql, params;
     if (showAll) {
       sql = `SELECT DISTINCT company FROM stakeholders WHERE company != '' ORDER BY company`;

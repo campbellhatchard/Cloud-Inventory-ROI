@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   server.js  —  Cloud Inventory ROI Builder  v5.7.4
+   server.js  —  Cloud Inventory ROI Builder  v5.8.0
    Database-backed multi-user edition — production hardened
 
    Security layers applied (Phase 10):
@@ -203,6 +203,8 @@ const stakeholdersRouter = require('./src/routes/stakeholders');
 app.use('/api/stakeholders', stakeholdersRouter);
 const handoffsRouter = require('./src/routes/handoffs');
 app.use('/api/handoffs', handoffsRouter);
+const salesManagerRouter = require('./src/routes/sales-manager');
+app.use('/api/sales-manager', salesManagerRouter);
 app.use('/api', require('./src/routes/analytics'));  // analytics + custom benchmarks
 
 /* ── Unified company list (v2.3) ──

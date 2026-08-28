@@ -54,8 +54,8 @@ async function ensureBootstrapAdmin(client) {
   if (!rows.length) {
     const passwordHash = await bcrypt.hash(password, rounds);
     await client.query(
-      `INSERT INTO users (email, username, password_hash, role, first_login, is_active)
-       VALUES ($1, $2, $3, 'admin', TRUE, TRUE)`,
+      `INSERT INTO users (email, username, password_hash, role, roles, first_login, is_active)
+       VALUES ($1, $2, $3, 'admin', ARRAY['admin'], TRUE, TRUE)`,
       [email, username, passwordHash]
     );
     console.log(
@@ -81,6 +81,7 @@ async function ensureBootstrapAdmin(client) {
       `UPDATE users
        SET password_hash = $1,
            role = 'admin',
+           roles = CASE WHEN 'admin' = ANY(roles) THEN roles ELSE array_prepend('admin', roles) END,
            first_login = TRUE,
            is_active = TRUE,
            failed_login_count = 0,

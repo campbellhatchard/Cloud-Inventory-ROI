@@ -6,7 +6,7 @@ const express   = require('express');
 const crypto    = require('crypto');
 const { query } = require('../db');
 const { log }   = require('../audit');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, hasRole } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -61,8 +61,8 @@ router.use(requireAuth);
 /* List own plans — admins can pass ?all=true to see all reps' plans */
 router.get('/', async (req, res) => {
   try {
-    const isAdmin = req.user.role === 'admin';
-    const showAll = isAdmin && req.query.all === 'true';
+    const canViewTeam = hasRole(req.user, 'admin') || hasRole(req.user, 'sales_manager');
+    const showAll = canViewTeam && req.query.all === 'true';
     let sql, params;
     if (showAll) {
       sql = `SELECT m.id, m.company, m.title, m.target_close_date, m.token, m.is_active,

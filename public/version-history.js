@@ -7,6 +7,19 @@
 
 const VERSION_HISTORY = [
   {
+    version: '5.8.0', date: '2026-08-28', tag: 'feature',
+    title: 'Sales Manager Deal Management',
+    summary: 'Adds a server-enforced Sales Manager workspace that synthesizes current team deals, buying progress, Solution Fit, Joint Project Plan execution, stakeholder health, contract economics, and internal management actions without recalculating ROI.',
+    changes: [
+      'Added additive migration 024 for multi-role user access and internal Sales Manager actions',
+      'Added Sales Manager portfolio views by team, rep, buying stage, deal health, Solution Fit, execution health, stakeholder coverage, and management priority',
+      'Added server-side Sales Manager role enforcement while preserving the user’s primary Account Executive, Solution Engineer, or Admin role',
+      'Kept saved ROI metrics authoritative and read-only in the manager dashboard; the dashboard does not invoke the ROI calculation engine',
+      'Made management actions follow the scenario base record across later scenario versions and update only fields explicitly supplied',
+      'Removed unnecessary prospect-link tokens and raw stakeholder records from the manager dashboard response'
+    ]
+  },
+  {
     version: '5.7.6', date: '2026-08-28', tag: 'fix',
     title: 'Three Whys remain attached to the current scenario version',
     summary: 'After a versioned save, the newly created scenario version becomes active immediately so later Executive View autosaves survive logout and reload.',

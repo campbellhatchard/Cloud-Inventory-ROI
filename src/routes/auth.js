@@ -26,6 +26,9 @@ const MAX_FAILED_LOGINS  = 5;
 const LOCKOUT_MINUTES    = 15;
 const PROD               = process.env.NODE_ENV === 'production';
 
+const ROLE_LABELS = { admin: 'Admin', rep: 'Account Executive', se: 'Solution Engineer', sales_manager: 'Sales Manager', value_engineering: 'Value Engineering' };
+function roleLabel(key) { return ROLE_LABELS[key] || key; }
+
 function setAuthCookie(res, token, expiresAt) {
   res.cookie('ci_auth', token, {
     httpOnly: true,
@@ -70,7 +73,7 @@ router.post('/login', async (req, res) => {
   try {
     /* Lookup user — case-insensitive username */
     const { rows } = await query(
-      `SELECT id, username, email, password_hash, role, first_login,
+      `SELECT id, username, email, password_hash, role, roles, first_login,
               is_active, failed_login_count, locked_until
        FROM users
        WHERE LOWER(username) = LOWER($1)`,
@@ -167,6 +170,8 @@ router.post('/login', async (req, res) => {
         username:   user.username,
         email:      user.email,
         role:       user.role,
+        roleKeys:   Array.isArray(user.roles) && user.roles.length ? user.roles : [user.role],
+        roles:      (Array.isArray(user.roles) && user.roles.length ? user.roles : [user.role]).map(roleLabel),
         firstLogin: user.first_login
       }
     });
@@ -260,12 +265,14 @@ router.post('/change-password', requireAuth, async (req, res) => {
 router.get('/me', requireAuth, async (req, res) => {
   try {
     const { rows } = await query(
-      `SELECT id, username, email, role, first_login, created_at, last_login_at
+      `SELECT id, username, email, role, roles, first_login, created_at, last_login_at
        FROM users WHERE id = $1`,
       [req.user.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'User not found.' });
-    res.json(rows[0]);
+    const user = rows[0];
+    const keys = Array.isArray(user.roles) && user.roles.length ? user.roles : [user.role];
+    res.json({ ...user, roleKeys: keys, roles: keys.map(roleLabel) });
   } catch (err) {
     console.error('/me error:', err.message);
     res.status(500).json({ error: 'Failed to load profile.' });

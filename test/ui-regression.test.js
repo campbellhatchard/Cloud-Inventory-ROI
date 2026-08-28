@@ -31,6 +31,14 @@ const narrative = fs.readFileSync(path.join(root, 'public', 'narrative.js'), 'ut
 const scenarioRoutes = fs.readFileSync(path.join(root, 'src', 'routes', 'scenarios.js'), 'utf8');
 const ciWorkflow = fs.readFileSync(path.join(root, '.github', 'workflows', 'ci.yml'), 'utf8');
 const mapMigration = fs.readFileSync(path.join(root, 'migrations', '023_map_groups.sql'), 'utf8');
+const salesManagerClient = fs.readFileSync(path.join(root, 'public', 'sales-manager.js'), 'utf8');
+const salesManagerRoutes = fs.readFileSync(path.join(root, 'src', 'routes', 'sales-manager.js'), 'utf8');
+const authMiddleware = fs.readFileSync(path.join(root, 'src', 'middleware', 'auth.js'), 'utf8');
+const authRoutes = fs.readFileSync(path.join(root, 'src', 'routes', 'auth.js'), 'utf8');
+const userRoutes = fs.readFileSync(path.join(root, 'src', 'routes', 'users.js'), 'utf8');
+const handoffAccess = fs.readFileSync(path.join(root, 'src', 'handoff-access.js'), 'utf8');
+const stakeholderRoutes = fs.readFileSync(path.join(root, 'src', 'routes', 'stakeholders.js'), 'utf8');
+const migration24 = fs.readFileSync(path.join(root, 'migrations', '024_sales_manager_dashboard.sql'), 'utf8');
 const { readiness } = require(path.join(root, 'src', 'shared', 'handoff-readiness.js'));
 const { calcROI } = require(path.join(root, 'src', 'shared', 'roi-engine.js'));
 
@@ -301,7 +309,7 @@ test('v5.6.12 Deal Coach refreshes buyer context and opens Proposal safely', () 
 });
 
 test('v5.6.11-v5.6.13 feature files preserve locked customer and ROI controls', () => {
-  assert.match(index, /APP_VERSION="5\.7\.6"/);
+  assert.match(index, /APP_VERSION="5\.8\.0"/);
   assert.match(proposal, /contractTerm:\s*\(v\.contractMonths \|\| 36\) \+ ' months'/);
   assert.match(proposal, /addDays\(30\)/);
   assert.match(dealCoach, /Joint Project Plan/);
@@ -436,7 +444,7 @@ test('v5.7.2 Prospect-Link Help uses a validated token and server-side prospect-
 });
 
 test('v5.7.2 keeps locked JPP, Proposal, Deal Coach and financial semantics while adding AI persistence', () => {
-  assert.match(index, /APP_VERSION="5\.7\.6"/);
+  assert.match(index, /APP_VERSION="5\.8\.0"/);
   assert.match(dealCoach, /async function refreshContext\(v\)/);
   assert.match(dealCoach, /proposalPrepared:proposalReady\(\)/);
   assert.match(dealCoach, /await refreshContext\(v\)/);
@@ -545,4 +553,76 @@ test('v5.7.5-v5.7.6 Executive View saves against the current scenario version', 
   assert.match(scenarioRoutes, /WHERE s\.is_current = TRUE/);
   assert.match(scenarioRoutes, /RETURNING s\.id, s\.updated_at/);
   assert.match(scenarioRoutes, /totalContractRoi:\s+r\.totalContractRoi/);
+});
+
+
+/* v5.8.0 Sales Manager Deal Management regression coverage */
+
+test('Sales Manager migration is additive, backfills primary roles, and creates internal actions', () => {
+  assert.match(migration24, /ADD COLUMN IF NOT EXISTS roles TEXT\[\] NOT NULL DEFAULT '\{\}'/i);
+  assert.match(migration24, /SET roles = ARRAY\[role\]/i);
+  assert.match(migration24, /CREATE TABLE IF NOT EXISTS sales_manager_actions/i);
+  assert.match(migration24, /scenario_id UUID NOT NULL REFERENCES scenarios\(id\) ON DELETE CASCADE/i);
+  assert.match(migration24, /created_by UUID NOT NULL REFERENCES users\(id\) ON DELETE RESTRICT/i);
+  assert.doesNotMatch(migration24, /\bDROP TABLE\b/i);
+  assert.doesNotMatch(migration24, /\bDELETE FROM\b/i);
+  assert.doesNotMatch(migration24, /\bTRUNCATE\b/i);
+});
+
+test('multi-role authentication is server-authoritative and preserves primary roles', () => {
+  assert.match(authMiddleware, /u\.role, u\.roles/);
+  assert.match(authMiddleware, /roleKeys:\s+Array\.isArray\(row\.roles\)/);
+  assert.match(authMiddleware, /function requireAnyRole\(\.\.\.roles\)/);
+  assert.match(authMiddleware, /function hasRole\(user, role\)/);
+  assert.match(authRoutes, /roleKeys:\s+Array\.isArray\(user\.roles\)/);
+  assert.match(userRoutes, /function cleanRoles\(roles, primary\)/);
+  assert.match(userRoutes, /if \(primary && !list\.includes\(primary\)\) list\.unshift\(primary\)/);
+  assert.match(userRoutes, /INSERT INTO users \(username, email, password_hash, role, roles,/);
+  assert.match(index, /id="newSalesManagerRole"/);
+  const userPanel = index.indexOf('id="adminPanel-users"');
+  const roleCheckbox = index.indexOf('id="newSalesManagerRole"');
+  const customerGatePos = index.indexOf('id="customerGate"');
+  assert.ok(roleCheckbox > userPanel, 'Sales Manager role control must live in Admin user management');
+  assert.ok(!(roleCheckbox > customerGatePos && roleCheckbox < userPanel), 'role control must not appear in customer onboarding');
+});
+
+test('Sales Manager dashboard is role-gated, read-only for ROI, and excludes unnecessary sensitive records', () => {
+  assert.match(server, /app\.use\('\/api\/sales-manager', salesManagerRouter\)/);
+  assert.match(salesManagerRoutes, /router\.use\(requireAuth, requireAnyRole\('sales_manager', 'admin'\)\)/);
+  assert.doesNotMatch(salesManagerRoutes, /calcROI|roi-engine/);
+  assert.match(salesManagerRoutes, /WHERE s\.is_current=TRUE AND s\.deleted_at IS NULL/);
+  assert.match(salesManagerRoutes, /totalContractRoi/);
+  assert.doesNotMatch(salesManagerRoutes, /SELECT[^;\n]*token[^;\n]*FROM mutual_action_plans/i);
+  assert.doesNotMatch(salesManagerRoutes, /planRecord\s*:/);
+  assert.doesNotMatch(salesManagerRoutes, /stakeholderRecords\s*:/);
+  assert.match(salesManagerClient, /roleKeys.*sales_manager/);
+  assert.doesNotMatch(salesManagerClient, /calcROI\s*\(/);
+});
+
+test('Sales Manager actions survive scenario versioning and PATCH preserves omitted fields', () => {
+  assert.match(salesManagerRoutes, /s\.base_id AS scenario_base_id/);
+  assert.match(salesManagerRoutes, /actionsByBase/);
+  assert.match(salesManagerRoutes, /actionsByBase\.get\(String\(s\.base_id\)\)/);
+  assert.match(salesManagerRoutes, /SELECT id, customer_id[\s\S]*FROM scenarios[\s\S]*WHERE id = \$1 AND deleted_at IS NULL/);
+  assert.doesNotMatch(salesManagerRoutes, /b\.customerId\s*\|\|/);
+  assert.match(salesManagerRoutes, /if \(b\.dueDate !== undefined\) push\('due_date', fields\.dueDate\)/);
+  assert.doesNotMatch(salesManagerRoutes, /due_date=\$3/);
+  assert.match(salesManagerRoutes, /if \(!updates\.length\) return res\.status\(400\)/);
+});
+
+test('Sales Manager team-read access is explicit across scenarios, plans, handoffs, and stakeholders', () => {
+  assert.match(scenarioRoutes, /hasRole\(req\.user, 'sales_manager'\)/);
+  assert.match(mapRoutes, /hasRole\(req\.user, 'sales_manager'\)/);
+  assert.match(stakeholderRoutes, /hasRole\(req\.user, 'sales_manager'\)/);
+  assert.match(handoffAccess, /roles\.includes\('sales_manager'\)/);
+  assert.match(handoffAccess, /function isCrossCustomer\(user\)[\s\S]*sales_manager/);
+  assert.match(app, /roleKeys[\s\S]*sales_manager/);
+  assert.match(index, /id="nav-manager"/);
+  assert.match(index, /id="tab-manager"/);
+  assert.match(index, /<script src="sales-manager\.js"><\/script>/);
+});
+
+test('v5.8.0 retains the complete production regression gate in CI', () => {
+  assert.match(ciWorkflow, /UI and startup regression tests/);
+  assert.match(ciWorkflow, /node --test test\/ui-regression\.test\.js/);
 });

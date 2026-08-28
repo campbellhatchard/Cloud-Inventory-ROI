@@ -11,6 +11,7 @@ A multi-user SaaS application for Cloud Inventory sales reps and Solution Engine
 - **Executive view** — CFO-ready narrative, Three Whys framework, PDF and PowerPoint exports
 - **Executive Proposal** — customer-ready editable proposal workspace with AI narrative refinement, PDF and Word export
 - **Deal Coach** — scenario-aware close-plan workspace linking value, stakeholders, proposal, Joint Project Plan, BuyCycle evidence, and persistent Christie AI coaching
+- **Sales Manager Deal Management** — role-gated team portfolio view combining buying progress, Solution Fit, execution, stakeholder health, contract economics, and internal management actions
 - **Solution Fit** — Pre-sales handoff document for Services / Solution Engineering
 - **Joint Project Plans** — Joint project plan builder with milestone tracking and a shareable prospect link
 - **Stakeholder map** — Influence/support matrix with AI gap analysis
@@ -80,7 +81,7 @@ Without `SENDGRID_API_KEY` the app runs fully — emails are silently skipped.
 
 ## Database migrations
 
-Migrations live in `migrations/*.sql` (001–023). They run automatically on every server startup. The runner tracks applied migrations in `schema_migrations` and only runs new ones.
+Migrations live in `migrations/*.sql` (001–024). They run automatically on every server startup. The runner tracks applied migrations in `schema_migrations` and only runs new ones.
 
 ```bash
 npm run migrate   # run manually
@@ -123,13 +124,14 @@ Push to the connected GitHub branch. Render installs with `npm ci` and starts `n
 │   │   ├── stakeholders.js    # Stakeholder maps
 │   │   └── users.js           # User management (admin)
 │   └── shared/roi-engine.js   # ROI calculation engine
-├── migrations/                # SQL migration files (001–023)
+├── migrations/                # SQL migration files (001–024)
 ├── public/                    # Frontend (no build step)
 │   ├── index.html             # Main app shell
 │   ├── prospect.html          # Standalone prospect questionnaire
 │   ├── print.html             # PDF print page
 │   ├── app.js                 # Scenario CRUD, authoritative scenario loading, tab routing
 │   ├── ai-session.js          # Session-scoped persistence for independent AI experiences
+│   ├── sales-manager.js       # Sales Manager portfolio workspace
 │   ├── features.js            # Analytics, sensitivity, CRM push
 │   ├── discovery.js           # Discovery guide
 │   ├── solution-fit.js        # Solution Fit tab
@@ -182,9 +184,10 @@ Edit `public/scenario-templates.js`, add an entry to `SCENARIO_TEMPLATES`:
 - Authenticated application APIs require a valid JWT; prospect Question Help uses a validated discovery token through the separately scoped `/api/prospect-assist` endpoint
 - AI endpoints are rate-limited; prospect Question Help rebuilds its context server-side from an explicit prospect-safe allow-list
 - AI session state is isolated in browser `sessionStorage` and cleared on logout or authenticated-session expiry
+- Sales Manager access is stored as a secondary server-validated role; the user’s primary AE/SE/Admin role remains unchanged
 
 ---
 
 ## Version
 
-Current: **v5.7.6** — see Admin → Version history for full changelog.
+Current: **v5.8.0** — see Admin → Version history for full changelog.

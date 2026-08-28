@@ -20,6 +20,12 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 const router = express.Router();
 
 const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS || '12', 10);
+const VALID_ROLES = ['admin', 'rep', 'se', 'sales_manager', 'value_engineering'];
+function cleanRoles(roles, primary) {
+  const list = Array.isArray(roles) ? roles.filter(r => VALID_ROLES.includes(r)) : [];
+  if (primary && !list.includes(primary)) list.unshift(primary);
+  return [...new Set(list)];
+}
 
 /* All user-management routes require Admin role */
 router.use(requireAuth);
@@ -79,7 +85,7 @@ function validateEmail(email) {
 router.get('/', async (req, res) => {
   try {
     const { rows } = await query(
-      `SELECT id, username, email, role, is_active, first_login,
+      `SELECT id, username, email, role, roles, is_active, first_login,
               created_at, last_login_at, failed_login_count,
               locked_until,
               (SELECT COUNT(*) FROM scenarios WHERE owner_id = users.id AND deleted_at IS NULL)::int AS scenario_count
@@ -99,7 +105,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { rows } = await query(
-      `SELECT id, username, email, role, is_active, first_login,
+      `SELECT id, username, email, role, roles, is_active, first_login,
               created_at, updated_at, last_login_at,
               failed_login_count, locked_until
        FROM users WHERE id = $1`,
@@ -120,7 +126,7 @@ router.get('/:id', async (req, res) => {
    Returns the temp password once (only time it is visible).
    ═══════════════════════════════════════ */
 router.post('/', async (req, res) => {
-  const { username, email, role } = req.body || {};
+  const { username, email, role, roles } = req.body || {};
 
   /* Validate inputs */
   const usernameError = validateUsername(username);
@@ -158,10 +164,10 @@ router.post('/', async (req, res) => {
     const passwordHash = await bcrypt.hash(tempPassword, BCRYPT_ROUNDS);
 
     const { rows } = await query(
-      `INSERT INTO users (username, email, password_hash, role, first_login, created_by)
-       VALUES ($1, $2, $3, $4, TRUE, $5)
-       RETURNING id, username, email, role, first_login, created_at`,
-      [username.trim(), email.trim().toLowerCase(), passwordHash, role, req.user.id]
+      `INSERT INTO users (username, email, password_hash, role, roles, first_login, created_by)
+       VALUES ($1, $2, $3, $4, $5, TRUE, $6)
+       RETURNING id, username, email, role, roles, first_login, created_at`,
+      [username.trim(), email.trim().toLowerCase(), passwordHash, role, cleanRoles(roles, role), req.user.id]
     );
 
     const newUser = rows[0];
@@ -200,7 +206,7 @@ router.post('/', async (req, res) => {
    ═══════════════════════════════════════ */
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
-  const { username, email, role } = req.body || {};
+  const { username, email, role, roles } = req.body || {};
 
   /* Prevent self-edit via this endpoint (use profile page instead) */
   if (id === req.user.id) {
@@ -211,7 +217,7 @@ router.patch('/:id', async (req, res) => {
 
   try {
     const { rows: existing } = await query(
-      'SELECT id, username, email, role, is_active FROM users WHERE id = $1',
+      'SELECT id, username, email, role, roles, is_active FROM users WHERE id = $1',
       [id]
     );
     if (!existing.length) return res.status(404).json({ error: 'User not found.' });
@@ -258,6 +264,12 @@ router.patch('/:id', async (req, res) => {
       values.push(role);
     }
 
+    if (roles !== undefined || role !== undefined) {
+      const primary = role !== undefined ? role : current.role;
+      updates.push(`roles = $${idx++}`);
+      values.push(cleanRoles(roles !== undefined ? roles : current.roles, primary));
+    }
+
     if (!updates.length) {
       return res.status(400).json({ error: 'No fields to update.' });
     }
@@ -267,7 +279,7 @@ router.patch('/:id', async (req, res) => {
 
     const { rows } = await query(
       `UPDATE users SET ${updates.join(', ')} WHERE id = $${idx}
-       RETURNING id, username, email, role, is_active, first_login, updated_at`,
+       RETURNING id, username, email, role, roles, is_active, first_login, updated_at`,
       values
     );
 
@@ -278,7 +290,7 @@ router.patch('/:id', async (req, res) => {
       entityId:   id,
       detail:     {
         changed: Object.fromEntries(
-          Object.entries({ username, email, role })
+          Object.entries({ username, email, role, roles })
             .filter(([, v]) => v !== undefined)
         )
       },

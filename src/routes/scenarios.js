@@ -16,7 +16,7 @@
 const express   = require('express');
 const { query, transaction } = require('../db');
 const { log, ACTIONS } = require('../audit');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, hasRole } = require('../middleware/auth');
 const { calcROI } = require('../shared/roi-engine');
 const { ensureCustomer } = require('../customers');
 
@@ -43,8 +43,9 @@ const LIST_COLS = `
    ═══════════════════════════════════════ */
 router.get('/', async (req, res) => {
   try {
-    const isAdmin  = req.user.role === 'admin';
-    const showAll  = isAdmin && req.query.all === 'true';
+    const isAdmin  = hasRole(req.user, 'admin');
+    const canViewTeam = isAdmin || hasRole(req.user, 'sales_manager');
+    const showAll  = canViewTeam && req.query.all === 'true';
     const baseId   = req.query.base_id;
 
     let sql, params;
@@ -59,7 +60,7 @@ router.get('/', async (req, res) => {
           AND s.deleted_at IS NULL
           AND (s.owner_id = $2 OR $2 = ANY(s.shared_with) OR $3)
         ORDER BY s.version DESC`;
-      params = [baseId, req.user.id, isAdmin];
+      params = [baseId, req.user.id, canViewTeam];
 
     } else if (showAll) {
       /* Admin: all current scenarios across all users */
@@ -103,7 +104,7 @@ router.get('/:id', async (req, res) => {
        FROM scenarios s JOIN users u ON u.id = s.owner_id
        WHERE s.id = $1 AND s.deleted_at IS NULL
          AND (s.owner_id = $2 OR $2 = ANY(s.shared_with) OR $3)`,
-      [req.params.id, req.user.id, req.user.role === 'admin']
+      [req.params.id, req.user.id, hasRole(req.user, 'admin') || hasRole(req.user, 'sales_manager')]
     );
     if (!rows.length) return res.status(404).json({ error: 'Scenario not found.' });
 
@@ -133,7 +134,7 @@ router.get('/:id/versions', async (req, res) => {
     );
     if (!base.length) return res.status(404).json({ error: 'Scenario not found.' });
 
-    const isOwnerOrAdmin = base[0].owner_id === req.user.id || req.user.role === 'admin';
+    const isOwnerOrAdmin = base[0].owner_id === req.user.id || hasRole(req.user, 'admin') || hasRole(req.user, 'sales_manager');
     if (!isOwnerOrAdmin) return res.status(403).json({ error: 'Access denied.' });
 
     const { rows } = await query(
@@ -596,7 +597,7 @@ router.get('/:id/resonance', async (req, res) => {
       `SELECT r.* FROM driver_resonance r
        JOIN scenarios s ON s.id = r.scenario_id
        WHERE r.scenario_id = $1 AND (s.owner_id = $2 OR $3)`,
-      [req.params.id, req.user.id, req.user.role === 'admin']
+      [req.params.id, req.user.id, hasRole(req.user, 'admin') || hasRole(req.user, 'sales_manager')]
     );
     res.json(rows[0] || null);
   } catch (err) {

@@ -155,6 +155,10 @@
     <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="9" width="3" height="6" rx="1" fill="currentColor"/><rect x="6" y="5" width="3" height="10" rx="1" fill="currentColor"/><rect x="11" y="1" width="3" height="14" rx="1" fill="currentColor"/></svg>
     Analytics
   </button>
+  <button class="nav-item" onclick="switchTab('manager')" id="nav-manager" style="display:none;">
+    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M2 14V8h3v6M7 14V4h3v10M12 14V1h3v13" stroke="currentColor" stroke-width="1.4"/><path d="M1 14.5h14" stroke="currentColor" stroke-width="1.2"/></svg>
+    Sales Manager
+  </button>
   <button class="nav-item" onclick="switchTab('admincustomers')" id="nav-admincustomers" style="display:none;">
     <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="5.5" cy="5" r="2.2" stroke="currentColor" stroke-width="1.4"/><circle cx="11" cy="6" r="1.8" stroke="currentColor" stroke-width="1.4"/><path d="M2 13c0-2 1.6-3.2 3.5-3.2S9 11 9 13M9.5 13c0-1.6 1.2-2.6 2.8-2.6S15 11.4 15 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
     Customers
@@ -1059,6 +1063,11 @@
   <div id="analyticsPanel"></div>
 </div>
 
+<!-- ═══ SALES MANAGER ═══ -->
+<div id="tab-manager" class="pane">
+  <div id="salesManagerDashboard"><div class="empty-state"><p>Loading sales management workspace…</p></div></div>
+</div>
+
 <!-- ═══ ADMIN ═══ -->
 <div id="tab-admin" class="pane">
   <div class="page-header">
@@ -1114,6 +1123,9 @@
             </select>
           </div>
         </div>
+        <label style="display:inline-flex;gap:7px;align-items:center;margin-top:10px;font-size:12px;">
+          <input type="checkbox" id="newSalesManagerRole"> Also assign Sales Manager access
+        </label>
         <div class="btn-row" style="margin-top:.85rem;">
           <button class="btn btn-cta" onclick="createUser()">Create user</button>
         </div>
@@ -1574,7 +1586,7 @@
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="5.7.6";</script>
+<script>const APP_VERSION="5.8.0";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
 <script src="ai-session.js"></script>
@@ -1592,6 +1604,7 @@
 <script src="proposal.js"></script>
 <script src="deal-coach.js"></script>
 <script src="comp-research.js"></script>
+<script src="sales-manager.js"></script>
 <script>
 /* ── Auth guard — runs before any app code ──
    initAuth() is stored as a Promise so initAdminTab(), initHelpTab(),
@@ -1608,6 +1621,9 @@ window._authReady = (async function() {
       if (navC) navC.style.display = isAdmin ? 'flex' : 'none';
       const navA = document.getElementById('nav-admin');
       if (navA) navA.style.display = isAdmin ? 'flex' : 'none';
+      const canManage = isAdmin || (Array.isArray(u.roleKeys) && u.roleKeys.includes('sales_manager'));
+      const navM = document.getElementById('nav-manager');
+      if (navM) navM.style.display = canManage ? 'flex' : 'none';
     } catch(e) {}
     return r;
   }
@@ -2745,13 +2761,13 @@ function renderUserTable(users) {
         return `<tr class="${!u.is_active?'user-row-inactive':''}${isMe?' user-row-me':''}">
           <td><strong>${escapeHtml(u.username)}</strong>${isMe?' <span class="you-badge">you</span>':''}</td>
           <td style="font-size:12px;color:var(--gray-500);">${escapeHtml(u.email)}</td>
-          <td><span class="role-badge" style="background:${roleColors[u.role]||'var(--gray-500)'}20;color:${roleColors[u.role]||'var(--gray-500)'};">${u.role==='admin'?'Admin':u.role==='se'?'Solution Engineer':'Account Executive'}</span></td>
+          <td><span class="role-badge" style="background:${roleColors[u.role]||'var(--gray-500)'}20;color:${roleColors[u.role]||'var(--gray-500)'};">${u.role==='admin'?'Admin':u.role==='se'?'Solution Engineer':'Account Executive'}</span>${Array.isArray(u.roles)&&u.roles.includes('sales_manager')?' <span class="role-badge">Sales Manager</span>':''}</td>
           <td>${statusBadge}</td>
           <td style="font-size:12px;color:var(--gray-500);">${lastLogin}</td>
           <td style="text-align:center;">${u.scenario_count||0}</td>
           <td>
             <div style="display:flex;gap:5px;flex-wrap:wrap;">
-              <button class="btn btn-ghost btn-sm" onclick="editUser('${u.id}','${escapeHtml(u.username)}','${escapeHtml(u.email)}','${u.role}')">Edit</button>
+              <button class="btn btn-ghost btn-sm" onclick="editUser('${u.id}','${escapeHtml(u.username)}','${escapeHtml(u.email)}','${u.role}','${encodeURIComponent(JSON.stringify(u.roles||[u.role]))}')">Edit</button>
               ${!isMe ? `<button class="btn btn-ghost btn-sm" onclick="adminResetPassword('${u.id}','${escapeHtml(u.username)}','${escapeHtml(u.email)}')">Reset pw</button>` : ''}
               ${!isMe ? `<button class="btn ${u.is_active?'btn-danger':'btn-ghost'} btn-sm" onclick="toggleUserStatus('${u.id}','${escapeHtml(u.username)}',${u.is_active})">${u.is_active?'Deactivate':'Reactivate'}</button>` : ''}
             </div>
@@ -2767,6 +2783,7 @@ async function createUser() {
   const username = document.getElementById('newUsername').value.trim();
   const email    = document.getElementById('newEmail').value.trim();
   const role     = document.getElementById('newRole').value;
+  const roles    = [role].concat(document.getElementById('newSalesManagerRole').checked ? ['sales_manager'] : []);
   const errEl    = document.getElementById('createUserError');
   errEl.style.display = 'none';
 
@@ -2775,7 +2792,7 @@ async function createUser() {
   try {
     const resp = await apiFetch('/api/users', {
       method: 'POST',
-      body: JSON.stringify({ username, email, role })
+      body: JSON.stringify({ username, email, role, roles })
     });
     const data = await resp.json();
     if (!resp.ok) { errEl.textContent = data.error || 'Failed to create user.'; errEl.style.display='block'; return; }
@@ -2794,6 +2811,7 @@ async function createUser() {
     document.getElementById('newUsername').value = '';
     document.getElementById('newEmail').value = '';
     document.getElementById('newRole').value = 'rep';
+    document.getElementById('newSalesManagerRole').checked = false;
 
     showToast(`User "${data.user.username}" created.`);
     loadUsers();
@@ -2843,7 +2861,8 @@ Any questions, just reply to this email.
 }
 
 /* ── Edit user modal ── */
-function editUser(id, username, email, role) {
+function editUser(id, username, email, role, rolesEncoded) {
+  let roles=[]; try{roles=JSON.parse(decodeURIComponent(rolesEncoded||''));}catch(e){roles=[role];}
   const modal = document.createElement('div');
   modal.className = 'modal-overlay open';
   modal.id = 'editUserModal';
@@ -2860,6 +2879,7 @@ function editUser(id, username, email, role) {
           <option value="admin" ${role==='admin'?'selected':''}>Admin</option>
         </select>
       </div>
+      <label style="display:inline-flex;gap:7px;align-items:center;font-size:12px;"><input type="checkbox" id="editSalesManagerRole" ${roles.includes('sales_manager')?'checked':''}> Sales Manager access</label>
       <div id="editUserError" class="field-hint" style="color:var(--red);display:none;"></div>
       <div class="btn-row" style="margin-top:1rem;">
         <button class="btn btn-cta" onclick="saveUserEdit('${id}')">Save changes</button>
@@ -2874,13 +2894,14 @@ async function saveUserEdit(id) {
   const username = document.getElementById('editUsername').value.trim();
   const email    = document.getElementById('editEmail').value.trim();
   const role     = document.getElementById('editRole').value;
+  const roles    = [role].concat(document.getElementById('editSalesManagerRole').checked ? ['sales_manager'] : []);
   const errEl    = document.getElementById('editUserError');
   errEl.style.display = 'none';
 
   try {
     const resp = await apiFetch(`/api/users/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify({ username, email, role })
+      body: JSON.stringify({ username, email, role, roles })
     });
     const data = await resp.json();
     if (!resp.ok) { errEl.textContent = data.error||'Update failed.'; errEl.style.display='block'; return; }

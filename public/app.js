@@ -27,8 +27,8 @@ async function fetchScenarios() {
     /* Admins see all users' scenarios so the customer → scenario lookup
        works across the whole team, not just their own deals. */
     const user    = window.ciAuth ? window.ciAuth.getUser() : {};
-    const isAdmin = user.role === 'admin';
-    const url     = isAdmin ? '/api/scenarios?all=true' : '/api/scenarios';
+    const canViewTeam = user.role === 'admin' || (Array.isArray(user.roleKeys) && user.roleKeys.includes('sales_manager'));
+    const url     = canViewTeam ? '/api/scenarios?all=true' : '/api/scenarios';
     const resp = await apiFetch(url);
     if (!resp || !resp.ok) return;
     const rows = await resp.json();
@@ -87,7 +87,7 @@ function persistSaved(arr)   { savedScenarios = arr; updateSavedBadge(); }
 /* ════════════════════════════════════════
    Navigation
    ════════════════════════════════════════ */
-const ALL_TABS = ['calc','disc','comp','exec','proposal','coach','saved','compare','sensitivity','analytics','map','stake','solfit','admincustomers','admin','help','impact','profile'];
+const ALL_TABS = ['calc','disc','comp','exec','proposal','coach','saved','compare','sensitivity','analytics','manager','map','stake','solfit','admincustomers','admin','help','impact','profile'];
 
 function switchTab(name) {
   ALL_TABS.forEach(n => {
@@ -103,6 +103,7 @@ function switchTab(name) {
   if (name === 'compare')     renderComparison();
   if (name === 'sensitivity') renderSensitivity();
   if (name === 'analytics')   renderAnalytics();
+  if (name === 'manager' && typeof initSalesManagerDashboard === 'function') initSalesManagerDashboard();
   if (name === 'admin')       adminUnlocked && renderAdminEditor();
   if (name === 'coach')       renderDealCoach();
   if (name === 'disc' && typeof clearDiscNotif === 'function') clearDiscNotif();
