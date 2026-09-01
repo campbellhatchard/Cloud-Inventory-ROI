@@ -26,7 +26,7 @@ const MAX_FAILED_LOGINS  = 5;
 const LOCKOUT_MINUTES    = 15;
 const PROD               = process.env.NODE_ENV === 'production';
 
-const ROLE_LABELS = { admin: 'Admin', rep: 'Account Executive', se: 'Solution Engineer', sales_manager: 'Sales Manager', value_engineering: 'Value Engineering' };
+const ROLE_LABELS = { admin: 'Admin', rep: 'Sales Rep', se: 'Sales Engineer', sales_manager: 'Sales Leader', value_engineering: 'Value Engineering' };
 function roleLabel(key) { return ROLE_LABELS[key] || key; }
 
 function setAuthCookie(res, token, expiresAt) {

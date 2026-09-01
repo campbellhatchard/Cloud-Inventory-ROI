@@ -5,20 +5,22 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Cloud Inventory — Discovery Questionnaire</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="brand-tokens.css"/>
+<script src="brand-system.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --navy:#1E2931;--cyan:#00A9CC;--cyan-dark:#0089A6;--cyan-pale:#E4F6FA;
-  --green:#2E7D32;--green-pale:#E8F5E9;--red:#C81E10;
-  --gray-50:#F8FAFC;--gray-100:#F1F5F9;--gray-200:#E3E9EE;
-  --gray-400:#6B7A8D;--gray-500:#64748B;--gray-600:#475569;
-  --gray-700:#334155;--gray-800:#1E293B;--white:#FFFFFF;
-  --font:'Inter',system-ui,sans-serif;
+  --navy:var(--ci-dark);--cyan:var(--ci-blue);--cyan-dark:var(--ci-blue-dark);--cyan-pale:var(--ci-blue-pale);
+  --green:var(--ci-green);--green-pale:var(--ci-success-surface);--red:var(--ci-deep-red);
+  --gray-50:var(--ci-neutral50);--gray-100:var(--ci-neutral100);--gray-200:var(--ci-neutral200);
+  --gray-400:var(--ci-neutral400);--gray-500:var(--ci-neutral500);--gray-600:var(--ci-neutral600);
+  --gray-700:var(--ci-neutral700);--gray-800:var(--ci-neutral800);--white:var(--ci-white);
+  --font:var(--ci-font);
   --radius:10px;--radius-sm:6px;
   --shadow:0 4px 16px rgba(0,0,0,.08);
 }
 html{font-size:15px;scroll-behavior:smooth;}
-body{font-family:var(--font);background:#F0F4F8;color:var(--gray-800);min-height:100vh;}
+body{font-family:var(--font);background:var(--ci-canvas);color:var(--gray-800);min-height:100vh;}
 
 /* Header */
 .header{background:var(--navy);padding:0;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.25);}
@@ -63,9 +65,9 @@ body{font-family:var(--font);background:#F0F4F8;color:var(--gray-800);min-height
 .q-text{font-size:14px;font-weight:500;color:var(--gray-800);margin-bottom:5px;line-height:1.45;}
 /* ── Collapsible "Why are we asking?" ── */
 .q-why{margin:5px 0 8px;}
-.q-why-toggle{font-size:11.5px;color:var(--cyan,#00A9CC);cursor:pointer;list-style:none;font-weight:600;}
+.q-why-toggle{font-size:11.5px;color:var(--ci-blue);cursor:pointer;list-style:none;font-weight:600;}
 .q-why-toggle::-webkit-details-marker{display:none;}
-.q-context{font-size:12.5px;color:var(--gray-500,#64748B);line-height:1.5;margin:6px 0 0;padding-left:10px;border-left:2px solid var(--cyan-line,#B4E3EF);}
+.q-context{font-size:12.5px;color:var(--gray-500);line-height:1.5;margin:6px 0 0;padding-left:10px;border-left:2px solid var(--ci-blue-pale);}
 .q-placeholder-hint{font-size:12px;color:var(--gray-400);margin-bottom:10px;}
 .q-input{width:100%;padding:10px 14px;font-size:14px;font-family:var(--font);border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);background:var(--white);color:var(--gray-800);transition:border-color .15s,box-shadow .15s;outline:none;}
 .q-input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,174,239,.12);}
@@ -115,14 +117,14 @@ body{font-family:var(--font);background:#F0F4F8;color:var(--gray-800);min-height
 .autosave.error{color:#FFB4A8;}
 .autosave .as-dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:as-pulse 1s infinite;}
 @keyframes as-pulse{0%,100%{opacity:.4}50%{opacity:1}}
-.resume-cue{background:#E4F6FA;border:1px solid var(--cyan);border-radius:var(--radius-sm);padding:.85rem 1rem;font-size:14px;color:var(--navy);margin-bottom:1.25rem;}
+.resume-cue{background:var(--ci-blue-pale);border:1px solid var(--cyan);border-radius:var(--radius-sm);padding:.85rem 1rem;font-size:14px;color:var(--navy);margin-bottom:1.25rem;}
 
 /* ── v4.0.0 polish: shared control metrics, focus ring, type ── */
 html{font-size:16px;}
 body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
 input,select,textarea,button{font-family:inherit;}
 input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(0,169,204,.18);}
-:focus-visible{outline:2px solid #00A9CC;outline-offset:2px;border-radius:4px;}
+:focus-visible{outline:2px solid var(--ci-blue);outline-offset:2px;border-radius:4px;}
 h1,h2,h3{letter-spacing:-.02em;text-wrap:pretty;}
 button{cursor:pointer;}
 /* ── Progress header top row ── */
@@ -134,7 +136,7 @@ button{cursor:pointer;}
 .sec-nav::-webkit-scrollbar{display:none;}
 .sn-pill{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border:1.5px solid rgba(255,255,255,.18);border-radius:20px;background:rgba(255,255,255,.07);color:rgba(255,255,255,.7);font-family:inherit;font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s;}
 .sn-pill:hover{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.35);color:#fff;}
-.sn-pill.sn-active{background:var(--cyan,#00A9CC);border-color:var(--cyan,#00A9CC);color:#fff;}
+.sn-pill.sn-active{background:var(--ci-blue);border-color:var(--ci-blue);color:#fff;}
 .sn-pill.sn-done{background:rgba(74,222,128,.18);border-color:rgba(74,222,128,.4);color:rgba(255,255,255,.9);}
 .sn-pill.sn-part{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.3);color:#fff;}
 .sn-mark{font-size:11px;min-width:14px;text-align:center;}
@@ -142,92 +144,92 @@ button{cursor:pointer;}
 @media(max-width:600px){.sn-label{max-width:80px;}}
 
 /* ── Section card (the active section) ── */
-.sec-card{background:var(--white,#fff);border-radius:var(--radius,12px);box-shadow:0 1px 4px rgba(0,0,0,.08);overflow:hidden;margin-bottom:16px;}
-.sec-card-head{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--gray-100,#F1F5F8);background:var(--gray-50,#F7F9FB);}
+.sec-card{background:var(--ci-white);border-radius:var(--radius,12px);box-shadow:0 1px 4px rgba(0,0,0,.08);overflow:hidden;margin-bottom:16px;}
+.sec-card-head{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-50);}
 .sec-card-icon{font-size:20px;flex-shrink:0;}
 .sec-card-meta{flex:1;min-width:0;}
-.sec-card-title{font-size:15px;font-weight:700;color:var(--navy,#1E2931);}
-.sec-card-count{font-size:12px;color:var(--gray-500,#6B7A8D);margin-top:2px;}
+.sec-card-title{font-size:15px;font-weight:700;color:var(--ci-dark);}
+.sec-card-count{font-size:12px;color:var(--gray-500);margin-top:2px;}
 .sec-body{padding:20px;}
 
 /* ── Back / Next navigation buttons ── */
 .sec-nav-btns{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px;}
-.snb-back{background:none;border:1.5px solid var(--gray-200,#E2E8F0);color:var(--gray-600,#4A5A6A);font-family:inherit;font-size:13.5px;font-weight:600;padding:10px 20px;border-radius:8px;cursor:pointer;transition:all .15s;}
-.snb-back:hover{border-color:var(--cyan,#00A9CC);color:var(--cyan,#00A9CC);}
-.snb-next{background:var(--cyan,#00A9CC);color:#fff;border:none;font-family:inherit;font-size:13.5px;font-weight:700;padding:10px 24px;border-radius:8px;cursor:pointer;box-shadow:0 2px 8px rgba(0,169,204,.28);transition:all .15s;}
-.snb-next:hover{background:var(--cyan-dark,#0089A6);transform:translateY(-1px);}
+.snb-back{background:none;border:1.5px solid var(--gray-200);color:var(--gray-600);font-family:inherit;font-size:13.5px;font-weight:600;padding:10px 20px;border-radius:8px;cursor:pointer;transition:all .15s;}
+.snb-back:hover{border-color:var(--ci-blue);color:var(--ci-blue);}
+.snb-next{background:var(--ci-blue);color:#fff;border:none;font-family:inherit;font-size:13.5px;font-weight:700;padding:10px 24px;border-radius:8px;cursor:pointer;box-shadow:0 2px 8px rgba(0,169,204,.28);transition:all .15s;}
+.snb-next:hover{background:var(--ci-blue-dark);transform:translateY(-1px);}
 .snb-submit{font-size:13.5px;padding:10px 24px !important;}
 
 /* ── "What your answers help assess" panel ── */
 .value-panel:empty{display:none;}
-.value-panel{background:var(--white,#fff);border-radius:var(--radius,12px);box-shadow:var(--shadow,0 1px 3px rgba(0,0,0,.08));padding:1.25rem 1.4rem;margin-bottom:1rem;}
-.vp-title{font-size:14px;font-weight:700;color:var(--navy,#1E2931);}
-.vp-sub{font-size:12px;color:var(--gray-500,#6B7A8D);margin-top:3px;line-height:1.5;}
+.value-panel{background:var(--ci-white);border-radius:var(--radius,12px);box-shadow:var(--shadow,0 1px 3px rgba(0,0,0,.08));padding:1.25rem 1.4rem;margin-bottom:1rem;}
+.vp-title{font-size:14px;font-weight:700;color:var(--ci-dark);}
+.vp-sub{font-size:12px;color:var(--gray-500);margin-top:3px;line-height:1.5;}
 .vd-list{list-style:none;margin:1rem 0 0;padding:0;display:flex;flex-direction:column;gap:8px;}
 .vd-row{display:flex;align-items:flex-start;gap:10px;padding:9px 10px;border-radius:9px;background:#F7F9FB;border:1px solid transparent;}
 .vd-row.vd-done{background:#F2FBF6;border-color:#CDEBD9;}
 .vd-row.vd-part{background:#F5FAFD;border-color:#D3E7F2;}
-.vd-mark{flex-shrink:0;width:17px;text-align:center;font-size:12px;line-height:1.5;color:var(--gray-500,#6B7A8D);}
-.vd-done .vd-mark{color:#2E7D32;font-weight:700;}
-.vd-part .vd-mark{color:#0089A6;}
+.vd-mark{flex-shrink:0;width:17px;text-align:center;font-size:12px;line-height:1.5;color:var(--gray-500);}
+.vd-done .vd-mark{color:var(--ci-green);font-weight:700;}
+.vd-part .vd-mark{color:var(--ci-blue-dark);}
 .vd-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
-.vd-label{font-size:12.5px;font-weight:600;color:var(--navy,#1E2931);}
-.vd-blurb{font-size:11.5px;color:var(--gray-500,#6B7A8D);line-height:1.45;}
-.vd-status{flex-shrink:0;font-size:10.5px;font-weight:600;color:var(--gray-500,#6B7A8D);white-space:nowrap;padding-top:2px;}
-.vd-done .vd-status{color:#2E7D32;}
-.vd-part .vd-status{color:#0089A6;}
+.vd-label{font-size:12.5px;font-weight:600;color:var(--ci-dark);}
+.vd-blurb{font-size:11.5px;color:var(--gray-500);line-height:1.45;}
+.vd-status{flex-shrink:0;font-size:10.5px;font-weight:600;color:var(--gray-500);white-space:nowrap;padding-top:2px;}
+.vd-done .vd-status{color:var(--ci-green);}
+.vd-part .vd-status{color:var(--ci-blue-dark);}
 @media(max-width:560px){
   .vd-row{flex-wrap:wrap;}
   .vd-status{width:100%;padding-left:27px;padding-top:1px;}
 }
 
 /* ── Per-question value context + "not sure" ── */
-.q-helps{font-size:11px;color:var(--gray-500,#6B7A8D);margin-top:7px;}
-.q-helps strong{color:var(--navy,#1E2931);font-weight:600;}
+.q-helps{font-size:11px;color:var(--gray-500);margin-top:7px;}
+.q-helps strong{color:var(--ci-dark);font-weight:600;}
 .q-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;flex-wrap:wrap;}
-.q-unsure{background:none;border:1px solid var(--gray-200,#E2E8F0);color:var(--gray-500,#6B7A8D);font-family:inherit;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;cursor:pointer;transition:all .15s;}
-.q-unsure:hover{border-color:var(--cyan,#00A9CC);color:var(--cyan,#00A9CC);}
+.q-unsure{background:none;border:1px solid var(--gray-200);color:var(--gray-500);font-family:inherit;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;cursor:pointer;transition:all .15s;}
+.q-unsure:hover{border-color:var(--ci-blue);color:var(--ci-blue);}
 .q-unsure.is-on{background:#FFF7E8;border-color:#E6C378;color:#8A6410;}
 .question.unsure{background:#FFFCF5;}
 /* ── Percent questions: slider + precise box ── */
 .q-pct{display:flex;align-items:center;gap:14px;margin-top:2px;}
-.q-range{flex:1;min-width:0;-webkit-appearance:none;appearance:none;height:5px;border-radius:3px;background:var(--gray-200,#E2E8F0);outline:none;cursor:pointer;}
-.q-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:19px;height:19px;border-radius:50%;background:var(--cyan,#00A9CC);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.28);cursor:pointer;}
-.q-range::-moz-range-thumb{width:17px;height:17px;border-radius:50%;background:var(--cyan,#00A9CC);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.28);cursor:pointer;}
+.q-range{flex:1;min-width:0;-webkit-appearance:none;appearance:none;height:5px;border-radius:3px;background:var(--gray-200);outline:none;cursor:pointer;}
+.q-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:19px;height:19px;border-radius:50%;background:var(--ci-blue);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.28);cursor:pointer;}
+.q-range::-moz-range-thumb{width:17px;height:17px;border-radius:50%;background:var(--ci-blue);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.28);cursor:pointer;}
 .q-range:focus-visible{box-shadow:0 0 0 3px rgba(0,169,204,.25);}
 .q-pct-box{position:relative;flex-shrink:0;width:88px;}
 .q-input-sm{width:100%;padding-right:26px !important;text-align:right;}
-.q-affix{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--gray-500,#6B7A8D);pointer-events:none;}
+.q-affix{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--gray-500);pointer-events:none;}
 @media(max-width:560px){
   .q-pct{gap:10px;}
   .q-pct-box{width:74px;}
 }
 /* ── Review & confirm screen ── */
-.rv-head{background:var(--white,#fff);border-radius:var(--radius,12px);box-shadow:var(--shadow,0 1px 3px rgba(0,0,0,.08));padding:1.5rem 1.6rem;margin-bottom:1rem;}
-.rv-title{font-size:19px;font-weight:700;color:var(--navy,#1E2931);}
-.rv-sub{font-size:13px;color:var(--gray-500,#6B7A8D);line-height:1.6;margin-top:6px;}
+.rv-head{background:var(--ci-white);border-radius:var(--radius,12px);box-shadow:var(--shadow,0 1px 3px rgba(0,0,0,.08));padding:1.5rem 1.6rem;margin-bottom:1rem;}
+.rv-title{font-size:19px;font-weight:700;color:var(--ci-dark);}
+.rv-sub{font-size:13px;color:var(--gray-500);line-height:1.6;margin-top:6px;}
 .rv-actions,.rv-foot{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:1rem;}
-.rv-foot{background:var(--white,#fff);border-radius:var(--radius,12px);box-shadow:var(--shadow,0 1px 3px rgba(0,0,0,.08));padding:1.25rem 1.6rem;margin-top:1rem;}
-.rv-back{background:none;border:1px solid var(--gray-200,#E2E8F0);color:var(--navy,#1E2931);font-family:inherit;font-size:13px;font-weight:600;padding:9px 16px;border-radius:8px;cursor:pointer;}
-.rv-back:hover{border-color:var(--cyan,#00A9CC);color:var(--cyan,#00A9CC);}
-.rv-sec{background:var(--white,#fff);border-radius:var(--radius,12px);box-shadow:var(--shadow,0 1px 3px rgba(0,0,0,.08));padding:1.1rem 1.4rem;margin-bottom:.75rem;}
-.rv-sec-title{font-size:13px;font-weight:700;color:var(--navy,#1E2931);margin-bottom:.6rem;}
+.rv-foot{background:var(--ci-white);border-radius:var(--radius,12px);box-shadow:var(--shadow,0 1px 3px rgba(0,0,0,.08));padding:1.25rem 1.6rem;margin-top:1rem;}
+.rv-back{background:none;border:1px solid var(--gray-200);color:var(--ci-dark);font-family:inherit;font-size:13px;font-weight:600;padding:9px 16px;border-radius:8px;cursor:pointer;}
+.rv-back:hover{border-color:var(--ci-blue);color:var(--ci-blue);}
+.rv-sec{background:var(--ci-white);border-radius:var(--radius,12px);box-shadow:var(--shadow,0 1px 3px rgba(0,0,0,.08));padding:1.1rem 1.4rem;margin-bottom:.75rem;}
+.rv-sec-title{font-size:13px;font-weight:700;color:var(--ci-dark);margin-bottom:.6rem;}
 .rv-list{list-style:none;margin:0;padding:0;}
-.rv-row{display:flex;align-items:baseline;gap:12px;padding:9px 0;border-top:1px solid var(--gray-100,#F1F5F8);}
+.rv-row{display:flex;align-items:baseline;gap:12px;padding:9px 0;border-top:1px solid var(--gray-100);}
 .rv-row:first-child{border-top:none;}
-.rv-q{flex:1;min-width:0;font-size:12.5px;color:var(--gray-600,#4A5A6A);line-height:1.5;}
-.rv-a{flex-shrink:0;max-width:38%;font-size:13px;font-weight:700;color:var(--navy,#1E2931);text-align:right;overflow-wrap:anywhere;}
+.rv-q{flex:1;min-width:0;font-size:12.5px;color:var(--gray-600);line-height:1.5;}
+.rv-a{flex-shrink:0;max-width:38%;font-size:13px;font-weight:700;color:var(--ci-dark);text-align:right;overflow-wrap:anywhere;}
 .rv-unsure{color:#8A6410;font-weight:600;}
-.rv-blank{color:var(--gray-400,#6B7A8D);font-weight:500;font-style:italic;}
-.rv-edit{flex-shrink:0;background:none;border:none;color:var(--cyan,#00A9CC);font-family:inherit;font-size:11.5px;font-weight:600;cursor:pointer;padding:2px 4px;text-decoration:underline;}
+.rv-blank{color:var(--gray-400);font-weight:500;font-style:italic;}
+.rv-edit{flex-shrink:0;background:none;border:none;color:var(--ci-blue);font-family:inherit;font-size:11.5px;font-weight:600;cursor:pointer;padding:2px 4px;text-decoration:underline;}
 .question.rv-flash{box-shadow:0 0 0 3px rgba(0,169,204,.35);border-radius:8px;transition:box-shadow .3s;}
 /* ── Time-basis badge + annualize helper ── */
-.q-basis-badge{display:inline-block;font-size:11px;font-weight:600;color:var(--cyan-dark,#0089A6);background:var(--cyan-pale,#F0F9FF);border:1px solid var(--cyan,#00AECF);border-radius:99px;padding:1px 9px;margin-left:6px;vertical-align:middle;white-space:nowrap;}
-.q-annualize-toggle{background:none;border:none;color:var(--cyan-dark,#0089A6);font-size:12px;cursor:pointer;padding:4px 0;margin-top:4px;text-decoration:underline;font-family:inherit;}
-.q-annualizer{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;padding:10px 12px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;font-size:12.5px;color:#475569;}
+.q-basis-badge{display:inline-block;font-size:11px;font-weight:600;color:var(--ci-blue-dark);background:var(--ci-info-surface);border:1px solid var(--ci-blue);border-radius:99px;padding:1px 9px;margin-left:6px;vertical-align:middle;white-space:nowrap;}
+.q-annualize-toggle{background:none;border:none;color:var(--ci-blue-dark);font-size:12px;cursor:pointer;padding:4px 0;margin-top:4px;text-decoration:underline;font-family:inherit;}
+.q-annualizer{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;padding:10px 12px;background:var(--ci-neutral-50);border:1px solid #E2E8F0;border-radius:8px;font-size:12.5px;color:var(--ci-neutral-600);}
 .q-annualizer input{width:120px;padding:6px 8px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;}
 .q-annualizer select{padding:6px 8px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;background:#fff;}
-.annz-result{font-weight:700;color:var(--cyan-dark,#0089A6);}
+.annz-result{font-weight:700;color:var(--ci-blue-dark);}
 
 /* ── Live ROI sidebar ── */
 .roi-sidebar{display:flex;flex-direction:column;gap:10px;}
@@ -263,16 +265,17 @@ button{cursor:pointer;}
 .roi-inaction-cost{font-size:18px;font-weight:700;color:var(--navy);}
 .roi-inaction-sub{font-size:11px;color:var(--gray-500);}
 
-.p-to-top{position:fixed;bottom:22px;right:22px;width:46px;height:46px;border-radius:50%;border:1px solid var(--gray-200,#E2E8F0);background:#fff;color:var(--navy,#1E2931);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:95;box-shadow:0 4px 16px rgba(0,0,0,.16);transition:opacity .2s,transform .2s,visibility .2s;}
-.p-to-top:hover{transform:translateY(-2px);background:var(--cyan,#00A9CC);color:#fff;border-color:var(--cyan,#00A9CC);}
+.p-to-top{position:fixed;bottom:22px;right:22px;width:46px;height:46px;border-radius:50%;border:1px solid var(--gray-200);background:#fff;color:var(--ci-dark);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:95;box-shadow:0 4px 16px rgba(0,0,0,.16);transition:opacity .2s,transform .2s,visibility .2s;}
+.p-to-top:hover{transform:translateY(-2px);background:var(--ci-blue);color:#fff;border-color:var(--ci-blue);}
 .p-to-top-hidden{opacity:0;visibility:hidden;pointer-events:none;transform:translateY(8px);}
 </style>
+<link rel="stylesheet" href="brand-tokens.css"/>
 </head>
 <body>
 
 <div class="header">
   <div class="header-inner">
-    <img class="header-logo" src="ci-logo-negative.png" alt="Cloud Inventory" onerror="this.style.display='none'"/>
+    <img class="header-logo" data-ci-logo="logoNegative" alt="Cloud Inventory"/>
     <div class="header-divider"></div>
     <span class="header-title" id="headerTitle">Discovery Questionnaire</span>
   </div>
@@ -322,6 +325,7 @@ button{cursor:pointer;}
 <div class="toast" id="toast"></div>
 
 <script src="/roi-engine.js"></script>
+<script src="/questionnaire-roi-registry.js"></script>
 <script src="discovery.js"></script>
 <script>
 /* ════════════════════════════════════════
@@ -333,6 +337,7 @@ button{cursor:pointer;}
 // (it's designed to work standalone for the prospect view)
 
 let sessionData = null;
+function prospectQuestionnaire(){return sessionData&&Array.isArray(sessionData.questionnaire)&&sessionData.questionnaire.length?sessionData.questionnaire:getProspectQuestions(sessionData&&sessionData.industry||'default',{hasFieldInventory:sessionData&&!!sessionData.has_field_inventory});}
 let prospectAnswers = {};
 let totalQuestions = 0;
 let answeredCount = 0;
@@ -393,7 +398,7 @@ async function init() {
       return;
     }
     const data = await res.json();
-    sessionData = { token, industry: data.industry || 'default', company: data.company || '' };
+    sessionData = { ...data, token, industry: data.industry || 'default', company: data.company || '' };
 
     /* Restore any answers the prospect (or rep) already entered */
     prospectAnswers = {};
@@ -437,7 +442,7 @@ var _currentSectionIdx = 0;
 function renderQuestionnaire(targetSection) {
   var industry = sessionData.industry || 'default';
   var company  = sessionData.company  || 'your organisation';
-  var sections = getProspectQuestions(industry, { hasFieldInventory: sessionData && !!sessionData.has_field_inventory });
+  var sections = prospectQuestionnaire();
   totalQuestions = sections.reduce(function(s, sec){ return s + sec.questions.length; }, 0);
   answeredCount  = Object.keys(prospectAnswers)
     .filter(function(k){ return !k.endsWith('_by') && isRealAnswer(prospectAnswers[k]); }).length;
@@ -467,7 +472,7 @@ function renderSecNav(sections) {
 }
 
 function jumpToSection(idx) {
-  var sections = getProspectQuestions(sessionData.industry || 'default', { hasFieldInventory: sessionData && !!sessionData.has_field_inventory });
+  var sections = prospectQuestionnaire();
   _currentSectionIdx = Math.max(0, Math.min(idx, sections.length - 1));
   showSection(sections, _currentSectionIdx);
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -804,7 +809,7 @@ function updateSectionCounts() {
      Update just the count badge for the currently visible section. */
   var el = document.getElementById('sectionCount');
   if (!el) return;
-  var sections = getProspectQuestions(sessionData && sessionData.industry || 'default', { hasFieldInventory: sessionData && !!sessionData.has_field_inventory });
+  var sections = prospectQuestionnaire();
   var sec = sections[_currentSectionIdx];
   if (!sec) return;
   var answered = sec.questions.filter(function(q){ return isRealAnswer(prospectAnswers[q.id]); }).length;
@@ -829,23 +834,23 @@ const VALUE_DRIVERS = {
   labour: {
     label: 'Team time & productivity',
     blurb: 'How much of your team\u2019s day goes to manual counting, data entry, and chasing discrepancies.',
-    fields: ['userCount','laborWastePct','countDaysYr','countPeople','fieldTechs',
-             'addedJobsPerDay','pickRateGainPct','repeatVisitsYr','costPerTruckRoll','costPerOrder']
+    fields: ['userCount','laborWastePct','countDaysYr','countPeople',
+             'pickRateGainPct','repeatVisitsYr','costPerTruckRoll','costPerOrder','fieldReconcilePersonHours']
   },
   accuracy: {
     label: 'Inventory accuracy & losses',
     blurb: 'The gap between recorded and actual stock, and what it costs in write-offs and shrinkage.',
-    fields: ['currentAccuracy','annualWriteOff','fieldLeakagePct']
+    fields: ['currentAccuracy','annualWriteOff','fieldLeakageRate']
   },
   workingCapital: {
     label: 'Working capital tied up',
     blurb: 'How much cash sits in inventory, and how quickly it turns.',
-    fields: ['inventoryValue','invTurnsCurrent','fieldInventoryValue']
+    fields: ['inventoryValue','invTurnsCurrent','fieldInvValue','fieldLocations','fieldReconcilePerYr']
   },
   service: {
     label: 'Delivery & customer commitments',
     blurb: 'Order accuracy and on-time-in-full performance, and the revenue exposed when they slip.',
-    fields: ['otifBaseline','otifTarget','orderErrorPct','costPerError','ordersPerYr','revenue','revenuePerJob']
+    fields: ['otifBaseline','otifTarget','orderErrorPct','costPerError','ordersPerYr','revenue','lostSalesYr','contributionMarginPct','servicePenaltyCostYr']
   },
   uptime: {
     label: 'Downtime & expediting',
@@ -895,8 +900,14 @@ const QUESTION_CONTEXT = {
   expediteSpendYr:  'Rush freight and expediting fees are a direct symptom of not trusting inventory data \u2014 and a cost that usually shrinks with accuracy.',
   costPerTruckRoll: 'A repeat visit for a missing part carries labor, vehicle, and opportunity cost \u2014 this quantifies what each one really costs.',
   repeatVisitsYr:   'How often technicians return for a wrong or missing part shows how much first-visit success could improve.',
-  fieldInventoryValue:'Parts on trucks and in the field are easy to lose track of \u2014 this sizes how much value is exposed to leakage.',
-  revenuePerJob:    'When technicians spend less time hunting parts, they can complete more billable work \u2014 this helps value that recovered capacity.',
+  fieldInvValue:    'Field inventory is reported separately from warehouse and central inventory so the same stock is not counted twice.',
+  fieldLeakageRate: 'This is the annual field-only loss rate; exclude losses already reported in central write-offs.',
+  fieldLocations:   'The location count combines with reconciliation frequency and person-hours; it creates no value by itself.',
+  fieldReconcilePerYr:'How often each field location is reconciled determines the annual effort.',
+  fieldReconcilePersonHours:'Enter total person-hours for one reconciliation at one field location.',
+  lostSalesYr:      'Use a supported annual lost-sales estimate caused by service or fulfillment failures; the model applies contribution margin, not full revenue.',
+  contributionMarginPct:'Contribution margin converts recovered sales into economic contribution. Without it, service revenue remains unquantified.',
+  servicePenaltyCostYr:'Report penalties, credits, chargebacks, or deductions separately from expedite and normal order-error handling.',
   itCost:           'What you spend maintaining current tools and workarounds is part of the true cost of the status quo.',
   discRate:         'Your finance team\u2019s hurdle rate lets any business case be judged on your own terms, not ours.'
 };
@@ -915,7 +926,7 @@ function isRealAnswer(val) {
 /* Per-driver progress: how many of its questions this questionnaire asks,
    and how many the prospect has genuinely answered. */
 function computeDriverProgress() {
-  const sections = getProspectQuestions((sessionData && sessionData.industry) || 'default', { hasFieldInventory: sessionData && !!sessionData.has_field_inventory });
+  const sections = prospectQuestionnaire();
   const out = {};
   Object.keys(VALUE_DRIVERS).forEach(k => { out[k] = { total: 0, answered: 0 }; });
   sections.forEach(sec => sec.questions.forEach(q => {
@@ -949,6 +960,16 @@ const SYNC_TO_ROI = {
   downtimeHrsPerEvent:'downtimeHrsPerEvent',
   downtimeCostPerHr: 'downtimeCostPerHr',
   expediteSpendYr:   'expediteSpendYr',
+  servicePenaltyCostYr:'servicePenaltyCostYr',
+  lostSalesYr:'lostSalesYr',
+  contributionMarginPct:'contributionMarginPct',
+  repeatVisitsYr:'repeatVisitsYr',
+  costPerTruckRoll:'costPerTruckRoll',
+  fieldLocations:'fieldLocations',
+  fieldInvValue:'fieldInvValue',
+  fieldLeakageRate:'fieldLeakageRate',
+  fieldReconcilePerYr:'fieldReconcilePerYr',
+  fieldReconcilePersonHours:'fieldReconcilePersonHours',
   itCost:            'itCost',
   revenue:           'revenue',
   discRate:          'discRate',
@@ -999,7 +1020,7 @@ function prospectDriverUnlocked(driver, answered) {
 function buildROIInputs() {
   const ind = (sessionData && sessionData.industry) || 'default';
   const def = IND_DEFAULTS[ind] || IND_DEFAULTS.default;
-  const sections = getProspectQuestions(ind, { hasFieldInventory: sessionData && !!sessionData.has_field_inventory });
+  const sections = prospectQuestionnaire();
 
   /* Build a lookup: sync field → answered value */
   const answered = {};
@@ -1019,12 +1040,13 @@ function buildROIInputs() {
 
   /* Merge answered fields over defaults */
   const inp = {
-    modelVersion: 27,
+    modelVersion: 28,
     /* Labor */
     users:         answered.userCount       || 0,
     labor:         answered.labor           || def.labor,
     mLabor:        def.mLabor,
     laborWastePct: (answered.laborWastePct || 0) / 100,
+    currentAccuracy: answered.currentAccuracy || 0,
     /* Shrinkage */
     mShrinkage:    def.mShrinkage,
     shrinkRate:    0.03,
@@ -1044,6 +1066,8 @@ function buildROIInputs() {
     otifBaseline:  answered.otifBaseline    || 0,
     otifTarget:    answered.otifTarget      || 0,
     mOtif:         def.mOtif,
+    lostSalesYr:answered.lostSalesYr||0,
+    contributionMarginPct:(answered.contributionMarginPct||0)/100,
     /* Do not silently create prospect-facing value from a revenue-risk
        benchmark when the prospect has not entered baseline and target. */
     otifRisk:      0,
@@ -1058,6 +1082,11 @@ function buildROIInputs() {
     /* Expedite */
     expediteSpendYr: answered.expediteSpendYr || 0,
     mExpedite:     0.25,
+    servicePenaltyCostYr:answered.servicePenaltyCostYr||0,
+    mServicePenalty:0.25,
+    repeatVisitsYr:answered.repeatVisitsYr||0,
+    costPerTruckRoll:answered.costPerTruckRoll||0,
+    mFirstFix:0.30,
     /* Counts */
     countDaysYr:   answered.countDaysYr || 0,
     countPeople:   answered.countPeople || 0,
@@ -1075,10 +1104,12 @@ function buildROIInputs() {
     fieldInvValue: answered.fieldInvValue || 0,
     fieldLeakageRate: answered.fieldLeakageRate || 0,
     fieldLocations: answered.fieldLocations || 0,
-    fieldReconcileCost: 0, fieldReconcilePerYr: 1,
+    fieldReconcileCost:0,fieldReconcilePerYr:answered.fieldReconcilePerYr||0,
+    fieldReconcilePersonHours:answered.fieldReconcilePersonHours||0,
     mFieldLeakage: 0.30, mFieldCount: 0.50,
-    /* Investment — use a reasonable placeholder for payback calc */
-    invest:        90000, otc: 0,
+    /* No fabricated commercial investment. ROI/payback remain unavailable
+       until an authoritative modeled investment is deliberately supplied. */
+    invest:Number(sessionData&&sessionData.modeled_investment)||0,otc:Number(sessionData&&sessionData.modeled_one_time_investment)||0,
     discRate:      answered.discRate ? answered.discRate / 100 : def.discRate,
     implMonths:    3, ramp1: 0.40, ramp2: 0.75, ramp3: 1.00,
   };
@@ -1099,7 +1130,8 @@ function computeLiveROI() {
       mIt: inp.mIt * 0.7, mDowntime: inp.mDowntime * 0.7, mExpedite: inp.mExpedite * 0.7,
       mCount: inp.mCount * 0.7, mThroughput: inp.mThroughput * 0.7,
       mAccuracy: inp.mAccuracy * 0.7, mFieldLeakage: inp.mFieldLeakage * 0.7,
-      mFieldCount: inp.mFieldCount * 0.7,
+      mFieldCount: inp.mFieldCount * 0.7, mServicePenalty: inp.mServicePenalty * 0.7,
+      mFirstFix: inp.mFirstFix * 0.7,
     };
     const cons = calcROI(consInp);
 
@@ -1157,7 +1189,7 @@ function renderValuePanel() {
   /* Confidence bar */
   const totalQ = Object.keys(prospectAnswers).filter(k => !k.endsWith('_by')).length;
   const answeredQ = Object.keys(prospectAnswers).filter(k => !k.endsWith('_by') && isRealAnswer(prospectAnswers[k])).length;
-  const sections = getProspectQuestions((sessionData&&sessionData.industry)||'default', {hasFieldInventory:sessionData&&!!sessionData.has_field_inventory});
+  const sections = prospectQuestionnaire();
   const allQ = sections.reduce((s,sec)=>s+sec.questions.length,0);
   const confPct = allQ > 0 ? Math.round((answeredQ / allQ) * 100) : 0;
 
@@ -1169,6 +1201,9 @@ function renderValuePanel() {
         <div class="roi-inaction-cost">${fmt(monthly)}</div>
         <div class="roi-inaction-sub">in recoverable value foregone</div>
       </div>`
+    : '';
+  const investmentNotice = (base.totalInvestY1||0) <= 0
+    ? '<div class="roi-disclaimer" style="margin-top:8px;"><strong>ROI and payback are not yet calculated.</strong> The investment has not been defined by your Cloud Inventory team.</div>'
     : '';
 
   /* Populate nudge card separately */
@@ -1193,6 +1228,7 @@ function renderValuePanel() {
     </div>
     <div class="roi-range-label">estimated annual benefit</div>
     ${inactionHtml}
+    ${investmentNotice}
     <div class="roi-disclaimer">Based only on value drivers supported by answers entered so far. The range applies 70%–100% of the starting recovery assumptions.</div>
 
     <div style="border-top:1px solid var(--gray-100);margin:12px -16px;padding:12px 16px 0;">
@@ -1217,7 +1253,7 @@ function estimateMinutesLeft(remaining) {
 }
 
 function updateProgress() {
-  const sections = getProspectQuestions((sessionData && sessionData.industry) || 'default', { hasFieldInventory: sessionData && !!sessionData.has_field_inventory });
+  const sections = prospectQuestionnaire();
   const total = sections.reduce((s, sec) => s + sec.questions.length, 0);
   const answered = Object.keys(prospectAnswers)
     .filter(k => !k.endsWith('_by') && isRealAnswer(prospectAnswers[k])).length;
@@ -1262,7 +1298,7 @@ async function pushAnswer(questionId, answer, enteredBy) {
       {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questionId, answer, enteredBy: enteredBy || 'prospect' })
+        body: JSON.stringify({ questionId, answer })
       }
     );
     if (r && (r.status === 401 || r.status === 403 || r.status === 410)) {
@@ -1288,7 +1324,7 @@ async function retryPendingAnswers() {
       const r = await fetch(
         '/api/discovery/sessions/' + encodeURIComponent(sessionData.token) + '/answers',
         { method: 'PUT', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ questionId, answer, enteredBy: 'prospect' }) }
+          body: JSON.stringify({ questionId, answer }) }
       );
       if (!r || !r.ok) anyFail = true;
     } catch(e) { anyFail = true; }
@@ -1336,7 +1372,7 @@ async function autoSave() {
 function submitAnswers() { renderReview(); }
 
 function renderReview() {
-  const sections = getProspectQuestions((sessionData && sessionData.industry) || 'default', { hasFieldInventory: sessionData && !!sessionData.has_field_inventory });
+  const sections = prospectQuestionnaire();
   const total = sections.reduce((s, sec) => s + sec.questions.length, 0);
   const answered = Object.keys(prospectAnswers)
     .filter(k => !k.endsWith('_by') && isRealAnswer(prospectAnswers[k])).length;
@@ -1393,7 +1429,7 @@ function backToForm() {
 
 function editAnswer(id) {
   /* Find which section the question is in, then jump there */
-  var sections = getProspectQuestions(sessionData.industry || 'default', { hasFieldInventory: sessionData && !!sessionData.has_field_inventory });
+  var sections = prospectQuestionnaire();
   var targetSection = _currentSectionIdx;
   sections.forEach(function(sec, i) {
     if (sec.questions.some(function(q){ return q.id === id; })) targetSection = i;
@@ -1412,6 +1448,7 @@ function editAnswer(id) {
 }
 
 var _submitting = false;
+var _submissionNonce = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('submission_' + Date.now() + '_' + Math.random().toString(36).slice(2));
 async function confirmSubmit() {
   if (_submitting) return;
   _submitting = true;
@@ -1425,16 +1462,20 @@ async function confirmSubmit() {
   const answered = Object.keys(prospectAnswers)
     .filter(k => !k.endsWith('_by') && isRealAnswer(prospectAnswers[k])).length;
 
-  /* Tell the server the prospect has confirmed submission — this stamps
-     submitted_at on the session and emails the rep. Fire-and-forget:
-     the thank-you screen shows regardless of whether the call succeeds. */
+  /* Snapshot the current answer buffer as immutable evidence. Question
+     wording and classification are sent as context; the server reads the
+     authoritative answer rows and validates financial canonical inputs. */
   try {
-    await fetch('/api/discovery/sessions/' + encodeURIComponent(sessionData.token) + '/submit', {
+    const response=await fetch('/api/discovery/sessions/' + encodeURIComponent(sessionData.token) + '/submit', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
+      body:JSON.stringify({clientSubmissionId:_submissionNonce})
     });
+    if(!response.ok)throw new Error((await response.json().catch(function(){return{};})).error||'Submission could not be saved.');
   } catch (e) {
-    console.warn('submit endpoint error (non-blocking):', e.message);
+    console.warn('submit endpoint error:', e.message);_submitting=false;
+    document.querySelectorAll('button[onclick="confirmSubmit()"]').forEach(function(btn){btn.disabled=false;btn.textContent='Confirm and send';});
+    alert('Your answers are still here, but the submission could not be confirmed. Please try again.');return;
   }
 
   document.getElementById('mainContent').innerHTML = `
@@ -1579,7 +1620,7 @@ document.addEventListener('DOMContentLoaded', init);
 .asst-chip-sm:hover{border-color:var(--cyan);color:var(--cyan);background:var(--white);}
 
 /* Prospect assistant: bottom-left (back-to-top is bottom-right) */
-.asst-context{display:flex;flex-direction:column;gap:3px;padding:9px 12px;border-bottom:1px solid #E7EDF2;background:#fff;font-size:11px;color:#6B7A8D}.asst-context strong{color:#1E2931}.ai-stale{margin:8px 10px;padding:9px 10px;border:1px solid #F5C66A;border-radius:8px;background:#FFF8E6;color:#8A4B08;font-size:12px;line-height:1.4}
+.asst-context{display:flex;flex-direction:column;gap:3px;padding:9px 12px;border-bottom:1px solid #E7EDF2;background:#fff;font-size:11px;color:#6B7A8D}.asst-context strong{color:var(--ci-dark)}.ai-stale{margin:8px 10px;padding:9px 10px;border:1px solid #F5C66A;border-radius:8px;background:#FFF8E6;color:#8A4B08;font-size:12px;line-height:1.4}
 .passt-fab{bottom:22px;left:22px;}
 .passt-panel{bottom:22px;left:22px;right:auto;transform-origin:bottom left;}
 @media(max-width:600px){.passt-panel{left:0;right:0;border-radius:0;transform-origin:bottom center;}}

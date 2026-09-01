@@ -16,92 +16,25 @@
   'use strict';
 
   /* ── Knowledge base ───────────────────────────────────────────── */
-  var KB = [
-    '# Cloud Inventory ROI Business Case Builder — assistant knowledge base',
-    '',
-    '## What the app does',
-    'A tool for Cloud Inventory sales teams to build data-driven executive business cases for prospects evaluating Cloud Inventory\'s warehouse management (WMS) and field inventory / MEP products. Reps enter a prospect\'s operational figures; the app computes a defensible ROI and produces an executive presentation and PDF.',
-    '',
-    '## Tabs and workflow',
-    '- Calculator: enter prospect figures, see ROI update live. Use the scenario dropdown to switch between this customer\'s scenarios without leaving the page. Save before sharing.',
-    '- Discovery: structured qualification questions that map to the ROI value drivers. Answers sync into the calculator.',
-    '- Executive presentation: polished summary for decision-makers — exportable to PDF and PowerPoint.',
-    '- Solution Fit: internal + customer-facing SE handoff.',
-    '- Sensitivity / Compare: test assumptions and compare scenarios side by side.',
-    '- Stakeholder map, MAP, Impact: relationship and deal-management tools.',
-    '- Saved scenarios: version history and sharing. Every save appends a new version; nothing is overwritten.',
-    '',
-    '## ROI methodology',
-    'The ROI combines independent value levers based on the prospect\'s own inputs:',
-    '- Labor productivity: time saved from manual counting, data entry, and reconciliation.',
-    '- Inventory accuracy / shrinkage: reduction in write-offs as accuracy improves.',
-    '- Carrying cost: annual holding-cost reduction, with turns overlap removed.',
-    '- OTIF (on-time-in-full): revenue protected by improving delivery reliability.',
-    '- IT / legacy cost: savings from retiring current tools.',
-    '- Field service (MEP, optional): fewer repeat visits, recovered technician time, reduced van-stock leakage. Left blank, these contribute $0.',
-    'Direct carrying-reduction and turns-based carrying estimates are not added together; only the higher combined estimate is counted. Benefits follow the configured implementation and monthly ramp across the full five-year horizon. Payback is based on cumulative net cash flow after one-time and recurring investment. The model is server-authoritative — figures are recomputed on save.',
-    '',
-    '## Calculator fields — primary drivers',
-    'These five inputs drive most of the ROI. They are visually emphasized in the calculator:',
-    '- Annual revenue ($): used to calculate OTIF value-at-risk — the revenue exposed when delivery reliability slips.',
-    '- Inventory users: everyone who touches inventory data (warehouse, field, office). Sizes the labor-productivity lever.',
-    '- Avg. labor cost / user / yr ($): fully-loaded cost (salary + benefits + overhead). Default is $55,000.',
-    '- Warehouse inventory value on hand ($): point-in-time value, excluding field inventory entered separately. Drives carrying-cost and shrinkage levers.',
-    '- Current IT / legacy cost / yr ($): annual spend on existing tools and workarounds that Cloud Inventory would replace.',
-    '',
-    '## Calculator fields — other important inputs',
-    '- Current accuracy (%): the share of inventory records that match physical counts. Industry average ~72%.',
-    '- Annual write-off / shrinkage ($): inventory lost to damage, expiry, theft, or error per year.',
-    '- OTIF baseline / target (%): current and desired on-time-in-full performance. The gap drives the revenue-protection calculation.',
-    '- Inventory turns (current / benchmark): how many times inventory cycles per year. Closing the gap to benchmark frees working capital.',
-    '- Downtime events / yr and cost per hour: production interruptions caused by parts not being where records say.',
-    '- Expedite spend / yr ($): rush freight and premium sourcing — a direct symptom of poor inventory data.',
-    '- Annual subscription cost ($): Cloud Inventory license cost, used in the net-benefit and payback calculation.',
-    '',
-    '## Key terms',
-    '- OTIF: On-Time-In-Full — orders delivered complete and on schedule. A core service-level metric.',
-    '- Inventory turns: times inventory is sold/replaced per year. Higher = less cash tied up.',
-    '- Shrinkage: inventory lost to damage, expiry, theft, or unrecorded consumption.',
-    '- Carrying cost: cost of holding inventory — capital, storage, insurance, obsolescence. Typically 20–30% of inventory value per year.',
-    '- Ramp: phased benefit realization in years 1–3 post go-live.',
-    '- WMS: warehouse management system.',
-    '- MEP / CIP / CPP: Cloud Inventory field and mobile product lines.',
-    '- Payback period: months until cumulative benefit equals total investment.',
-    '- NPV: net present value — future benefits discounted to today\'s dollars.',
-    '',
-    '## Sharing and tracking',
-    '- Scenario share links: trackable and revocable. The app shows when a link has been opened. Scenario must be saved before sharing.',
-    '- Business-case links (Executive tab): tracked independently.',
-    '- Discovery links (sent to prospects): tracked when the prospect opens and submits.',
-    '- All share links are token-based — they can be revoked from the Saved tab.',
-    '',
-    '## Guided mode',
-    'A step-by-step walkthrough of the calculator (one section at a time). The numbered stepper at the top shows which of the five sections is current and which are complete. Toggle it with the Guided mode switch in the calculator header.',
-    '',
-    '## Common how-to',
-    '- Switch scenarios: use the scenario dropdown in the calculator header (no need to leave the page).',
-    '- See earlier versions: click the version history button next to the scenario dropdown.',
-    '- Send to a prospect: save the scenario, then click Share in the header.',
-    '- Generate PDF: Executive tab → Download PDF. Scenario must have enough data to render.',
-    '- Export PowerPoint: Executive tab → PowerPoint button.',
-    '- Send discovery questionnaire: Discovery tab → generate a prospect link.'
-  ].join('\n');
-
+  /* Product facts are assembled server-side from Application Knowledge 1.0. */
   /* ── Tab context: what to add to the system prompt per active tab ─ */
   var TAB_CONTEXT = {
     'tab-calc':        'The rep is currently on the CALCULATOR tab, entering prospect data.',
     'tab-disc':        'The rep is currently on the DISCOVERY tab, reviewing or editing qualification questions.',
     'tab-exec':        'The rep is currently on the EXECUTIVE PRESENTATION tab, reviewing the business case summary and export options.',
     'tab-solfit':      'The rep is currently on the SOLUTION FIT tab, completing the SE handoff.',
-    'tab-comp':        'The rep is currently on the SENSITIVITY tab, adjusting assumptions to test scenarios.',
+    'tab-comp':        'The rep is currently in Competitive Intelligence. Explain reuse versus refresh, product-specific sources, research freshness, opportunity memory, and the difference between saved research and an approved Battlecard.',
     'tab-sensitivity': 'The rep is currently on the SENSITIVITY tab.',
     'tab-compare':     'The rep is currently on the COMPARE tab, comparing multiple scenarios.',
     'tab-map':         'The rep is currently on the Joint Project Plan tab.',
     'tab-stake':       'The rep is currently on the STAKEHOLDER MAP tab.',
     'tab-saved':       'The rep is currently on the SAVED SCENARIOS tab.',
     'tab-analytics':   'The rep is currently on the ANALYTICS tab.',
+    'tab-manager':     'The user is currently on the SALES MANAGER workspace. Explain the selected view, filters, Management Priority, Deal Health, next customer commitment, saved buyer evidence, and internal manager actions. Never imply that the application reads or writes a CRM.',
     'tab-impact':      'The rep is currently on the IMPACT tab.',
-    'tab-help':        'The rep is currently on the HELP tab.'
+    'tab-help':        'The rep is currently on the HELP tab.',
+    'tab-readiness':   'The rep is currently on BUYER EVIDENCE & STAGE READINESS, reviewing customer evidence and governed stage progression.',
+    'tab-coach':       'The rep is currently with CHRISTIE, the internal AI deal coach.'
   };
 
   /* Field-label map: input id → human-readable label.
@@ -115,7 +48,9 @@
     downtimeEventsYr:'Downtime events per year', downtimeCostPerHr:'Cost per hour of downtime',
     expediteSpendYr:'Annual expedite spend', invest:'Annual subscription cost',
     repeatVisitsYr:'Repeat / return visits per year', costPerTruckRoll:'Cost per truck roll',
-    fieldTechs:'Field technicians', revenuePerJob:'Revenue per job', fieldInventoryValue:'Field inventory value',
+    fieldInvValue:'Field inventory value', fieldLeakageRate:'Field leakage rate', fieldLocations:'Field locations',
+    fieldReconcilePerYr:'Field reconciliations per year', fieldReconcilePersonHours:'Person-hours per reconciliation',
+    lostSalesYr:'Annual lost sales', contributionMarginPct:'Contribution margin', servicePenaltyCostYr:'Service penalties and credits',
     ramp1:'Year 1 ramp %', ramp2:'Year 2 ramp %', ramp3:'Year 3 ramp %', discRate:'Discount rate',
     scenarioName:'Scenario name', companyName:'Company name', repName:'Rep name',
     industry:'Industry', competitor:'Primary competitor'
@@ -128,6 +63,11 @@
   var history  = assistantState.history || [];
   var lastFocusedField = null;   // most recently focused input id
   var busy = false;
+  window.resetCustomerAIContext = function(){
+    window.CIAIState?.clear('assistant');window.CIAIState?.clear('internal_help');
+    assistantState={history:[]};helpState={history:[],fields:{}};history=[];lastFocusedField=null;
+    if(document.getElementById('asstBody')){renderConversation();renderPersistentChips();}
+  };
 
   /* ── Context snapshot (called at send time) ───────────────────── */
   function getContext() {
@@ -163,7 +103,7 @@
          'or act as a general business consultant.\n' +
       '5. If context shows a focused field, lead with what that specific field means in this app.\n' +
       '6. Be concise — a few sentences is usually right.\n\n' +
-      'KNOWLEDGE BASE:\n' + KB;
+      'Authoritative product knowledge is supplied by the server-owned /api/ai-help endpoint.';
   }
 
   /* ── Field focus tracking ─────────────────────────────────────── */
@@ -225,8 +165,8 @@
     if (document.getElementById('asstFab')) return;
     var fab = el('button', 'asst-fab');
     fab.id = 'asstFab';
-    fab.setAttribute('aria-label', 'Open assistant');
-    fab.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Ask</span>';
+    fab.setAttribute('aria-label', 'Open AI Help');
+    fab.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>AI Help</span>';
     fab.onclick = openPanel;
 
     var panel = el('div', 'asst-panel');
@@ -235,7 +175,7 @@
     panel.setAttribute('aria-label', 'Assistant');
     panel.innerHTML =
       '<div class="asst-head">' +
-        '<div class="asst-title"><span class="asst-dot"></span><span id="asstTitle">AI Assistant</span></div>' +
+        '<div class="asst-title"><span class="asst-dot"></span><span id="asstTitle">Ask AI Help</span></div>' +
         '<button class="asst-close" aria-label="Close">&times;</button>' +
       '</div>' +
       '<div class="ai-mode-tabs"><button id="asstMode" class="active">Assistant</button><button id="helpMode">Field Help</button><button id="asstRefresh">Refresh</button><button id="asstClear">Clear</button></div>' +
@@ -272,7 +212,7 @@
   function helpFieldState(){var id=lastFocusedField||helpState.activeField||'__none__';helpState.fields=helpState.fields||{};helpState.fields[id]=helpState.fields[id]||{history:[],lastResponse:'',stale:false};return helpState.fields[id];}
   function stateForMode(){ return mode === 'internal_help' ? helpFieldState() : assistantState; }
   function saveCurrent(){ var s=stateForMode(); s.history=history; s.lastResponse=history.filter(function(x){return x.role==='assistant';}).slice(-1)[0]?.content||''; if(window.CIAIState)window.CIAIState.save(mode,mode==='internal_help'?helpState:s); }
-  function switchMode(next){ saveCurrent(); mode=next; history=(stateForMode().history||[]); document.getElementById('asstMode').classList.toggle('active',mode==='assistant');document.getElementById('helpMode').classList.toggle('active',mode==='internal_help');document.getElementById('asstTitle').textContent=mode==='internal_help'?'Internal Field Help':'AI Assistant';renderConversation();renderPersistentChips(); }
+  function switchMode(next){ saveCurrent(); mode=next; history=(stateForMode().history||[]); document.getElementById('asstMode').classList.toggle('active',mode==='assistant');document.getElementById('helpMode').classList.toggle('active',mode==='internal_help');document.getElementById('asstTitle').textContent=mode==='internal_help'?'Internal Field Help':'Ask AI Help';renderConversation();renderPersistentChips(); }
   function clearCurrent(){ history=[]; var s=stateForMode();s.history=[];s.lastResponse='';s.stale=false;saveCurrent();renderConversation(); }
   function fieldContext(){var id=lastFocusedField||helpState.activeField||'',field=id&&document.getElementById(id),wrap=field&&field.closest('.field'),label=wrap&&wrap.querySelector('label'),pane=document.querySelector('.pane.active'),section=field&&field.closest('.card,.accordion,.sf-section'),type=field?(field.type||field.tagName):'',units='';if(/revenue|cost|value|writeoff|invest|spend/i.test(id))units='Currency';else if(/pct|rate|otif|accuracy|ramp|discount/i.test(id))units='Percentage';return {audience:'Internal User',screen:pane?.id||'',section:section?.querySelector('.card-title,.acc-title,h2,h3')?.textContent?.trim()||'',field:id,fieldLabel:(label?.textContent||FIELD_LABELS[id]||id).trim(),question:(label?.textContent||FIELD_LABELS[id]||'').trim(),description:field?.getAttribute('title')||wrap?.querySelector('.field-hint')?.textContent?.trim()||'',inputType:type,units,existingValue:field?.value||'',relevantPriorInputs:[],allowedContext:'Application usage and field explanation',contextClassification:'Internal'};}
   function currentContextObject(){return mode==='internal_help'?fieldContext():{screen:document.querySelector('.pane.active')?.id||'',field:lastFocusedField||'',company:(document.getElementById('companyName')||{}).value||'',scenario:(document.getElementById('scenarioName')||{}).value||''};}
@@ -366,17 +306,18 @@
          current context (tab, focused field, company, guided mode). */
       var contextObject=currentContextObject(), s=stateForMode(), fp=window.CIAIState&&window.CIAIState.fingerprint(contextObject);
       if(s.lastResponse&&s.contextFingerprint&&s.contextFingerprint!==fp)s.stale=true;
-      var systemPrompt = buildSystemPrompt() + getContext() + (mode==='internal_help'?'\n\nFIELD CONTEXT OBJECT:\n'+JSON.stringify(contextObject)+'\nAnswer what this exact field means, why it matters, and what the user should enter. Prefer this targeted context over generic Help.':'');
-
-      var resp = await apiFetch('/api/enhance', {
+      var resp = await fetch('/api/ai-help', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          max_tokens: 700,
-          system: systemPrompt,
-          messages: history.slice(-10)
+          question: q,
+          workspaceId: contextObject.screen || '',
+          focusedFieldId: contextObject.field || '',
+          scenarioId: window.currentScenarioId || null,
+          recentHelpConversation: history.slice(-10)
         })
       });
-      if (!resp || !resp.ok) throw new Error('AI request failed');
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
       var data = await resp.json();
       var text = (data.content && data.content[0] && data.content[0].text) || '';
       if (!text) throw new Error('empty');

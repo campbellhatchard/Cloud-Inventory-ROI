@@ -9,6 +9,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="style.css"/>
 <link rel="stylesheet" href="exec.css"/>
+<link rel="stylesheet" href="customer-switcher.css"/>
+<link rel="stylesheet" href="brand-tokens.css"/>
 <!-- Auth helper must load before app scripts -->
 <script src="src/client/api.js"></script>
 <script>
@@ -86,7 +88,7 @@
 
 <header class="topbar">
   <button class="hamburger" onclick="toggleSidebar()" aria-label="Toggle menu"><span></span><span></span><span></span></button>
-  <img class="topbar-logo" src="ci-logo-negative.png" alt="Cloud Inventory" onerror="this.style.display='none'"/>
+  <img class="topbar-logo" data-ci-logo="logoNegative" alt="Cloud Inventory"/>
   <div class="topbar-divider"></div>
   <span class="topbar-title">ROI Business Case Builder</span>
   <div class="topbar-right" id="topbarRight"><span class="save-status" id="saveStatus" style="display:none;"></span><span class="topbar-date" id="todayDate"></span></div>
@@ -104,90 +106,31 @@
 <div class="app-shell">
 <nav class="sidebar" id="sidebar">
   <div class="sidebar-spacer"></div>
-  <div class="sidebar-section-label">Deal workflow</div>
-  <button class="nav-item active" onclick="switchTab('calc')" id="nav-calc">
-    <span class="nav-step">1</span>
-    Calculator
-  </button>
-  <button class="nav-item" onclick="switchTab('disc')" id="nav-disc">
-    <span class="nav-step">2</span>
-    Discovery guide
-    <span class="nav-notif" id="discNotifBadge" style="display:none;"></span>
-  </button>
-  <button class="nav-item" onclick="switchTab('exec')" id="nav-exec">
-    <span class="nav-step">3</span>
-    Executive view
-  </button>
-  <button class="nav-item" onclick="switchTab('solfit')" id="nav-solfit">
-    <span class="nav-step">4</span>
-    Solution Fit
-  </button>
+  <div class="sidebar-section-label">Value Case</div>
+  <button class="nav-item active" onclick="switchTab('calc')" id="nav-calc"><span class="nav-icon">◆</span>ROI Calculator</button>
+  <button class="nav-item" onclick="switchTab('disc')" id="nav-disc"><span class="nav-icon">◇</span>Discovery<span class="nav-notif" id="discNotifBadge" style="display:none;"></span></button>
+  <button class="nav-item" onclick="switchTab('readiness')" id="nav-readiness"><span class="nav-icon">✓</span>Buyer Evidence</button>
+  <button class="nav-item" onclick="switchTab('stake')" id="nav-stake"><span class="nav-icon">○</span>Stakeholders</button>
+  <button class="nav-item" onclick="switchTab('solfit')" id="nav-solfit"><span class="nav-icon">◇</span>Solution Fit</button>
+  <button class="nav-item" onclick="switchTab('map')" id="nav-map"><span class="nav-icon">☰</span>Joint Project Plan</button>
+  <button class="nav-item" onclick="switchTab('exec')" id="nav-exec"><span class="nav-icon">▤</span>Executive Outputs</button>
 
-  <div class="sidebar-section-label">Strengthen the case</div>
-  <button class="nav-item" onclick="switchTab('comp')" id="nav-comp">
-    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M8 1l2 4 4.5.65-3.25 3.17.77 4.48L8 11.1l-4.02 2.2.77-4.48L1.5 5.65 6 5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
-    Competitive
-  </button>
-  <button class="nav-item" onclick="switchTab('sensitivity')" id="nav-sensitivity">
-    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M1 12l4-4 3 3 4-6 3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    Sensitivity
-  </button>
-  <button class="nav-item" onclick="switchTab('coach')" id="nav-coach">
-    <span class="nav-icon">✦</span>
-    Deal Coach
-  </button>
-  <button class="nav-item" onclick="switchTab('map')" id="nav-map">
-    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M2 8h12M2 13h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="4.5" cy="3" r="1.6" fill="currentColor"/><circle cx="9" cy="8" r="1.6" fill="currentColor"/><circle cx="12" cy="13" r="1.6" fill="currentColor"/></svg>
-    Joint Project Plan
-  </button>
-  <button class="nav-item" onclick="switchTab('stake')" id="nav-stake">
-    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="5" cy="5" r="2.2" stroke="currentColor" stroke-width="1.4"/><circle cx="11.5" cy="7" r="1.8" stroke="currentColor" stroke-width="1.4"/><path d="M1.5 13.5c0-2.2 1.6-3.7 3.5-3.7s3.5 1.5 3.5 3.7M9.5 13.5c.2-1.7 1.1-2.8 2-2.8 1.5 0 2.8 1.2 2.8 2.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-    Stakeholders
-  </button>
+  <div class="sidebar-section-label">Analyze &amp; Coach</div>
+  <button class="nav-item" onclick="openChristieForPerspective('rep')" id="nav-coach"><span class="nav-icon">✦</span>Deal Coach</button>
+  <button class="nav-item" onclick="switchTab('sensitivity')" id="nav-sensitivity"><span class="nav-icon">⌁</span>Sensitivity</button>
+  <button class="nav-item" onclick="switchTab('comp')" id="nav-comp"><span class="nav-icon">☆</span>Competitive</button>
+  <button class="nav-item" onclick="switchTab('impact')" id="nav-impact"><span class="nav-icon">◎</span>Impact Map</button>
+  <button class="nav-item" onclick="switchTab('compare')" id="nav-compare"><span class="nav-icon">▥</span>Compare</button>
 
-  <div class="sidebar-section-label">Library</div>
-  <button class="nav-item" onclick="switchTab('saved')" id="nav-saved">
-    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="12" height="14" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 1v5l3-2 3 2V1" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
-    Saved scenarios
-    <span class="nav-badge" id="savedCount">0</span>
-  </button>
-  <button class="nav-item" onclick="switchTab('analytics')" id="nav-analytics">
-    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="9" width="3" height="6" rx="1" fill="currentColor"/><rect x="6" y="5" width="3" height="10" rx="1" fill="currentColor"/><rect x="11" y="1" width="3" height="14" rx="1" fill="currentColor"/></svg>
-    Analytics
-  </button>
-  <button class="nav-item" onclick="switchTab('manager')" id="nav-manager" style="display:none;">
-    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M2 14V8h3v6M7 14V4h3v10M12 14V1h3v13" stroke="currentColor" stroke-width="1.4"/><path d="M1 14.5h14" stroke="currentColor" stroke-width="1.2"/></svg>
-    Sales Manager
-  </button>
-  <button class="nav-item" onclick="switchTab('admincustomers')" id="nav-admincustomers" style="display:none;">
-    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="5.5" cy="5" r="2.2" stroke="currentColor" stroke-width="1.4"/><circle cx="11" cy="6" r="1.8" stroke="currentColor" stroke-width="1.4"/><path d="M2 13c0-2 1.6-3.2 3.5-3.2S9 11 9 13M9.5 13c0-1.6 1.2-2.6 2.8-2.6S15 11.4 15 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-    Customers
-  </button>
+  <div class="sidebar-section-label">Portfolio</div>
+  <button class="nav-item" onclick="switchTab('saved')" id="nav-saved"><span class="nav-icon">▣</span>Saved Scenarios<span class="nav-badge" id="savedCount">0</span></button>
+  <button class="nav-item" onclick="switchTab('manager')" id="nav-manager" style="display:none;"><span class="nav-icon">▥</span>Sales Manager</button>
+  <button class="nav-item" onclick="switchTab('analytics')" id="nav-analytics"><span class="nav-icon">▥</span>Analytics</button>
 
-  <!-- More tools (collapsed by default) -->
-  <button class="nav-item nav-more-toggle" onclick="toggleNavMore(this)" style="color:rgba(255,255,255,.4);font-size:var(--fs-xs);">
-    <span id="navMoreChevron" style="font-size:10px;">▸</span> More tools
-  </button>
-  <div id="navMoreItems" style="display:none;">
-    <button class="nav-item" onclick="switchTab('compare')" id="nav-compare">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="6" height="10" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="9" y="3" width="6" height="10" rx="1" stroke="currentColor" stroke-width="1.4"/></svg>
-      Compare
-    </button>
-    <button class="nav-item" onclick="switchTab('impact')" id="nav-impact">
-      <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M2 8h12M2 13h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="13" cy="13" r="2" stroke="currentColor" stroke-width="1.4"/></svg>
-      Impact Map
-    </button>
-  </div>
-
-  <div class="sidebar-section-label">Settings</div>
-  <button class="nav-item" onclick="switchTab('help')" id="nav-help">
-    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.4"/><path d="M6 6.5C6 5.4 6.9 4.5 8 4.5s2 .9 2 2c0 .83-.5 1.55-1.22 1.88C8.3 8.65 8 9.1 8 9.5v.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="11.5" r=".75" fill="currentColor"/></svg>
-    How to Use
-  </button>
-  <button class="nav-item" onclick="switchTab('admin')" id="nav-admin" style="display:none;">
-    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.22 3.22l1.41 1.41M11.37 11.37l1.41 1.41M3.22 12.78l1.41-1.41M11.37 4.63l1.41-1.41" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-    Admin
-  </button>
+  <div class="sidebar-section-label">Administration / Support</div>
+  <button class="nav-item" onclick="switchTab('admincustomers')" id="nav-admincustomers" style="display:none;"><span class="nav-icon">○</span>Customers</button>
+  <button class="nav-item" onclick="switchTab('help')" id="nav-help"><span class="nav-icon">?</span>How to Use</button>
+  <button class="nav-item" onclick="switchTab('admin')" id="nav-admin" style="display:none;"><span class="nav-icon">⚙</span>Admin</button>
   <div class="sidebar-footer">
     <button class="sidebar-signout" onclick="window.ciAuth.logout()">
       <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3M11 11l3-3-3-3M14 8H6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -211,14 +154,15 @@
         <select id="calcScenarioSelect" onchange="onCalcScenarioPick(this.value)" title="Switch to another scenario for this customer"></select>
         <button class="btn btn-ghost btn-sm" id="calcVersionsBtn" onclick="openCurrentVersionHistory()" style="display:none;" title="View saved versions of this scenario"></button>
       </div>
-      <button class="btn btn-ghost btn-sm" id="calcSwitchCustomerBtn" onclick="showCustomerGate()" title="Switch customer" style="display:none;">⌂ Switch customer</button>
-      <button class="btn btn-primary btn-sm" onclick="saveScenario()" title="Save this scenario">
+      <button class="btn btn-ghost btn-sm" id="calcSwitchCustomerBtn" onclick="openCustomerSwitcher()" title="Switch customer" style="display:none;">⇄ Switch customer</button>
+      <button class="btn btn-ghost btn-sm" id="roiModelUpgradeBtn" onclick="previewRoiModelUpgrade()" style="display:none;" title="Preview Model v2.8 without changing this saved version">Preview v2.8 upgrade</button>
+      <button class="btn btn-primary btn-sm" id="calcSaveBtn" onclick="saveScenario()" title="Save this scenario">
         <svg viewBox="0 0 16 16" fill="none" width="13" height="13"><path d="M13 15H3a1 1 0 01-1-1V2a1 1 0 011-1h7.5L14 4.5V14a1 1 0 01-1 1z" stroke="currentColor" stroke-width="1.5"/><path d="M10 1v4H5V1M5 9h6M5 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        Save
+        Save Scenario
       </button>
-      <button class="btn btn-cta btn-sm" onclick="switchTab('exec')" title="Go to the executive presentation to review and print">
+      <button class="btn btn-secondary btn-sm" onclick="switchTab('exec')" title="Review customer-facing executive outputs">
         <svg viewBox="0 0 16 16" fill="none" width="13" height="13"><rect x="2" y="1" width="12" height="14" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        Executive view
+        Review Executive Output
       </button>
       <button class="btn btn-ghost btn-sm" onclick="generateShareURL()" title="Copy shareable link">🔗 Share</button>
       <button class="btn btn-ghost btn-sm" onclick="generateEmail()">✉️ Email</button>
@@ -238,10 +182,9 @@
           <div class="cg-card-desc">Begin a fresh business case for a company you haven't modeled yet.</div>
           <div class="cg-new-row">
             <input type="text" id="cgNewCompany" placeholder="Company name…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="cg-new-company-field" onkeydown="if(event.key==='Enter')cgCreateNew()"/>
-            <button class="btn btn-cta btn-sm" onclick="cgCreateNew()">Create</button>
+            <button class="btn btn-primary btn-sm" onclick="cgCreateNew()">Create</button>
           </div>
         </div>
-
         <div class="cg-card">
           <div class="cg-card-icon" style="background:#12786F;">☰</div>
           <div class="cg-card-title">Existing customer</div>
@@ -315,12 +258,12 @@
           </div>
           <div class="two-col">
             <div class="field"><label>AE / SE name</label><input type="text" id="repName" placeholder="Your name" maxlength="80"/></div>
-            <div class="field"><label>Deal stage</label>
-              <select id="dealStage">
-                <option value="">— Select stage —</option>
-                <option>Discovery</option><option>Demo</option><option>Proposal</option>
-                <option>Negotiation</option><option>Closed Won</option><option>Closed Lost</option>
-              </select>
+            <div class="field"><label>Current BuyCycle Stage</label>
+              <div class="buycycle-stage-display" style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:var(--surface-2,#f8fafc)">
+                <strong id="currentBuyCycleStageDisplay">Stage 2 — Define Economic Consequences</strong>
+                <div id="currentBuyCycleStageHelp" class="field-hint" style="margin-top:4px">New opportunities begin at Stage 2. Save the scenario to activate Buyer Evidence.</div>
+                <button type="button" class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="switchTab('readiness')">Review Stage Readiness</button>
+              </div>
             </div>
           </div>
           <div class="two-col">
@@ -364,6 +307,14 @@
               </select>
             </div>
           </div>
+          <div class="field field-primary opportunity-value-field">
+            <label>Estimated Opportunity Value</label>
+            <div class="input-prefix"><span id="opportunityValueSymbol">$</span><input type="text" inputmode="decimal" id="opportunityValue" placeholder="e.g. 325,000" min="0"/></div>
+            <div class="field-hint"><span id="opportunityValueCurrency">USD · Total expected contract value</span></div>
+            <div class="field-hint">Expected total Cloud Inventory contract value for this opportunity. This sales estimate is separate from customer ROI, benefit, and modeled investment.</div>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="useModeledInvestmentForOpportunityValue()">Use Modeled Investment</button>
+            <div class="field-hint">Copies the current modeled investment as a starting estimate. Future ROI changes will not update Opportunity Value.</div>
+          </div>
           <!-- Field inventory toggle -->
           <div class="fi-toggle-row" id="fiToggleRow">
             <label class="fi-toggle-label" for="hasFieldInventory">
@@ -394,6 +345,7 @@
               <span class="mep-tag" style="background:var(--cyan);color:#fff;">Field inventory</span>
               <span class="driver-group-hint">These drivers apply to stock held outside the main warehouse. Leave blank to exclude from ROI.</span>
             </div>
+            <div class="field-hint" style="margin:0 0 12px;color:var(--gray-600);"><strong>Keep the pools mutually exclusive:</strong> warehouse inventory and central write-offs above must exclude trucks, vans, job sites, contractor stores, and the field inventory and losses entered here.</div>
             <div class="field-row-2">
               <div class="field"><label title="Total value of inventory held at field locations (trucks, vans, job sites, contractor stores)">Field inventory value ($)</label>
                 <input type="text" inputmode="numeric" id="fieldInvValue" placeholder="e.g. 2,000,000" oninput="recalc()" min="0" step="10000"/></div>
@@ -407,8 +359,9 @@
                 <input type="number" id="fieldReconcilePerYr" placeholder="e.g. 4" oninput="recalc()" min="0" step="1"/></div>
             </div>
             <div class="field-row-2">
-              <div class="field"><label title="Cost to reconcile / count one field location (labor + travel)">Cost to reconcile / location ($)</label>
-                <input type="text" inputmode="numeric" id="fieldReconcileCost" placeholder="e.g. 500" oninput="recalc()" min="0" step="50"/></div>
+              <div class="field"><label title="Total employee time for one reconciliation at one location">Person-hours / reconciliation (#)</label>
+                <input type="number" id="fieldReconcilePersonHours" placeholder="e.g. 8" oninput="recalc()" min="0" step="0.5"/>
+                <input type="hidden" id="fieldReconcileCost" value="0"/></div>
               <div class="field"><label title="Share of reconciliation effort that will actually be eliminated or redeployed">Reconciliation effort reduction (%)</label>
                 <input type="number" id="mFieldCount" placeholder="e.g. 50" oninput="recalc()" min="0" max="100" step="1"/></div>
             </div>
@@ -530,7 +483,7 @@
                 Write-off reduction CI delivers
               </label>
               <div style="display:flex;align-items:center;gap:8px;">
-                <input type="number" id="m_shrinkage" placeholder="Avg until confirmed" oninput="recalc()" min="0" max="100" style="width:72px;text-align:right;font-size:13px;font-weight:500;padding:5px 7px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);"/>
+                <input type="number" id="m_shrinkage" placeholder="Derived from accuracy until confirmed" oninput="markExplicitRecovery('mShrinkage');recalc()" min="0" max="100" style="width:72px;text-align:right;font-size:13px;font-weight:500;padding:5px 7px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);"/>
                 <span style="font-size:12px;color:var(--gray-400);">%</span>
                 <span class="metric-bench" id="b_shrinkage">Avg: 40%</span>
                 <span id="shrinkSavPreview" style="margin-left:auto;font-size:12px;font-weight:600;color:var(--green);"></span>
@@ -663,6 +616,21 @@
                 <input type="number" id="m_expedite" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
             </div>
 
+            <div class="field-group-label">Service economics (kept separate from OTIF)</div>
+            <div class="field-row-2">
+              <div class="field"><label>Annual service penalties / credits ($)</label><input type="text" inputmode="numeric" id="servicePenaltyCostYr" placeholder="e.g. 150,000" oninput="recalc()"/></div>
+              <div class="field"><label>Penalty reduction (%)</label><input type="number" id="m_servicePenalty" placeholder="e.g. 25" min="0" max="100" oninput="recalc()"/></div>
+            </div>
+            <div class="field-row-2">
+              <div class="field"><label>Annual lost sales from service failures ($)</label><input type="text" inputmode="numeric" id="lostSalesYr" placeholder="Optional direct estimate" oninput="recalc()"/></div>
+              <div class="field"><label>Contribution margin (%)</label><input type="number" id="contributionMarginPct" placeholder="Required for revenue benefit" min="0" max="100" oninput="recalc()"/></div>
+            </div>
+            <div class="field-row-3">
+              <div class="field"><label>Repeat truck rolls / yr (#)</label><input type="number" id="repeatVisitsYr" placeholder="e.g. 500" min="0" oninput="recalc()"/></div>
+              <div class="field"><label>Cost per truck roll ($)</label><input type="text" inputmode="numeric" id="costPerTruckRoll" placeholder="e.g. 325" oninput="recalc()"/></div>
+              <div class="field"><label>Repeat-visit reduction (%)</label><input type="number" id="m_firstFix" placeholder="e.g. 30" min="0" max="100" oninput="recalc()"/></div>
+            </div>
+
             <div class="field-group-label">Physical / cycle counting labor</div>
             <div class="field-row-3">
               <div class="field"><label title="Total person-days per year spent on physical or cycle counts">Count days / yr (#)</label>
@@ -686,7 +654,7 @@
         <div class="acc-body closed">
           <div class="assumptions-header">Your estimate &nbsp;|&nbsp; Industry avg</div>
           <div class="metric-row"><span class="metric-label" title="Reduction in time spent on manual processes">Labor productivity gain</span><input class="metric-input" type="number" id="m_labor" placeholder="Use industry avg until confirmed" oninput="recalc();autoFlagConfidence()" min="0" max="100"/><span class="metric-unit">%</span><span class="metric-bench" id="b_labor">Avg: 25%</span></div>
-          <div class="metric-row"><span class="metric-label" title="Reduction in carrying costs via better accuracy and reduced buffer stock">Carrying cost reduction</span><input class="metric-input" type="number" id="m_carrying" placeholder="Use industry avg until confirmed" oninput="recalc()" min="0" max="100"/><span class="metric-unit">%</span><span class="metric-bench" id="b_carrying">Avg: 15%</span></div>
+          <div class="metric-row"><span class="metric-label" title="Reduction in carrying costs via better accuracy and reduced buffer stock">Carrying cost reduction</span><input class="metric-input" type="number" id="m_carrying" placeholder="Derived from accuracy until confirmed" oninput="markExplicitRecovery('mCarrying');recalc()" min="0" max="100"/><span class="metric-unit">%</span><span class="metric-bench" id="b_carrying">Avg: 15%</span></div>
           <div class="metric-row"><span class="metric-label" title="Share of the revenue-risk gap expected to be realized as economic value; validate with Finance">OTIF value realization</span><input class="metric-input" type="number" id="m_otif" placeholder="Use industry avg until confirmed" oninput="recalc()" min="0" max="100"/><span class="metric-unit">%</span><span class="metric-bench" id="b_otif">Avg: 10%</span></div>
           <div class="metric-row"><span class="metric-label" title="% of current IT/legacy costs Cloud Inventory displaces">IT / legacy cost displaced</span><input class="metric-input" type="number" id="m_it" placeholder="Use industry avg until confirmed" oninput="recalc()" min="0" max="100"/><span class="metric-unit">%</span><span class="metric-bench" id="b_it">Avg: 60%</span></div>
           <div class="metric-row"><span class="metric-label" title="Annual cost to hold inventory: storage, insurance, obsolescence, capital cost">Carrying cost rate (% of inventory)</span><input class="metric-input" type="number" id="m_carryRate" placeholder="Use industry avg until confirmed" oninput="recalc();autoFlagConfidence()" min="0"/><span class="metric-unit">%</span><span class="metric-bench" id="b_carryRate">Avg: 25%</span></div>
@@ -723,7 +691,7 @@
       <svg viewBox="0 0 16 16" fill="none"><path d="M13 15H3a1 1 0 01-1-1V2a1 1 0 011-1h7.5L14 4.5V14a1 1 0 01-1 1z" stroke="currentColor" stroke-width="1.5"/><path d="M10 1v4H5V1M5 9h6M5 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       Save scenario
     </button>
-    <button class="btn btn-cta" onclick="switchTab('exec')">
+    <button class="btn btn-primary" onclick="switchTab('exec')">
       <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="12" height="14" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       Executive presentation
     </button>
@@ -769,6 +737,7 @@
           <select id="compSolutionFilter" onchange="renderCompFilter()">
             <option value="cip">Cloud Inventory Platform (CIP)</option>
             <option value="mep">Mobile Enterprise Platform (MEP)</option>
+            <option value="epp">Enterprise Printing Platform (EPP)</option>
           </select>
         </div>
         <div class="field" style="min-width:260px;flex:2;max-width:460px;margin-bottom:0;"><label>Current competing solution</label>
@@ -789,13 +758,14 @@
 <!-- ═══ SENSITIVITY ═══ -->
 <div id="tab-sensitivity" class="pane">
   <div class="page-header"><div><div class="page-title">Sensitivity analysis</div><div class="page-subtitle">See how much each assumption impacts the 5-yr NPV. Bars show the range if each input changes ±20–30%.</div></div>
-    <button class="btn btn-cta btn-sm" onclick="renderSensitivity()">Refresh</button>
+    <button class="btn btn-secondary btn-sm" onclick="renderSensitivity()">Refresh</button>
   </div>
   <div class="card"><div id="sensitivityChart"><div class="empty-state"><p>Fill in the Calculator to see sensitivity analysis.</p></div></div></div>
 </div>
 
 <!-- ═══ EXECUTIVE VIEW ═══ -->
 <div id="tab-exec" class="pane">
+  <div id="executiveReadinessBanner" class="executive-readiness-banner"></div>
   <div class="page-header">
     <div><div class="page-title">Executive presentation</div><div class="page-subtitle">Business value assessment — write your narrative, then download or share.</div></div>
     <div class="btn-row exec-toolbar" style="margin-top:0;flex-wrap:wrap;gap:6px;">
@@ -804,7 +774,7 @@
         <svg viewBox="0 0 16 16" fill="none"><path d="M8 1v9M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         Download PDF
       </button>
-      <button class="btn btn-cta" id="pptxExportBtn" data-label="Export to PowerPoint" onclick="exportToPowerPoint()">
+      <button class="btn btn-primary" id="pptxExportBtn" data-label="Export to PowerPoint" onclick="exportToPowerPoint()">
         <svg viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 6h3a1.5 1.5 0 010 3H5V6zM5 9v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Export to PowerPoint
       </button>
@@ -857,7 +827,7 @@
           </div>
           <div class="whys-head-actions">
             <button class="btn btn-ghost btn-sm" onclick="loadThreeWhysDefaults()" title="Reset to industry defaults">↺ Reset</button>
-            <button class="btn btn-cta btn-sm" id="aiEnhanceBtn" onclick="aiEnhanceWhys()">✨ AI enhance</button>
+            <button class="btn btn-tertiary btn-sm" id="aiEnhanceBtn" onclick="aiEnhanceWhys()">✨ AI enhance</button>
           </div>
         </div>
         <!-- Audience: pill chips instead of dropdown -->
@@ -1024,7 +994,7 @@
       </select>
       <button class="btn btn-ghost btn-sm" id="adminViewAllBtn" style="display:none;" onclick="toggleAdminViewAll()">👥 View all (team)</button>
       <button class="btn btn-ghost btn-sm" onclick="showTemplatePicker()" title="Start from a vertical template">📋 Template</button>
-      <button class="btn btn-cta" onclick="switchTab('calc')">
+      <button class="btn btn-primary" onclick="switchTab('calc')">
         <svg viewBox="0 0 16 16" fill="none"><path d="M8 1v14M1 8h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         New scenario
       </button>
@@ -1056,7 +1026,7 @@
     <div style="display:flex;gap:8px;">
       <input type="text" id="dealQueryInput" placeholder="Ask a question about deal performance…" style="flex:1;"
         onkeydown="if(event.key==='Enter') askDealQuestion()"/>
-      <button class="btn btn-cta" onclick="askDealQuestion()">Ask</button>
+      <button class="btn btn-primary" onclick="askDealQuestion()">Ask</button>
     </div>
     <div id="dealQueryAnswer" style="display:none;"></div>
   </div>
@@ -1091,12 +1061,14 @@
     <!-- Sub-navigation tabs within Admin -->
     <div class="admin-tabs">
       <button class="admin-tab active" data-panel="users"      onclick="switchAdminPanel('users')">👥 Users</button>
+      <button class="admin-tab"        data-panel="teams"      onclick="switchAdminPanel('teams')">🏢 Sales Teams</button>
       <button class="admin-tab"        data-panel="benchmarks" onclick="switchAdminPanel('benchmarks')">📊 Benchmarks</button>
       <button class="admin-tab"        data-panel="auditlog"   onclick="switchAdminPanel('auditlog')">📋 Audit log</button>
       <button class="admin-tab"        data-panel="versions"   onclick="switchAdminPanel('versions')">🗂 Version history</button>
       <button class="admin-tab"        data-panel="errors"     onclick="switchAdminPanel('errors')">🛠 Error log</button>
       <button class="admin-tab"        data-panel="export"     onclick="switchAdminPanel('export')">⬇ Export</button>
       <button class="admin-tab"        data-panel="cleanup"    onclick="switchAdminPanel('cleanup')">🧹 Cleanup</button>
+      <button class="admin-tab"        data-panel="competitive" onclick="switchAdminPanel('competitive')">Competitive Intelligence</button>
     </div>
 
     <!-- ─── USERS PANEL ─── -->
@@ -1123,11 +1095,11 @@
             </select>
           </div>
         </div>
-        <label style="display:inline-flex;gap:7px;align-items:center;margin-top:10px;font-size:12px;">
-          <input type="checkbox" id="newSalesManagerRole"> Also assign Sales Manager access
-        </label>
+        <div class="admin-role-grid" aria-label="Additional roles">
+          <label><input type="checkbox" id="newRepRole"> Sales Rep</label><label><input type="checkbox" id="newSeRole"> Sales Engineer</label><label><input type="checkbox" id="newSalesManagerRole"> Sales Leader</label><label><input type="checkbox" id="newAdminRole"> Admin</label>
+        </div>
         <div class="btn-row" style="margin-top:.85rem;">
-          <button class="btn btn-cta" onclick="createUser()">Create user</button>
+          <button class="btn btn-primary" onclick="createUser()">Create user</button>
         </div>
         <div id="createUserError" class="field-hint" style="color:var(--red);display:none;margin-top:6px;"></div>
       </div>
@@ -1144,7 +1116,7 @@
         </div>
         <div class="field-hint" id="tempPasswordEmailNote" style="margin-top:8px;"></div>
         <div class="btn-row" style="margin-top:.75rem;">
-          <button class="btn btn-cta btn-sm" onclick="emailCredentialsViaMailClient()">✉️ Email via my mail client</button>
+          <button class="btn btn-secondary btn-sm" onclick="emailCredentialsViaMailClient()">✉️ Email via my mail client</button>
           <button class="btn btn-ghost btn-sm" onclick="document.getElementById('tempPasswordCard').style.display='none'">Dismiss</button>
         </div>
       </div>
@@ -1161,6 +1133,8 @@
         </div>
       </div>
     </div>
+
+    <div id="adminPanel-teams" class="admin-panel" style="display:none;"><div id="salesTeamsAdmin"><div class="empty-state"><p>Loading Sales Teams…</p></div></div></div>
 
     <!-- ─── BENCHMARKS PANEL ─── -->
     <div id="adminPanel-benchmarks" class="admin-panel" style="display:none;">
@@ -1195,7 +1169,7 @@
             <input type="date" id="logFilterTo"/>
           </div>
           <div style="display:flex;gap:6px;">
-            <button class="btn btn-cta btn-sm" onclick="loadAuditLog(0)">Apply</button>
+            <button class="btn btn-primary btn-sm" onclick="loadAuditLog(0)">Apply</button>
             <button class="btn btn-ghost btn-sm" onclick="clearAuditFilters()">Clear</button>
           </div>
         </div>
@@ -1284,30 +1258,20 @@
 
     <!-- ─── CLEANUP PANEL ─── -->
     <div id="adminPanel-cleanup" class="admin-panel" style="display:none;">
-      <div class="admin-section-title">Test data cleanup</div>
-      <p style="font-size:13px;color:var(--gray-600);margin-bottom:20px;">
-        Search any company name to preview records across all reps. Check the rows you want to remove, then delete only the selection.
-        Deleted records are soft-deleted — nothing is permanently removed and everything is recoverable.
-      </p>
-      <div class="cleanup-search-wrap">
-        <div class="cleanup-typeahead-wrap">
-          <textarea id="cleanupSearch" class="cleanup-search-input" rows="2"
-            placeholder="Search any company name&#10;e.g. James Test, ACME, demo"
-            oninput="adminCleanupTypeahead()"
-            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();adminCleanupPreview()}"
-          ></textarea>
-          <div id="cleanupTypeaheadDropdown" class="cleanup-ta-dropdown" style="display:none;"></div>
-        </div>
-        <button class="btn btn-primary" onclick="adminCleanupPreview()">Preview matches</button>
+      <div class="admin-section-title">Data Cleanup &amp; Recovery</div>
+      <p class="cleanup-intro">Find test, duplicate, or obsolete records, preview everything affected, then safely remove or restore selected records.</p>
+      <div class="cleanup-view-tabs" role="tablist" aria-label="Data Cleanup and Recovery views">
+        <button class="active" id="cleanupFindTab" role="tab" aria-selected="true" onclick="adminCleanupView('find')">Find &amp; Remove</button>
+        <button id="cleanupRestoreTab" role="tab" aria-selected="false" onclick="adminCleanupView('removed')">Recently Removed</button>
       </div>
-      <div id="cleanupPreview" style="margin-top:16px;"></div>
-
-      <div class="admin-section-title" style="margin-top:28px;display:flex;align-items:center;justify-content:space-between;">
-        <span>Recently deleted <span style="font-size:12px;font-weight:400;color:var(--gray-500);">(last 30 days)</span></span>
-        <button class="btn btn-ghost btn-sm" onclick="loadRecentlyDeleted()">↻ Refresh</button>
-      </div>
-      <div id="recentlyDeletedList"><div class="cleanup-no-match"><p>Click Refresh to load recently deleted records.</p></div></div>
+      <section id="cleanupFindView">
+        <div class="cleanup-search-wrap"><div class="cleanup-typeahead-wrap"><input id="cleanupSearch" class="cleanup-search-input" placeholder="Search customer, opportunity, or rep" oninput="adminCleanupTypeahead()" onkeydown="if(event.key==='Enter'){event.preventDefault();adminCleanupPreview()}"><div id="cleanupTypeaheadDropdown" class="cleanup-ta-dropdown" style="display:none;"></div></div><button class="btn btn-primary" onclick="adminCleanupPreview()">Preview Results</button></div>
+        <div class="cleanup-filter-grid"><label>Record status<select id="cleanupStatus"><option value="active">Active</option><option value="closed">Closed</option><option value="removed">Removed</option><option value="all">All</option></select></label><label>Scenario<select id="cleanupScenario"><option value="all">All</option><option value="current">Current versions</option><option value="prior">Prior versions</option></select></label><label>Prospect Link<select id="cleanupProspect"><option value="all">All</option><option value="submitted">Submitted</option><option value="draft">Draft / not submitted</option><option value="inactive">Inactive</option></select></label><details><summary>More Filters</summary><div class="cleanup-type-filters"><label><input type="checkbox" value="scenario" checked> Opportunities / scenarios</label><label><input type="checkbox" value="discovery" checked> Prospect / Discovery sessions</label><label><input type="checkbox" value="customer" checked> Customers</label><label><input type="checkbox" value="handoff" checked> Solution Fit / Handoff</label></div></details></div>
+        <div id="cleanupPreview" style="margin-top:16px;"></div>
+      </section>
+      <section id="cleanupRemovedView" hidden><div class="cleanup-recovery-toolbar"><input id="cleanupRemovedSearch" placeholder="Search customer, opportunity, or removed by"><select id="cleanupRemovedType"><option value="all">All record types</option><option value="scenario">Scenario</option><option value="customer">Customer</option><option value="discovery">Prospect / Discovery session</option><option value="handoff">Solution Fit / Handoff</option></select><button class="btn btn-tertiary" onclick="loadRecentlyDeleted()">Refresh</button></div><p class="cleanup-safe-note">Restoring an internal record does not reactivate prior public share or Prospect links.</p><div id="recentlyDeletedList"><div class="cleanup-no-match"><p>Choose Refresh to load recently removed records.</p></div></div></section>
     </div>
+    <div id="adminPanel-competitive" class="admin-panel" style="display:none;"><div id="competitiveIntelligenceAdmin"><div class="empty-state"><p>Loading Competitive Intelligence…</p></div></div></div>
 
   </div><!-- end adminContent -->
 </div>
@@ -1351,7 +1315,7 @@
         <div id="profilePwError" class="field-hint" style="color:var(--red);display:none;margin-bottom:.5rem;"></div>
         <div id="profilePwSuccess" class="field-hint" style="color:var(--green);display:none;margin-bottom:.5rem;"></div>
         <div class="btn-row" style="margin-top:.5rem;">
-          <button class="btn btn-cta" onclick="profileChangePassword()">Update password</button>
+          <button class="btn btn-primary" onclick="profileChangePassword()">Update password</button>
         </div>
       </div>
     </div>
@@ -1370,8 +1334,11 @@
   </div>
 </div>
 
-<!-- ═══ DEAL COACH ═══ -->
+<!-- ═══ JOINT PROJECT PLAN ═══ -->
 <div id="tab-coach" class="pane"><div id="dealCoachWrap"></div></div>
+
+<!-- ═══ BUYER EVIDENCE & STAGE READINESS ═══ -->
+<div id="tab-readiness" class="pane"><div id="buyerReadinessWrap"></div></div>
 
 <!-- ═══ JOINT PROJECT PLAN ═══ -->
 <div id="tab-map" class="pane">
@@ -1402,7 +1369,7 @@
       <button class="btn btn-ghost btn-sm" onclick="printStakeholderMap()" title="Print / save PDF">🖨 PDF</button>
       <button class="btn btn-ghost btn-sm" id="stakePptBtn" onclick="pptStakeholderMap()" title="Export PowerPoint">📊 PPT</button>
       <button class="btn btn-ghost btn-sm" onclick="suggestStakeholdersFromDiscovery()" title="Draft stakeholders from your value-engineering discovery answers">✨ Suggest from discovery</button>
-      <button class="btn btn-cta btn-sm" id="stakeAddBtn" onclick="addStakeholder()">+ Add stakeholder</button>
+      <button class="btn btn-primary btn-sm" id="stakeAddBtn" onclick="addStakeholder()">+ Add stakeholder</button>
     </div>
   </div>
   <div class="two-col" style="align-items:start;margin-bottom:1.25rem;">
@@ -1517,7 +1484,7 @@
     <textarea id="emailBody" rows="18"></textarea>
     <div class="btn-row" style="margin-top:1rem;">
       <button class="btn btn-primary" onclick="openMailto()">Open in email client</button>
-      <button class="btn btn-cta" onclick="copyEmail()">Copy to clipboard</button>
+      <button class="btn btn-secondary" onclick="copyEmail()">Copy to clipboard</button>
       <button class="btn btn-ghost" id="aiPersonalizeEmailBtn" onclick="aiPersonalizeEmail()" title="Rewrite the tone for the selected audience, keeping every number exact">✨ AI personalize</button>
       <button class="btn btn-ghost" onclick="closeModal('emailModal')">Close</button>
     </div>
@@ -1533,7 +1500,7 @@
     <span class="modal-label">Share URL</span>
     <input type="text" id="shareUrlInput" readonly onclick="this.select()"/>
     <div class="btn-row" style="margin-top:1rem;">
-      <button class="btn btn-primary" onclick="navigator.clipboard.writeText(document.getElementById('shareUrlInput').value).then(()=>showToast('Copied!'))">Copy link</button>
+      <button class="btn btn-secondary" onclick="navigator.clipboard.writeText(document.getElementById('shareUrlInput').value).then(()=>showToast('Copied!'))">Copy link</button>
       <button class="btn btn-ghost" onclick="closeModal('shareModal')">Close</button>
     </div>
   </div>
@@ -1552,7 +1519,7 @@
         <span>Salesforce</span>
         <span style="font-size:11px;opacity:.7;font-weight:400;">Opens login → paste note</span>
       </button>
-      <button class="btn btn-cta" style="padding:14px;flex-direction:column;gap:4px;height:auto;" onclick="pushToCRM('hubspot');closeModal('crmModal')">
+      <button class="btn btn-primary" style="padding:14px;flex-direction:column;gap:4px;height:auto;" onclick="pushToCRM('hubspot');closeModal('crmModal')">
         <span style="font-size:18px;">🟠</span>
         <span>HubSpot</span>
         <span style="font-size:11px;opacity:.7;font-weight:400;">Opens app → paste note</span>
@@ -1568,6 +1535,8 @@
 </div>
 
 <script src="/roi-engine.js"></script>
+<script src="/questionnaire-roi-registry.js"></script>
+<script src="brand-system.js"></script>
 <script src="brand-palette.js"></script>
 <script src="currency.js"></script>
 <script src="format-utils.js"></script>
@@ -1582,14 +1551,17 @@
 <!-- PowerPoint runtime: JSZip must load before the browser PptxGenJS bundle. -->
 <script src="/jszip.min.js"></script>
 <script src="/pptxgen.min.js"></script>
+<script src="executive-story.js"></script>
 <script src="pptx-export.js"></script>
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="5.8.0";</script>
+<script>const APP_VERSION="6.8.2";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
 <script src="ai-session.js"></script>
+<script src="customer-switcher.js"></script>
+<script src="application-knowledge.js"></script>
 <script src="assistant.js"></script>
 <script src="input-format.js"></script>
 <script src="exec-infographics.js"></script>
@@ -1603,9 +1575,11 @@
 <script src="deal-export.js"></script>
 <script src="proposal.js"></script>
 <script src="deal-coach.js"></script>
+<script src="buyer-readiness.js"></script>
 <script src="comp-research.js"></script>
 <script src="sales-manager.js"></script>
 <script>
+function clientHasRole(user,key,label) { return !!user && (user.role===key || (user.roleKeys||[]).includes(key) || (user.roles||[]).includes(label||key)); }
 /* ── Auth guard — runs before any app code ──
    initAuth() is stored as a Promise so initAdminTab(), initHelpTab(),
    and initProfileTab() can await it rather than reading stale
@@ -1616,12 +1590,12 @@ window._authReady = (async function() {
     /* Reveal admin-only nav (Customers command center + Admin panel). */
     try {
       const u = window.ciAuth.getUser ? window.ciAuth.getUser() : {};
-      const isAdmin = !!(u && u.role === 'admin');
+      const isAdmin = clientHasRole(u,'admin','Admin');
       const navC = document.getElementById('nav-admincustomers');
       if (navC) navC.style.display = isAdmin ? 'flex' : 'none';
       const navA = document.getElementById('nav-admin');
       if (navA) navA.style.display = isAdmin ? 'flex' : 'none';
-      const canManage = isAdmin || (Array.isArray(u.roleKeys) && u.roleKeys.includes('sales_manager'));
+      const canManage = isAdmin || (Array.isArray(u.roleKeys) && u.roleKeys.includes('sales_manager')) || (Array.isArray(u.roles) && (u.roles.includes('Sales Leader') || u.roles.includes('Sales Manager')));
       const navM = document.getElementById('nav-manager');
       if (navM) navM.style.display = canManage ? 'flex' : 'none';
     } catch(e) {}
@@ -1641,6 +1615,8 @@ function downloadPDF() {
   v.threeWhysCi  = document.getElementById('why_ci')?.value  || '';
   v.threeWhysNow = document.getElementById('why_now')?.value || '';
   const vForPDF = { ...v };
+  vForPDF._customerProof = (window.selectedCustomerProofRecords || []).slice(0, 3);
+  vForPDF._customerProofMeta = { proofIds:vForPDF._customerProof.map(p=>p.id), revisions:vForPDF._customerProof.map(p=>({id:p.id,revision:p.revision})), generatedAt:new Date().toISOString() };
   /* The prospect logo is a large base64 data URL that bloats the handoff URL
      and is the main cause of truncation/parse failures. It's decorative, so
      always drop it from the PDF payload — the print page falls back to the
@@ -1747,7 +1723,7 @@ function refreshExec() {
 function applyDefaultsAndShowProof() {
   const ind = document.getElementById('industry')?.value;
   const card = document.getElementById('proofPointsCard');
-  if (ind && typeof PROOF_POINTS !== 'undefined' && PROOF_POINTS[ind]) { renderProofPoints(ind); if (card) card.style.display = 'block'; }
+  if (ind && typeof renderProofPoints === 'function') { renderProofPoints(ind); if (card) card.style.display = 'block'; }
   else if (card) card.style.display = 'none';
   if (typeof renderDiscoveryTab === 'function') renderDiscoveryTab();
   if (typeof renderCalcIndustryQuestions === 'function') renderCalcIndustryQuestions();
@@ -1902,7 +1878,8 @@ function refreshCalcScenarioPicker() {
   const company = (document.getElementById('companyName')?.value || '').trim();
   const all = (typeof savedScenarios !== 'undefined' && Array.isArray(savedScenarios)) ? savedScenarios : [];
   /* Current versions only — the dropdown lists scenarios, not versions. */
-  const mine = all.filter(s => s && s.company === company && s.isCurrent !== false);
+  const customerId=window.currentScenarioCustomerId||window._currentCustomerId||null;
+  const mine = all.filter(s => s && s.isCurrent !== false && (customerId?s.customerId===customerId:s.company===company));
   if (!company || mine.length === 0) { wrap.style.display = 'none'; return; }
 
   mine.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
@@ -2002,7 +1979,7 @@ async function initAdminTab() {
   if (window._authReady) await window._authReady;
 
   const user = window.ciAuth ? window.ciAuth.getUser() : {};
-  const isAdmin = user.role === 'admin';
+  const isAdmin = clientHasRole(user,'admin','Admin');
   const gate    = document.getElementById('adminGate');
   const content = document.getElementById('adminContent');
   if (gate)    gate.style.display    = isAdmin ? 'none'  : 'block';
@@ -2032,216 +2009,7 @@ async function adminExport(entity) {
   } catch(e) { showToast('Export failed.'); }
 }
 
-/* ── Admin: test data cleanup ── */
-
-/* Typeahead: fetch matching company names as the admin types */
-let _cleanupTaTimer = null;
-async function adminCleanupTypeahead() {
-  clearTimeout(_cleanupTaTimer);
-  const dd = document.getElementById('cleanupTypeaheadDropdown');
-  const val = (document.getElementById('cleanupSearch')?.value || '').trim();
-  if (!val || val.length < 2) { if (dd) dd.style.display = 'none'; return; }
-  _cleanupTaTimer = setTimeout(async () => {
-    try {
-      const resp = await apiFetch('/api/admin/companies?q=' + encodeURIComponent(val));
-      if (!resp || !resp.ok) return;
-      const { companies } = await resp.json();
-      if (!companies || companies.length === 0) { dd.style.display = 'none'; return; }
-      dd.innerHTML = companies.map(c =>
-        '<div class="cleanup-ta-item" onclick="adminCleanupPickCompany(' + JSON.stringify(c) + ')">' + escapeHtml(c) + '</div>'
-      ).join('');
-      dd.style.display = 'block';
-    } catch(e) { /* silently ignore */ }
-  }, 200);
-}
-
-function adminCleanupPickCompany(name) {
-  const el = document.getElementById('cleanupSearch');
-  if (el) el.value = name;
-  const dd = document.getElementById('cleanupTypeaheadDropdown');
-  if (dd) dd.style.display = 'none';
-  adminCleanupPreview();
-}
-
-/* Close typeahead dropdown when clicking outside */
-document.addEventListener('click', function(e) {
-  if (!e.target.closest('.cleanup-typeahead-wrap')) {
-    const dd = document.getElementById('cleanupTypeaheadDropdown');
-    if (dd) dd.style.display = 'none';
-  }
-});
-
-/* Track which records are checked */
-let _cleanupSelection = { scenarioIds: [], discoveryIds: [], customerIds: [] };
-
-function _cleanupUpdateDeleteBtn() {
-  const btn = document.getElementById('cleanupDeleteSelectedBtn');
-  if (!btn) return;
-  const total = _cleanupSelection.scenarioIds.length + _cleanupSelection.discoveryIds.length + _cleanupSelection.customerIds.length;
-  btn.textContent = total > 0 ? 'Delete ' + total + ' selected record' + (total !== 1 ? 's' : '') : 'Delete selected';
-  btn.disabled = total === 0;
-}
-
-function _cleanupToggle(type, id, checked) {
-  const arr = _cleanupSelection[type];
-  if (checked) { if (!arr.includes(id)) arr.push(id); }
-  else { const i = arr.indexOf(id); if (i > -1) arr.splice(i, 1); }
-  _cleanupUpdateDeleteBtn();
-}
-
-function _cleanupSelectAll(type, ids, checked) {
-  _cleanupSelection[type] = checked ? [...ids] : [];
-  /* sync individual checkboxes */
-  ids.forEach(id => {
-    const cb = document.getElementById('clcb-' + type + '-' + id);
-    if (cb) cb.checked = checked;
-  });
-  _cleanupUpdateDeleteBtn();
-}
-
-async function adminCleanupPreview() {
-  const search = (document.getElementById('cleanupSearch')?.value || '').trim();
-  if (!search) { showToast('Enter a company name to search.'); return; }
-  const dd = document.getElementById('cleanupTypeaheadDropdown');
-  if (dd) dd.style.display = 'none';
-  const el = document.getElementById('cleanupPreview');
-  if (!el) return;
-  el.innerHTML = '<div class="empty-state"><p>Searching\u2026</p></div>';
-  /* Reset selection */
-  _cleanupSelection = { scenarioIds: [], discoveryIds: [], customerIds: [] };
-  try {
-    const resp = await apiFetch('/api/admin/cleanup/preview', {
-      method: 'POST', body: JSON.stringify({ company: search })
-    });
-    if (!resp || !resp.ok) { el.innerHTML = '<div class="empty-state"><p>Preview failed.</p></div>'; return; }
-    const data = await resp.json();
-    const { scenarios, discovery, customers, handoffs, summary } = data;
-    const total = summary.scenarios + summary.discovery + summary.customers + summary.handoffs;
-
-    if (total === 0) {
-      el.innerHTML = '<div class="cleanup-no-match"><p>No records found matching <strong>' + escapeHtml(search) + '</strong>. Nothing would be deleted.</p></div>';
-      return;
-    }
-
-    /* Build selectable table with checkboxes */
-    function scenarioRows(rows) {
-      const allIds = rows.map(r => r.id);
-      return '<div class="cleanup-section-label">'
-        + '<label class="cleanup-sel-all"><input type="checkbox" id="clcb-all-scenarios" onchange="_cleanupSelectAll(\'scenarioIds\',' + JSON.stringify(allIds) + ',this.checked)"> Select all</label>'
-        + 'Scenarios</div>'
-        + '<div class="cleanup-table-wrap"><table class="cleanup-table"><thead><tr>'
-        + '<th class="cleanup-th-cb"></th><th>Name</th><th>Company</th><th>Rep</th><th>Version</th><th>Active</th>'
-        + '</tr></thead><tbody>'
-        + rows.map(r => '<tr class="cleanup-row" id="clrow-scenarios-' + r.id + '">'
-          + '<td class="cleanup-td-cb"><input type="checkbox" id="clcb-scenarioIds-' + r.id + '" onchange="_cleanupToggle(\'scenarioIds\',' + r.id + ',this.checked)"></td>'
-          + '<td>' + escapeHtml(r.name || '') + '</td>'
-          + '<td>' + escapeHtml(r.company || '') + '</td>'
-          + '<td>' + escapeHtml(r.rep || '') + '</td>'
-          + '<td>' + escapeHtml(String(r.version ?? '')) + '</td>'
-          + '<td>' + (r.is_current ? '<span class="cleanup-pill-active">Active</span>' : '<span class="cleanup-pill-old">Old</span>') + '</td>'
-          + '</tr>').join('')
-        + '</tbody></table></div>';
-    }
-
-    function discoveryRows(rows) {
-      const allIds = rows.map(r => r.id);
-      return '<div class="cleanup-section-label">'
-        + '<label class="cleanup-sel-all"><input type="checkbox" id="clcb-all-discovery" onchange="_cleanupSelectAll(\'discoveryIds\',' + JSON.stringify(allIds) + ',this.checked)"> Select all</label>'
-        + 'Discovery sessions</div>'
-        + '<div class="cleanup-table-wrap"><table class="cleanup-table"><thead><tr>'
-        + '<th class="cleanup-th-cb"></th><th>Company</th><th>Rep</th><th>Submitted</th><th>Answers</th>'
-        + '</tr></thead><tbody>'
-        + rows.map(r => '<tr class="cleanup-row" id="clrow-discovery-' + r.id + '">'
-          + '<td class="cleanup-td-cb"><input type="checkbox" id="clcb-discoveryIds-' + r.id + '" onchange="_cleanupToggle(\'discoveryIds\',' + r.id + ',this.checked)"></td>'
-          + '<td>' + escapeHtml(r.company || '') + '</td>'
-          + '<td>' + escapeHtml(r.rep || '') + '</td>'
-          + '<td>' + (r.submitted ? '<span class="cleanup-pill-active">Yes</span>' : '<span class="cleanup-pill-old">No</span>') + '</td>'
-          + '<td>' + escapeHtml(String(r.answer_count ?? 0)) + '</td>'
-          + '</tr>').join('')
-        + '</tbody></table></div>';
-    }
-
-    function customerRows(rows) {
-      const allIds = rows.map(r => r.id);
-      return '<div class="cleanup-section-label">'
-        + '<label class="cleanup-sel-all"><input type="checkbox" id="clcb-all-customers" onchange="_cleanupSelectAll(\'customerIds\',' + JSON.stringify(allIds) + ',this.checked)"> Select all</label>'
-        + 'Customer records</div>'
-        + '<div class="cleanup-table-wrap"><table class="cleanup-table"><thead><tr>'
-        + '<th class="cleanup-th-cb"></th><th>Name</th><th>Owner</th><th>Scenarios</th>'
-        + '</tr></thead><tbody>'
-        + rows.map(r => '<tr class="cleanup-row" id="clrow-customers-' + r.id + '">'
-          + '<td class="cleanup-td-cb"><input type="checkbox" id="clcb-customerIds-' + r.id + '" onchange="_cleanupToggle(\'customerIds\',' + r.id + ',this.checked)"></td>'
-          + '<td>' + escapeHtml(r.name || '') + '</td>'
-          + '<td>' + escapeHtml(r.owner || '') + '</td>'
-          + '<td>' + escapeHtml(String(r.scenario_count ?? 0)) + '</td>'
-          + '</tr>').join('')
-        + '</tbody></table></div>';
-    }
-
-    el.innerHTML = '<div class="cleanup-preview-card">'
-      + '<div class="cleanup-preview-header">'
-      + '<div class="cleanup-preview-title">Preview: <strong>' + escapeHtml(search) + '</strong></div>'
-      + '<div class="cleanup-preview-counts">'
-      + '<span class="cleanup-count-pill">' + summary.scenarios + ' scenario' + (summary.scenarios!==1?'s':'') + '</span>'
-      + '<span class="cleanup-count-pill">' + summary.discovery + ' discovery link' + (summary.discovery!==1?'s':'') + '</span>'
-      + '<span class="cleanup-count-pill">' + summary.customers + ' customer record' + (summary.customers!==1?'s':'') + '</span>'
-      + (summary.handoffs ? '<span class="cleanup-count-pill">' + summary.handoffs + ' solution fit record' + (summary.handoffs!==1?'s':'') + '</span>' : '')
-      + '</div>'
-      + '</div>'
-      + (scenarios.length ? scenarioRows(scenarios) : '')
-      + (discovery.length ? discoveryRows(discovery) : '')
-      + (customers.length ? customerRows(customers) : '')
-      + '<div class="cleanup-preview-actions">'
-      + '<div class="cleanup-warning">&#9888; Soft-deletes the selected records. They remain in the database and are recoverable below.</div>'
-      + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
-      + '<button class="btn btn-danger" id="cleanupDeleteSelectedBtn" onclick="adminCleanupExecuteSelected(' + JSON.stringify(search) + ')" disabled>Delete selected</button>'
-      + '<button class="btn btn-danger btn-outline" onclick="adminCleanupExecuteAll(' + JSON.stringify(search) + ')">Delete all ' + total + ' matched</button>'
-      + '<button class="btn btn-ghost" onclick="document.getElementById(\'cleanupPreview\').innerHTML=\'\'">Cancel</button>'
-      + '</div></div>'
-      + '</div>';
-
-    _cleanupUpdateDeleteBtn();
-  } catch(e) { el.innerHTML = '<div class="empty-state"><p>Preview failed.</p></div>'; }
-}
-
-async function adminCleanupExecuteSelected(search) {
-  const total = _cleanupSelection.scenarioIds.length + _cleanupSelection.discoveryIds.length + _cleanupSelection.customerIds.length;
-  if (total === 0) { showToast('No records selected.'); return; }
-  if (!confirm('Soft-delete ' + total + ' selected record' + (total!==1?'s':'') + '? This is recoverable.')) return;
-  await _doCleanupExecute(search, _cleanupSelection);
-}
-
-async function adminCleanupExecuteAll(search) {
-  if (!confirm('Soft-delete ALL records matching "' + search + '"? This is recoverable but will remove them from all rep views.')) return;
-  await _doCleanupExecute(search, null);
-}
-
-async function _doCleanupExecute(search, selection) {
-  try {
-    const body = selection
-      ? { company: search, scenarioIds: selection.scenarioIds, discoveryIds: selection.discoveryIds, customerIds: selection.customerIds }
-      : { company: search };
-    const resp = await apiFetch('/api/admin/cleanup/execute', {
-      method: 'POST', body: JSON.stringify(body)
-    });
-    if (!resp || !resp.ok) { showToast('Cleanup failed.'); return; }
-    const data = await resp.json();
-    const el = document.getElementById('cleanupPreview');
-    if (el) el.innerHTML = '<div class="cleanup-success">'
-      + '<div class="cleanup-success-icon">&#10003;</div>'
-      + '<div class="cleanup-success-title">Cleanup complete</div>'
-      + '<div class="cleanup-success-detail">'
-      + data.scenariosDeleted + ' scenario' + (data.scenariosDeleted!==1?'s':'') + ' deleted &middot; '
-      + data.discoveryDeactivated + ' discovery link' + (data.discoveryDeactivated!==1?'s':'') + ' deactivated &middot; '
-      + data.customersDeleted + ' customer record' + (data.customersDeleted!==1?'s':'') + ' deleted'
-      + '</div>'
-      + '<button class="btn btn-ghost btn-sm" onclick="document.getElementById(\'cleanupSearch\').value=\'\';document.getElementById(\'cleanupPreview\').innerHTML=\'\'">Done</button>'
-      + '</div>';
-    document.getElementById('cleanupSearch').value = '';
-    _cleanupSelection = { scenarioIds: [], discoveryIds: [], customerIds: [] };
-    await fetchScenarios();
-  } catch(e) { showToast('Cleanup failed.'); }
-}
+/* Data Cleanup & Recovery is implemented in admin-cleanup-v661.js. */
 
 /* ── Batch C: After-the-meeting debrief / driver resonance ── */
 const DEBRIEF_DRIVERS = [
@@ -2395,72 +2163,7 @@ window.switchTab = function(name) {
   _origSwitchTabMore(name);
 };
 
-/* ── Admin cleanup undo: recently deleted records ── */
-async function loadRecentlyDeleted() {
-  const el = document.getElementById('recentlyDeletedList');
-  if (!el) return;
-  el.innerHTML = '<div class="cleanup-no-match"><p>Loading\u2026</p></div>';
-  try {
-    const resp = await apiFetch('/api/admin/cleanup/deleted');
-    if (!resp || !resp.ok) { el.innerHTML = '<div class="cleanup-no-match"><p>Failed to load.</p></div>'; return; }
-    const { scenarios, customers } = await resp.json();
-    const total = scenarios.length + customers.length;
-    if (total === 0) {
-      el.innerHTML = '<div class="cleanup-no-match"><p>No records deleted in the last 30 days.</p></div>';
-      return;
-    }
-    const fmtDate = d => d ? new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '\u2014';
-    let html = '<div class="cleanup-preview-card">';
-    if (scenarios.length) {
-      html += '<div class="cleanup-section-label">Deleted scenarios (' + scenarios.length + ')</div>'
-        + '<div class="cleanup-table-wrap"><table class="cleanup-table"><thead><tr><th>Name</th><th>Company</th><th>Rep</th><th>Deleted</th><th></th></tr></thead><tbody>'
-        + scenarios.map(s => '<tr>'
-            + '<td>' + escapeHtml(s.name) + (s.is_current ? ' <span class="shared-badge">current</span>' : '') + '</td>'
-            + '<td>' + escapeHtml(s.company) + '</td>'
-            + '<td style="font-size:11.5px;color:var(--gray-500);">' + escapeHtml(s.rep || '') + '</td>'
-            + '<td style="font-size:11.5px;color:var(--gray-500);">' + fmtDate(s.deleted_at) + '</td>'
-            + '<td><button class="btn btn-ghost btn-sm" onclick="adminRestore(\'scenario\',\'' + s.id + '\',this)">Restore</button></td>'
-            + '</tr>').join('')
-        + '</tbody></table></div>';
-    }
-    if (customers.length) {
-      html += '<div class="cleanup-section-label">Deleted customers (' + customers.length + ')</div>'
-        + '<div class="cleanup-table-wrap"><table class="cleanup-table"><thead><tr><th>Name</th><th>Owner</th><th>Deleted</th><th></th></tr></thead><tbody>'
-        + customers.map(c => '<tr>'
-            + '<td>' + escapeHtml(c.name) + '</td>'
-            + '<td style="font-size:11.5px;color:var(--gray-500);">' + escapeHtml(c.owner || '') + '</td>'
-            + '<td style="font-size:11.5px;color:var(--gray-500);">' + fmtDate(c.deleted_at) + '</td>'
-            + '<td><button class="btn btn-ghost btn-sm" onclick="adminRestore(\'customer\',\'' + c.id + '\',this)">Restore</button></td>'
-            + '</tr>').join('')
-        + '</tbody></table></div>';
-    }
-    html += '</div>';
-    el.innerHTML = html;
-  } catch(e) { el.innerHTML = '<div class="cleanup-no-match"><p>Failed to load.</p></div>'; }
-}
-
-async function adminRestore(type, id, btn) {
-  if (btn) { btn.disabled = true; btn.textContent = 'Restoring\u2026'; }
-  try {
-    const resp = await apiFetch('/api/admin/cleanup/restore', {
-      method: 'POST', body: JSON.stringify({ type, id })
-    });
-    if (!resp || !resp.ok) {
-      showToast('Restore failed.');
-      if (btn) { btn.disabled = false; btn.textContent = 'Restore'; }
-      return;
-    }
-    showToast('\u2713 Restored successfully.');
-    const row = btn ? btn.closest('tr') : null;
-    if (row) { row.style.opacity = '0.4'; row.style.pointerEvents = 'none'; }
-    await fetchScenarios();
-  } catch(e) {
-    showToast('Restore failed.');
-    if (btn) { btn.disabled = false; btn.textContent = 'Restore'; }
-  }
-}
-window.loadRecentlyDeleted = loadRecentlyDeleted;
-window.adminRestore = adminRestore;
+/* Cleanup recovery handlers are implemented in admin-cleanup-v661.js. */
 
 function switchAdminPanel(panel) {
   document.querySelectorAll('.admin-tab').forEach(b =>
@@ -2473,6 +2176,8 @@ function switchAdminPanel(panel) {
   if (panel === 'versions' && typeof renderVersionHistory === 'function') renderVersionHistory();
   if (panel === 'errors' && typeof loadErrorLog === 'function') loadErrorLog();
   if (panel === 'cleanup' && typeof loadRecentlyDeleted === 'function') loadRecentlyDeleted();
+  if (panel === 'teams' && typeof loadSalesTeamsAdmin === 'function') loadSalesTeamsAdmin();
+  if (panel === 'competitive' && typeof loadCompetitiveAdmin === 'function') loadCompetitiveAdmin();
 }
 
 /* ─────────────────────────────────────────
@@ -2489,7 +2194,7 @@ async function populateAuditFilterDropdowns() {
      but guard here as belt-and-suspenders against direct calls.   */
   if (window._authReady) await window._authReady;
   const user = window.ciAuth ? window.ciAuth.getUser() : {};
-  if (user.role !== 'admin') return; // not an admin — skip API calls
+  if (!clientHasRole(user,'admin','Admin')) return; // not an admin — skip API calls
   try {
     /* User dropdown */
     const uResp = await apiFetch('/api/users');
@@ -2761,7 +2466,7 @@ function renderUserTable(users) {
         return `<tr class="${!u.is_active?'user-row-inactive':''}${isMe?' user-row-me':''}">
           <td><strong>${escapeHtml(u.username)}</strong>${isMe?' <span class="you-badge">you</span>':''}</td>
           <td style="font-size:12px;color:var(--gray-500);">${escapeHtml(u.email)}</td>
-          <td><span class="role-badge" style="background:${roleColors[u.role]||'var(--gray-500)'}20;color:${roleColors[u.role]||'var(--gray-500)'};">${u.role==='admin'?'Admin':u.role==='se'?'Solution Engineer':'Account Executive'}</span>${Array.isArray(u.roles)&&u.roles.includes('sales_manager')?' <span class="role-badge">Sales Manager</span>':''}</td>
+          <td>${[...new Set([...(u.roles||[]),u.role].filter(Boolean))].map(r=>`<span class="role-badge" style="background:${roleColors[r]||'var(--gray-500)'}20;color:${roleColors[r]||'var(--gray-500)'};">${({admin:'Admin',se:'Solution Engineer',rep:'Sales Rep',sales_manager:'Sales Leader',value_engineering:'Value Engineering'})[r]||escapeHtml(r)}</span>`).join(' ')}</td>
           <td>${statusBadge}</td>
           <td style="font-size:12px;color:var(--gray-500);">${lastLogin}</td>
           <td style="text-align:center;">${u.scenario_count||0}</td>
@@ -2783,7 +2488,7 @@ async function createUser() {
   const username = document.getElementById('newUsername').value.trim();
   const email    = document.getElementById('newEmail').value.trim();
   const role     = document.getElementById('newRole').value;
-  const roles    = [role].concat(document.getElementById('newSalesManagerRole').checked ? ['sales_manager'] : []);
+  const roles    = [...new Set([role,document.getElementById('newRepRole').checked?'rep':null,document.getElementById('newSeRole').checked?'se':null,document.getElementById('newSalesManagerRole').checked?'sales_manager':null,document.getElementById('newAdminRole').checked?'admin':null].filter(Boolean))];
   const errEl    = document.getElementById('createUserError');
   errEl.style.display = 'none';
 
@@ -2812,6 +2517,9 @@ async function createUser() {
     document.getElementById('newEmail').value = '';
     document.getElementById('newRole').value = 'rep';
     document.getElementById('newSalesManagerRole').checked = false;
+    document.getElementById('newRepRole').checked = false;
+    document.getElementById('newSeRole').checked = false;
+    document.getElementById('newAdminRole').checked = false;
 
     showToast(`User "${data.user.username}" created.`);
     loadUsers();
@@ -2879,10 +2587,10 @@ function editUser(id, username, email, role, rolesEncoded) {
           <option value="admin" ${role==='admin'?'selected':''}>Admin</option>
         </select>
       </div>
-      <label style="display:inline-flex;gap:7px;align-items:center;font-size:12px;"><input type="checkbox" id="editSalesManagerRole" ${roles.includes('sales_manager')?'checked':''}> Sales Manager access</label>
+      <div class="admin-role-grid"><label><input type="checkbox" id="editRepRole" ${roles.includes('rep')?'checked':''}> Sales Rep</label><label><input type="checkbox" id="editSeRole" ${roles.includes('se')?'checked':''}> Sales Engineer</label><label><input type="checkbox" id="editSalesManagerRole" ${roles.includes('sales_manager')?'checked':''}> Sales Leader</label><label><input type="checkbox" id="editAdminRole" ${roles.includes('admin')?'checked':''}> Admin</label></div>
       <div id="editUserError" class="field-hint" style="color:var(--red);display:none;"></div>
       <div class="btn-row" style="margin-top:1rem;">
-        <button class="btn btn-cta" onclick="saveUserEdit('${id}')">Save changes</button>
+        <button class="btn btn-primary" onclick="saveUserEdit('${id}')">Save changes</button>
         <button class="btn btn-ghost" onclick="document.getElementById('editUserModal').remove()">Cancel</button>
       </div>
     </div>`;
@@ -2894,7 +2602,7 @@ async function saveUserEdit(id) {
   const username = document.getElementById('editUsername').value.trim();
   const email    = document.getElementById('editEmail').value.trim();
   const role     = document.getElementById('editRole').value;
-  const roles    = [role].concat(document.getElementById('editSalesManagerRole').checked ? ['sales_manager'] : []);
+  const roles    = [...new Set([role,document.getElementById('editRepRole').checked?'rep':null,document.getElementById('editSeRole').checked?'se':null,document.getElementById('editSalesManagerRole').checked?'sales_manager':null,document.getElementById('editAdminRole').checked?'admin':null].filter(Boolean))];
   const errEl    = document.getElementById('editUserError');
   errEl.style.display = 'none';
 
@@ -3000,7 +2708,7 @@ async function initHelpTab() {
     // Show edit button for admins only
     const me = window.ciAuth ? window.ciAuth.getUser() : {};
     const editBtn = document.getElementById('helpEditBtn');
-    if (editBtn) editBtn.style.display = me.role === 'admin' ? 'block' : 'none';
+    if (editBtn) editBtn.style.display = clientHasRole(me,'admin','Admin') ? 'block' : 'none';
     // Open first page by default
     loadHelpPage(_helpPages[0].slug);
   } catch(e) {
@@ -3042,7 +2750,7 @@ async function loadHelpPage(slug) {
 
     const me = window.ciAuth ? window.ciAuth.getUser() : {};
     const editBtn = document.getElementById('helpEditBtn');
-    if (editBtn) editBtn.style.display = me.role === 'admin' ? 'block' : 'none';
+    if (editBtn) editBtn.style.display = clientHasRole(me,'admin','Admin') ? 'block' : 'none';
 
     content.innerHTML = `
       <div class="help-page-header">
@@ -3099,7 +2807,7 @@ function startHelpEdit() {
         <textarea id="helpEditBody" class="help-edit-body" rows="20">${escapeHtml(currentHtml)}</textarea>
       </div>
       <div class="btn-row" style="margin-top:1rem;">
-        <button class="btn btn-cta" onclick="saveHelpPage()">Save changes</button>
+        <button class="btn btn-primary" onclick="saveHelpPage()">Save changes</button>
         <button class="btn btn-ghost" onclick="cancelHelpEdit()">Cancel</button>
       </div>
       <div id="helpEditError" class="field-hint" style="color:var(--red);display:none;"></div>
@@ -3334,7 +3042,7 @@ async function openShareModal(scenarioId, scenarioName) {
       }
       <div id="shareModalError" class="field-hint" style="color:var(--red);display:none;margin-top:.5rem;"></div>
       <div class="btn-row" style="margin-top:1rem;">
-        <button class="btn btn-cta" onclick="saveSharing('${scenarioId}')">Save sharing</button>
+        <button class="btn btn-primary" onclick="saveSharing('${scenarioId}')">Save sharing</button>
         <button class="btn btn-ghost" onclick="document.getElementById('shareScenarioModal').remove()">Cancel</button>
       </div>
     </div>`;
@@ -3372,55 +3080,26 @@ if (typeof fetchScenarios === 'function') fetchScenarios();
 /* Industry filter dropdown + admin view-all button (Feature 3) */
 /* Calculator company field — check-existing on blur (v2.3) */
 /* ── Customer search on the landing page ── */
-let _customerCache = null;
-async function loadCustomerCache() {
-  if (_customerCache) return _customerCache;
-  try {
-    const resp = await apiFetch('/api/customers');
-    _customerCache = (resp && resp.ok) ? await resp.json() : [];
-  } catch (e) { _customerCache = []; }
-  return _customerCache;
-}
 async function onCustomerSearch(q) {
   const box = document.getElementById('customerSearchResults');
   if (!box) return;
-  const customers = await loadCustomerCache();
-  const term = (q || '').trim().toLowerCase();
-  const matches = !term ? customers.slice(0, 8)
-    : customers.filter(c => (c.name || '').toLowerCase().includes(term)).slice(0, 8);
-  if (!customers.length) { box.style.display = 'none'; return; }
+  const params=new URLSearchParams({search:q||'',state:'active',limit:'8'});
+  const resp=await apiFetch('/api/customer-switcher?'+params);
+  const data=(resp&&resp.ok)?await resp.json():{items:[]};
+  const matches=data.items||[];
   box.innerHTML = matches.length
     ? matches.map(c => `<button type="button" class="cs-result" onclick="selectCustomerFromSearch('${escapeHtml(c.id)}')">
         <span class="cs-name">${escapeHtml(c.name)}</span>
-        <span class="cs-meta">${c.scenarioCount||0} scenario${(c.scenarioCount===1)?'':'s'}${c.ownerUsername?` · ${escapeHtml(c.ownerUsername)}`:''}</span>
+        <span class="cs-meta">${c.scenarioCount||0} scenario${(c.scenarioCount===1)?'':'s'} · ${escapeHtml(c.owner||'')}${c.opportunity?` · ${escapeHtml(c.opportunity)}`:''}</span>
       </button>`).join('')
-    : '<div class="cs-empty">No matching customers</div>';
+    : '<div class="cs-empty">No customers match this search within your authorized access.</div>';
   box.style.display = 'block';
 }
 async function selectCustomerFromSearch(customerId) {
   const box = document.getElementById('customerSearchResults');
   if (box) box.style.display = 'none';
-  const input = document.getElementById('customerSearchInput');
-  try {
-    /* Load that customer's most recent current scenario. */
-    const _me = (window.ciAuth && window.ciAuth.getUser) ? (window.ciAuth.getUser() || {}) : {};
-    const resp = await apiFetch('/api/scenarios' + (_me.role === 'admin' ? '?all=true' : ''));
-    if (!resp || !resp.ok) { showToast('Could not load scenarios.'); return; }
-    const list = await resp.json();
-    const rows = Array.isArray(list) ? list : (list.scenarios || []);
-    const forCustomer = rows.filter(s => s.customerId === customerId);
-    if (!forCustomer.length) {
-      /* Customer exists but no scenario loaded — set the company name and remember the id. */
-      const c = (_customerCache || []).find(x => x.id === customerId);
-      if (c) { const cn = document.getElementById('companyName'); if (cn) cn.value = c.name; window.currentScenarioCustomerId = customerId; window._sfSelectedCustomerId = customerId; }
-      if (input) input.value = c ? c.name : '';
-      showToast('Customer selected — no saved scenario yet.');
-      return;
-    }
-    forCustomer.sort((a,b) => new Date(b.updatedAt||0) - new Date(a.updatedAt||0));
-    if (input) input.value = '';
-    await loadScenario(forCustomer[0].id);
-  } catch (e) { console.error('selectCustomerFromSearch error:', e.message); showToast('Could not load that customer.'); }
+  const input = document.getElementById('customerSearchInput');if(input)input.value='';
+  await selectCustomerContextById(customerId,{targetTab:'calc'});
 }
 /* Hide results when clicking away. */
 document.addEventListener('click', (e) => {
@@ -3507,6 +3186,14 @@ const _fabEl = document.getElementById('fabRow'); if (_fabEl) _fabEl.style.displ
   </button>
 </div>
 
+<link rel="stylesheet" href="help-v6.css">
+<script src="help-v6.js"></script>
+<script src="admin-cleanup-v661.js"></script>
+<link rel="stylesheet" href="competitive-intelligence-v662.css">
+<script src="competitive-intelligence-v662.js"></script>
+<link rel="stylesheet" href="teams-admin.css">
+<script src="teams-admin.js"></script>
 <script src="ui-v4.js"></script>
+<script src="executive-output-adapters.js"></script>
 </body>
 </html>

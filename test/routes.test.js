@@ -141,12 +141,13 @@ describe('HTTP API integration', { skip: HAS_DB ? false : 'DATABASE_URL not set 
       assert.ok(Number(data.annualBenefit) > 0, 'server should compute a positive annual benefit');
     }
 
-    // Record an outcome on the group.
+    // The legacy group outcome writer is permanently retired. Closure must use
+    // Buyer Readiness, even when the caller supplies a formerly valid payload.
     if (baseId) {
       const oc = await api(`/api/scenarios/group/${baseId}/outcome`, {
         method: 'PUT', token: adminToken, body: { outcome: 'won', realizedValue: 1500000 }
       });
-      assert.ok([200].includes(oc.status), `outcome status ${oc.status}`);
+      assert.strictEqual(oc.status, 410, 'legacy outcome writer must remain retired');
     }
 
     // Clean up.
@@ -234,8 +235,8 @@ describe('HTTP API integration', { skip: HAS_DB ? false : 'DATABASE_URL not set 
     if (id) await api('/api/users/' + id, { method: 'DELETE', token: adminToken });
   });
 
-  test('outcome endpoint rejects an invalid outcome value', async () => {
-    // Create a throwaway scenario, then send a bad outcome.
+  test('retired outcome endpoint cannot mutate with any payload', async () => {
+    // The retired endpoint returns 410 before payload validation or DB writes.
     const created = await api('/api/scenarios', { method: 'POST', token: adminToken, body: { data: { name: 'Bad Outcome Co', company: 'Bad Outcome Co', modelVersion: 27 }, name: 'Bad Outcome Co' } });
     const saved = created.json && (created.json.scenario || created.json);
     const baseId = saved && (saved.base_id || saved.baseId);
@@ -244,7 +245,7 @@ describe('HTTP API integration', { skip: HAS_DB ? false : 'DATABASE_URL not set 
       const bad = await api(`/api/scenarios/group/${baseId}/outcome`, {
         method: 'PUT', token: adminToken, body: { outcome: 'maybe' }
       });
-      assert.strictEqual(bad.status, 400, 'invalid outcome should be rejected with 400');
+      assert.strictEqual(bad.status, 410, 'retired outcome endpoint must always return 410');
     }
     if (id) await api(`/api/scenarios/${id}`, { method: 'DELETE', token: adminToken });
   });

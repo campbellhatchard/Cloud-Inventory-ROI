@@ -40,30 +40,32 @@ function deMilestonesInGroup(milestones, group) {
   return milestones.filter(m => m.groupId === group.id || (!m.groupId && m.phase === group.name));
 }
 /* Open a clean print window with branded HTML and trigger print */
-function dePrintWindow(title, innerHtml, extraCss) {
+function dePrintWindow(title, innerHtml, extraCss, audience = 'customer') {
+  const theme = window.CIBrand.documentTheme(audience);
+  const themeCss = window.CIBrand.documentCss(audience);
   const w = window.open('', '_blank');
   if (!w) {
     /* Popup blocked — build document in a Blob URL instead so the user gets a clickable link */
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>${deEsc(title)}</title>
-    <style>@page{margin:.6in}*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Inter','Segoe UI',system-ui,sans-serif;color:#1E2931;line-height:1.5}
-    .doc-head{display:flex;align-items:center;gap:14px;border-bottom:3px solid #00A9CC;padding-bottom:14px;margin-bottom:20px}
-    .doc-head img{height:42px}.doc-head .ht{font-size:12px;color:#64748B}
-    h1{font-size:22px;color:#1E2931;margin-bottom:4px}.sub{font-size:13px;color:#64748B;margin-bottom:18px}
-    h2{font-size:13px;color:#00A9CC;text-transform:uppercase;letter-spacing:.06em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1.5px solid #E2E8F0}
-    table{width:100%;border-collapse:collapse;margin:8px 0 16px}th{background:#1E2931;color:#fff;font-size:11px;text-align:left;padding:7px 9px}
-    td{font-size:12px;padding:6px 9px;border-bottom:1px solid #F1F5F9;vertical-align:top}tr:nth-child(even) td{background:#F5F8FA}
-    .foot{margin-top:28px;padding-top:12px;border-top:1px solid #E2E8F0;font-size:11px;color:#6B7A8D;text-align:center}
-    .customer-purpose{margin:0 0 14px;padding:10px 13px;background:#F0F9FF;border-left:3px solid #00A9CC;border-radius:0 7px 7px 0;font-size:12px;line-height:1.55;color:#475569}
+    <style>${themeCss}@page{margin:.6in}*{box-sizing:border-box;margin:0;padding:0}body{font-family:var(--doc-font);color:var(--doc-body);line-height:1.5}
+    .doc-head{display:flex;align-items:center;gap:14px;border-bottom:3px solid var(--doc-accent);padding-bottom:14px;margin-bottom:20px}
+    .doc-head img{height:42px}.doc-head .ht{font-size:12px;color:var(--doc-muted)}
+    h1{font-size:22px;color:var(--doc-heading);margin-bottom:4px}.sub{font-size:13px;color:var(--doc-muted);margin-bottom:18px}
+    h2{font-size:13px;color:var(--doc-accent);text-transform:uppercase;letter-spacing:.06em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1.5px solid var(--doc-border)}
+    table{width:100%;border-collapse:collapse;margin:8px 0 16px}th{background:var(--doc-heading);color:#fff;font-size:11px;text-align:left;padding:7px 9px}
+    td{font-size:12px;padding:6px 9px;border-bottom:1px solid var(--doc-canvas);vertical-align:top}tr:nth-child(even) td{background:var(--doc-canvas)}
+    .foot{margin-top:28px;padding-top:12px;border-top:1px solid var(--doc-border);font-size:11px;color:#6B7A8D;text-align:center}
+    .customer-purpose{margin:0 0 14px;padding:10px 13px;background:var(--doc-info);border-left:3px solid var(--doc-accent);border-radius:0 7px 7px 0;font-size:12px;line-height:1.55;color:#475569}
     @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.no-print{display:none}}
     ${extraCss || ''}</style></head><body>${innerHtml}
-    <div class="foot">© ${new Date().getFullYear()} Cloud Inventory · Confidential and proprietary · Prepared for the intended recipient</div>
+    <div class="foot">${theme.footer} · Prepared for the intended recipient</div>
     <script>window.onload=function(){setTimeout(function(){window.print();},350);}<\/script></body></html>`;
     try {
       const blob = new Blob([html], { type: 'text/html' });
       const blobUrl = URL.createObjectURL(blob);
       const msg = document.createElement('div');
-      msg.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:#1E2931;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,.25);max-width:90vw;';
-      msg.innerHTML = '<span>Pop-up blocked. <a href="' + blobUrl + '" target="_blank" style="color:#00A9CC;font-weight:600;text-decoration:underline;">Open ' + deEsc(title) + ' ↗</a></span>'
+      msg.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:var(--doc-heading);color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,.25);max-width:90vw;';
+      msg.innerHTML = '<span>Pop-up blocked. <a href="' + blobUrl + '" target="_blank" style="color:var(--doc-accent);font-weight:600;text-decoration:underline;">Open ' + deEsc(title) + ' ↗</a></span>'
         + '<button onclick="this.parentElement.remove()" style="background:none;border:none;color:rgba(255,255,255,.6);cursor:pointer;font-size:18px;padding:0 4px;">×</button>';
       document.body.appendChild(msg);
       setTimeout(function(){ if (msg.parentElement) { msg.remove(); URL.revokeObjectURL(blobUrl); } }, 15000);
@@ -71,36 +73,36 @@ function dePrintWindow(title, innerHtml, extraCss) {
     return;
   }
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>${deEsc(title)}</title>
-    <style>
+    <style>${themeCss}
       @page { margin: 0.6in; }
       * { box-sizing: border-box; margin: 0; padding: 0; }
-      body { font-family: 'Inter','Segoe UI',system-ui,sans-serif; color: #1E2931; line-height: 1.5; }
-      .doc-head { display: flex; align-items: center; gap: 14px; border-bottom: 3px solid #00A9CC; padding-bottom: 14px; margin-bottom: 20px; }
+      body { font-family: 'Inter','Segoe UI',system-ui,sans-serif; color: var(--doc-heading); line-height: 1.5; }
+      .doc-head { display: flex; align-items: center; gap: 14px; border-bottom: 3px solid var(--doc-accent); padding-bottom: 14px; margin-bottom: 20px; }
       .doc-head img { height: 42px; }
-      .doc-head .ht { font-size: 12px; color: #64748B; }
-      h1 { font-size: 22px; color: #1E2931; margin-bottom: 4px; }
-      .sub { font-size: 13px; color: #64748B; margin-bottom: 18px; }
-      h2 { font-size: 13px; color: #00A9CC; text-transform: uppercase; letter-spacing: .06em; margin: 20px 0 8px; padding-bottom: 4px; border-bottom: 1.5px solid #E2E8F0; }
+      .doc-head .ht { font-size: 12px; color: var(--doc-muted); }
+      h1 { font-size: 22px; color: var(--doc-heading); margin-bottom: 4px; }
+      .sub { font-size: 13px; color: var(--doc-muted); margin-bottom: 18px; }
+      h2 { font-size: 13px; color: var(--doc-accent); text-transform: uppercase; letter-spacing: .06em; margin: 20px 0 8px; padding-bottom: 4px; border-bottom: 1.5px solid var(--doc-border); }
       table { width: 100%; border-collapse: collapse; margin: 8px 0 16px; }
-      th { background: #1E2931; color: #fff; font-size: 11px; text-align: left; padding: 7px 9px; }
-      td { font-size: 12px; padding: 6px 9px; border-bottom: 1px solid #F1F5F9; vertical-align: top; }
-      tr:nth-child(even) td { background: #F5F8FA; }
+      th { background: var(--doc-heading); color: #fff; font-size: 11px; text-align: left; padding: 7px 9px; }
+      td { font-size: 12px; padding: 6px 9px; border-bottom: 1px solid var(--doc-canvas); vertical-align: top; }
+      tr:nth-child(even) td { background: var(--doc-canvas); }
       .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
-      .prog-wrap { height: 12px; background: #F1F5F9; border-radius: 6px; overflow: hidden; max-width: 320px; margin: 6px 0 14px; }
-      .prog-fill { height: 100%; background: linear-gradient(90deg,#00A9CC,#2E7D32); }
-      .meta-line { font-size: 12px; color: #64748B; margin-bottom: 3px; }
-      .foot { margin-top: 28px; padding-top: 12px; border-top: 1px solid #E2E8F0; font-size: 11px; color: #6B7A8D; text-align: center; }
-      .customer-purpose { margin: 0 0 14px; padding: 10px 13px; background: #F0F9FF; border-left: 3px solid #00A9CC; border-radius: 0 7px 7px 0; font-size: 12px; line-height: 1.55; color: #475569; }
-      .overdue { color: #C81E10; font-weight: 700; }
+      .prog-wrap { height: 12px; background: var(--doc-canvas); border-radius: 6px; overflow: hidden; max-width: 320px; margin: 6px 0 14px; }
+      .prog-fill { height: 100%; background: linear-gradient(90deg,var(--doc-accent),var(--doc-success)); }
+      .meta-line { font-size: 12px; color: var(--doc-muted); margin-bottom: 3px; }
+      .foot { margin-top: 28px; padding-top: 12px; border-top: 1px solid var(--doc-border); font-size: 11px; color: #6B7A8D; text-align: center; }
+      .customer-purpose { margin: 0 0 14px; padding: 10px 13px; background: var(--doc-info); border-left: 3px solid var(--doc-accent); border-radius: 0 7px 7px 0; font-size: 12px; line-height: 1.55; color: #475569; }
+      .overdue { color: var(--doc-danger); font-weight: 700; }
       .done td { color: #6B7A8D; }
       .quad { position: relative; width: 460px; height: 340px; border: 1.5px solid #CBD5E1; margin: 10px 0 8px; }
-      .quad-line { position: absolute; background: #E2E8F0; }
+      .quad-line { position: absolute; background: var(--doc-border); }
       .quad-dot { position: absolute; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; }
       .quad-lbl { position: absolute; font-size: 9px; color: #6B7A8D; font-weight: 700; }
       @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display: none; } }
       ${extraCss || ''}
     </style></head><body>${innerHtml}
-    <div class="foot">© ${new Date().getFullYear()} Cloud Inventory · Confidential and proprietary · Prepared for the intended recipient</div>
+    <div class="foot">${theme.footer} · Prepared for the intended recipient</div>
     <script>window.onload=function(){setTimeout(function(){window.print();},350);};<\/script>
     </body></html>`);
   w.document.close();
@@ -144,7 +146,7 @@ async function printActionPlan(variant) {
     : '';
   const html = `
     <div class="doc-head">
-      <img src="${window.location.origin}/ci-logo.png" onerror="this.style.display='none'"/>
+      <img src="${window.location.origin}/${window.CIBrand.logo('logoColor')}" onerror="this.style.display='none'"/>
       <div class="ht">${headTag}</div>
     </div>
     <h1>${deEsc(m.title)}</h1>
@@ -153,7 +155,7 @@ async function printActionPlan(variant) {
     <div class="meta-line"><strong>Progress:</strong> ${done} of ${ms.length} complete (${pct}%)</div>
     <div class="prog-wrap"><div class="prog-fill" style="width:${pct}%;"></div></div>
     ${rowsHtml || '<p style="font-size:13px;color:#6B7A8D;">No milestones yet.</p>'}`;
-  dePrintWindow(m.title, html);
+  dePrintWindow(m.title, html, '', variant === 'internal' ? 'internal' : 'customer');
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -249,7 +251,7 @@ async function printStakeholderMap() {
   const dots = _stakeholders.map(s => {
     const x = ((s.support - 1) / 4) * 88 + 6;
     const y = 90 - ((s.influence - 1) / 4) * 84;
-    const c = (typeof STAKE_ROLES !== 'undefined' && STAKE_ROLES[s.role]) ? STAKE_ROLES[s.role].color : '#64748B';
+    const c = (typeof STAKE_ROLES !== 'undefined' && STAKE_ROLES[s.role]) ? STAKE_ROLES[s.role].color : 'var(--doc-muted)';
     const initials = s.name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
     return `<div class="quad-dot" style="left:${x}%;top:${y}%;background:${c};${s.engaged?'':'opacity:.5;'}">${deEsc(initials)}</div>`;
   }).join('');
@@ -275,7 +277,7 @@ async function printStakeholderMap() {
 
   const html = `
     <div class="doc-head">
-      <img src="${window.location.origin}/ci-logo.png" onerror="this.style.display='none'"/>
+      <img src="${window.location.origin}/${window.CIBrand.logo('logoColor')}" onerror="this.style.display='none'"/>
       <div class="ht">Stakeholder Map — Internal</div>
     </div>
     <h1>Stakeholder Map</h1>
@@ -292,7 +294,7 @@ async function printStakeholderMap() {
     </div>
     <h2>Role coverage</h2>${coverage}
     <h2>Stakeholder roster</h2>${roster}`;
-  dePrintWindow('Stakeholder Map — ' + company, html);
+  dePrintWindow('Stakeholder Map — ' + company, html, '', 'internal');
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -397,155 +399,36 @@ async function pptStakeholderMap() {
 
 /* Build the personalized lever + roll-up data model once, shared by both formats. */
 function buildRoiMethodology() {
-  const v = getVals(), r = calcROI(v);
-  const M = n => (n===null||n===undefined||isNaN(n)) ? '—' : (typeof moneyFull==='function' ? moneyFull(n) : '$' + Math.round(n).toLocaleString());
-  const PC = n => (n===null||n===undefined||isNaN(n)) ? '—' : Math.round(n*100) + '%';
-  const N  = n => (n===null||n===undefined||isNaN(n)) ? '—' : Number(n).toLocaleString();
-
-  /* effective shrink base + carry base recomputed for display transparency */
-  const shrinkBase = v.effectiveShrinkBase || 0;
-  const carryBase  = r.annualCarryCost || 0;
-  const downtimeAnnual = (v.downtimeEventsYr||0)*(v.downtimeHrsPerEvent||0)*(v.downtimeCostPerHr||0);
-  const countAnnual = (v.countDaysYr||0)*(v.countPeople||0)*((v.labor||0)/260);
-
-  /* Each lever: provided? (has the inputs), formula string, plugged-in string, value */
-  const levers = [
-    { name:'Labor productivity',
-      desc:'Recovered staff time from eliminating manual inventory work.',
-      provided: v.users>0,
-      formula: (v.modelVersion>=25 && v.laborWastePct>0) ? 'users × labor rate × productivity waste % × recovery %' : 'users × labor rate × recovery %',
-      plugged: (v.modelVersion>=25 && v.laborWastePct>0)
-        ? `${N(v.users)} × ${M(v.labor)} × ${PC(v.laborWastePct)} × ${PC(v.mLabor)}`
-        : `${N(v.users)} × ${M(v.labor)} × ${PC(v.mLabor)}`,
-      value: r.laborSav },
-    { name:'Write-off / shrink reduction',
-      desc:'Reduction in inventory written off to loss, damage, or shrinkage.',
-      provided: shrinkBase>0,
-      formula:'annual write-off base × recovery %',
-      plugged:`${M(shrinkBase)} × ${PC(v.mShrinkage)}`,
-      value: r.shrinkSav },
-    { name:'Carrying-cost reduction',
-      desc:'Lower cost of holding inventory (capital, storage, insurance, obsolescence).',
-      provided: carryBase>0,
-      formula:'incremental carrying estimate after turns overlap',
-      plugged:`max(0, ${M(carryBase)} × ${PC(v.mCarrying)} − ${M(r.turnsSav)})`,
-      value: r.carrySav },
-    { name:'Inventory turns — annual carrying savings',
-      desc:'Annual carrying-cost savings from capital freed by improving inventory turns toward the benchmark.',
-      provided: (v.inventory>0 && v.invTurnsCurrent>0),
-      formula:'freed capital × carry rate',
-      plugged:`${M(r.capitalFreed)} × ${PC(v.carryRate)}`,
-      value: r.turnsSav },
-    { name:'Service revenue (OTIF)',
-      desc:'Revenue protected by closing the on-time-in-full gap.',
-      provided: (v.revenue>0 && (v.otifTarget>v.otifBaseline || v.otifRisk>0)),
-      formula:'revenue × OTIF gap × recovery %',
-      plugged:`${M(v.revenue)} × ${v.otifTarget>v.otifBaseline?PC((v.otifTarget-v.otifBaseline)/100):PC(v.otifRisk)} × ${PC(v.mOtif)}`,
-      value: r.otifSav },
-    { name:'IT displacement',
-      desc:'Legacy inventory/ERP/WMS system and support costs displaced.',
-      provided: v.itCost>0,
-      formula:'IT cost × recovery %',
-      plugged:`${M(v.itCost)} × ${PC(v.mIt)}`,
-      value: r.itSav },
-    { name:'Production downtime',
-      desc:'Recovered production from fewer stockout-driven stoppages.',
-      provided: downtimeAnnual>0,
-      formula:'events/yr × hrs/event × $/hr × recovery %',
-      plugged:`${N(v.downtimeEventsYr)} × ${N(v.downtimeHrsPerEvent)} × ${M(v.downtimeCostPerHr)} × ${PC(v.mDowntime)}`,
-      value: r.downtimeSav, isNew:true },
-    { name:'Expedite / emergency procurement',
-      desc:'Reduced premium freight and rush orders caused by stockouts.',
-      provided: (v.expediteSpendYr||0)>0,
-      formula:'annual expedite spend × recovery %',
-      plugged:`${M(v.expediteSpendYr)} × ${PC(v.mExpedite)}`,
-      value: r.expediteSav, isNew:true },
-    { name:'Physical / cycle-count labor',
-      desc:'Labor recovered from reduced manual counting.',
-      provided: countAnnual>0,
-      formula:'count days × people × daily labor × recovery %',
-      plugged:`${N(v.countDaysYr)} × ${N(v.countPeople)} × ${M((v.labor||0)/260)} × ${PC(v.mCount)}`,
-      value: r.countSav, isNew:true },
-    { name:'Warehouse throughput / pick-rate',
-      desc:'Ship more with the same team from faster mobile-first workflows.',
-      provided: (v.ordersPerYr>0 && v.costPerOrder>0 && v.pickRateGainPct>0),
-      formula:'orders/yr × cost/order × pick-rate gain % × recovery %',
-      plugged:`${N(v.ordersPerYr)} × ${M(v.costPerOrder)} × ${PC(v.pickRateGainPct)} × ${PC(v.mThroughput)}`,
-      value: r.throughputSav, isNew:true },
-    { name:'Order accuracy → returns & chargebacks',
-      desc:'Reduced mis-ship cost: returns, re-ship freight, customer chargebacks.',
-      provided: (v.ordersPerYr>0 && v.orderErrorPct>0 && v.costPerError>0),
-      formula:'orders/yr × error rate % × cost/error × recovery %',
-      plugged:`${N(v.ordersPerYr)} × ${PC(v.orderErrorPct)} × ${M(v.costPerError)} × ${PC(v.mAccuracy)}`,
-      value: r.accuracySav, isNew:true },
-    { name:'First-time-fix / truck-roll avoidance',
-      desc:'Fewer repeat field visits from having the right part on the truck.',
-      provided: (v.repeatVisitsYr>0 && v.costPerTruckRoll>0),
-      formula:'repeat visits/yr × cost per truck roll × recovery %',
-      plugged:`${N(v.repeatVisitsYr)} × ${M(v.costPerTruckRoll)} × ${PC(v.mFirstFix)}`,
-      value: r.truckRollSav, isNew:true },
-    { name:'Field parts leakage',
-      desc:'Reduced loss of van-stock and field parts (lost, walked-off, expired).',
-      provided: (v.fieldInventoryValue>0 && v.fieldLeakagePct>0),
-      formula:'field inventory value × leakage rate % × recovery %',
-      plugged:`${M(v.fieldInventoryValue)} × ${PC(v.fieldLeakagePct)} × ${PC(v.mLeakage)}`,
-      value: r.fieldLeakageSav, isNew:true },
-  ];
-
-  /* Revenue-growth lever shown SEPARATELY from cost savings (per design). */
-  const revenueLever = {
-    name:'Revenue per technician (revenue growth)',
-    desc:'Additional billable revenue from higher technician utilization. Shown separately from cost savings.',
-    provided: (v.fieldTechs>0 && v.addedJobsPerDay>0 && v.revenuePerJob>0 && v.workingDaysYr>0),
-    formula:'techs × added jobs/day × revenue/job × working days × realization %',
-    plugged:`${N(v.fieldTechs)} × ${N(v.addedJobsPerDay)} × ${M(v.revenuePerJob)} × ${N(v.workingDaysYr)} × ${PC(v.mUtilization)}`,
-    value: r.techRevenueSav
+  const v=getVals(),r=calcROI(v);
+  const M=n=>(n===null||n===undefined||isNaN(n))?'—':(typeof moneyFull==='function'?moneyFull(n):'$'+Math.round(n).toLocaleString());
+  const PC=n=>(n===null||n===undefined||isNaN(n))?'—':Math.round(n*100)+'%';
+  const N=n=>(n===null||n===undefined||isNaN(n))?'—':Number(n).toLocaleString();
+  const classLabels={direct_cost_savings:'Direct cost savings',recovered_contribution_margin:'Recovered contribution margin',working_capital_carrying_benefit:'Working-capital / carrying benefit',capacity_value:'Capacity value',risk_avoidance:'Risk avoidance'};
+  const details={
+    workforce_productivity:()=>r.productivityMethodUsed==='throughput'
+      ?{formula:'orders/year × cost/order × pick-rate gain × recovery',plugged:`${N(v.ordersPerYr)} × ${M(v.costPerOrder)} × ${PC(v.pickRateGainPct)} × ${PC(v.mThroughput)}`,desc:'Counted throughput-capacity method; not represented as automatic cash savings.'}
+      :{formula:'users × loaded labor × measured waste × recovery',plugged:`${N(v.users)} × ${M(v.labor)} × ${PC(v.laborWastePct)} × ${PC(v.mLabor)}`,desc:'Counted workforce-productivity labor-recovery method.'},
+    inventory_writeoff:()=>({formula:'annual central write-off base × effective recovery',plugged:`${M(v.effectiveShrinkBase)} × ${PC(r.effectiveShrinkRecovery)}`,desc:r.accuracyDerivedRecovery!==null&&!r.shrinkRecoveryExplicit?'Recovery is a derived model assumption from customer inventory accuracy.':'Central inventory write-off reduction; excludes field leakage.'}),
+    inventory_carrying:()=>({formula:'max(direct carrying estimate, turns carrying estimate)',plugged:`counted ${M(r.inventoryCarrySav)}; overlap removed ${M(r.overlapAdj)}`,desc:'Central inventory working-capital/carrying pool.'}),
+    service_revenue_margin:()=>({formula:r.serviceRevenueMethod==='direct_lost_sales'?'lost sales × contribution margin × realization':'revenue × OTIF gap × contribution margin × realization',plugged:r.serviceRevenueMethod==='direct_lost_sales'?`${M(v.lostSalesYr)} × ${PC(v.contributionMarginPct)} × ${PC(v.mOtif)}`:`${M(v.revenue)} × ${PC((v.otifTarget-v.otifBaseline)/100)} × ${PC(v.contributionMarginPct)} × ${PC(v.mOtif)}`,desc:`Method: ${r.serviceRevenueMethod||'unquantified — contribution margin required'}. Revenue is not treated as profit.`}),
+    service_penalties:()=>({formula:'annual penalties / credits × reduction',plugged:`${M(v.servicePenaltyCostYr)} × ${PC(v.mServicePenalty)}`,desc:'Separate customer penalties, credits, chargebacks, and deductions pool.'}),
+    expedite_premium:()=>({formula:'annual expedite premium × reduction',plugged:`${M(v.expediteSpendYr)} × ${PC(v.mExpedite)}`,desc:'Separate premium freight and emergency procurement pool.'}),
+    downtime:()=>({formula:'events × hours/event × internal operating cost/hour × reduction',plugged:`${N(v.downtimeEventsYr)} × ${N(v.downtimeHrsPerEvent)} × ${M(v.downtimeCostPerHr)} × ${PC(v.mDowntime)}`,desc:'Risk avoidance: excludes lost sales, penalties/credits, and expedite reported separately.'}),
+    count_labor:()=>({formula:'count days × people × loaded daily labor × recovery',plugged:`${N(v.countDaysYr)} × ${N(v.countPeople)} × ${M((v.labor||0)/260)} × ${PC(v.mCount)}`,desc:'Count days are event days, not people-days.'}),
+    order_error:()=>({formula:'orders × error rate × operational cost/error × recovery',plugged:`${N(v.ordersPerYr)} × ${PC(v.orderErrorPct)} × ${M(v.costPerError)} × ${PC(v.mAccuracy)}`,desc:'Internal rework, return handling, and normal reship only; excludes penalties, expedite, and lost sales.'}),
+    first_time_fix:()=>({formula:'repeat visits × cost/truck roll × reduction',plugged:`${N(v.repeatVisitsYr)} × ${M(v.costPerTruckRoll)} × ${PC(v.mFirstFix)}`,desc:'Avoided repeat-visit direct cost.'}),
+    field_leakage:()=>({formula:'field inventory × field leakage rate × recovery',plugged:`${M(v.fieldInvValue)} × ${PC(v.fieldLeakageRate/100)} × ${PC(v.mFieldLeakage)}`,desc:'Field-only leakage; excludes central write-offs.'}),
+    field_carrying:()=>({formula:'field inventory × carrying rate × effective recovery',plugged:`${M(v.fieldInvValue)} × ${PC(v.carryRate)} × ${PC(r.effectiveCarryingRecovery)}`,desc:'Field-only working-capital/carrying pool.'}),
+    field_reconciliation:()=>({formula:'locations × frequency × person-hours × loaded hourly labor × recovery',plugged:`${N(v.fieldLocations)} × ${N(v.fieldReconcilePerYr)} × ${N(v.fieldReconcilePersonHours)} × ${M((v.labor||0)/2080)} × ${PC(v.mFieldCount)}`,desc:'Field reconciliation labor; separate from generic labor recovery.'}),
+    it_displacement:()=>({formula:'annual IT cost × displacement',plugged:`${M(v.itCost)} × ${PC(v.mIt)}`,desc:'Direct legacy system cost displacement.'})
   };
-
-  /* Inputs table (what the prospect provided) */
-  const inputs = [
-    ['Inventory users', N(v.users)],
-    ['Fully-loaded labor rate', M(v.labor)],
-    ['Productivity waste %', v.laborWastePct>0?PC(v.laborWastePct):'Not Provided'],
-    ['Current inventory accuracy', v.currentAccuracy>0?v.currentAccuracy+'%':'Not Provided'],
-    ['Annual write-off value', shrinkBase>0?M(shrinkBase):'Not Provided'],
-    ['Inventory value on hand', v.inventory>0?M(v.inventory):'Not Provided'],
-    ['Current inventory turns', v.invTurnsCurrent>0?N(v.invTurnsCurrent):'Not Provided'],
-    ['OTIF baseline / target', (v.otifBaseline>0)?`${v.otifBaseline}% → ${v.otifTarget}%`:'Not Provided'],
-    ['Annual revenue', v.revenue>0?M(v.revenue):'Not Provided'],
-    ['Current IT / systems cost', v.itCost>0?M(v.itCost):'Not Provided'],
-    ['Downtime (events × hrs × $/hr)', downtimeAnnual>0?`${N(v.downtimeEventsYr)} × ${N(v.downtimeHrsPerEvent)} × ${M(v.downtimeCostPerHr)}`:'Not Provided'],
-    ['Annual expedite spend', (v.expediteSpendYr||0)>0?M(v.expediteSpendYr):'Not Provided'],
-    ['Counting (days × people)', countAnnual>0?`${N(v.countDaysYr)} × ${N(v.countPeople)}`:'Not Provided'],
-    ['Orders / lines per year', v.ordersPerYr>0?N(v.ordersPerYr):'Not Provided'],
-    ['Cost per order', v.costPerOrder>0?M(v.costPerOrder):'Not Provided'],
-    ['Pick-rate gain %', v.pickRateGainPct>0?PC(v.pickRateGainPct):'Not Provided'],
-    ['Order error rate', v.orderErrorPct>0?PC(v.orderErrorPct):'Not Provided'],
-    ['Cost per error', v.costPerError>0?M(v.costPerError):'Not Provided'],
-    ['Repeat visits / yr', v.repeatVisitsYr>0?N(v.repeatVisitsYr):'Not Provided'],
-    ['Cost per truck roll', v.costPerTruckRoll>0?M(v.costPerTruckRoll):'Not Provided'],
-    ['Field technicians', v.fieldTechs>0?N(v.fieldTechs):'Not Provided'],
-    ['Added jobs/day · rev/job', (v.addedJobsPerDay>0&&v.revenuePerJob>0)?`${N(v.addedJobsPerDay)} × ${M(v.revenuePerJob)}`:'Not Provided'],
-    ['Field inventory value', v.fieldInventoryValue>0?M(v.fieldInventoryValue):'Not Provided'],
-    ['Field leakage rate', v.fieldLeakagePct>0?PC(v.fieldLeakagePct):'Not Provided'],
-    ['Discount rate (NPV)', PC(v.discRate)],
-  ];
-
-  /* ── Provenance: which inputs the prospect verified via discovery ──
-     Reads the confidence fieldStates (confirmed_prospect = customer-verified).
-     Surfaces the value-engineering credibility signal in the CFO doc.     */
-  const fs = (typeof fieldStates !== 'undefined') ? fieldStates : {};
-  const provFields = (typeof CONFIDENCE_FIELDS !== 'undefined') ? CONFIDENCE_FIELDS : [];
-  let prospectVerified = 0, repConfirmed = 0, totalTracked = provFields.length;
-  const verifiedLabels = [];
-  provFields.forEach(f => {
-    const s = fs[f.id] || '';
-    if (s === 'confirmed_prospect') { prospectVerified++; verifiedLabels.push(f.label); }
-    else if (s === 'confirmed') repConfirmed++;
-  });
-  const provenance = { prospectVerified, repConfirmed, totalTracked, verifiedLabels };
-
-  return { v, r, M, PC, N, levers, revenueLever, inputs, provenance };
+  const levers=(r.activeValueDrivers||[]).map(d=>{const x=details[d.formulaId]?details[d.formulaId]():{formula:'Engine-calculated value',plugged:M(d.annualValue),desc:''};return{name:d.label,desc:x.desc+' Economic class: '+(classLabels[d.economicClass]||d.economicClass)+'.',provided:true,formula:x.formula,plugged:x.plugged,value:d.annualValue,economicClass:d.economicClass,counted:true};});
+  const alternatives=(r.overlapAdjustments||[]).filter(x=>Number(x.removedValue)>0).map(x=>({name:'Alternative estimate — not additionally counted',desc:`${x.pool} overlap policy; selected method: ${x.method}.`,provided:true,formula:'Alternative-method comparison',plugged:Object.entries(x.candidateValues||{}).map(([k,val])=>k+' '+M(val)).join(' · '),value:0,counted:false}));
+  const inputs=[['Inventory users',N(v.users)],['Loaded labor',M(v.labor)],['Central inventory value',M(v.inventory)],['Field inventory value',M(v.fieldInvValue)],['Central annual write-off',M(v.effectiveShrinkBase)],['Current accuracy',v.currentAccuracy?N(v.currentAccuracy)+'%':'Not Provided'],['OTIF baseline / target',v.otifBaseline?`${v.otifBaseline}% → ${v.otifTarget}%`:'Not Provided'],['Annual lost sales',v.lostSalesYr?M(v.lostSalesYr):'Not Provided'],['Contribution margin',v.contributionMarginPct?PC(v.contributionMarginPct):'Not Provided'],['Service penalties / credits',v.servicePenaltyCostYr?M(v.servicePenaltyCostYr):'Not Provided'],['Annual expedite premium',v.expediteSpendYr?M(v.expediteSpendYr):'Not Provided'],['Discount rate',PC(v.discRate)]];
+  const fs=(typeof fieldStates!=='undefined')?fieldStates:{},provFields=(typeof CONFIDENCE_FIELDS!=='undefined')?CONFIDENCE_FIELDS:[];let prospectVerified=0,customerProvided=0,repConfirmed=0;const verifiedLabels=[];provFields.forEach(f=>{const s=fs[f.id]||'';if(s==='confirmed_prospect'){prospectVerified++;verifiedLabels.push(f.label);}else if(s==='confirmed_customer'){customerProvided++;verifiedLabels.push(f.label);}else if(s==='confirmed')repConfirmed++;});
+  const provenance={prospectVerified,customerProvided,customerSupported:prospectVerified+customerProvided,repConfirmed,totalTracked:provFields.length,verifiedLabels};
+  const categories={directCostSavings:r.annualDirectCostSavings,recoveredContributionMargin:r.annualRecoveredContributionMargin,workingCapitalBenefit:r.annualWorkingCapitalBenefit,capacityValue:r.annualCapacityValue,riskAvoidance:r.annualRiskAvoidance,annualEconomicBenefit:r.annualEconomicBenefit};
+  return{v,r,M,PC,N,levers,alternatives,inputs,provenance,categories};
 }
 
 /* ── PDF variant ── */
@@ -555,7 +438,8 @@ async function roiMethodologyPDF() {
   const v = m.v, r = m.r, M = m.M;
   const company = (v.company && v.company !== 'Prospect') ? v.company : 'Your Company';
 
-  const leverRows = m.levers.map(L => {
+  const leverRows = [...m.levers,...m.alternatives].map(L => {
+    if(L.counted===false)return `<tr class="np"><td><strong>${esc(L.name)}</strong><div class="ld">${esc(L.desc)}</div></td><td class="f">${esc(L.formula)}</td><td class="f">${esc(L.plugged)}</td><td class="r">Not counted</td></tr>`;
     if (!L.provided || !L.value) {
       return `<tr class="np"><td><strong>${esc(L.name)}</strong>${L.isNew?' <span class="new">new</span>':''}<div class="ld">${esc(L.desc)}</div></td>
         <td colspan="2"><em>Not Provided</em> — data not captured; represents unquantified upside.</td>
@@ -568,13 +452,13 @@ async function roiMethodologyPDF() {
   /* Map confidence field IDs → whether prospect-verified, to badge input rows */
   const fsMap = (typeof fieldStates !== 'undefined') ? fieldStates : {};
   const verifiedByInputLabel = {
-    'Annual revenue': fsMap['revenue'] === 'confirmed_prospect',
-    'Inventory users': fsMap['userCount'] === 'confirmed_prospect',
-    'Inventory value on hand': fsMap['inventoryValue'] === 'confirmed_prospect',
-    'Annual write-off value': fsMap['annualWriteOff'] === 'confirmed_prospect',
-    'OTIF baseline / target': fsMap['otifBaseline'] === 'confirmed_prospect',
-    'Current inventory turns': fsMap['invTurnsCurrent'] === 'confirmed_prospect',
-    'Current IT / systems cost': fsMap['itCost'] === 'confirmed_prospect'
+    'Annual revenue': ['confirmed_prospect','confirmed_customer'].includes(fsMap['revenue']),
+    'Inventory users': ['confirmed_prospect','confirmed_customer'].includes(fsMap['userCount']),
+    'Inventory value on hand': ['confirmed_prospect','confirmed_customer'].includes(fsMap['inventoryValue']),
+    'Annual write-off value': ['confirmed_prospect','confirmed_customer'].includes(fsMap['annualWriteOff']),
+    'OTIF baseline / target': ['confirmed_prospect','confirmed_customer'].includes(fsMap['otifBaseline']),
+    'Current inventory turns': ['confirmed_prospect','confirmed_customer'].includes(fsMap['invTurnsCurrent']),
+    'Current IT / systems cost': ['confirmed_prospect','confirmed_customer'].includes(fsMap['itCost'])
   };
   const inputRows = m.inputs.map(([k,val]) => {
     const mark = verifiedByInputLabel[k] ? ' <span class="prov-mark" title="Verified by prospect">◉</span>' : '';
@@ -585,15 +469,15 @@ async function roiMethodologyPDF() {
 
   /* Prospect-verification headline (value-engineering credibility signal) */
   const p = m.provenance || { prospectVerified:0, totalTracked:0 };
-  const provenanceBanner = p.prospectVerified > 0
-    ? `<div class="prov-banner"><span class="prov-check">◉</span> <strong>${p.prospectVerified} of ${p.totalTracked} core value drivers were verified directly by ${esc(company)}</strong> through the discovery process — the remainder are estimated from provided data or industry benchmarks. Verified inputs are marked <span class="prov-mark">◉</span> below.</div>`
+  const provenanceBanner = (p.customerSupported||p.prospectVerified) > 0
+    ? `<div class="prov-banner"><span class="prov-check">◉</span> <strong>${p.customerSupported||p.prospectVerified} of ${p.totalTracked} tracked inputs have recorded customer provenance</strong> — ${p.prospectVerified||0} were entered through the Prospect Link and ${p.customerProvided||0} were recorded from another customer source. Customer-supported inputs are marked <span class="prov-mark">◉</span> below.</div>`
     : '';
 
   const html = `
-    <div class="doc-head"><img src="${window.location.origin}/ci-logo.png" onerror="this.style.display='none'"/><div class="ht">ROI Methodology &amp; Calculation Detail</div></div>
+    <div class="doc-head"><img src="${window.location.origin}/${window.CIBrand.logo('logoColor')}" onerror="this.style.display='none'"/><div class="ht">ROI Methodology &amp; Calculation Detail</div></div>
     <h1>ROI Methodology &amp; Calculation Detail</h1>
     <div class="sub">${esc(company)}${v.rep?' · Prepared by '+esc(v.rep):''}${v.name?' · '+esc(v.name):''} · ${new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</div>
-    <p class="intro">This appendix documents how the return on investment in the business case was calculated, following a structured, data-driven methodology built to withstand independent financial review. The approach captures <strong>your operational data</strong> through guided discovery, decomposes the benefit into independently-quantified value drivers each tied to a metric you provided, and models every driver conservatively — applying ramp-up, benchmark grounding, and overlap adjustments. Cost savings and revenue growth are reported separately. Every result below traces to an input in the first table. Items marked <em>Not Provided</em> were not captured and represent potential upside not included in the totals.</p>
+    <p class="intro">This appendix reports the calculation executed by ROI Model v2.8. Customer-provided inputs are supplemented by documented model assumptions and approved benchmarks where applicable. Counted drivers, excluded alternatives, economic classes, ramp, and overlap decisions reconcile to the calculator.</p>
 
     <h2>1. Inputs used</h2>
     ${provenanceBanner}
@@ -604,19 +488,16 @@ async function roiMethodologyPDF() {
     <tbody>${leverRows}</tbody>
     <tfoot><tr><td colspan="3"><strong>Total annual benefit</strong> (steady-state)</td><td class="r"><strong>${M(r.annualBenefit)}</strong>/yr</td></tr></tfoot></table>
 
-    ${m.revenueLever.provided ? `<h2>2a. Revenue growth (shown separately)</h2>
-    <p class="intro">The following reflects <strong>additional revenue</strong> from higher technician utilization, not a cost saving. It is presented separately so cost-based ROI and revenue upside remain transparent and independently verifiable.</p>
-    <table><thead><tr><th style="width:34%">Revenue driver</th><th>Formula</th><th>Your figures</th><th class="r">Annual value</th></tr></thead>
-    <tbody><tr><td><strong>${esc(m.revenueLever.name)}</strong><div class="ld">${esc(m.revenueLever.desc)}</div></td>
-      <td class="f">${esc(m.revenueLever.formula)}</td><td class="f">${esc(m.revenueLever.plugged)}</td>
-      <td class="r"><strong>${M(m.revenueLever.value)}</strong>/yr</td></tr></tbody></table>` : ''}
+    <h2>2a. Economic-class reconciliation</h2><table class="kv"><tbody>
+      <tr><td>Direct cost savings</td><td>${M(m.categories.directCostSavings)}</td></tr><tr><td>Recovered contribution margin</td><td>${M(m.categories.recoveredContributionMargin)}</td></tr><tr><td>Working-capital / carrying benefit</td><td>${M(m.categories.workingCapitalBenefit)}</td></tr><tr><td>Capacity value</td><td>${M(m.categories.capacityValue)}</td></tr><tr><td>Risk avoidance</td><td>${M(m.categories.riskAvoidance)}</td></tr><tr><td><strong>Annual economic benefit</strong></td><td><strong>${M(m.categories.annualEconomicBenefit)}</strong></td></tr>
+    </tbody></table>
 
     <h2>3. Assumptions &amp; conservatism</h2>
     <ul class="notes">
-      <li><strong>Accuracy benchmark 99.5%.</strong> Recovery percentages are grounded in the gap between your current accuracy and this benchmark.</li>
+      <li><strong>Internal accuracy-calibration rule.</strong> The 99.5% modeling target, gap × 5 rule, and 60% cap are Cloud Inventory model assumptions, not an industry benchmark.</li>
       <li><strong>Inventory-carrying overlap control.</strong> Direct carrying reduction and turns-based carrying savings are not added together; ${M(r.overlapAdj)} of overlap was removed.</li>
       <li><strong>Ramp-up applied.</strong> ${esc(rampNote)}</li>
-      <li><strong>Prospect-provided figures</strong> are used wherever supplied; industry benchmarks fill only what was not provided.</li>
+      <li><strong>Input provenance.</strong> Customer-provided inputs are supplemented by documented model assumptions and approved benchmarks where applicable.</li>
     </ul>
 
     <h2>3a. Benchmark sourcing</h2>
@@ -654,22 +535,22 @@ async function roiMethodologyPDF() {
   const htmlWithContext = html.replace('<p class="disc">', contextSection + '<p class="disc">');
 
   const extraCss = `
-    .intro{font-size:12px;color:#64748B;line-height:1.6;margin-bottom:16px;}
-    table.kv td:first-child{color:#64748B;width:55%;}
+    .intro{font-size:12px;color:var(--doc-muted);line-height:1.6;margin-bottom:16px;}
+    table.kv td:first-child{color:var(--doc-muted);width:55%;}
     table.kv td:last-child{font-weight:600;text-align:right;}
-    .f{font-family:'Courier New',monospace;font-size:10px;color:#64748B;}
+    .f{font-family:'Courier New',monospace;font-size:10px;color:var(--doc-muted);}
     .r{text-align:right;}
     .ld{font-size:10px;color:#6B7A8D;font-weight:400;margin-top:2px;}
     .new{background:#C24A1E;color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:8px;}
     tr.np td{color:#6B7A8D;}
     .np-cell{color:#C24A1E;font-weight:600;}
-    tfoot td{border-top:2px solid #1E2931;font-size:13px;padding-top:8px;}
-    .notes{margin:4px 0 16px;padding-left:18px;} .notes li{font-size:11px;color:#64748B;margin-bottom:5px;line-height:1.5;}
+    tfoot td{border-top:2px solid var(--doc-heading);font-size:13px;padding-top:8px;}
+    .notes{margin:4px 0 16px;padding-left:18px;} .notes li{font-size:11px;color:var(--doc-muted);margin-bottom:5px;line-height:1.5;}
     .disc{font-size:10px;color:#6B7A8D;font-style:italic;margin-top:14px;line-height:1.5;}
     .prov-banner{background:#E3F2F0;border:1px solid #12786F;border-radius:7px;padding:9px 13px;margin-bottom:12px;font-size:11px;color:#0D5A54;line-height:1.5;}
     .prov-check{color:#12786F;font-weight:700;}
     .prov-mark{color:#12786F;font-size:10px;}`;
-  dePrintWindow('ROI Methodology — ' + company, htmlWithContext, extraCss);
+  dePrintWindow('ROI Methodology — ' + company, htmlWithContext, extraCss, 'internal');
 }
 
 /* ── PowerPoint variant ── */
@@ -703,7 +584,8 @@ async function roiMethodologyPPT() {
       {text:'Your figures',options:{bold:true,color:PPT.WHITE,fill:{color:PPT.NAVY},fontSize:10}},
       {text:'Annual value',options:{bold:true,color:PPT.WHITE,fill:{color:PPT.NAVY},fontSize:10}}
     ]];
-    m.levers.forEach(L => {
+    [...m.levers,...m.alternatives].forEach(L => {
+      if(L.counted===false){rows.push([{text:L.name,options:{fontSize:9,color:PPT.DARK_TXT}},{text:L.plugged,options:{fontSize:9,color:PPT.GRAY_TXT,italic:true}},{text:'Not counted',options:{fontSize:9,color:'C77700'}}]);return;}
       const provided = L.provided && L.value;
       rows.push([
         {text:L.name+(L.isNew?'  (new)':''),options:{fontSize:9,color:PPT.DARK_TXT}},
@@ -719,12 +601,6 @@ async function roiMethodologyPPT() {
     s1.addTable(rows,{x:0.45,y:1.55,w:9.1,colW:[3.5,3.6,2.0],border:{pt:0.5,color:'E0E4E8'},autoPage:true});
     s1.addText('Items marked "Not Provided" were not captured and are excluded from the total — potential upside.',
       {x:0.45,y:5.05,w:9.1,h:0.3,fontSize:9,italic:true,color:PPT.GRAY_TXT,fontFace:PPT.FONT});
-    if (m.revenueLever.provided) {
-      s1.addText([
-        {text:'+ Revenue growth (separate): ',options:{bold:true,color:PPT.ORANGE}},
-        {text:`${m.revenueLever.name} = ${M(m.revenueLever.value)}/yr — additional revenue from technician utilization, shown separately from cost savings.`,options:{color:PPT.GRAY_TXT}}
-      ],{x:0.45,y:5.3,w:9.1,h:0.4,fontSize:9,fontFace:PPT.FONT});
-    }
 
     /* Return + assumptions slide */
     const s2 = pptx.addSlide(); pptChrome(s2,3); pptTitle(s2,'Return & Assumptions');
@@ -743,10 +619,10 @@ async function roiMethodologyPPT() {
     });
     s2.addText('Conservative adjustments applied',{x:7.4,y:1.6,w:2.6,h:0.3,fontSize:12,bold:true,color:PPT.CYAN,fontFace:PPT.FONT});
     s2.addText([
-      {text:'99.5% accuracy benchmark',options:{bullet:{indent:8},breakLine:true}},
+      {text:'99.5% internal accuracy-calibration target (model assumption)',options:{bullet:{indent:8},breakLine:true}},
       {text:`Inventory-carrying overlap removed (${M(r.overlapAdj)})`,options:{bullet:{indent:8},breakLine:true}},
       {text:'Ramp-up applied to Year 1',options:{bullet:{indent:8},breakLine:true}},
-      {text:'Prospect figures used where provided',options:{bullet:{indent:8}}}
+      {text:'Customer inputs plus documented assumptions and approved benchmarks where applicable',options:{bullet:{indent:8}}}
     ],{x:7.4,y:2.0,w:2.6,h:2.5,fontSize:9.5,color:PPT.GRAY_TXT,fontFace:PPT.FONT,paraSpaceAfter:6,valign:'top'});
 
     const safe = company.replace(/[^a-zA-Z0-9 \-_]/g,'').trim().replace(/\s+/g,'-')||'Prospect';
@@ -834,7 +710,7 @@ function showBusinessCaseShareModal(url, company) {
       Share this link with <strong>${(company||'the prospect').replace(/</g,'&lt;')}</strong>. You'll see when they open it on the Saved tab (view count and last-viewed time). No tracking pixels are used — engagement is measured by views of this link.</p>
     <div style="display:flex;gap:8px;align-items:center;">
       <input type="text" id="bcShareUrl" readonly value="${url}" style="flex:1;padding:8px 10px;font-size:12px;border:1.5px solid var(--gray-200);border-radius:8px;"/>
-      <button class="btn btn-cta btn-sm" onclick="(function(){var i=document.getElementById('bcShareUrl');i.select();navigator.clipboard.writeText(i.value).then(function(){if(typeof showToast==='function')showToast('Link copied.');});})()">Copy</button>
+      <button class="btn btn-primary btn-sm" onclick="(function(){var i=document.getElementById('bcShareUrl');i.select();navigator.clipboard.writeText(i.value).then(function(){if(typeof showToast==='function')showToast('Link copied.');});})()">Copy</button>
     </div>
     <div class="modal-actions"><button class="btn btn-ghost" onclick="document.getElementById('bcShareModal').remove()">Done</button></div>
   </div>`;
@@ -1156,6 +1032,13 @@ window.exportOnePager = exportOnePager;
 
 function _getCompData() {
   const key = (document.getElementById('compSelect') || {}).value || '';
+  const intel=window._ciCurrentIntelligence;
+  if(intel&&intel.product&&intel.product.id===key){
+    const approved=(intel.findings||[]).filter(f=>f.status==='approved'),latest=(intel.researchRuns||[])[0],raw=latest?.result_json||{};
+    const c={name:intel.product.product_name,cost:'See governed source details',time:'See governed source details',maint:'See governed source details',pain:approved.length?approved.map(f=>f.claim):(raw.competitorPain||[]).map(x=>x.text),adv:approved.length?[]:(raw.ciAdvantages||[]).map(x=>x.text)};
+    const company=(document.getElementById('company')||{}).value||'Internal sales team',repName=(typeof currentUser!=='undefined'&&currentUser)?currentUser.full_name||currentUser.username:'';
+    return {key,c,company,repName,talk:approved.length?'':raw.talkTrack||'',battlecardRevisionId:intel.battlecard?.current_revision_id||null,statusLabel:approved.length?`Approved Battlecard v${intel.battlecard?.revision_version||1}`:'Research — not yet approved'};
+  }
   if (!key || !window.COMP || !window.COMP[key]) return null;
   const c = window.COMP[key];
   const company = (document.getElementById('company') || {}).value || 'Prospect';
@@ -1183,11 +1066,11 @@ function exportCompPDF() {
 
   const html = `
     <div class="doc-head">
-      <img src="${window.location.origin}/ci-logo.png" onerror="this.style.display='none'"/>
-      <div class="ht">Competitive Battlecard · ${esc(company)}</div>
+      <img src="${window.location.origin}/${window.CIBrand.logo('logoColor')}" onerror="this.style.display='none'"/>
+      <div class="ht">INTERNAL COMPETITIVE INTELLIGENCE · CONFIDENTIAL</div>
     </div>
     <h1>Competitive displacement: ${esc(c.name)}</h1>
-    <div class="sub">${esc(company)}${repName ? ' · Prepared by ' + esc(repName) : ''} · ${date}</div>
+    <div class="sub">${esc(d.statusLabel||'Legacy curated content — provenance requires review')} · ${esc(company)}${repName ? ' · Prepared by ' + esc(repName) : ''} · ${date}</div>
 
     <h2>Current solution overview</h2>
     <table class="kv"><tbody>
@@ -1211,22 +1094,22 @@ function exportCompPDF() {
     <div class="talk-box">${esc(talk)}</div>` : ''}`;
 
   const extraCss = `
-    .kv td { padding: 7px 10px; font-size: 13px; border-bottom: 1px solid #F1F5F9; vertical-align: top; }
-    .kv td:first-child { font-weight: 600; color: #1E2931; width: 38%; }
+    .kv td { padding: 7px 10px; font-size: 13px; border-bottom: 1px solid var(--doc-canvas); vertical-align: top; }
+    .kv td:first-child { font-weight: 600; color: var(--doc-heading); width: 38%; }
     .two-col-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0 20px; }
-    .col-card { border-radius: 8px; overflow: hidden; border: 1px solid #E2E8F0; }
+    .col-card { border-radius: 8px; overflow: hidden; border: 1px solid var(--doc-border); }
     .col-head { font-size: 12px; font-weight: 700; padding: 9px 14px; text-transform: uppercase; letter-spacing: .05em; }
     .pain-head { background: #FEF2F2; color: #991B1B; border-bottom: 1px solid #FECACA; }
     .adv-head  { background: #F0FDF4; color: #166534; border-bottom: 1px solid #BBF7D0; }
-    .comp-row  { display: flex; align-items: flex-start; gap: 10px; padding: 8px 14px; border-bottom: 1px solid #F8FAFC; font-size: 12.5px; color: #1E2931; }
+    .comp-row  { display: flex; align-items: flex-start; gap: 10px; padding: 8px 14px; border-bottom: 1px solid #F8FAFC; font-size: 12.5px; color: var(--doc-heading); }
     .comp-row:last-child { border-bottom: none; }
     .x-dot   { flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; background: #FEE2E2; color: #DC2626; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
     .chk-dot { flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; background: #DCFCE7; color: #16A34A; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
-    .talk-box { font-size: 13px; color: #1E2931; line-height: 1.7; background: #F0F9FF; border-left: 3px solid #00A9CC; border-radius: 0 8px 8px 0; padding: 14px 16px; margin-top: 8px; font-style: italic; }
+    .talk-box { font-size: 13px; color: var(--doc-heading); line-height: 1.7; background: var(--doc-info); border-left: 3px solid var(--doc-accent); border-radius: 0 8px 8px 0; padding: 14px 16px; margin-top: 8px; font-style: italic; }
     @media print { .two-col-grid { break-inside: avoid; } }
   `;
 
-  dePrintWindow(`Competitive Battlecard – ${c.name}`, html, extraCss);
+  dePrintWindow(`Competitive Battlecard – ${c.name}`, html, extraCss, 'internal');
   if (typeof trackEvent === 'function') trackEvent('comp_pdf_exported', { competitor: d.key, company: d.company });
 }
 
@@ -1249,7 +1132,8 @@ async function exportCompDocx() {
       excel:      '“Spreadsheets are really a hidden cost center. The ROI math is usually under six months, which is why this tends to be an easy buy-in.”',
       erp:        '“ERP modules are great at recording transactions, but they’re not designed for execution. We sit on top of your ERP and handle the execution layer it was never built for.”',
       mep_lowcode:'“Low-code platforms give you a blank canvas — which sounds good until you realize someone has to build and maintain every single workflow. MEP is purpose-built for governed enterprise workflow mobilization.”',
-      mep_rfgen:  '“RF-SMART and RFgen are solid scanning tools, but they’re built around one ERP. MEP connects to any ERP, handles offline execution natively, and lets your team change workflows without a dev cycle.”',
+      mep_rfgen:  '“RFgen is a distinct competitive product. Validate current product-specific evidence before using this internal talk track.”',
+      mep_rfsmart:'“RF-SMART is a distinct competitive product. Validate current product-specific evidence before using this internal talk track.”',
       other:      '“Most WMS platforms were built to be configured once and frozen. We’re no-code and cloud-native, so your team can adapt the system without calling us.”'
     };
     const talkText = (talk || TALK_TRACKS[d.key] || '');
@@ -1269,7 +1153,9 @@ async function exportCompDocx() {
         adv:     c.adv,
         talk:    talkText,
         company: company,
-        repName: repName
+        repName: repName,
+        battlecardRevisionId: d.battlecardRevisionId || null,
+        researchStatus: d.statusLabel || 'Legacy curated content — provenance requires review'
       })
     });
 

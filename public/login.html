@@ -7,16 +7,18 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="brand-tokens.css"/>
+<script src="brand-system.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --navy:#1E2931;--navy-mid:#2B3A44;--navy-deep:#151E24;
-  --cyan:#00A9CC;--cyan-dark:#0089A6;--cyan-pale:#E4F6FA;
-  --orange:#F9642E;--green:#2E7D32;--red:#C81E10;--amber:#C24A1E;
-  --gray-50:#F8FAFC;--gray-100:#F1F5F9;--gray-200:#E3E9EE;--gray-300:#CBD6DE;
-  --gray-400:#6B7A8D;--gray-500:#64748B;--gray-600:#475569;--gray-800:#1E293B;
+  --navy:var(--ci-dark);--navy-mid:#2B3A44;--navy-deep:#151E24;
+  --cyan:var(--ci-blue);--cyan-dark:var(--ci-blue-dark);--cyan-pale:var(--ci-blue-pale);
+  --orange:var(--ci-orange);--green:var(--ci-green);--red:var(--ci-deep-red);--amber:var(--ci-orange-dark);
+  --gray-50:var(--ci-neutral-50);--gray-100:var(--ci-neutral-100);--gray-200:var(--ci-border);--gray-300:#CBD6DE;
+  --gray-400:#6B7A8D;--gray-500:var(--ci-neutral-500);--gray-600:var(--ci-neutral-600);--gray-800:#1E293B;
   --canvas:#F4F7FA;--white:#fff;
-  --font:'Inter',system-ui,-apple-system,sans-serif;
+  --font:var(--ci-font);
   --ring:0 0 0 3px rgba(0,169,204,.18);
 }
 html{font-size:16px;}
@@ -43,7 +45,7 @@ a{color:var(--cyan-dark);}
 .card-sub{font-size:15px;color:var(--gray-500);margin-bottom:32px;}
 
 .field{margin-bottom:18px;}
-.field label{display:block;font-size:13px;font-weight:600;color:var(--gray-700,#334155);margin-bottom:7px;}
+.field label{display:block;font-size:13px;font-weight:600;color:var(--gray-700,var(--ci-neutral-700));margin-bottom:7px;}
 .field input{width:100%;padding:12px 14px;font-size:15px;font-family:var(--font);border:1.5px solid var(--gray-200);border-radius:9px;background:var(--white);color:var(--gray-800);outline:none;transition:border-color .15s,box-shadow .15s;}
 .field input:hover{border-color:var(--gray-300);}
 .field input:focus{border-color:var(--cyan);box-shadow:var(--ring);}
@@ -88,11 +90,12 @@ a{color:var(--cyan-dark);}
   .form-panel{padding:36px 24px 56px;}
 }
 </style>
+<link rel="stylesheet" href="brand-tokens.css"/>
 </head>
 <body>
 
 <section class="brand-panel">
-  <img class="brand-logo" src="/ci-logo-negative.png" alt="Cloud Inventory"/>
+  <img class="brand-logo" data-ci-logo="logoNegative" alt="Cloud Inventory"/>
   <div class="brand-copy">
     <div class="brand-eyebrow">ROI Business Case Builder</div>
     <h1 class="brand-head">Build the <strong>defensible</strong> number before the CFO asks for it.</h1>
@@ -145,11 +148,24 @@ a{color:var(--cyan-dark);}
       </div>
     </div>
 
-    <div class="page-footer">Cloud Inventory · Nextworld Company · Internal tool · v4.0.0</div>
+    <div class="page-footer">Cloud Inventory · Nextworld Company · Internal tool · <span id="loginAppVersion" aria-label="Application version">version loading…</span></div>
   </div>
 </section>
 
 <script>
+/* Load the package version reported by the deployed server. */
+(async function loadLoginVersion() {
+  const target = document.getElementById('loginAppVersion');
+  if (!target) return;
+  try {
+    const response = await fetch('/health', { cache: 'no-store', headers: { 'Accept': 'application/json' } });
+    const data = await response.json();
+    target.textContent = data.version ? 'v' + data.version : 'version unavailable';
+  } catch (_) {
+    target.textContent = 'version unavailable';
+  }
+})();
+
 /* ── Show a clear message if the rep was sent here by an expired session ── */
 (function() {
   try {

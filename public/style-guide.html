@@ -3,11 +3,13 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Cloud Inventory — Design system v4.0.0</title>
+<title>Cloud Inventory — Brand System</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="style.css"/>
+<link rel="stylesheet" href="brand-tokens.css"/>
+<script src="brand-system.js"></script>
 <style>
   body{display:block;background:var(--canvas);}
   .sg-shell{max-width:1080px;margin:0 auto;padding:48px 32px 96px;}
@@ -39,8 +41,8 @@
 
   <header class="sg-head">
     <div class="sg-kicker">Cloud Inventory · ROI Business Case Builder</div>
-    <h1 class="sg-title">Design system v4.0.0</h1>
-    <p class="sg-lede">The live reference for the application shell. Everything on this page is rendered from <code>style.css</code> — if a value changes there, it changes here. Colours are the six brand colours plus a categorical set reserved for charts and tags.</p>
+    <h1 class="sg-title">Central Brand System <span id="brandVersion"></span></h1>
+    <p class="sg-lede">The live reference for web experiences and customer-facing outputs. Tokens, logos, typography, charts, statuses and audience treatments are rendered from <code>config/cloud-inventory-brand.json</code>.</p>
   </header>
 
   <section class="sg-section">
@@ -116,8 +118,9 @@
     <p class="sg-note">One primary action per screen, one secondary beside it, everything else quiet or inside a More menu. Minimum target height is 40px.</p>
     <div class="sg-panel sg-stack">
       <div class="sg-row">
-        <button class="btn btn-cta">Primary action</button>
-        <button class="btn btn-primary">Secondary action</button>
+        <button class="btn btn-primary">Primary action</button>
+        <button class="btn btn-secondary">Secondary action</button>
+        <button class="btn btn-tertiary">Quiet utility</button>
         <button class="btn btn-ghost">Quiet action</button>
         <button class="btn btn-danger">Destructive</button>
         <button class="btn btn-ghost btn-sm">Small</button>
@@ -208,5 +211,18 @@
   </section>
 
 </div>
+<script>
+(function(){
+  const b=window.CIBrand;
+  document.getElementById('brandVersion').textContent='v'+b.brandVersion;
+  const render=entries=>entries.map(([name,value])=>`<div class="sw"><div class="sw-chip" style="background:${value};${value==='#FFFFFF'?'border-bottom:1px solid var(--ci-border)':''}"></div><div class="sw-meta"><div class="sw-name">${name.replace(/([A-Z])/g,' $1')}</div><div class="sw-hex">${value}</div></div></div>`).join('');
+  const sections=[...document.querySelectorAll('.sg-section')];
+  const grid=t=>sections.find(x=>x.querySelector('h2')?.textContent.trim()===t)?.querySelector('.sg-grid');
+  const core=Object.entries(b.colors.core);
+  const brand=grid('Brand palette'); if(brand)brand.innerHTML=render(core.slice(0,6));
+  const working=grid('Working colours'); if(working)working.innerHTML=render(core.slice(6));
+  const charts=grid('Categorical palette'); if(charts)charts.innerHTML=render(b.charts.categorical.map((v,i)=>['Chart '+(i+1),v]));
+})();
+</script>
 </body>
 </html>

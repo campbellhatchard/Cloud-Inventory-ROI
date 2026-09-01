@@ -65,7 +65,9 @@ const IND = {
 };
 
 /* ── Competitive data ── */
-const COMP = {
+/* LEGACY_CURATED_COMPETITIVE_CONTENT — migration and historical export
+   compatibility only. Not the active Battlecard or selector authority. */
+const LEGACY_CURATED_COMPETITIVE_CONTENT = {
   /* ── WMS / inventory displacement competitors ── */
   sap:   { solution:'cip', name:'SAP WM / Extended WH Mgmt',
     cost:'$500K–$2M+ implementation', time:'12–24 months to go-live', maint:'18–22% annual maintenance',
@@ -128,7 +130,7 @@ const COMP = {
     whyWin:['Inventory-specific execution across warehouse, production, field, and distributed operations','Preserves the ERP as system of record without forcing replacement','Configurable workflows reduce dependence on custom ERP code'] },
 
   /* ── MEP displacement competitors ── */
-  mep_lowcode: { solution:'mep', name:'Low-code Platform (Power Apps / Mendix / Appian)',
+  mep_lowcode: { solution:'mep', name:'Microsoft Power Apps',
     cost:'$100K–$500K+ build + ongoing dev', time:'6–18 months to first workflow', maint:'High: custom code, versioning, and dev dependency',
     pain:['Generic platform requires custom development for every workflow','No offline-first or governed sync built in','ERP integration requires bespoke connectors','Scaling means more dev cycles, not configuration'],
     adv: ['Purpose-built for governed enterprise workflow mobilization','Reliable online and offline execution with governed sync','No-code configuration — no developers required','Connects to ERPs, APIs, databases, and enterprise systems out of the box','Role-based workflows and simplified frontline experiences'],
@@ -140,7 +142,7 @@ const COMP = {
     discQualify:['What must users complete when fully disconnected?','Which transactions require validation, approval, photos, signatures, barcode scans, or attachments?','How frequently do workflows and business rules change?'],
     whyWin:['Purpose-built for mobilizing governed enterprise workflows at the point of work','Reliable online and offline operation for frontline environments','No-code configuration speeds change and reduces dependence on custom development','Simplified role-based experiences improve frontline adoption'] },
 
-  mep_rfgen: { solution:'mep', name:'ERP Mobility / Scanning (RFgen / RF-SMART)',
+  mep_rfgen: { solution:'mep', name:'RFgen',
     cost:'$50K–$300K + ERP consulting', time:'3–9 months, ERP-specific', maint:'Tied to ERP version; limited to scanning workflows',
     pain:['ERP-specific — locked to one system','Limited to scanning and data capture, not full workflow execution','No offline-first capability for field environments','Cannot mobilize cross-system or non-ERP workflows'],
     adv: ['Works across ERPs, APIs, databases, and enterprise systems','Full workflow execution — not just scanning','Reliable offline operation with governed sync','No-code configuration for any workflow type'],
@@ -151,6 +153,14 @@ const COMP = {
     discPrequalify:['Which enterprise systems contain the workflows and data they need?','Is the requirement a single form, scanning workflow, or broader process mobilization?','How many users, locations, device types, and connectivity conditions are involved?'],
     discQualify:['What must users complete when fully disconnected?','What security, governance, integration, and support standards apply?','How frequently do workflows and business rules change?'],
     whyWin:['Connects to ERPs, databases, APIs, and other enterprise systems','Reliable online and offline operation for frontline environments','No-code configuration speeds change and reduces dependence on custom development','Central governance supports reusable applications and consistent processes at scale'] },
+
+  mep_rfsmart: { solution:'mep', name:'RF-SMART',
+    cost:'Legacy curated estimate — provenance requires review', time:'Research required', maint:'Research required',
+    pain:[], adv:[], targetProfile:'ERP-connected mobile and scanning evaluation.', targetBuyers:'IT Applications, ERP owners, Operations.',
+    compLandscape:'RF-SMART is maintained as its own product record.', compReframe:'Research and approve product-specific claims before use.', discPrequalify:[],discQualify:[],whyWin:[] },
+
+  mep_mendix: { solution:'mep', name:'Mendix', cost:'Legacy curated estimate — provenance requires review',time:'Research required',maint:'Research required',pain:[],adv:[],targetProfile:'Low-code application platform evaluation.',targetBuyers:'CIO, IT Applications, Enterprise Architecture.',compLandscape:'Mendix is maintained as its own product record.',compReframe:'Research and approve product-specific claims before use.',discPrequalify:[],discQualify:[],whyWin:[] },
+  mep_appian: { solution:'mep', name:'Appian', cost:'Legacy curated estimate — provenance requires review',time:'Research required',maint:'Research required',pain:[],adv:[],targetProfile:'Low-code application platform evaluation.',targetBuyers:'CIO, IT Applications, Enterprise Architecture.',compLandscape:'Appian is maintained as its own product record.',compReframe:'Research and approve product-specific claims before use.',discPrequalify:[],discQualify:[],whyWin:[] },
 
   other: { solution:'cip', name:'Other WMS',
     cost:'$200K–$1M+ typical', time:'12–18 months average', maint:'15–20% annual maintenance',
@@ -168,4 +178,4 @@ const COMP = {
 /* Explicitly expose on window so cross-<script> access is reliable regardless
    of strict-mode context (top-level const does not always become a global
    property). print.html depends on these. */
-if (typeof window !== 'undefined') { window.IND = IND; window.COMP = COMP; window.BENCHMARK_CITATIONS = BENCHMARK_CITATIONS; }
+if (typeof window !== 'undefined') { window.IND = IND; window.LEGACY_CURATED_COMPETITIVE_CONTENT = LEGACY_CURATED_COMPETITIVE_CONTENT; window.COMP = LEGACY_CURATED_COMPETITIVE_CONTENT; window.BENCHMARK_CITATIONS = BENCHMARK_CITATIONS; }

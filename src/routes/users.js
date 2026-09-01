@@ -135,8 +135,8 @@ router.post('/', async (req, res) => {
   const emailError = validateEmail(email);
   if (emailError) return res.status(400).json({ error: emailError });
 
-  if (!role || !['admin', 'rep', 'se'].includes(role)) {
-    return res.status(400).json({ error: 'Role must be "admin", "rep" (AE), or "se" (Solution Engineer).' });
+  if (!role || !VALID_ROLES.includes(role)) {
+    return res.status(400).json({ error: 'A valid primary role is required.' });
   }
 
   /* Guard: cannot create a second admin without explicit intent (soft guard — UX) */
@@ -174,8 +174,7 @@ router.post('/', async (req, res) => {
 
     /* Send welcome email — fire and forget, never blocks response */
     const { sendWelcomeWithTempPassword } = require('../email');
-    sendWelcomeWithTempPassword(newUser.email, newUser.username, tempPassword, req.user.username)
-      .catch(err => console.error('Welcome email failed:', err.message));
+    const emailResult=await sendWelcomeWithTempPassword(newUser.email, newUser.username, tempPassword, req.user.username);
 
     await log({
       userId:     req.user.id,
@@ -190,7 +189,8 @@ router.post('/', async (req, res) => {
     res.status(201).json({
       user:          newUser,
       tempPassword,  /* Display this to the Admin; it will not be recoverable again */
-      emailSent:     !!process.env.SENDGRID_API_KEY
+      emailSent:     emailResult.ok,
+      emailState:    emailResult.state
     });
 
   } catch (err) {
@@ -257,8 +257,8 @@ router.patch('/:id', async (req, res) => {
     }
 
     if (role !== undefined) {
-      if (!['admin', 'rep', 'se'].includes(role)) {
-        return res.status(400).json({ error: 'Role must be "admin", "rep" (AE), or "se" (Solution Engineer).' });
+      if (!VALID_ROLES.includes(role)) {
+        return res.status(400).json({ error: 'A valid primary role is required.' });
       }
       updates.push(`role = $${idx++}`);
       values.push(role);
@@ -296,6 +296,9 @@ router.patch('/:id', async (req, res) => {
       },
       ipAddress: req.ip
     });
+    const beforeRoles=new Set(cleanRoles(current.roles,current.role)),afterRoles=new Set(cleanRoles(rows[0].roles,rows[0].role));
+    for(const added of [...afterRoles].filter(r=>!beforeRoles.has(r)))await log({userId:req.user.id,action:ACTIONS.USER_ROLE_ADDED,entityType:'user',entityId:id,detail:{role:added},ipAddress:req.ip});
+    for(const removed of [...beforeRoles].filter(r=>!afterRoles.has(r)))await log({userId:req.user.id,action:ACTIONS.USER_ROLE_REMOVED,entityType:'user',entityId:id,detail:{role:removed},ipAddress:req.ip});
 
     res.json(rows[0]);
 
@@ -345,8 +348,7 @@ router.post('/:id/reset-password', async (req, res) => {
 
     /* Email the new temp password */
     const { sendWelcomeWithTempPassword } = require('../email');
-    sendWelcomeWithTempPassword(user.email, user.username, tempPassword, req.user.username)
-      .catch(err => console.error('Reset password email failed:', err.message));
+    const emailResult=await sendWelcomeWithTempPassword(user.email, user.username, tempPassword, req.user.username);
 
     await log({
       userId:     req.user.id,
@@ -360,7 +362,8 @@ router.post('/:id/reset-password', async (req, res) => {
     res.json({
       ok:          true,
       tempPassword,
-      emailSent:   !!process.env.SENDGRID_API_KEY,
+      emailSent:   emailResult.ok,
+      emailState:  emailResult.state,
       message:     `Password reset for ${user.username}. All active sessions have been revoked.`
     });
 

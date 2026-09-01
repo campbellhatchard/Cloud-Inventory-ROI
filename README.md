@@ -6,14 +6,11 @@ A multi-user SaaS application for Cloud Inventory sales reps and Solution Engine
 
 ## What it does
 
-- **ROI Calculator** — Live-updating model with 10 value drivers plus annual, cumulative, and total-contract economics for configurable 1–60 month terms
-- **Discovery guide** — Industry-specific question sets with a shareable prospect link, including field-aware prospect-safe Question Help
+- **ROI Calculator** — Live-updating model with 10 value drivers (labor, shrinkage, carrying cost, inventory turns, OTIF, downtime, expediting, field inventory, IT displacement, WMS levers)
+- **Discovery guide** — Industry-specific question sets with a shareable prospect link so prospects can contribute their own data
 - **Executive view** — CFO-ready narrative, Three Whys framework, PDF and PowerPoint exports
-- **Executive Proposal** — customer-ready editable proposal workspace with AI narrative refinement, PDF and Word export
-- **Deal Coach** — scenario-aware close-plan workspace linking value, stakeholders, proposal, Joint Project Plan, BuyCycle evidence, and persistent Christie AI coaching
-- **Sales Manager Deal Management** — role-gated team portfolio view combining buying progress, Solution Fit, execution, stakeholder health, contract economics, and internal management actions
 - **Solution Fit** — Pre-sales handoff document for Services / Solution Engineering
-- **Joint Project Plans** — Joint project plan builder with milestone tracking and a shareable prospect link
+- **Action plans** — Mutual action plan builder with milestone tracking and a shareable prospect link
 - **Stakeholder map** — Influence/support matrix with AI gap analysis
 - **Scenario templates** — Pre-populated starting points for 6 verticals
 - **Version history & diffing** — Every save creates a version; compare any two side by side
@@ -75,19 +72,19 @@ npm run dev             # → http://localhost:3000
 | `FROM_EMAIL` | From address for SendGrid emails |
 | `APP_URL` | Base URL used in email links |
 
-Without `SENDGRID_API_KEY` the app runs fully — emails are silently skipped.
+Without both `SENDGRID_API_KEY` and a verified `FROM_EMAIL`, the app runs but reports email as not configured. Valid business transactions still complete; message content and secrets are never logged.
 
 ---
 
 ## Database migrations
 
-Migrations live in `migrations/*.sql` (001–024). They run automatically on every server startup. The runner tracks applied migrations in `schema_migrations` and only runs new ones.
+Migrations live in `migrations/*.sql` (001–034). They run automatically on every server startup. The runner tracks applied migrations in `schema_migrations` and only runs new ones.
 
 ```bash
 npm run migrate   # run manually
 ```
 
-**Security note:** The migration runner ensures the bootstrap admin exists. After the administrator completes the mandatory first-login password change, startup preserves that user-managed password rather than overwriting it.
+**Security note:** The migration runner ensures the configured bootstrap Admin exists. Before the mandatory first-login password change it may synchronize the bootstrap credential; after the administrator completes that change, startup preserves the user-managed password rather than overwriting it.
 
 ---
 
@@ -119,19 +116,17 @@ Push to the connected GitHub branch. Render installs with `npm ci` and starts `n
 │   ├── middleware/auth.js     # requireAuth middleware
 │   ├── routes/
 │   │   ├── auth.js            # Login, logout, forgot/reset password
-│   │   ├── maps.js            # Joint Project Plans
+│   │   ├── maps.js            # Mutual action plans
 │   │   ├── scenarios.js       # Scenarios CRUD, versions, outcome, resonance
 │   │   ├── stakeholders.js    # Stakeholder maps
 │   │   └── users.js           # User management (admin)
 │   └── shared/roi-engine.js   # ROI calculation engine
-├── migrations/                # SQL migration files (001–024)
+├── migrations/                # SQL migration files (001–034)
 ├── public/                    # Frontend (no build step)
 │   ├── index.html             # Main app shell
 │   ├── prospect.html          # Standalone prospect questionnaire
 │   ├── print.html             # PDF print page
-│   ├── app.js                 # Scenario CRUD, authoritative scenario loading, tab routing
-│   ├── ai-session.js          # Session-scoped persistence for independent AI experiences
-│   ├── sales-manager.js       # Sales Manager portfolio workspace
+│   ├── app.js                 # Scenario CRUD, tab routing
 │   ├── features.js            # Analytics, sensitivity, CRM push
 │   ├── discovery.js           # Discovery guide
 │   ├── solution-fit.js        # Solution Fit tab
@@ -143,7 +138,7 @@ Push to the connected GitHub branch. Render installs with `npm ci` and starts `n
 │   ├── pptx-export.js         # PowerPoint export
 │   └── style.css              # All styles
 └── test/
-    ├── roi-engine.test.js     # ROI engine unit tests, including contract-term economics
+    ├── roi-engine.test.js     # ROI engine unit tests (17 tests)
     └── routes.test.js         # Integration tests (requires DB)
 ```
 
@@ -181,13 +176,11 @@ Edit `public/scenario-templates.js`, add an entry to `SCENARIO_TEMPLATES`:
 
 - Keep the repo **private** — migration 003 contains the bootstrap admin logic
 - `JWT_SECRET` is auto-generated by Render — never share it
-- Authenticated application APIs require a valid JWT; prospect Question Help uses a validated discovery token through the separately scoped `/api/prospect-assist` endpoint
-- AI endpoints are rate-limited; prospect Question Help rebuilds its context server-side from an explicit prospect-safe allow-list
-- AI session state is isolated in browser `sessionStorage` and cleared on logout or authenticated-session expiry
-- Sales Manager access is stored as a secondary server-validated role; the user’s primary AE/SE/Admin role remains unchanged
+- All `/api/*` routes except `/api/auth/*` and `/api/discovery/*` require a valid JWT
+- The AI endpoint is rate-limited to 20 req/15 min per IP, plus the global 100 req/min limit
 
 ---
 
 ## Version
 
-Current: **v5.8.0** — see Admin → Version history for full changelog.
+Current: **v6.8.2** — AI Knowledge & Christie Runtime Completion. Help and AI documentation now match every active runtime, Manager and SE workspaces launch the correct server-authorized Christie lens, competitive freshness uses the governed status, Value History materiality uses counted ROI driver contribution rather than raw input size, and customer methodology wording is consistent. ROI Model remains v2.8 and Brand System remains v1.0.

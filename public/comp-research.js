@@ -40,7 +40,7 @@ function renderCompResearch() {
   var el = document.getElementById('compResearchApp');
   if (!el) return;
   _syncBattlecardResearchContext();
-  var isAdmin = (window.ciAuth && window.ciAuth.getUser().role === 'admin');
+  var isAdmin = !!(window.ciAuth && (typeof clientHasRole==='function' ? clientHasRole(window.ciAuth.getUser(),'admin','Admin') : window.ciAuth.getUser().role === 'admin'));
   el.innerHTML = _buildResearchUI(isAdmin);
   _bindResearchEvents();
   crOnCompSel();
@@ -82,10 +82,9 @@ function _curatedProductSource(ctx) {
 }
 
 function _syncBattlecardResearchContext() {
-  var ctx = _battlecardResearchContext();
-  if (!_cr.ciSource || _cr.ciSource.type === 'battlecard') {
-    _cr.ciSource = _curatedProductSource(ctx);
-  }
+  /* First-party comparison authority comes from the approved product-specific
+     server source. Static Battlecard language is never promoted to canonical. */
+  if (_cr.ciSource && _cr.ciSource.type === 'battlecard') _cr.ciSource = null;
 }
 
 function _researchCompetitorOptions() {
@@ -149,6 +148,7 @@ function _buildResearchUI(isAdmin) {
   + '<div id="crCompNameWrap" style="display:none;margin-bottom:10px;">'
   + '<label class="cr-field-lbl">Competitor name</label>'
   + '<input type="text" id="crCompName" class="cr-url-input" placeholder="e.g. Acme WMS" oninput="crCheckReady()" />'
+  + '<button type="button" class="btn btn-tertiary btn-sm" style="margin-top:6px" onclick="crSaveDraftProduct()">Save as Draft</button>'
   + '</div>'
   + '<div id="crCompActiveWrap" style="display:none;margin-bottom:10px;"></div>'
   + '<div class="cr-input-group">'
@@ -173,7 +173,7 @@ function _buildResearchUI(isAdmin) {
   + '<div class="cr-action-title" id="crActionTitle">Set both sources to continue</div>'
   + '<div class="cr-action-sub" id="crActionSub">AI will compare product capabilities, generate a provenance-tagged battlecard, and suggest an updated talk track.</div>'
   + '</div>'
-  + '<button class="btn btn-cta" id="crResearchBtn" onclick="crStartResearch()" disabled>\u2728 Research &amp; compare</button>'
+  + '<button class="btn btn-primary" id="crResearchBtn" onclick="crStartResearch()" disabled>\u2728 Research &amp; compare</button>'
   + '</div>'
 
   /* ── Progress (hidden until running) ── */
@@ -227,7 +227,7 @@ function _bindResearchEvents() {
 /* ── Load canonical CI source from server ── */
 async function _loadCISourceInfo() {
   try {
-    var resp = await apiFetch('/api/competitive/ci-source');
+    var resp = await apiFetch('/api/competitive/ci-source?ciProduct=' + encodeURIComponent(((document.getElementById('compSolutionFilter')||{}).value||'cip')));
     if (!resp || !resp.ok) {
       if (_cr.ciSource) {
         _renderCIActive(_cr.ciSource.name, 'doc', 'Selected on Battlecard · approved product positioning');
@@ -316,6 +316,7 @@ function crOnCompSel() {
     deposco:'https://www.deposco.com/',
     fishbowl:'https://www.fishbowlinventory.com/',
     mep_rfgen:'https://www.rfgen.com/',
+    mep_rfsmart:'https://www.rfsmart.com/',
     mep_lowcode:'https://powerplatform.microsoft.com/en-us/power-apps/'
   };
   var urlEl = document.getElementById('crCompUrl');
@@ -329,7 +330,7 @@ function _compDisplayName() {
   var v   = sel ? sel.value : '';
   if (v === 'other') return (document.getElementById('crCompName') || {}).value || 'Competitor';
   if (typeof COMP !== 'undefined' && COMP[v]) return COMP[v].name;
-  var labels = { oracle:'Oracle WMS', sap:'SAP WM', rf:'RFgen / RF-SMART', lowcode:'Microsoft Power Apps / Mendix', deposco:'Deposco / Infios WMS', fishbowl:'Fishbowl / Cin7' };
+  var labels = { oracle:'Oracle WMS', sap:'SAP WM', rf:'RFgen', mep_rfsmart:'RF-SMART',lowcode:'Microsoft Power Apps',deposco:'Deposco',fishbowl:'Fishbowl Inventory' };
   return labels[v] || v || 'Competitor';
 }
 
@@ -445,12 +446,8 @@ async function crStartResearch() {
 
   /* CI source */
   var ciOverride = null;
-  if (_cr.ciSource && _cr.ciSource.type !== 'canonical') {
-    ciOverride = {
-      name: _cr.ciSource.name,
-      text: _cr.ciSource.text || '',
-      url:  _cr.ciSource.url  || null
-    };
+  if (_cr.ciSource && (_cr.ciSource.type === 'file' || _cr.ciSource.type === 'url')) {
+    ciOverride = { name:_cr.ciSource.name,text:_cr.ciSource.text||'',url:_cr.ciSource.url||null };
   }
 
   _cr.running = true;
@@ -475,7 +472,10 @@ async function crStartResearch() {
       competitorName:     resolvedCompName,
       competitorUrl:      resolvedCompUrl,
       competitorFileText: resolvedCompText,
-      ciSourceOverride:   ciOverride
+      ciSourceOverride:   ciOverride,
+      productId:          window._ciSelectedProductId || null,
+      ciProductKey:       ((document.getElementById('compSolutionFilter')||{}).value||'cip'),
+      opportunityBaseId:  window.getCompetitiveOpportunityBaseId ? window.getCompetitiveOpportunityBaseId() : null
     };
     var resp = await apiFetch('/api/competitive/research', { method:'POST', body: JSON.stringify(body) });
     _crSetStep(4,'done');
@@ -557,7 +557,7 @@ function _crRenderResults(data) {
           + '</div>';
       }).join('')
     + '<div class="cr-diff-actions">'
-    + '<button class="btn btn-cta btn-sm" onclick="crAcceptDiffs()">Accept all updates to battlecard</button>'
+    + '<button class="btn btn-secondary btn-sm" onclick="crAcceptDiffs()">Review proposed findings</button>'
     + '<button class="btn btn-ghost btn-sm" onclick="crDiscardDiffs()">Discard \u2014 keep current</button>'
     + '</div>'
     + '</div>' : '';
@@ -586,8 +586,8 @@ function _crRenderResults(data) {
     + '<span class="cr-badge cr-badge-ai" style="margin-left:8px;">Verify before customer use</span></div>'
     + '<div class="cr-talk-text" id="crTalkText">' + escapeHtml(r.talkTrack) + '</div>'
     + '<div class="cr-talk-foot">'
-    + '<button class="btn btn-cta btn-sm" onclick="crCopyTalk()">Copy talk track</button>'
-    + (typeof exportCompPDF === 'function' ? '<button class="btn btn-ghost btn-sm" onclick="crExportToBattlecard()">Export to battlecard</button>' : '')
+    + '<button class="btn btn-primary btn-sm" onclick="crCopyTalk()">Copy talk track</button>'
+    + (typeof exportCompPDF === 'function' ? '<button class="btn btn-ghost btn-sm" onclick="crExportToBattlecard()">Propose Battlecard update</button>' : '')
     + '</div>'
     + (r.researchNotes ? '<div class="cr-research-note"><i class="ti ti-info-circle" aria-hidden="true"></i>' + escapeHtml(r.researchNotes) + '</div>' : '')
     + '</div>' : '';
@@ -596,7 +596,7 @@ function _crRenderResults(data) {
   var srcPills = '<div class="cr-src-pills">'
     + '<span class="cr-src-pill"><i class="ti ti-file-type-pdf" aria-hidden="true"></i>' + escapeHtml((data.ciSourceLabel||'CI source').slice(0,40)) + '</span>'
     + '<span class="cr-src-pill"><i class="ti ti-world" aria-hidden="true"></i>' + escapeHtml((data.compSourceLabel||'Competitor source').slice(0,40)) + '</span>'
-    + (data.compFetchStatus === 'failed' ? '<span class="cr-badge cr-badge-ai">Competitor URL unavailable \u2014 used general knowledge</span>' : '')
+    + (data.compFetchStatus === 'failed' ? '<span class="cr-badge cr-badge-ai">Source insufficient \u2014 provide or refresh a source</span>' : '')
     + '</div>';
 
   el.innerHTML = '<div class="cr-results-head">'
@@ -609,7 +609,7 @@ function _crRenderResults(data) {
 }
 
 /* ── Actions ── */
-function crAcceptDiffs() { showToast('Battlecard updated with AI research findings. Review in the Battlecard tab.'); }
+function crAcceptDiffs() { showToast('Research findings are saved as proposed. An Admin must approve selected findings before the Battlecard changes.'); }
 function crDiscardDiffs() { showToast('AI diff discarded. Battlecard unchanged.'); }
 
 function crCopyTalk() {
@@ -619,9 +619,7 @@ function crCopyTalk() {
   showToast('Talk track copied to clipboard.');
 }
 
-function crExportToBattlecard() {
-  showToast('Export to battlecard: coming soon.');
-}
+function crExportToBattlecard() { showToast('Battlecard update proposed. The saved findings are awaiting Admin review; raw research was not published.'); }
 
 /* ── Admin source panel ── */
 function crOpenAdminSourcePanel() {
@@ -639,9 +637,9 @@ async function crSaveAdminUrl() {
   try {
     var resp = await apiFetch('/api/competitive/ci-source', {
       method: 'POST',
-      body: JSON.stringify({ sourceType:'url', sourceName: url.replace(/^https?:\/\//,'').slice(0,120), sourceUrl: url })
+      body: JSON.stringify({ sourceType:'url', sourceName: url.replace(/^https?:\/\//,'').slice(0,120), sourceUrl: url,ciProductKey:((document.getElementById('compSolutionFilter')||{}).value||'cip') })
     });
-    if (resp && resp.ok) { showToast('Canonical CI source updated for all reps.'); _loadCISourceInfo(); crCloseAdminPanel(); }
+    if (resp && resp.ok) { showToast('Canonical source updated for this Cloud Inventory product.'); _loadCISourceInfo(); crCloseAdminPanel(); }
     else showToast('Save failed. Check your connection.');
   } catch(e) { showToast('Save failed: ' + e.message); }
 }
@@ -654,9 +652,9 @@ function crAdminHandleFile(evt) {
     try {
       var resp = await apiFetch('/api/competitive/ci-source', {
         method: 'POST',
-        body: JSON.stringify({ sourceType:'file', sourceName: file.name, contentText: text, fileSize: file.size })
+        body: JSON.stringify({ sourceType:'file', sourceName: file.name, contentText: text, fileSize: file.size,ciProductKey:((document.getElementById('compSolutionFilter')||{}).value||'cip') })
       });
-      if (resp && resp.ok) { showToast(file.name + ' saved as canonical CI source for all reps.'); _loadCISourceInfo(); crCloseAdminPanel(); }
+      if (resp && resp.ok) { showToast(file.name + ' saved as the canonical source for this Cloud Inventory product.'); _loadCISourceInfo(); crCloseAdminPanel(); }
       else showToast('Upload failed.');
     } catch(ex) { showToast('Upload error: ' + ex.message); }
   };

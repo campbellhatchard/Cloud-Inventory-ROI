@@ -1,0 +1,19 @@
+# Application Knowledge and AI Architecture — v6.8.0
+
+Application Knowledge 1.0 is defined in `config/application-knowledge.json`. Server AI uses `src/shared/application-knowledge.js`; Human Help receives the generated `public/application-knowledge.js`. `scripts/generate-application-knowledge.js --check` prevents projection drift.
+
+The knowledge layer reuses the authoritative questionnaire/ROI registry for field definitions, units, classifications, formulas, economic classes, companion inputs, provenance and overlap treatment. It does not introduce a second ROI model. ROI Model v2.8 (`modelVersion: 28`) and Brand System v1.0 remain unchanged.
+
+`POST /api/ai-help` owns the AI Help prompt. `POST /api/prospect-assist` validates the prospect token and resolves `questionId` from the linked session; client field context is ignored. `GET /api/scenarios/:id/christie-context` and `POST /api/scenarios/:id/christie` enforce scenario access before building Christie context. Christie can recommend actions but cannot update governed data.
+# v6.8.1 runtime correction
+
+Christie uses `src/shared/christie-context-source.js` as the single authoritative composition boundary after scenario authorization. AI Help receives a bounded projection selected by workspace and exact field; it does not receive a blind copy of application state. Browser Help is generated from Application Knowledge 1.0, mapped into visible governed groups, and merged by topic ID with curated guidance taking precedence.
+# v6.8.2 complete runtime architecture
+
+Application Knowledge 1.0 is the versioned product-knowledge source. Generated Human Help topics are assigned to visible governed groups, then merged by topic ID; curated guidance deterministically overrides a generated duplicate. AI Help receives a minimized workspace projection. Internal Field Help adds the exact field schema and ROI Formula Registry semantics. Prospect Help uses only the token-authorized, prospect-safe question object and relevant prior prospect answers.
+
+Christie Persona 1.0 receives one server-authoritative context assembled by `christie-context-source.js` after scenario authorization. The context includes contract economics, counted value drivers, base-scoped Value History, Buyer Evidence, Buyer Commitment, Stakeholders, Solution Fit, JPP, Proposal, output readiness, approved customer-safe proof, governed Competitive Intelligence, Three Whys, and the opportunity profile. A deterministic revision marks prior coaching stale without replacing it. Rep is the direct Deal Coach lens; Sales Manager and authorized SE/Admin launches request Manager and SE lenses. The server reduces unauthorized perspective requests and no lens adds edit permission.
+
+Competitive Research AI can research, compare, and propose source-bound findings; only governed Admin workflows approve findings and publish Battlecards. Proposal AI Enhance edits persisted narrative against the canonical Executive Value Story and approved customer-safe proof. Three Whys AI Enhance drafts opportunity narrative from governed context; its wording is not customer evidence. Neither specialist can invent facts or modify ROI, stage, evidence, proof approval, or governance.
+
+Context is minimized by experience and authorization is enforced before context assembly. Safe fallbacks preserve prior content: Human Help for AI Help, static field definitions for Field Help, deterministic coaching for Christie, existing editorial narrative for enhancements, and existing approved intelligence when research fails. SendGrid is not an AI knowledge source; it only transports accepted notifications and retains v6.8.1 actual-result reporting. Tests cover pure normalization, role launch boundaries, source composition, Help/document drift, specialist capability boundaries, locked model versions, safe email behavior, and database integration when a test PostgreSQL URL is available.

@@ -53,7 +53,6 @@ const SCENARIO_TEMPLATES = [
       discRate: 10,
       implMonths: 3,
       ramp1: 40, ramp2: 75, ramp3: 100,
-      dealStage: 'Discovery',
       execAudience: 'mixed'
     }
   },
@@ -99,7 +98,6 @@ const SCENARIO_TEMPLATES = [
       discRate: 10,
       implMonths: 4,
       ramp1: 35, ramp2: 65, ramp3: 100,
-      dealStage: 'Discovery',
       execAudience: 'ops'
     }
   },
@@ -140,7 +138,6 @@ const SCENARIO_TEMPLATES = [
       discRate: 10,
       implMonths: 4,
       ramp1: 35, ramp2: 70, ramp3: 100,
-      dealStage: 'Discovery',
       execAudience: 'fin'
     }
   },
@@ -182,7 +179,6 @@ const SCENARIO_TEMPLATES = [
       discRate: 10,
       implMonths: 5,
       ramp1: 30, ramp2: 65, ramp3: 100,
-      dealStage: 'Discovery',
       execAudience: 'mixed'
     }
   },
@@ -217,7 +213,6 @@ const SCENARIO_TEMPLATES = [
       discRate: 12,
       implMonths: 5,
       ramp1: 30, ramp2: 65, ramp3: 100,
-      dealStage: 'Discovery',
       execAudience: 'fin'
     }
   },
@@ -258,7 +253,6 @@ const SCENARIO_TEMPLATES = [
       discRate: 10,
       implMonths: 3,
       ramp1: 40, ramp2: 80, ramp3: 100,
-      dealStage: 'Discovery',
       execAudience: 'ops'
     }
   }

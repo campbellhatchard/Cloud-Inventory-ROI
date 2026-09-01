@@ -106,9 +106,9 @@ function run() {
   check('partial-year benefit uses only months 13 through 18', approx(c18.contractYears[1].grossBenefit,
     c18.monthlyProfile.slice(12,18).reduce((sum,m)=>sum+m.benefit,0)));
   check('payback is either within selected contract or explicitly absent', c18.contractPayback === null || c18.contractPayback <= 18);
-  check('blank contract term defaults to 36 months', calcROI({ ...BASE, modelVersion:27, contractMonths:'' }).contractMonths === 36);
-  check('zero contract term clamps to 1 month rather than silently becoming 36', calcROI({ ...BASE, modelVersion:27, contractMonths:0 }).contractMonths === 1);
-  check('contract term caps at 60 months', calcROI({ ...BASE, modelVersion:27, contractMonths:999 }).contractMonths === 60);
+  check('blank contract term defaults to 36 months', calcROI({ ...BASE, modelVersion:28, contractMonths:'' }).contractMonths === 36);
+  check('zero contract term clamps to 1 month rather than silently becoming 36', calcROI({ ...BASE, modelVersion:28, contractMonths:0 }).contractMonths === 1);
+  check('contract term caps at 60 months', calcROI({ ...BASE, modelVersion:28, contractMonths:999 }).contractMonths === 60);
   return { pass:_pass, fail:_fail };
 }
 console.log('ROI engine tests:');

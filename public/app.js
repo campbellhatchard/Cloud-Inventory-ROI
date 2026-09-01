@@ -19,6 +19,16 @@
    ────────────────────────────────────────────────────────────────── */
 let savedScenarios = [];
 let _scenariosLoading = false;
+window._currentBuyCycleStage=2;
+window._currentBuyCycleStageLabel='Stage 2 — Define Economic Consequences';
+window._currentOpportunityOutcome=null;
+window.getCurrentBuyCycleStage=()=>window._currentBuyCycleStage||2;
+window.getCurrentBuyCycleStageLabel=()=>window._currentOpportunityOutcome&&window._currentBuyCycleStage===7?`Closed ${window._currentOpportunityOutcome==='won'?'Won':'Lost'}`:window._currentBuyCycleStageLabel;
+function updateCurrentBuyCycleStageDisplay(saved=false){
+  const label=document.getElementById('currentBuyCycleStageDisplay'),help=document.getElementById('currentBuyCycleStageHelp');
+  if(label)label.textContent=window.getCurrentBuyCycleStageLabel();
+  if(help)help.textContent=saved?'Governed through Buyer Evidence & Stage Readiness.':'New opportunities begin at Stage 2. Save the scenario to activate Buyer Evidence.';
+}
 
 async function fetchScenarios() {
   if (_scenariosLoading) return;
@@ -27,7 +37,7 @@ async function fetchScenarios() {
     /* Admins see all users' scenarios so the customer → scenario lookup
        works across the whole team, not just their own deals. */
     const user    = window.ciAuth ? window.ciAuth.getUser() : {};
-    const canViewTeam = user.role === 'admin' || (Array.isArray(user.roleKeys) && user.roleKeys.includes('sales_manager'));
+    const canViewTeam = (typeof clientHasRole==='function'&&clientHasRole(user,'admin','Admin')) || (user.roleKeys||[]).includes('sales_manager') || (user.roles||[]).some(r=>r==='Sales Leader'||r==='Sales Manager');
     const url     = canViewTeam ? '/api/scenarios?all=true' : '/api/scenarios';
     const resp = await apiFetch(url);
     if (!resp || !resp.ok) return;
@@ -56,6 +66,9 @@ function normaliseRow(r) {
     name:          r.name,
     company:       r.company,
     industry:      r.industry,
+    currentBuyCycleStage: Number(r.current_buy_cycle_stage||2),
+    currentBuyCycleStageLabel: r.current_buy_cycle_stage_label || r.deal_stage || 'Stage 2 — Define Economic Consequences',
+    repAssessedStage: Number(r.rep_assessed_stage||r.current_buy_cycle_stage||2),
     dealStage:     r.deal_stage,
     execAudience:  r.exec_audience || 'mixed',
     solution:      r.solution || 'cip',
@@ -70,8 +83,9 @@ function normaliseRow(r) {
     npv3:          parseFloat(r.npv3)           || 0,
     npv5:          parseFloat(r.npv5)           || 0,
     payback:       r.payback !== null ? parseFloat(r.payback) : null,
-    outcome:       r.outcome || '',
-    outcomeReason: r.outcome_reason || '',
+    outcome:       r.buy_cycle_outcome || '',
+    legacyOutcome: r.legacyOutcome || r.legacy_outcome || '',
+    legacyOutcomeReason: r.legacyOutcomeReason || r.outcome_reason || '',
     realizedValue: r.realized_value !== null && r.realized_value !== undefined ? parseFloat(r.realized_value) : null,
     outcomeAt:     r.outcome_at || null,
     customerId:    r.customer_id || null,
@@ -79,6 +93,8 @@ function normaliseRow(r) {
     inputs:        r.data || null
   };
 }
+function scenarioMatchesStageFilter(s,key){return !key||(key==='won'||key==='lost'?s.currentBuyCycleStage===7&&s.outcome===key:String(s.currentBuyCycleStage)===String(key));}
+function scenarioStageDisplay(s){if(s.currentBuyCycleStage===7&&s.outcome)return `Closed ${s.outcome==='won'?'Won':'Lost'}`;const short={2:'Economic Consequences',3:'Funding',4:'Decision Criteria',5:'Evaluation',6:'Vendor Selection',7:'Closed'};return `Stage ${s.currentBuyCycleStage||2} · ${short[s.currentBuyCycleStage||2]}`;}
 
 /* No-op stubs — keep callers working without errors */
 function loadSaved()         { return []; }
@@ -87,7 +103,7 @@ function persistSaved(arr)   { savedScenarios = arr; updateSavedBadge(); }
 /* ════════════════════════════════════════
    Navigation
    ════════════════════════════════════════ */
-const ALL_TABS = ['calc','disc','comp','exec','proposal','coach','saved','compare','sensitivity','analytics','manager','map','stake','solfit','admincustomers','admin','help','impact','profile'];
+const ALL_TABS = ['calc','disc','comp','exec','proposal','coach','readiness','saved','compare','sensitivity','analytics','manager','map','stake','solfit','admincustomers','admin','help','impact','profile'];
 
 function switchTab(name) {
   ALL_TABS.forEach(n => {
@@ -97,7 +113,7 @@ function switchTab(name) {
     if (nav) nav.classList.toggle('active', n === name);
   });
   document.body.classList.toggle('impact-active', name === 'impact');
-  if (name === 'comp')        { syncCompDropdowns(); renderCompFilter(); }
+  if (name === 'comp')        { syncCompDropdowns(); window.renderCompFilter?.(); }
   if (name === 'exec')        renderExec();
   if (name === 'saved')       { renderList(); renderStageFilters(); }
   if (name === 'compare')     renderComparison();
@@ -106,6 +122,7 @@ function switchTab(name) {
   if (name === 'manager' && typeof initSalesManagerDashboard === 'function') initSalesManagerDashboard();
   if (name === 'admin')       adminUnlocked && renderAdminEditor();
   if (name === 'coach')       renderDealCoach();
+  if (name === 'readiness' && typeof renderBuyerReadiness === 'function') renderBuyerReadiness();
   if (name === 'disc' && typeof clearDiscNotif === 'function') clearDiscNotif();
   if (window.innerWidth <= 900) closeSidebar();
   trackEvent('tab_view', { tab: name });
@@ -259,6 +276,29 @@ function metricVal(id, industryKey) {
   return d && d[industryKey] !== undefined ? d[industryKey] : 0;
 }
 
+window._roiModelVersion = Number(window._roiModelVersion) || 28;
+window._explicitRecoveryInputs = Array.isArray(window._explicitRecoveryInputs) ? window._explicitRecoveryInputs : [];
+function markExplicitRecovery(name){
+  if(!window._explicitRecoveryInputs.includes(name)) window._explicitRecoveryInputs.push(name);
+}
+window.markExplicitRecovery=markExplicitRecovery;
+
+function refreshRoiModelUpgradeControl(){
+  const button=document.getElementById('roiModelUpgradeBtn');if(!button)return;
+  button.style.display=window._calcScenarioId&&Number(window._roiModelVersion)<28?'inline-flex':'none';
+}
+function previewRoiModelUpgrade(){
+  if(Number(window._roiModelVersion)>=28)return;
+  if(window._currentOpportunityOutcome){showToast('Closed opportunities cannot be upgraded. Create a new active business case if new analysis is required.');return;}
+  const prior=getVals(),legacy=calcROI({...prior,modelVersion:Number(window._roiModelVersion)||27}),modern=calcROI({...prior,modelVersion:28});
+  const currency=prior.currency||'USD',money=n=>new Intl.NumberFormat('en-US',{style:'currency',currency,maximumFractionDigits:0}).format(Number(n)||0);
+  const wrap=document.createElement('div');wrap.className='modal-overlay open';wrap.id='roiUpgradeModal';
+  wrap.innerHTML=`<div class="modal" role="dialog" aria-modal="true"><button class="modal-close" onclick="document.getElementById('roiUpgradeModal').remove()">✕</button><div class="modal-title">Preview ROI Model v2.8</div><p>This preview does not change the saved v2.7 record. Upgrading creates a new scenario version.</p><table style="width:100%;margin:14px 0"><tr><th></th><th>Saved v2.7</th><th>Preview v2.8</th></tr><tr><td>Annual benefit</td><td>${money(legacy.annualBenefit)}</td><td>${money(modern.annualBenefit)}</td></tr><tr><td>Contract ROI</td><td>${legacy.totalContractRoi==null?'Not available':Math.round(legacy.totalContractRoi)+'%'}</td><td>${modern.totalContractRoi==null?'Not available':Math.round(modern.totalContractRoi)+'%'}</td></tr></table><p style="font-size:12px;color:var(--gray-500)">v2.8 applies contribution-margin service economics, accuracy calibration, and governed overlap rules. Review assumptions before saving.</p><div class="btn-row"><button class="btn btn-ghost" onclick="document.getElementById('roiUpgradeModal').remove()">Keep v2.7</button><button class="btn btn-primary" onclick="confirmRoiModelUpgrade()">Create v2.8 version</button></div></div>`;
+  document.body.appendChild(wrap);
+}
+function confirmRoiModelUpgrade(){document.getElementById('roiUpgradeModal')?.remove();window._roiModelVersion=28;refreshRoiModelUpgradeControl();recalc();saveScenario();}
+window.previewRoiModelUpgrade=previewRoiModelUpgrade;window.confirmRoiModelUpgrade=confirmRoiModelUpgrade;
+
 function getVals() {
   const psvc = g('psvcCost'), hw = g('hwCost'), train = g('trainCost');
   const writeOffDollars = g('annualWriteOff');
@@ -279,16 +319,23 @@ function getVals() {
   const ramp2 = Math.min(100, valueOrDefault('ramp2', 75)) / 100;
   const ramp3 = Math.min(100, valueOrDefault('ramp3', 100)) / 100;
 
+  const opportunityRaw=String(document.getElementById('opportunityValue')?.value||'').replace(/,/g,'').trim();
+  const opportunityValue=opportunityRaw===''?null:Number(opportunityRaw);
+  const storedOpportunityValue=window._opportunityValueOriginal;
+  const opportunityValueCurrency=opportunityValue!==storedOpportunityValue
+    ? ((typeof getCurrency==='function')?getCurrency():'USD')
+    : (window._opportunityValueStoredCurrency||((typeof getCurrency==='function')?getCurrency():'USD'));
   return {
     name: gs('scenarioName') || 'Unnamed scenario',
     company: gs('companyName') || 'Prospect',
     rep: gs('repName'),
     industry: gs('industry'),
     competitor: gs('competitor') || gs('compSelect'),
-    dealStage: gs('dealStage'),
     execAudience: gs('execAudience') || 'mixed',
     solution: gs('solution') || 'cip',
     currency: (typeof getCurrency === 'function') ? getCurrency() : 'USD',
+    opportunityValue:Number.isFinite(opportunityValue)?opportunityValue:null,
+    opportunityValueCurrency,
     revenue: g('revenue'), users: g('userCount'), labor: g('laborCost'),
     inventory: inventoryVal, itCost: g('itCost'), invest: g('invest'),
     contractMonths: Math.max(1, Math.min(60, valueOrDefault('contractMonths', 36))),
@@ -301,9 +348,10 @@ function getVals() {
     otifBaseline, otifTarget,
     invTurnsCurrent, invTurnsBenchmark,
     /* ── v2.5 new calculation levers ── */
-    modelVersion: 27,
+    modelVersion: Number(window._roiModelVersion) || 28,
     laborWastePct:       g('laborWastePct') / 100,  // measured productivity waste (Option B)
     currentAccuracy:     g('currentAccuracy'),        // measured inventory accuracy % (Option A)
+    explicitRecoveryInputs: Array.isArray(window._explicitRecoveryInputs) ? window._explicitRecoveryInputs.slice() : [],
     /* ── Field inventory levers (opt-in) ── */
     /* The customer flag is the source of truth. The visible switch mirrors it;
        keeping this independent from the selected product prevents MEP/CIP from
@@ -315,6 +363,7 @@ function getVals() {
     fieldLocations:      g('fieldLocations'),
     fieldReconcileCost:  g('fieldReconcileCost'),
     fieldReconcilePerYr: g('fieldReconcilePerYr'),
+    fieldReconcilePersonHours: g('fieldReconcilePersonHours'),
     mFieldCount:         g('mFieldCount') / 100,
     /* ── v2.6 WMS levers ── */
     ordersPerYr:         g('ordersPerYr'),
@@ -330,6 +379,13 @@ function getVals() {
     mDowntime:           metricPct('m_downtime', 'downtime'),
     expediteSpendYr:     g('expediteSpendYr'),
     mExpedite:           metricPct('m_expedite', 'expedite'),
+    servicePenaltyCostYr:g('servicePenaltyCostYr'),
+    mServicePenalty:     metricPct('m_servicePenalty', 'servicePenalty'),
+    lostSalesYr:         g('lostSalesYr'),
+    contributionMarginPct:g('contributionMarginPct') / 100,
+    repeatVisitsYr:      g('repeatVisitsYr'),
+    costPerTruckRoll:    g('costPerTruckRoll'),
+    mFirstFix:           metricPct('m_firstFix', 'firstFix'),
     countDaysYr:         g('countDaysYr'),
     countPeople:         g('countPeople'),
     mCount:              metricPct('m_count', 'count'),
@@ -534,7 +590,9 @@ function recalc() {
 /* ════════════════════════════════════════
    Competitive tab
    ════════════════════════════════════════ */
-function renderCompFilter() {
+/* LEGACY_CURATED_COMPETITIVE_CONTENT compatibility renderer. Persistent
+   competitive-intelligence-v662.js is the only active screen authority. */
+function legacyRenderCompFilter() {
   /* Rebuild the competitor dropdown based on selected solution */
   const sol = (document.getElementById('compSolutionFilter') || {}).value || 'cip';
   const sel = document.getElementById('compSelect');
@@ -555,10 +613,10 @@ function renderCompFilter() {
   } else {
     sel.value = '';
   }
-  renderComp();
+  legacyRenderComp();
 }
 
-function renderComp() {
+function legacyRenderComp() {
   const key = (document.getElementById('compSelect') || {}).value || gs('compSelect') || gs('competitor');
   const el  = document.getElementById('compContent');
   const pdfBtn  = document.getElementById('compPdfBtn');
@@ -586,7 +644,8 @@ function renderComp() {
     excel:      '\u201cSpreadsheets are really a hidden cost center \u2014 we typically find $80K to $200K a year in labor waste just from reconciliation, write-offs, and the time it takes to answer \u2018where is this inventory right now?\u2019 The ROI math is usually under six months, which is why this tends to be an easy buy-in.\u201d',
     erp:        '\u201cERP inventory modules are great at recording transactions, but they\u2019re not designed for execution \u2014 no directed put-away, limited scanning, and zero support for field inventory. We sit on top of your ERP and handle the execution layer it was never built for.\u201d',
     mep_lowcode:'\u201cLow-code platforms give you a blank canvas \u2014 which sounds good until you realize someone has to build and maintain every single workflow. MEP is purpose-built for governed enterprise workflow mobilization. No-code configuration, offline-first, and ERP-connected out of the box. Most of our customers are live in weeks, not quarters.\u201d',
-    mep_rfgen:  '\u201cRF-SMART and RFgen are solid scanning tools, but they\u2019re built around one ERP and one use case. If your frontline work spans multiple systems, offline environments, or workflows beyond basic scanning, they hit a wall fast. MEP connects to any ERP, handles offline execution natively, and lets your team change workflows without a dev cycle.\u201d',
+    mep_rfgen:  '\u201cRFgen is evaluated as a distinct product. Validate its current ERP, workflow, and offline capabilities from governed sources before positioning MEP.\u201d',
+    mep_rfsmart:'\u201cRF-SMART is evaluated as a distinct product. Validate current product-specific evidence before positioning MEP.\u201d',
     other:      '\u201cMost WMS platforms were built to be configured once and frozen. If your business changes \u2014 new sites, new workflows, new ERP \u2014 you\u2019re back in a services engagement. We\u2019re no-code and cloud-native, so your team can adapt the system without calling us.\u201d'
   };
   const talk = TALK_TRACKS[key] || '';
@@ -820,7 +879,9 @@ function renderExec() {
   const r = calcROI(v);
   const indLabel = v.industry&&IND[v.industry] ? IND[v.industry].label : '—';
   const today = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
-  const comp = v.competitor ? COMP[v.competitor] : null;
+  /* Competitive claims are intentionally excluded from customer-facing
+     executive outputs unless governed evidence is explicitly supplied. */
+  const comp = null;
 
   const DC = (typeof DRIVER_CHART_COLORS !== 'undefined') ? DRIVER_CHART_COLORS : ['#0089A6','#2E7D32','#12786F','#A6791E','#6A4C93','#45688A'];
   const valueRows=[
@@ -864,7 +925,7 @@ function renderExec() {
           — not vendor estimates.
         </div>
         <div class="e-prov-sub">
-          ${daProspect.length > 0 ? `${prospectPct}% of answered inputs were provided by the prospect's own team. ` : ''}${daRep.length > 0 ? `${daRep.length} figure${daRep.length !== 1 ? 's' : ''} entered by the Cloud Inventory rep. ` : ''}Industry benchmarks apply only where no prospect figure was provided.
+          ${daProspect.length > 0 ? `${prospectPct}% of answered inputs were provided by the prospect's own team. ` : ''}${daRep.length > 0 ? `${daRep.length} figure${daRep.length !== 1 ? 's' : ''} entered by the Cloud Inventory rep. ` : ''}Documented model assumptions and approved benchmarks are used where applicable.
           <span class="e-prov-link" onclick="switchTab('disc')">View sources →</span>
         </div>
       </div>
@@ -874,7 +935,9 @@ function renderExec() {
     </div>` : '';
 
   /* ── Cost of inaction ── */
-  const monthlyInaction = r.annualBenefit > 0 ? r.annualBenefit / 12 : 0;
+  /* Do not transform modeled annual benefit into a generic cost-of-delay
+     claim. Customer-facing urgency must come from confirmed narrative. */
+  const monthlyInaction = 0;
   const inactionBlock = r.annualBenefit > 0 ? `
     <div class="e-section e-inaction-section">
       <div class="e-h2">Cost of delayed action</div>
@@ -965,16 +1028,16 @@ function renderExec() {
     </div>`:'';
 
   // Proof points for exec doc
-  const proofPoints = (typeof PROOF_POINTS !== 'undefined' ? PROOF_POINTS[v.industry] : null) || [];
+  const proofPoints = window.selectedCustomerProofRecords || [];
   const proofSection = proofPoints.length?`
     <div class="e-section">
       <div class="e-h2">Customer results — ${indLabel}</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;">
         ${proofPoints.map(p=>`
           <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:.85rem;">
-            <div style="font-size:10px;font-weight:700;color:#1E2931;margin-bottom:4px;">${p.company}</div>
+            <div style="font-size:10px;font-weight:700;color:#1E2931;margin-bottom:4px;">${p.displayName}</div>
             <div style="font-size:11px;color:#334155;margin-bottom:4px;">${p.result}</div>
-            <div style="font-size:11px;font-weight:700;color:#2E7D32;">${p.metric}</div>
+            <div style="font-size:11px;font-weight:700;color:#2E7D32;">${p.metric}</div><div style="font-size:9px;color:#64748B;margin-top:5px;">Source: ${p.sourceDisplay}</div>
           </div>`).join('')}
       </div>
     </div>`:'';
@@ -990,7 +1053,7 @@ function renderExec() {
     ? `<div style="margin-top:1rem;display:flex;align-items:center;gap:12px;">
         <img src="${v.prospectLogoDataUrl}" style="height:32px;object-fit:contain;background:#fff;border-radius:4px;padding:2px 8px;" alt="Prospect logo"/>
         <span style="color:rgba(255,255,255,.4);font-size:14px;">×</span>
-        <img src="ci-logo-negative.png" style="height:28px;object-fit:contain;" alt="Cloud Inventory" onerror="this.style.display='none'"/>
+        <img src="${window.CIBrand.logo('logoNegative')}" style="height:28px;object-fit:contain;" alt="Cloud Inventory"/>
       </div>` : '';
 
   // Confidence indicator
@@ -1006,7 +1069,7 @@ function renderExec() {
   document.getElementById('execDoc').innerHTML = `
   <div id="execPrintTarget">
     <div class="e-cover">
-      <img class="e-cover-logo" src="ci-logo-negative.png" alt="Cloud Inventory" onerror="this.style.display='none'"/>
+      <img class="e-cover-logo" src="${window.CIBrand.logo('logoNegative')}" alt="Cloud Inventory"/>
       <div class="e-tagline">Business Value Assessment</div>
       <div class="e-company">${v.company||'Your Company'}</div>
       <div class="e-sub">Cloud Inventory Platform &nbsp;·&nbsp; ${indLabel} &nbsp;·&nbsp; ${today}${v.rep?' &nbsp;·&nbsp; '+v.rep:''}</div>
@@ -1040,7 +1103,7 @@ function renderExec() {
           <div class="e-approach-pillar">
             <div class="e-approach-icon" style="background:#A6791E;">◆</div>
             <div class="e-approach-pt">Conservatively modeled</div>
-            <div class="e-approach-pd">Ramp-up, benchmark grounding, and overlap adjustments applied throughout.</div>
+            <div class="e-approach-pd">Ramp-up, documented Cloud Inventory model assumptions, approved benchmarks where applicable, and overlap adjustments are shown throughout.</div>
           </div>
           <div class="e-approach-pillar">
             <div class="e-approach-icon" style="background:#2E7D32;">◆</div>
@@ -1113,8 +1176,8 @@ function renderExec() {
       </div>
       ${narrative.nextSection}
       <div class="e-footer">
-        <img class="e-footer-logo" src="ci-logo-full-color.png" alt="Cloud Inventory" onerror="this.style.display='none'"/>
-        <span class="e-footer-txt">Analysis uses industry benchmarks and prospect-supplied inputs. Actual results may vary. · cloudinventory.com</span>
+        <img class="e-footer-logo" src="${window.CIBrand.logo('logoColor')}" alt="Cloud Inventory"/>
+        <span class="e-footer-txt">Analysis uses customer-provided inputs supplemented by documented Cloud Inventory model assumptions and approved benchmarks where applicable. Actual results may vary. · cloudinventory.com</span>
       </div>
     </div>
   </div>`;
@@ -1158,6 +1221,7 @@ async function saveScenario() {
     threeWhysCi:  document.getElementById('why_ci')?.value  || '',
     threeWhysNow: document.getElementById('why_now')?.value || '',
     fieldStates:        typeof fieldStates !== 'undefined' ? { ...fieldStates } : {},
+    fieldProvenance:    typeof fieldProvenance !== 'undefined' ? { ...fieldProvenance } : {},
     annualBenefit:      r.annualBenefit,
     roi:                r.roi,
     npv3:               r.npv3,
@@ -1193,9 +1257,10 @@ async function _doSave(v, dataBlob, baseId, note) {
         company:      v.company,
         data:         dataBlob,
         industry:     v.industry     || null,
-        dealStage:    v.dealStage    || null,
         execAudience: v.execAudience || 'mixed',
         solution:     v.solution     || 'cip',
+        opportunityValue: v.opportunityValue,
+        opportunityValueCurrency: v.opportunityValueCurrency || v.currency,
         versionNote:  note           || null,
         baseId:       baseId         || null
       })
@@ -1206,6 +1271,8 @@ async function _doSave(v, dataBlob, baseId, note) {
       return;
     }
     const saved = await resp.json();
+    window._opportunityValueOriginal=saved.opportunityProfile?.estimatedOpportunityValue??v.opportunityValue??null;
+    window._opportunityValueStoredCurrency=saved.opportunityProfile?.currency||v.opportunityValueCurrency||v.currency;
     /* Saving creates a new immutable version. Subsequent Executive View
        autosaves must target that new current row, not the version just left. */
     window._calcScenarioId = saved.id;
@@ -1222,13 +1289,14 @@ async function _doSave(v, dataBlob, baseId, note) {
   }
 }
 
-async function loadScenario(id) {
+async function loadScenario(id, options = {}) {
   try {
     /* Finish any pending narrative write against the scenario being left
        before changing the active scenario id. */
     if (window._calcScenarioId && typeof persistThreeWhys === 'function') {
       await persistThreeWhys();
     }
+    if (typeof clearProposalContext === 'function') clearProposalContext();
     let scenario = savedScenarios.find(x => x.id === id);
     let inputs   = null;
     let fullData = null;
@@ -1238,6 +1306,12 @@ async function loadScenario(id) {
     if (!resp || !resp.ok) { showToast('Could not load scenario.'); return; }
     fullData = await resp.json();
     inputs = fullData.data;
+    window._roiModelVersion = Number(inputs && inputs.modelVersion) || 27;
+    window._explicitRecoveryInputs = Array.isArray(inputs && inputs.explicitRecoveryInputs) ? inputs.explicitRecoveryInputs.slice() : [];
+    window._currentBuyCycleStage=Number(fullData.currentBuyCycleStage||fullData.current_buy_cycle_stage||2);
+    window._currentBuyCycleStageLabel=fullData.currentBuyCycleStageLabel||fullData.deal_stage||'Stage 2 — Define Economic Consequences';
+    window._currentOpportunityOutcome=fullData.buy_cycle_outcome||null;
+    updateCurrentBuyCycleStageDisplay(true);
     if (scenario) scenario.inputs = inputs;
     await fetchScenarios();
     if (!inputs) { showToast('Scenario data not found.'); return; }
@@ -1257,23 +1331,42 @@ async function loadScenario(id) {
         if (typeof applyFieldInventoryState === 'function') applyFieldInventoryState(window._hasFieldInventory);
       }
     }
+    window._loadingScenarioCurrency=true;
     if (typeof loadFromObject === 'function') loadFromObject(inputs);
+    window._loadingScenarioCurrency=false;
+    const profile=fullData.opportunityProfile||{};
+    const opportunity=document.getElementById('opportunityValue');
+    if(opportunity)opportunity.value=profile.estimatedOpportunityValue??'';
+    window._opportunityValueOriginal=profile.estimatedOpportunityValue??null;
+    window._opportunityValueStoredCurrency=profile.currency||inputs.currency||'USD';
+    if(typeof updateOpportunityValueCurrencyDisplay==='function')updateOpportunityValueCurrencyDisplay();
     window._scenarioLoaded = true;
+    refreshRoiModelUpgradeControl();
     if (typeof refreshCalcScenarioPicker === 'function') refreshCalcScenarioPicker();
     /* Remember which customer this scenario belongs to, so the Solution Fit
        tab can attach to it. */
-    window.currentScenarioCustomerId = (scenario && scenario.customerId) || null;
+    window.currentScenarioCustomerId = cid;
+    window._sfSelectedCustomerId = cid;
+    if(cid&&(!window._activeCustomerMeta||window._activeCustomerMeta.id!==cid)){
+      try{const mr=await apiFetch('/api/customer-switcher?customerId='+encodeURIComponent(cid)+'&state=all&limit=1');if(mr&&mr.ok){const md=await mr.json();window._activeCustomerMeta=(md.items||[])[0]||null;window.applyCustomerPermissionMode?.(window._activeCustomerMeta);}}catch(_){}
+    }
     /* Reset + reattach discovery session to THIS scenario — prevents a
        prospect link from a previously-loaded customer being reused.    */
     if (typeof resetDiscoveryForScenario === 'function') await resetDiscoveryForScenario(id);
+    if (typeof loadAuthoritativeProposal === 'function') await loadAuthoritativeProposal(id);
+    if (typeof renderProofPoints === 'function') await renderProofPoints(inputs.industry);
     showToast('Loaded — "' + (scenario?.name || inputs.name || 'scenario') + '"');
-    switchTab('calc');
+    const targetTab = options.preserveWorkspace ? (options.targetTab || 'calc') : 'calc';
+    switchTab(targetTab);
     trackEvent('scenario_loaded', { company: inputs.company || '' });
+    return true;
   } catch(e) {
     console.error('loadScenario error:', e.message);
     showToast('Failed to load scenario.');
+    return false;
   }
 }
+window.loadScenario = loadScenario;
 
 async function deleteScenario(id) {
   const s = savedScenarios.find(x => x.id === id);
@@ -1306,7 +1399,7 @@ function renderList() {
   const el = document.getElementById('scenarioList');
   if (!el) return;
   const current = savedScenarios.filter(s => s.isCurrent !== false);
-  const filtered = stageFilter ? current.filter(s => s.dealStage === stageFilter) : current;
+  const filtered = current.filter(s => scenarioMatchesStageFilter(s,stageFilter));
 
   if (!filtered.length) {
     el.innerHTML = '<div class="empty-state"><p>No scenarios saved yet. Build one in the Calculator.</p></div>';
@@ -1316,7 +1409,6 @@ function renderList() {
 
   const initials    = n => n.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase()||'?';
   const payStr      = pb => pb===null?'—':pb>=60?'60+mo':pb.toFixed(1)+'mo';
-  const stageColors = (typeof STAGE_COLORS !== 'undefined') ? STAGE_COLORS : { Discovery:'#0089A6', Demo:'#A6791E', Proposal:'#12786F', Negotiation:'#6A4C93', 'Closed Won':'#2E7D32', 'Closed Lost':'#C81E10' };
   const me          = window.ciAuth ? window.ciAuth.getUser() : {};
 
   el.innerHTML = `<ul class="scenario-list">${filtered.map(s => `
@@ -1329,7 +1421,7 @@ function renderList() {
           ${s.ownerUsername && s.ownerUsername !== me.username ? `<span class="shared-badge">shared by ${s.ownerUsername}</span>` : ''}
         </div>
         <div class="scenario-meta">${s.company}${s.industry&&IND[s.industry]?' · '+IND[s.industry].label:''} · ${s.date} · Payback: ${payStr(s.payback)}</div>
-        ${s.dealStage?`<span class="stage-pill" style="background:${stageColors[s.dealStage]||'#64748B'}20;color:${stageColors[s.dealStage]||'#64748B'};border:1px solid ${stageColors[s.dealStage]||'#64748B'}40">${s.dealStage}</span>`:''}
+        <span class="stage-pill">${scenarioStageDisplay(s)}</span>
       </div>
       <div class="scenario-kpis">
         <div class="sk-main">${fmtFull(s.annualBenefit)}/yr · ${fmtPct(s.roi)} ROI</div>
@@ -1343,7 +1435,7 @@ function renderList() {
       </div>
     </li>`).join('')}
   </ul>
-  ${compareIds.size>=2?`<div class="compare-cta"><button class="btn btn-cta" onclick="switchTab('compare')">Compare ${compareIds.size} scenarios →</button></div>`:''}`;
+  ${compareIds.size>=2?`<div class="compare-cta"><button class="btn btn-primary" onclick="switchTab('compare')">Compare ${compareIds.size} scenarios →</button></div>`:''}`;
   renderStageFilters();
 }
 
@@ -1369,13 +1461,13 @@ async function generateShareURLFromScenario(id) {
    Clear form
    ════════════════════════════════════════ */
 /* ── Option A: accuracy-gap → suggested recovery % ──
-   Benchmark accuracy is 99.5%. The gap (benchmark − current) is mapped to
+   The internal modeling target is 99.5%. The gap (target − current) is mapped to
    a suggested shrink/carrying recovery %. This SUGGESTS only — the rep must
    click Apply; nothing is silently overwritten.                          */
-const ACCURACY_BENCHMARK = 99.5;
+const ACCURACY_MODEL_TARGET = 99.5;
 function computeAccuracyRecovery(currentAccuracy) {
-  if (!currentAccuracy || currentAccuracy <= 0 || currentAccuracy >= ACCURACY_BENCHMARK) return null;
-  const gap = ACCURACY_BENCHMARK - currentAccuracy;           // percentage points
+  if (!currentAccuracy || currentAccuracy <= 0 || currentAccuracy >= ACCURACY_MODEL_TARGET) return null;
+  const gap = ACCURACY_MODEL_TARGET - currentAccuracy;           // percentage points
   /* Map gap → recovery %: each point of gap ≈ 5% recoverable, capped at 60%.
      e.g. 92% accuracy → 7.5pt gap → ~38% suggested recovery.             */
   const suggested = Math.min(60, Math.round(gap * 5));
@@ -1388,7 +1480,7 @@ function renderAccuracySuggestion(v) {
   if (rec === null) { box.style.display = 'none'; return; }
   box.style.display = 'block';
   box.innerHTML =
-    `<span>Prospect accuracy <strong>${v.currentAccuracy}%</strong> → suggested recovery ` +
+    `<span>Prospect accuracy <strong>${v.currentAccuracy}%</strong> → internal-model recovery ` +
     `<strong>${rec}%</strong> for shrink &amp; carrying.</span> ` +
     `<button type="button" class="btn btn-ghost btn-sm" onclick="applyAccuracySuggestion(${rec})">Apply</button>`;
 }
@@ -1427,11 +1519,13 @@ function applySolutionEmphasis() {
 }
 
 function clearForm() {
-  ['scenarioName','companyName','repName','revenue','userCount','inventoryValue','itCost',
+  ['scenarioName','companyName','repName','opportunityValue','revenue','userCount','inventoryValue','itCost',
    'psvcCost','hwCost','trainCost','annualWriteOff','otifBaseline','otifTarget',
    'invTurnsCurrent','invTurnsBenchmark'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   for(let i=1;i<=17;i++){ const el=document.getElementById('dq'+i); if(el) el.value=''; }
-  ['industry','competitor','compSelect','dealStage'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  ['industry','competitor','compSelect'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  window._currentBuyCycleStage=2;window._currentBuyCycleStageLabel='Stage 2 — Define Economic Consequences';window._currentOpportunityOutcome=null;updateCurrentBuyCycleStageDisplay(false);
+  window._opportunityValueOriginal=null;window._opportunityValueStoredCurrency=null;
   const audEl = document.getElementById('execAudience');
   if (audEl) audEl.value = 'mixed';
   ['why_act','why_ci','why_now'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
@@ -1444,9 +1538,9 @@ function clearForm() {
   ['m_labor','m_shrinkage','m_carrying','m_otif','m_it',
    'm_shrinkRate','m_carryRate','m_otifRisk',
    'downtimeEventsYr','downtimeHrsPerEvent','downtimeCostPerHr','m_downtime',
-   'expediteSpendYr','m_expedite','countDaysYr','countPeople','m_count',
+   'expediteSpendYr','m_expedite','servicePenaltyCostYr','m_servicePenalty','lostSalesYr','contributionMarginPct','repeatVisitsYr','costPerTruckRoll','m_firstFix','countDaysYr','countPeople','m_count',
    'laborWastePct','currentAccuracy',
-   'ordersPerYr','costPerOrder','pickRateGainPct','m_throughput','orderErrorPct','costPerError','m_accuracy'].forEach(id => {
+   'ordersPerYr','costPerOrder','pickRateGainPct','m_throughput','orderErrorPct','costPerError','m_accuracy','fieldReconcilePersonHours'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   const defaults={laborCost:55000,invest:80000,discRate:10,contractMonths:36,
@@ -1456,6 +1550,10 @@ function clearForm() {
   prospectLogoDataUrl=null;
   confirmedFields=new Set();
   fieldStates={};
+  fieldProvenance={};
+  window._roiModelVersion=28;
+  window._explicitRecoveryInputs=[];
+  refreshRoiModelUpgradeControl();
   /* New blank scenario — clear any discovery session from a prior load */
   if (typeof resetDiscoveryForScenario === 'function') resetDiscoveryForScenario(null);
   if (typeof updateLogoPreview === 'function') updateLogoPreview();

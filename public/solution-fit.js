@@ -14,9 +14,9 @@
   const CLASSIFICATIONS = ['UNKNOWN','CONFIGURATION','PROCESS CHANGE','EXTENSION','INTEGRATION','REPORT / PRINT','DATA','NON-FUNCTIONAL','ROADMAP','OUT OF SCOPE'];
 
   const PRODUCTS = ['MEP','CIP','CPP','Platform'];
-  const blankProcess = (name, i) => ({ id:`P-${String(i+1).padStart(3,'0')}`, name, selected:false, demoStatus:'Not reviewed', fit:'Not reviewed', notes:'' });
+  const blankProcess = (name, i) => ({ id:`P-${String(i+1).padStart(3,'0')}`, name, selected:false, demoStatus:'Not reviewed', fit:'Not reviewed', customerValidation:'Not validated', notes:'' });
   const blankState = () => ({
-    opportunity:{customer:'',solutionEngineer:'',solutionEngineerId:'',stage:'Discovery',products:[],productsOther:'',goLive:'',users:'',locations:'',problem:'',outcome:'',
+    opportunity:{customer:'',solutionEngineer:'',solutionEngineerId:'',stage:'Stage 2 — Define Economic Consequences',products:[],productsOther:'',goLive:'',users:'',locations:'',problem:'',outcome:'',
       businessOwnerName:'',businessOwnerTitle:'',businessOwnerEmail:'',businessOwnerPhone:'',
       technicalOwnerName:'',technicalOwnerTitle:'',technicalOwnerEmail:'',technicalOwnerPhone:''},
     architecture:{relationship:'',erp:'',version:'',otherSystems:'',integrationMethod:'',integrationOwner:'',integrationNotes:'',
@@ -34,6 +34,7 @@
   let openGapId = null, activeTab = 'context', saveTimer = null, dirty = false;
   let showMissingOnly = false, activeTemplate = 'field', knownStakeholders = [];
   let knownSources = {}, sfKeyboardBound = false, sfActionsDelegated = false;
+  let lastEditedByName = '', lastEditedAt = '';
 
   const SOLUTION_TEMPLATES = {
     field: {
@@ -93,6 +94,8 @@
       const resp = await apiFetch('/api/handoffs/' + encodeURIComponent(custId));
       if (!resp || !resp.ok) { renderGate('Could not load the handoff for this customer.'); return false; }
       const data = await resp.json();
+      lastEditedByName = data.lastEditedByName || '';
+      lastEditedAt = data.updatedAt || '';
       customerName = data.customerName || '';
       exists = !!data.exists;
       knownSources = {};
@@ -103,7 +106,8 @@
       if (!S.opportunity.customer && customerName) S.opportunity.customer = customerName;
       /* Default Solution Engineer to the logged-in user (SE), or the admin. */
       const u = currentUser();
-      if (!S.opportunity.solutionEngineer && (u.role === 'se' || u.role === 'admin')) {
+      const roles=u.roleKeys||u.roles||[u.role];
+      if (!S.opportunity.solutionEngineer && (roles.includes('se') || roles.includes('admin'))) {
         S.opportunity.solutionEngineer = u.username || u.name || '';
         S.opportunity.solutionEngineerId = u.id || '';
         knownSources['opportunity.solutionEngineer'] = 'Signed-in user';
@@ -136,6 +140,7 @@
     if (a.hasCustomizations === undefined) a.hasCustomizations = '';
     if (!Array.isArray(a.customizations)) a.customizations = [];
     if (!Array.isArray(s.interfaces)) s.interfaces = [];
+    s.processes.forEach(p=>{if(p.customerValidation===undefined)p.customerValidation='Not validated';});
     s.interfaces.forEach(it=>{
       if (it.direction === undefined) it.direction = 'Bidirectional';
       if (it.trigger === undefined) it.trigger = 'Near real time';
@@ -200,16 +205,13 @@
     let v = {};
     try { v = typeof getVals === 'function' ? getVals() : {}; } catch (e) {}
     const da = typeof discoveryAnswers !== 'undefined' ? discoveryAnswers : {};
-    const stageMap = { Demo:'Technical validation', Proposal:'Proposal', Negotiation:'Proposal', Discovery:'Discovery', 'Closed Won':'Closed' };
     const solution = String(v.solution || '').toLowerCase();
     const product = solution === 'mep' ? 'MEP' : solution === 'cip' ? 'CIP' : '';
     const whyAct = document.getElementById('why_act')?.value?.trim() || '';
     const add = (path, value, source) => { if (setKnown(path, value, source, mutate)) changed++; };
     add('opportunity.customer', customerName || v.company, 'Customer');
     add('opportunity.users', v.users > 0 ? String(v.users) : '', 'Calculator');
-    if (mutate && !exists && stageMap[v.dealStage]) {
-      S.opportunity.stage = stageMap[v.dealStage]; knownSources['opportunity.stage'] = 'Scenario'; changed++;
-    } else add('opportunity.stage', stageMap[v.dealStage] || '', 'Scenario');
+    add('opportunity.stage', window.getCurrentBuyCycleStageLabel?.() || 'Stage 2 — Define Economic Consequences', 'Buyer Evidence');
     add('opportunity.locations', v.fieldLocations > 0 ? `${v.fieldLocations} field location${v.fieldLocations===1?'':'s'}` : '', 'Calculator');
     add('opportunity.problem', whyAct, 'Executive narrative');
     add('opportunity.outcome', da.ve13 || '', 'Discovery');
@@ -273,7 +275,8 @@
     /* SEs and admins can write; AEs are read + print. Read the role from the
        app's auth cache (exposed as window.ciAuth.getUser). */
     const u = currentUser();
-    return !!u && (u.role === 'se' || u.role === 'admin');
+    const roles=u&&(u.roleKeys||u.roles||[u.role])||[];
+    return roles.includes('se') || roles.includes('admin');
   }
 
   function mergeState(base, extra) {
@@ -302,6 +305,8 @@
       });
       if (!resp || !resp.ok) { setSaveState('error'); return; }
       const r = await resp.json();
+      const selected = _seList.find(x => x.name === S.opportunity.solutionEngineer);
+      if (selected) await apiFetch('/api/handoffs/' + encodeURIComponent(customerId) + '/assignment', { method:'PUT', body:JSON.stringify({ primarySeId:selected.id, additionalSeIds:[] }) });
       exists = true; dirty = false;
       setSaveState('saved');
       /* Reflect the server's authoritative readiness. */
@@ -377,6 +382,7 @@
     const defaultCount = templateDefaultCount();
     const templateOptions = Object.entries(SOLUTION_TEMPLATES).map(([key,t])=>`<option value="${key}" ${key===activeTemplate?'selected':''}>${esc(t.label)}</option>`).join('');
     const productsSummary = fmtProducts(S.opportunity);
+    const user=window.ciAuth?.getUser?.()||{},roleKeys=[user.role,...(user.roles||[]),...(user.roleKeys||[])].map(x=>String(x||'').toLowerCase()),canUseSeChristie=roleKeys.some(x=>['admin','se','solution_engineer','solution engineer','value_engineering','value engineering'].includes(x));
     const tabs = [
       { k:'context',     l:'Context' },
       { k:'checklist',   l:'Demo &amp; Fit', badge:demoMissing || null, badgeCls:demoMissing?'sf-tab-badge-warn':'' },
@@ -391,8 +397,10 @@
           ${S.opportunity.stage ? `<span class="sf-stage-pill">${esc(S.opportunity.stage)}</span>` : ''}
           ${productsSummary!=='—' ? `<span class="sf-stage-pill">${esc(productsSummary)}${S.opportunity.users?` · ${esc(S.opportunity.users)} users`:''}</span>` : ''}
           ${!canWrite ? '<span class="sf-ro-badge">Read-only</span>' : ''}
+          ${lastEditedByName ? `<span class="sf-last-edit">Last updated by ${esc(lastEditedByName)}${lastEditedAt?' · '+new Date(lastEditedAt).toLocaleString():''}</span>` : ''}
         </div>
         <div class="sf-topbar-actions">
+          ${canUseSeChristie?'<button class="btn btn-ghost btn-sm sf-topbar-btn" data-sfaction="askChristie">Ask Christie</button>':''}
           ${canWrite ? '<button class="btn btn-ghost btn-sm sf-topbar-btn" data-sfaction="refreshKnown">Refresh known data</button>' : ''}
           ${canWrite && defaultCount ? `<button class="btn btn-primary btn-sm" data-sfaction="applyDefaults">Apply ${defaultCount} recommended default${defaultCount===1?'':'s'}</button>` : ''}
           <div class="sf-topbar-right" id="sfSaveStateMini"></div>
@@ -418,6 +426,7 @@
       </div>
       <div class="sf-next-row"><button class="btn btn-primary" id="sfNextSection">${activeTab==='handoff'?'Review handoff':'Next section →'}</button></div>`;
     wireTabs();
+    app.querySelector('[data-sfaction="askChristie"]')?.addEventListener('click',()=>window.openChristieForPerspective?.('se',window._calcScenarioId||null));
     wireBindings();
     showActivePane();
     renderReadinessBar(r.score, r.status, r.miss);
@@ -539,7 +548,7 @@
 
     const oppBody = `
       <div class="sf-grid4">
-        ${sel('Stage','opportunity.stage',['Discovery','Technical validation','Proposal','Closed'])}
+        <div class="sf-field"><label>Current BuyCycle Stage${sourceTag('opportunity.stage')}</label><input value="${esc(o.stage||window.getCurrentBuyCycleStageLabel?.()||'Stage 2 — Define Economic Consequences')}" readonly></div>
         ${f('Target go-live','opportunity.goLive','e.g. Q1 2027')}
         ${f('Estimated users','opportunity.users','e.g. 45')}
         ${f('Locations / operating scope','opportunity.locations','e.g. 3 warehouses + 18 field sites')}
@@ -611,7 +620,7 @@
       + '<button type="button" id="sfBulkFitBtn" class="btn btn-ghost btn-sm">Full fit</button>'
       + '<button type="button" class="btn btn-accent btn-sm sf-add-process" data-sfaction="addProcess">&#xff0b; Add process</button></div>'
       + '</div>'
-      + '<div class="sf-table-wrap"><table class="sf-table sf-process-table"><thead><tr><th style="width:44px">Scope</th><th>Workflow</th><th style="width:170px">Demo status</th><th style="width:150px">Fit</th><th>Exception note</th></tr></thead><tbody>'
+      + '<div class="sf-table-wrap"><table class="sf-table sf-process-table"><thead><tr><th style="width:44px">Scope</th><th>Workflow</th><th style="width:150px">Demo status</th><th style="width:140px">Fit</th><th style="width:150px">Customer validation</th><th>Evidence / exception</th></tr></thead><tbody>'
       + S.processes.map(function(p,i){return renderProcessRow(p,i);}).join('') + '</tbody></table></div>';
   }
   function renderProcessRow(p,i) {
@@ -621,6 +630,7 @@
       + '<td><strong class="sf-proc-name">' + esc(p.name) + '</strong></td>'
       + '<td><select class="sf-table-input" data-sfpdemo="' + i + '" ' + (p.selected?'':'disabled') + '>' + ['Not reviewed','Demonstrated','Discussed only','Not demonstrated','Not applicable'].map(function(x){return '<option ' + (p.demoStatus===x?'selected':'') + '>' + esc(x) + '</option>';}).join('') + '</select></td>'
       + '<td><select class="sf-table-input" data-sfpfit="' + i + '" ' + (p.selected?'':'disabled') + '>' + ['Not reviewed','Full fit','Partial fit','Gap','Unknown'].map(function(x){return '<option ' + (p.fit===x?'selected':'') + '>' + esc(x) + '</option>';}).join('') + '</select></td>'
+      + '<td><select class="sf-table-input" data-sfpvalidation="' + i + '" ' + (p.selected?'':'disabled') + '>' + ['Not validated','Validation pending','Customer validated','Customer rejected'].map(function(x){return '<option ' + (p.customerValidation===x?'selected':'') + '>' + esc(x) + '</option>';}).join('') + '</select></td>'
       + '<td>' + (p.selected && showNote ? '<input class="sf-table-input" data-sfpnote="' + i + '" value="' + esc(p.notes) + '" placeholder="Evidence, exception, or workaround">' : '<span class="sf-table-muted">' + (p.selected?'Only needed for exceptions':'—') + '</span>') + '</td>'
       + '</tr>';
   }
@@ -790,7 +800,7 @@
     ${a.hasCustomizations==='Yes' && a.customizations.length ? `<p><strong>Known SOR customizations:</strong></p><ul class="hd-ul">${a.customizations.map(c=>`<li><strong>${esc(c.module||'Module')}</strong> — ${esc(c.description||'—')} <em>(impact: ${esc(c.impact||'None')})</em></li>`).join('')}</ul>` : (a.hasCustomizations==='No'?'<p><strong>Known SOR customizations:</strong> None reported.</p>':'')}
     <p><strong>Partner involved:</strong> ${esc(p.involved||'—')}${p.involved==='Yes'?` &nbsp;·&nbsp; <strong>Partner:</strong> ${esc(p.company||'—')} &nbsp;·&nbsp; <strong>Contact:</strong> ${esc(p.contactName||'—')} (${esc(p.email||'—')})`:''}</p>
     <h2 class="hd-h2">Demo &amp; fit evidence</h2>
-    ${sel.length?`<table class="hd-table"><thead><tr><th>Process</th><th>Demo status</th><th>Fit</th><th>Evidence / note</th></tr></thead><tbody>${sel.map(x=>`<tr><td><strong>${esc(x.name)}</strong></td><td>${esc(x.demoStatus)}</td><td>${esc(x.fit)}</td><td>${esc(x.notes||'—')}</td></tr>`).join('')}</tbody></table>`:'<p>No process scope recorded.</p>'}
+    ${sel.length?`<table class="hd-table"><thead><tr><th>Process</th><th>Demo status</th><th>Fit</th><th>Customer validation</th><th>Evidence / note</th></tr></thead><tbody>${sel.map(x=>`<tr><td><strong>${esc(x.name)}</strong></td><td>${esc(x.demoStatus)}</td><td>${esc(x.fit)}</td><td>${esc(x.customerValidation||'Not validated')}</td><td>${esc(x.notes||'—')}</td></tr>`).join('')}</tbody></table>`:'<p>No process scope recorded.</p>'}
     <h2 class="hd-h2">Gap register</h2>
     ${S.gaps.length?S.gaps.map(g=>`<div class="hd-gap"><h3 class="hd-h3">${esc(g.id)} · ${esc(g.process||'—')} · ${esc(g.classification)} · ${esc(g.priority)}</h3>
       <p><strong>Required outcome:</strong> ${esc(g.need||'—')}<br>
@@ -800,7 +810,7 @@
     <p><strong>Offline:</strong> ${esc(S.drivers.offline)} ${S.drivers.offlineDuration?`(${esc(S.drivers.offlineDuration)})`:''} &nbsp;·&nbsp; <strong>Devices:</strong> ${esc(S.drivers.devices||'—')} &nbsp;·&nbsp; <strong>Custom outputs:</strong> ${esc(S.drivers.customOutput)} &nbsp;·&nbsp; <strong>Volume concern:</strong> ${esc(S.drivers.volumeConcern)}</p>
     <h2 class="hd-h2">Readiness</h2>
     ${r.miss.length?`<p><strong>Missing:</strong> ${r.miss.map(x=>esc(x.label)).join(', ')}</p>`:'<p>No automated handoff blockers detected.</p>'}
-    <p class="hd-foot">CONFIDENTIAL · Internal use · © 2026 Cloud Inventory</p>`;
+    <p class="hd-foot">${window.CIBrand.audience('internal')}</p>`;
   }
 
   function customerOpenItems(){
@@ -827,14 +837,14 @@
     ${a.relationship!=='Standalone'?`<p><strong>Expected integration approach:</strong> ${esc(a.integrationMethod||'To be confirmed')} &nbsp;·&nbsp; <strong>Expected delivery responsibility:</strong> ${esc(a.integrationOwner||'To be confirmed')}</p>`:''}
     ${p.involved==='Yes'?`<p><strong>Partner participation:</strong> ${esc(p.company||'Partner to be confirmed')} ${p.role?`(${esc(p.role)})`:''}</p>`:''}
     <h2 class="hd-h2">Functionality reviewed</h2>
-    ${sel.length?`<table class="hd-table"><thead><tr><th>Business process</th><th>Review status</th><th>Current fit</th></tr></thead><tbody>${sel.map(x=>`<tr><td><strong>${esc(x.name)}</strong></td><td>${esc(x.demoStatus)}</td><td>${esc(x.fit)}</td></tr>`).join('')}</tbody></table>`:'<p>Process scope is still being confirmed.</p>'}
+    ${sel.length?`<table class="hd-table"><thead><tr><th>Business process</th><th>Review status</th><th>Current fit</th><th>Customer validation</th></tr></thead><tbody>${sel.map(x=>`<tr><td><strong>${esc(x.name)}</strong></td><td>${esc(x.demoStatus)}</td><td>${esc(x.fit)}</td><td>${esc(x.customerValidation||'Not validated')}</td></tr>`).join('')}</tbody></table>`:'<p>Process scope is still being confirmed.</p>'}
     <h2 class="hd-h2">Requirements requiring validation or extension</h2>
     ${exceptions.length?exceptions.map(g=>`<div class="hd-gap"><h3 class="hd-h3">${esc(g.process||'Requirement')} — ${esc(g.priority)}</h3><p>${esc(g.need||'Requirement to be confirmed')}${g.acceptance?`<br><strong>Expected outcome:</strong> ${esc(g.acceptance)}`:''}</p></div>`).join(''):'<p>No non-standard requirements have been identified at this stage.</p>'}
     <h2 class="hd-h2">Integration &amp; shared responsibilities</h2>
     ${S.interfaces.length?`<ul class="hd-ul">${S.interfaces.map(i=>`<li>${esc(i.source||'Source TBD')} → ${esc(i.target||'Target TBD')}: ${esc(i.object||'Purpose to be confirmed')} · Expected owner: ${esc(i.owner||'TBD')}</li>`).join('')}</ul>`:'<p>No additional material interfaces have been identified beyond the primary architecture above.</p>'}
     <h2 class="hd-h2">Items to confirm together</h2>
     <ul class="hd-ul">${customerOpenItems().map(x=>`<li>${esc(x)}</li>`).join('')||'<li>No customer confirmation items are currently recorded.</li>'}</ul>
-    <p class="hd-foot">© 2026 Cloud Inventory · Discovery summary for customer review</p>`;
+    <p class="hd-foot">${window.CIBrand.audience('customer')} · Discovery summary for customer review</p>`;
   }
 
   /* Branded print window — self-contained so it renders identically to PDF. */
@@ -845,28 +855,28 @@
     const w = window.open('', '_blank');
     if (!w) { if(typeof showToast==='function') showToast('Pop-up blocked — allow pop-ups to print.'); return; }
     w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>
-      :root{--navy:#1E2931;--cyan:#00A9CC;--ink:#1E2931;--muted:#647681;--line:#dbe5e9;}
-      *{box-sizing:border-box}body{margin:0;font-family:Aptos,"Segoe UI",Arial,sans-serif;color:var(--ink);line-height:1.5;padding:44px 52px;}
-      .hd-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid var(--cyan);padding-bottom:16px;margin-bottom:22px;}
-      .hd-brand{font-weight:700;letter-spacing:.5px;color:var(--navy);font-size:15px;}
+      ${window.CIBrand.documentCss(isCustomer?'customer':'internal')}
+      *{box-sizing:border-box}body{margin:0;font-family:var(--doc-font);color:var(--doc-body);line-height:1.5;padding:44px 52px;}
+      .hd-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid var(--doc-accent);padding-bottom:16px;margin-bottom:22px;}
+      .hd-brand{font-weight:700;letter-spacing:.5px;color:var(--doc-heading);font-size:15px;}
       .hd-reg{font-size:9px;vertical-align:super;}
-      .hd-title{font-size:24px;margin:6px 0 2px;color:var(--navy);}
-      .hd-sub{margin:0;color:var(--muted);font-size:13px;}
-      .hd-badge{background:var(--navy);color:#fff;font-size:10px;font-weight:700;letter-spacing:.5px;padding:6px 12px;border-radius:20px;white-space:nowrap;}
-      .hd-summary{display:flex;gap:26px;background:#F5F8FA;border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin-bottom:22px;}
+      .hd-title{font-size:24px;margin:6px 0 2px;color:var(--doc-heading);}
+      .hd-sub{margin:0;color:var(--doc-muted);font-size:13px;}
+      .hd-badge{background:var(--doc-heading);color:var(--doc-bg);font-size:10px;font-weight:700;letter-spacing:.5px;padding:6px 12px;border-radius:20px;white-space:nowrap;}
+      .hd-summary{display:flex;gap:26px;background:var(--doc-canvas);border:1px solid var(--doc-border);border-radius:12px;padding:16px 20px;margin-bottom:22px;}
       .hd-summary div{text-align:center;}
-      .hd-summary b{display:block;font-size:26px;color:var(--cyan);}
-      .hd-summary span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
-      .hd-intro{background:#F5F8FA;border-left:3px solid var(--cyan);padding:12px 16px;border-radius:6px;font-size:13px;color:#3a4a54;margin-bottom:20px;}
-      .hd-h2{font-size:14px;color:var(--navy);border-bottom:1px solid var(--line);padding-bottom:5px;margin:22px 0 10px;}
-      .hd-h3{font-size:12.5px;color:var(--cyan);margin:14px 0 4px;}
+      .hd-summary b{display:block;font-size:26px;color:var(--doc-accent);}
+      .hd-summary span{font-size:10px;color:var(--doc-muted);text-transform:uppercase;letter-spacing:.5px;}
+      .hd-intro{background:var(--doc-info);border-left:3px solid var(--doc-accent);padding:12px 16px;border-radius:6px;font-size:13px;color:var(--doc-body);margin-bottom:20px;}
+      .hd-h2{font-size:14px;color:var(--doc-heading);border-bottom:1px solid var(--doc-border);padding-bottom:5px;margin:22px 0 10px;}
+      .hd-h3{font-size:12.5px;color:var(--doc-accent-accessible);margin:14px 0 4px;}
       p{font-size:12.5px;margin:6px 0;}
       .hd-table{width:100%;border-collapse:collapse;margin:8px 0;font-size:12px;}
-      .hd-table th{background:#F5F8FA;text-align:left;padding:7px 9px;border:1px solid var(--line);color:var(--navy);}
-      .hd-table td{padding:7px 9px;border:1px solid var(--line);vertical-align:top;}
+      .hd-table th{background:var(--doc-canvas);text-align:left;padding:7px 9px;border:1px solid var(--doc-border);color:var(--doc-heading);}
+      .hd-table td{padding:7px 9px;border:1px solid var(--doc-border);vertical-align:top;}
       .hd-ul{font-size:12.5px;padding-left:18px;}
       .hd-gap{margin-bottom:10px;page-break-inside:avoid;}
-      .hd-foot{margin-top:28px;font-size:9px;color:#84939a;border-top:1px solid var(--line);padding-top:10px;}
+      .hd-foot{margin-top:28px;font-size:9px;color:var(--doc-muted);border-top:1px solid var(--doc-border);padding-top:10px;}
       @media print{body{padding:0;}@page{margin:16mm;}}
     </style></head><body>${body}<script>window.onload=function(){setTimeout(function(){window.print();},250);}<\/script></body></html>`);
     w.document.close();
@@ -945,6 +955,7 @@
     document.querySelectorAll('[data-sfpsel]').forEach(el=>el.addEventListener('change',e=>{ const i=+el.dataset.sfpsel; S.processes[i].selected=e.target.checked; if(!e.target.checked){S.processes[i].demoStatus='Not reviewed';S.processes[i].fit='Not reviewed';} rerenderChecklist(); scheduleSave(); }));
     document.querySelectorAll('[data-sfpdemo]').forEach(el=>el.addEventListener('change',e=>{ S.processes[+el.dataset.sfpdemo].demoStatus=e.target.value; rerenderChecklist(); scheduleSave(); }));
     document.querySelectorAll('[data-sfpfit]').forEach(el=>el.addEventListener('change',e=>{ S.processes[+el.dataset.sfpfit].fit=e.target.value; rerenderChecklist(); scheduleSave(); }));
+    document.querySelectorAll('[data-sfpvalidation]').forEach(el=>el.addEventListener('change',e=>{ S.processes[+el.dataset.sfpvalidation].customerValidation=e.target.value; scheduleSave(); }));
     document.querySelectorAll('[data-sfpnote]').forEach(el=>el.addEventListener('input',e=>{ S.processes[+el.dataset.sfpnote].notes=e.target.value; scheduleSave(); }));
     /* gaps */
     document.querySelectorAll('[data-sfgaptoggle]').forEach(el=>el.onclick=()=>{ openGapId = openGapId===el.dataset.sfgaptoggle?null:el.dataset.sfgaptoggle; rerenderGaps(); });
@@ -1065,39 +1076,40 @@
     const priOrder = {'Must Have':0,'Should Have':1,'Could Have':2};
     const sorted = gaps.slice().sort((a,b) => (priOrder[a.priority]||99) - (priOrder[b.priority]||99));
 
-    const priColors = {'Must Have':'#C24A1E','Should Have':'#A6791E','Could Have':'#2E7D32'};
+    const theme = window.CIBrand.documentTheme('customer');
+    const priColors = {'Must Have':theme.warning,'Should Have':window.CIBrand.charts.categorical[3],'Could Have':theme.success};
     const gapRows = sorted.map(g => {
       const pri = g.priority || 'Could Have';
-      const col = priColors[pri] || '#64748B';
-      return `<div style="border:1px solid #E2E8F0;border-left:4px solid ${col};border-radius:8px;padding:14px 18px;margin-bottom:12px;">
+      const col = priColors[pri] || theme.muted;
+      return `<div style="border:1px solid var(--doc-border);border-left:4px solid ${col};border-radius:8px;padding:14px 18px;margin-bottom:12px;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:6px;">
-          <div style="font-size:14px;font-weight:700;color:#1E2931;">${esc(g.feature||g.id||'Gap')}</div>
+          <div style="font-size:14px;font-weight:700;color:var(--doc-heading);">${esc(g.feature||g.id||'Gap')}</div>
           <span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:99px;background:${col}20;color:${col};white-space:nowrap;">${pri}</span>
         </div>
-        ${g.notes ? `<div style="font-size:12.5px;color:#334155;margin-bottom:6px;">${esc(g.notes)}</div>` : ''}
-        ${g.mitigation ? `<div style="font-size:12px;color:#2E7D32;font-weight:600;">✓ Mitigation: ${esc(g.mitigation)}</div>` : '<div style="font-size:12px;color:#A6791E;">⚠ Mitigation under discussion</div>'}
+        ${g.notes ? `<div style="font-size:12.5px;color:var(--doc-body);margin-bottom:6px;">${esc(g.notes)}</div>` : ''}
+        ${g.mitigation ? `<div style="font-size:12px;color:var(--doc-success);font-weight:600;">✓ Mitigation: ${esc(g.mitigation)}</div>` : '<div style="font-size:12px;color:var(--doc-warning);">⚠ Mitigation under discussion</div>'}
       </div>`;
     }).join('');
 
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
     <title>Risk Ledger — ${esc(company)}</title>
-    <style>*{box-sizing:border-box}body{font-family:'Inter','Segoe UI',sans-serif;color:#1E2931;padding:44px 52px;max-width:760px;margin:0 auto;line-height:1.5;}
-    h1{font-size:24px;margin:0 0 4px;}h2{font-size:16px;color:#0089A6;margin:24px 0 10px;border-bottom:1px solid #E2E8F0;padding-bottom:6px;}
+    <style>${window.CIBrand.documentCss('customer')}*{box-sizing:border-box}body{font-family:var(--doc-font);color:var(--doc-body);padding:44px 52px;max-width:760px;margin:0 auto;line-height:1.5;}
+    h1{font-size:24px;margin:0 0 4px;}h2{font-size:16px;color:var(--doc-accent-accessible);margin:24px 0 10px;border-bottom:1px solid var(--doc-border);padding-bottom:6px;}
     @media print{body{padding:20px 30px;}}</style>
     </head><body>
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #00A9CC;padding-bottom:14px;margin-bottom:22px;">
-      <div><div style="font-size:12px;font-weight:700;color:#1E2931;letter-spacing:.5px;">CLOUD INVENTORY</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid var(--doc-accent);padding-bottom:14px;margin-bottom:22px;">
+      <div><div style="font-size:12px;font-weight:700;color:var(--doc-heading);letter-spacing:.5px;">CLOUD INVENTORY</div>
         <h1>What you should know before you commit</h1>
-        <div style="color:#64748B;font-size:13px;">${esc(company)} · ${today}</div>
+        <div style="color:var(--doc-muted);font-size:13px;">${esc(company)} · ${today}</div>
       </div>
     </div>
-    <p style="font-size:13.5px;color:#334155;background:#F0F9FF;border:1px solid #00AECF;border-radius:8px;padding:12px 16px;margin-bottom:24px;">
+    <p style="font-size:13.5px;color:var(--doc-body);background:var(--doc-info);border:1px solid var(--doc-accent);border-radius:8px;padding:12px 16px;margin-bottom:24px;">
       This document lists every gap or limitation identified during the evaluation of Cloud Inventory for ${esc(company)}, along with the proposed mitigation for each. We share this proactively — if your team or procurement finds these, we want you to hear them from us first.
     </p>
     <h2>${sorted.length} item${sorted.length!==1?'s':''} identified</h2>
-    ${sorted.length ? gapRows : '<p style="color:#64748B;font-style:italic;">No gaps were identified during the evaluation. All selected processes demonstrated full fit.</p>'}
-    <div style="margin-top:32px;padding-top:14px;border-top:1px solid #E2E8F0;font-size:11px;color:#64748B;font-style:italic;">
-      This document reflects the evaluation status as of ${today}. Items marked "Must Have" require resolution before contract. Contact your Cloud Inventory representative with questions. · cloudinventory.com
+    ${sorted.length ? gapRows : '<p style="color:var(--doc-muted);font-style:italic;">No gaps were identified during the evaluation. All selected processes demonstrated full fit.</p>'}
+    <div style="margin-top:32px;padding-top:14px;border-top:1px solid var(--doc-border);font-size:11px;color:var(--doc-muted);font-style:italic;">
+      This document reflects the evaluation status as of ${today}. Items marked "Must Have" require resolution before contract. Contact your Cloud Inventory representative with questions. · cloudinventory.com · ${window.CIBrand.audience('customer')}
     </div>
     </body></html>`;
 

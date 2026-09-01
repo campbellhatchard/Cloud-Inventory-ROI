@@ -5,20 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Cloud Inventory — Business Value Assessment</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="brand-tokens.css"/>
+<script src="brand-system.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-:root{
-  --navy:#1E2931;--cyan:#00A9CC;--cyan-dark:#0089A6;--cyan-pale:#E4F6FA;
-  --green:#2E7D32;--green-pale:#E8F5E9;--red:#C81E10;
-  --amber:#C24A1E;--amber-pale:#FDEDE6;--purple:#6A4C93;
-  --teal:#12786F;--brown:#A6791E;
-  --chart-teal:#12786F;--chart-violet:#6A4C93;--chart-gold:#A6791E;
-  --chart-slate:#45688A;--chart-berry:#A23E5C;
-  --gray-50:#F8FAFC;--gray-100:#F1F5F9;--gray-200:#E3E9EE;
-  --gray-400:#6B7A8D;--gray-500:#64748B;--gray-600:#475569;
-  --gray-700:#334155;--gray-800:#1E293B;--white:#FFFFFF;
-  --font:'Inter',system-ui,sans-serif;
-}
+:root{--green-pale:var(--ci-success-surface);--amber:var(--ci-orange-dark);--amber-pale:var(--ci-warning-surface);--purple:var(--ci-chart-4);--teal:var(--ci-chart-3);--brown:var(--ci-chart-5);--chart-teal:var(--ci-chart-3);--chart-violet:var(--ci-chart-4);--chart-gold:var(--ci-chart-5);--chart-slate:var(--ci-chart-6);--chart-berry:var(--ci-chart-7);--white:var(--ci-white);}
 body{font-family:var(--font);background:#EAECEF;color:var(--gray-800);font-size:14px;}
 
 /* Toolbar */
@@ -220,10 +211,11 @@ body{font-family:var(--font);background:#EAECEF;color:var(--gray-800);font-size:
   }
 }
 </style>
+<link rel="stylesheet" href="brand-tokens.css"/>
 </head>
 <body>
 <div class="toolbar">
-  <img class="tb-logo" src="ci-logo-negative.png" alt="Cloud Inventory" onerror="this.style.display='none'"/>
+  <img class="tb-logo" data-ci-logo="logoNegative" alt="Cloud Inventory"/>
   <span class="tb-title" id="tbTitle">Business Value Assessment</span>
   <div class="scenario-toggle" id="scenToggle" style="display:none;">
     <button class="stog" data-mode="conservative" onclick="setMode('conservative')">Conservative</button>
@@ -271,12 +263,12 @@ function fp(n){return Math.round(n)+'%';}
 /* ════════ SVG CHARTS ════════ */
 
 function donutChart(r,sz=180){
-  const COLS=['#0089A6','#2E7D32','#12786F','#A6791E','#6A4C93','#45688A'];
+  const COLS=['var(--doc-accessible-accent)','var(--doc-success)','#12786F','#A6791E','#6A4C93','#45688A'];
   const segs=[{l:'Labor capacity value',v:r.laborSav,c:COLS[0]},{l:'Write-off reduction',v:r.shrinkSav,c:COLS[1]},
     {l:'Carrying cost',v:r.carrySav,c:COLS[2]},{l:'OTIF protection',v:r.otifSav,c:COLS[3]},
     {l:'Turns carrying savings',v:r.turnsSav,c:COLS[4]},{l:'IT displaced',v:r.itSav,c:COLS[5]}].filter(s=>s.v>0);
   const tot=segs.reduce((s,x)=>s+x.v,0);
-  if(!tot)return'<p style="color:#6B7A8D;font-size:11px;">No data.</p>';
+  if(!tot)return'<p style="color:var(--doc-muted);font-size:11px;">No data.</p>';
   const cx=sz/2,cy=sz/2,R=sz*.43,ri=sz*.26;
   let sa=-Math.PI/2,paths='';
   segs.forEach(seg=>{
@@ -287,11 +279,11 @@ function donutChart(r,sz=180){
     sa=ea;
   });
   const legend=segs.map(s=>`<div class="dl-row"><div class="dl-sw" style="background:${s.c}"></div><span class="dl-lbl">${s.l}</span><span class="dl-val">${f(s.v)}</span><span class="dl-pct">${Math.round(s.v/tot*100)}%</span></div>`).join('');
-  return`<div class="dnut"><div><svg width="${sz}" height="${sz}" viewBox="0 0 ${sz} ${sz}">${paths}<text x="${cx}" y="${cy-6}" text-anchor="middle" font-size="11" font-weight="800" fill="#1E2931" font-family="Inter,sans-serif">${f(tot)}</text><text x="${cx}" y="${cy+8}" text-anchor="middle" font-size="8" fill="#6B7A8D" font-family="Inter,sans-serif">ANNUAL</text><text x="${cx}" y="${cy+19}" text-anchor="middle" font-size="8" fill="#6B7A8D" font-family="Inter,sans-serif">BENEFIT</text></svg></div><div class="dleg">${legend}</div></div>`;
+  return`<div class="dnut"><div><svg width="${sz}" height="${sz}" viewBox="0 0 ${sz} ${sz}">${paths}<text x="${cx}" y="${cy-6}" text-anchor="middle" font-size="11" font-weight="800" fill="var(--doc-heading)" font-family="Inter,sans-serif">${f(tot)}</text><text x="${cx}" y="${cy+8}" text-anchor="middle" font-size="8" fill="var(--doc-muted)" font-family="Inter,sans-serif">ANNUAL</text><text x="${cx}" y="${cy+19}" text-anchor="middle" font-size="8" fill="var(--doc-muted)" font-family="Inter,sans-serif">BENEFIT</text></svg></div><div class="dleg">${legend}</div></div>`;
 }
 
 function waterfallBars(r){
-  const bars=[{l:'Labor & productivity',v:r.laborSav,c:'#0089A6'},{l:'Write-off reduction',v:r.shrinkSav,c:'#2E7D32'},
+  const bars=[{l:'Labor & productivity',v:r.laborSav,c:'var(--doc-accessible-accent)'},{l:'Write-off reduction',v:r.shrinkSav,c:'var(--doc-success)'},
     {l:'Carrying cost savings',v:r.carrySav,c:'#12786F'},{l:'OTIF protection',v:r.otifSav,c:'#A6791E'},
     {l:'Turns: annual carrying savings',v:r.turnsSav,c:'#6A4C93'},{l:'IT displaced',v:r.itSav,c:'#45688A'}]
     .filter(b=>b.v>0).sort((a,b)=>b.v-a.v);
@@ -310,7 +302,7 @@ function waterfallBars(r){
       +`<span class="wf-pct" style="color:${b.c};">${pct}%</span>`
       +`<span class="wf-val">${f(b.v)}</span>`
       +`</div>`;
-  }).join('')+`<div class="wf-total"><span style="font-size:11px;font-weight:700;color:#1E2931;">Total</span><div></div><span class="wf-pct" style="color:#1E2931;font-weight:700;">100%</span><span style="font-size:13px;font-weight:800;color:#1E2931;">${ff(r.annualBenefit)}</span></div>`;
+  }).join('')+`<div class="wf-total"><span style="font-size:11px;font-weight:700;color:var(--doc-heading);">Total</span><div></div><span class="wf-pct" style="color:var(--doc-heading);font-weight:700;">100%</span><span style="font-size:13px;font-weight:800;color:var(--doc-heading);">${ff(r.annualBenefit)}</span></div>`;
 }
 
 function npvCurve(r,v){
@@ -327,17 +319,17 @@ function npvCurve(r,v){
   const pd=pts.map((p,i)=>`${i?'L':'M'}${px(p.y).toFixed(1)},${py(p.c).toFixed(1)}`).join(' ');
   const ad=pd+` L${px(5)},${py(0)} L${px(0)},${py(0)} Z`;
   const z0=py(0);
-  const gl=[mx*.5,mx].filter(vv=>vv>mn+rng*.1).map(vv=>`<line x1="${PL}" y1="${py(vv).toFixed(0)}" x2="${PL+cW}" y2="${py(vv).toFixed(0)}" stroke="#E3E9EE" stroke-width="1" stroke-dasharray="3,3"/><text x="${PL-4}" y="${(py(vv)+4).toFixed(0)}" text-anchor="end" font-size="8" fill="#6B7A8D" font-family="Inter,sans-serif">${f(vv)}</text>`).join('');
-  const yl=[0,1,2,3,4,5].map(y=>`<text x="${px(y).toFixed(0)}" y="${H-4}" text-anchor="middle" font-size="9" fill="#6B7A8D" font-family="Inter,sans-serif">${y===0?'Now':'Yr '+y}</text>`).join('');
-  const dd=pts.map(p=>`<circle cx="${px(p.y).toFixed(1)}" cy="${py(p.c).toFixed(1)}" r="3.5" fill="${p.c>=0?'#2E7D32':'#C81E10'}" stroke="#fff" stroke-width="1.5"/>`).join('');
-  const bm=bx?`<line x1="${bx.toFixed(0)}" y1="${PT}" x2="${bx.toFixed(0)}" y2="${H-PB}" stroke="#00A9CC" stroke-width="1.5" stroke-dasharray="4,3"/><text x="${bx.toFixed(0)}" y="${PT-4}" text-anchor="middle" font-size="8" fill="#00A9CC" font-weight="700" font-family="Inter,sans-serif">Break-even</text>`:'';
-  return`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;max-width:100%;"><defs><linearGradient id="ng" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2E7D32" stop-opacity=".25"/><stop offset="100%" stop-color="#2E7D32" stop-opacity="0"/></linearGradient></defs>${gl}<line x1="${PL}" y1="${z0.toFixed(0)}" x2="${PL+cW}" y2="${z0.toFixed(0)}" stroke="#CBD5E1" stroke-width="1.5"/><path d="${ad}" fill="url(#ng)"/><path d="${pd}" fill="none" stroke="#1E2931" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${bm}${dd}${yl}<text x="${PL-4}" y="${(z0+3).toFixed(0)}" text-anchor="end" font-size="8" fill="#1E2931" font-weight="700" font-family="Inter,sans-serif">$0</text></svg>`;
+  const gl=[mx*.5,mx].filter(vv=>vv>mn+rng*.1).map(vv=>`<line x1="${PL}" y1="${py(vv).toFixed(0)}" x2="${PL+cW}" y2="${py(vv).toFixed(0)}" stroke="var(--doc-border)" stroke-width="1" stroke-dasharray="3,3"/><text x="${PL-4}" y="${(py(vv)+4).toFixed(0)}" text-anchor="end" font-size="8" fill="var(--doc-muted)" font-family="Inter,sans-serif">${f(vv)}</text>`).join('');
+  const yl=[0,1,2,3,4,5].map(y=>`<text x="${px(y).toFixed(0)}" y="${H-4}" text-anchor="middle" font-size="9" fill="var(--doc-muted)" font-family="Inter,sans-serif">${y===0?'Now':'Yr '+y}</text>`).join('');
+  const dd=pts.map(p=>`<circle cx="${px(p.y).toFixed(1)}" cy="${py(p.c).toFixed(1)}" r="3.5" fill="${p.c>=0?'var(--doc-success)':'var(--doc-danger)'}" stroke="#fff" stroke-width="1.5"/>`).join('');
+  const bm=bx?`<line x1="${bx.toFixed(0)}" y1="${PT}" x2="${bx.toFixed(0)}" y2="${H-PB}" stroke="var(--doc-accent)" stroke-width="1.5" stroke-dasharray="4,3"/><text x="${bx.toFixed(0)}" y="${PT-4}" text-anchor="middle" font-size="8" fill="var(--doc-accent)" font-weight="700" font-family="Inter,sans-serif">Break-even</text>`:'';
+  return`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;max-width:100%;"><defs><linearGradient id="ng" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--doc-success)" stop-opacity=".25"/><stop offset="100%" stop-color="var(--doc-success)" stop-opacity="0"/></linearGradient></defs>${gl}<line x1="${PL}" y1="${z0.toFixed(0)}" x2="${PL+cW}" y2="${z0.toFixed(0)}" stroke="#CBD5E1" stroke-width="1.5"/><path d="${ad}" fill="url(#ng)"/><path d="${pd}" fill="none" stroke="var(--doc-heading)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${bm}${dd}${yl}<text x="${PL-4}" y="${(z0+3).toFixed(0)}" text-anchor="end" font-size="8" fill="var(--doc-heading)" font-weight="700" font-family="Inter,sans-serif">$0</text></svg>`;
 }
 
 function scenChart(bv){
   const sc=Object.entries(MODES).map(([k,m])=>{
     const sv=scaleV(bv,m.scale),r=calcROI(sv);
-    const c=k==='conservative'?'#A6791E':k==='base'?'#0089A6':'#2E7D32';
+    const c=k==='conservative'?'#A6791E':k==='base'?'var(--doc-accessible-accent)':'var(--doc-success)';
     return{k,lbl:k==='conservative'?'Conservative':k==='base'?'Base':'Aggressive',c,r};
   });
   const mb=Math.max(...sc.map(s=>s.r.totalContractBenefit),1);
@@ -346,9 +338,9 @@ function scenChart(bv){
     const bp=Math.round(s.r.totalContractBenefit/mb*100);
     const np=Math.round(s.r.totalContractNpv/mn*100);
     const pb=s.r.paybackFromSigning===null?'—':s.r.paybackFromSigning>=60?'60+mo':s.r.paybackFromSigning.toFixed(1)+'mo';
-    return`<tr><td class="l"><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:9px;height:9px;border-radius:2px;background:${s.c};display:inline-block;"></span>${s.lbl}</span></td><td><div style="background:#F1F5F9;border-radius:3px;height:18px;overflow:hidden;"><div style="width:${bp}%;height:100%;background:${s.c};opacity:.8;"></div></div><div style="font-size:10px;font-weight:700;color:${s.c};text-align:right;margin-top:2px;">${f(s.r.totalContractBenefit)}</div></td><td style="font-weight:700;color:${s.c};">${fp(s.r.totalContractRoi)}</td><td style="color:#475569;">${s.r.contractPayback===null?'Not in term':s.r.contractPayback.toFixed(1)+'mo'}</td><td><div style="background:#F1F5F9;border-radius:3px;height:18px;overflow:hidden;"><div style="width:${np}%;height:100%;background:${s.c};opacity:.65;"></div></div><div style="font-size:10px;font-weight:700;color:${s.c};text-align:right;margin-top:2px;">${f(s.r.totalContractNpv)}</div></td></tr>`;
+    return`<tr><td class="l"><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:9px;height:9px;border-radius:2px;background:${s.c};display:inline-block;"></span>${s.lbl}</span></td><td><div style="background:var(--doc-canvas);border-radius:3px;height:18px;overflow:hidden;"><div style="width:${bp}%;height:100%;background:${s.c};opacity:.8;"></div></div><div style="font-size:10px;font-weight:700;color:${s.c};text-align:right;margin-top:2px;">${f(s.r.totalContractBenefit)}</div></td><td style="font-weight:700;color:${s.c};">${fp(s.r.totalContractRoi)}</td><td style="color:var(--ci-neutral-600);">${s.r.contractPayback===null?'Not in term':s.r.contractPayback.toFixed(1)+'mo'}</td><td><div style="background:var(--doc-canvas);border-radius:3px;height:18px;overflow:hidden;"><div style="width:${np}%;height:100%;background:${s.c};opacity:.65;"></div></div><div style="font-size:10px;font-weight:700;color:${s.c};text-align:right;margin-top:2px;">${f(s.r.totalContractNpv)}</div></td></tr>`;
   }).join('');
-  return`<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr><th style="background:#1E2931;color:#fff;padding:7px 10px;text-align:left;font-size:10px;width:105px;">Scenario</th><th style="background:#1E2931;color:#fff;padding:7px 10px;font-size:10px;">Total contract benefit</th><th style="background:#1E2931;color:#fff;padding:7px 10px;font-size:10px;">Total contract ROI</th><th style="background:#1E2931;color:#fff;padding:7px 10px;font-size:10px;">Payback</th><th style="background:#1E2931;color:#fff;padding:7px 10px;font-size:10px;">Contract NPV</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td colspan="5" style="padding:5px 10px;font-size:9px;color:#6B7A8D;font-style:italic;background:#F8FAFC;">Conservative=70% · Aggressive=130% of base improvement assumptions · Investment costs fixed · Contract term ${bv.contractMonths||36} months</td></tr></tfoot></table>`;
+  return`<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr><th style="background:var(--doc-heading);color:#fff;padding:7px 10px;text-align:left;font-size:10px;width:105px;">Scenario</th><th style="background:var(--doc-heading);color:#fff;padding:7px 10px;font-size:10px;">Total contract benefit</th><th style="background:var(--doc-heading);color:#fff;padding:7px 10px;font-size:10px;">Total contract ROI</th><th style="background:var(--doc-heading);color:#fff;padding:7px 10px;font-size:10px;">Payback</th><th style="background:var(--doc-heading);color:#fff;padding:7px 10px;font-size:10px;">Contract NPV</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td colspan="5" style="padding:5px 10px;font-size:9px;color:var(--doc-muted);font-style:italic;background:var(--doc-canvas);">Conservative=70% · Aggressive=130% of base improvement assumptions · Investment costs fixed · Contract term ${bv.contractMonths||36} months</td></tr></tfoot></table>`;
 }
 
 function paybackTimeline(r,v){
@@ -358,16 +350,16 @@ function paybackTimeline(r,v){
   const impX=xAt(impl),rampX=xAt(Math.min(impl+3,tot));
   const mos=[0,6,12,18,24,36,48,60].filter(m=>m<=tot);
   return`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;max-width:100%;">
-    <rect x="${PL}" y="${TY-TH/2}" width="${tW}" height="${TH}" rx="3" fill="#E3E9EE"/>
+    <rect x="${PL}" y="${TY-TH/2}" width="${tW}" height="${TH}" rx="3" fill="var(--doc-border)"/>
     ${impl>0?`<rect x="${PL}" y="${TY-TH/2}" width="${impX-PL}" height="${TH}" rx="3" fill="#A6791E"/>`:``}
-    <rect x="${impX}" y="${TY-TH/2}" width="${rampX-impX}" height="${TH}" fill="#00A9CC"/>
-    <rect x="${rampX}" y="${TY-TH/2}" width="${PL+tW-rampX}" height="${TH}" rx="3" fill="#2E7D32"/>
-    ${impl>0?`<circle cx="${impX}" cy="${TY}" r="5" fill="#A6791E" stroke="#fff" stroke-width="1.5"/><text x="${impX}" y="${TY+16}" text-anchor="middle" font-size="8" fill="#A6791E" font-weight="700" font-family="Inter,sans-serif">Go-live</text><text x="${impX}" y="${TY+26}" text-anchor="middle" font-size="8" fill="#64748B" font-family="Inter,sans-serif">Mo.${impl+1}</text>`:''}
-    ${pbX?`<circle cx="${pbX}" cy="${TY}" r="7" fill="#fff" stroke="#1E2931" stroke-width="2"/><text x="${pbX}" y="${TY+4}" text-anchor="middle" font-size="7" font-weight="800" fill="#1E2931" font-family="Inter,sans-serif">✓</text><line x1="${pbX}" y1="${TY-10}" x2="${pbX}" y2="${TY-24}" stroke="#1E2931" stroke-width="1.5" stroke-dasharray="2,2"/><text x="${pbX}" y="${TY-27}" text-anchor="middle" font-size="9" font-weight="700" fill="#1E2931" font-family="Inter,sans-serif">Break-even ${r.paybackFromSigning.toFixed(1)} mo</text>`:''}
-    ${mos.map(m=>`<text x="${xAt(m)}" y="${H-4}" text-anchor="middle" font-size="8" fill="#6B7A8D" font-family="Inter,sans-serif">Mo.${m}</text><line x1="${xAt(m)}" y1="${TY+TH/2+2}" x2="${xAt(m)}" y2="${H-14}" stroke="#E3E9EE" stroke-width="1"/>`).join('')}
-    <rect x="${PL}" y="8" width="9" height="5" rx="1" fill="#A6791E"/><text x="${PL+13}" y="14" font-size="8" fill="#64748B" font-family="Inter,sans-serif">Implementation</text>
-    <rect x="${PL+95}" y="8" width="9" height="5" rx="1" fill="#00A9CC"/><text x="${PL+108}" y="14" font-size="8" fill="#64748B" font-family="Inter,sans-serif">Ramp-up</text>
-    <rect x="${PL+162}" y="8" width="9" height="5" rx="1" fill="#2E7D32"/><text x="${PL+175}" y="14" font-size="8" fill="#64748B" font-family="Inter,sans-serif">Full efficiency</text>
+    <rect x="${impX}" y="${TY-TH/2}" width="${rampX-impX}" height="${TH}" fill="var(--doc-accent)"/>
+    <rect x="${rampX}" y="${TY-TH/2}" width="${PL+tW-rampX}" height="${TH}" rx="3" fill="var(--doc-success)"/>
+    ${impl>0?`<circle cx="${impX}" cy="${TY}" r="5" fill="#A6791E" stroke="#fff" stroke-width="1.5"/><text x="${impX}" y="${TY+16}" text-anchor="middle" font-size="8" fill="#A6791E" font-weight="700" font-family="Inter,sans-serif">Go-live</text><text x="${impX}" y="${TY+26}" text-anchor="middle" font-size="8" fill="var(--doc-muted)" font-family="Inter,sans-serif">Mo.${impl+1}</text>`:''}
+    ${pbX?`<circle cx="${pbX}" cy="${TY}" r="7" fill="#fff" stroke="var(--doc-heading)" stroke-width="2"/><text x="${pbX}" y="${TY+4}" text-anchor="middle" font-size="7" font-weight="800" fill="var(--doc-heading)" font-family="Inter,sans-serif">✓</text><line x1="${pbX}" y1="${TY-10}" x2="${pbX}" y2="${TY-24}" stroke="var(--doc-heading)" stroke-width="1.5" stroke-dasharray="2,2"/><text x="${pbX}" y="${TY-27}" text-anchor="middle" font-size="9" font-weight="700" fill="var(--doc-heading)" font-family="Inter,sans-serif">Break-even ${r.paybackFromSigning.toFixed(1)} mo</text>`:''}
+    ${mos.map(m=>`<text x="${xAt(m)}" y="${H-4}" text-anchor="middle" font-size="8" fill="var(--doc-muted)" font-family="Inter,sans-serif">Mo.${m}</text><line x1="${xAt(m)}" y1="${TY+TH/2+2}" x2="${xAt(m)}" y2="${H-14}" stroke="var(--doc-border)" stroke-width="1"/>`).join('')}
+    <rect x="${PL}" y="8" width="9" height="5" rx="1" fill="#A6791E"/><text x="${PL+13}" y="14" font-size="8" fill="var(--doc-muted)" font-family="Inter,sans-serif">Implementation</text>
+    <rect x="${PL+95}" y="8" width="9" height="5" rx="1" fill="var(--doc-accent)"/><text x="${PL+108}" y="14" font-size="8" fill="var(--doc-muted)" font-family="Inter,sans-serif">Ramp-up</text>
+    <rect x="${PL+162}" y="8" width="9" height="5" rx="1" fill="var(--doc-success)"/><text x="${PL+175}" y="14" font-size="8" fill="var(--doc-muted)" font-family="Inter,sans-serif">Full efficiency</text>
   </svg>`;
 }
 
@@ -384,16 +376,16 @@ function render(v,mode){
   const ps=r.paybackFromSigning===null?'—':r.paybackFromSigning>=60?'60+ mo':r.paybackFromSigning.toFixed(1)+' mo';
   const pl=r.paybackFromGoLive===null?'—':r.paybackFromGoLive>=60?'60+ mo':r.paybackFromGoLive.toFixed(1)+' mo';
   const yr1p=Math.round(r.year1Factor*100);
-  const mc=mode==='conservative'?'#A6791E':mode==='aggressive'?'#2E7D32':'';
+  const mc=mode==='conservative'?'#A6791E':mode==='aggressive'?'var(--doc-success)':'';
   const mbg=mode==='conservative'?'rgba(133,79,11,.2)':mode==='aggressive'?'rgba(46,125,50,.2)':'';
   const mbadge=mode!=='base'?`<div class="cov-badge" style="background:${mbg};color:${mc};border:1px solid ${mc}40;">${MODES[mode].lbl} — improvement assumptions ${mode==='conservative'?'scaled down 30%':'scaled up 30%'}</div>`:'';
   const pLogo=sv.prospectLogoDataUrl?`<span class="cov-sep">×</span><img class="cov-logo-p" src="${sv.prospectLogoDataUrl}" alt="Prospect"/>`:'';
-  const wa=sv.threeWhysAct||(typeof THREE_WHYS_LIBRARY!=='undefined'?(THREE_WHYS_LIBRARY[sv.industry]||THREE_WHYS_LIBRARY.default).act:'');
-  const wc=sv.threeWhysCi||(typeof THREE_WHYS_LIBRARY!=='undefined'?(THREE_WHYS_LIBRARY[sv.industry]||THREE_WHYS_LIBRARY.default).ci:'');
-  const wn=sv.threeWhysNow||(typeof THREE_WHYS_LIBRARY!=='undefined'?(THREE_WHYS_LIBRARY[sv.industry]||THREE_WHYS_LIBRARY.default).now:'');
+  const wa=sv.threeWhysAct||'To validate';
+  const wc=sv.threeWhysCi||'To validate';
+  const wn=sv.threeWhysNow||'To validate';
 
   const headlines=(typeof buildExecHeadlines==='function')?buildExecHeadlines(sv,r):[];
-  const proofPts=(typeof PROOF_POINTS!=='undefined'&&PROOF_POINTS[sv.industry])||[];
+  const proofPts=Array.isArray(sv._customerProof)?sv._customerProof.slice(0,3):[];
   const criteria=(typeof buildDecisionCriteria==='function')?buildDecisionCriteria(sv):[];
   /* ── Next steps: MAP milestones first, then stage-defaults ── */
   function _buildPrintNextSteps(sv) {
@@ -422,29 +414,30 @@ function render(v,mode){
         });
     }
 
-    /* 2. Deal-stage defaults */
-    var stage = (sv.dealStage || '').toLowerCase().trim();
-    if (!stage || stage === 'discovery' || stage === 'prospecting') return [
+    /* 2. Governed BuyCycle defaults (dealStage is a server-owned mirror). */
+    var match = String(sv.dealStage||'').match(/Stage\s+([2-7])/i);
+    var stage = Number(match&&match[1]||2);
+    if (stage === 2) return [
       { by: fmtD(addD(7)),  action: 'Validate ROI assumptions', detail: 'Share this business case with your champion. Confirm the three key inputs: inventory value, labour hours, and current write-off rate.' },
       { by: fmtD(addD(14)), action: 'Technical discovery call', detail: 'Review ERP integration requirements, user roles, and site configuration.' },
       { by: fmtD(addD(30)), action: 'Live product demonstration', detail: 'Tailored demo focused on your specific workflows — warehouse receiving, cycle counts, field inventory, and ERP sync.' },
     ];
-    if (stage === 'demo' || stage === 'demonstration') return [
+    if (stage === 3) return [
       { by: fmtD(addD(5)),  action: 'Demo follow-up and Q&A', detail: 'Send meeting summary and address open technical questions. Identify additional stakeholders.' },
       { by: fmtD(addD(14)), action: 'Pilot program proposal', detail: 'Agree on pilot scope (1–2 sites, 4–6 weeks), success metrics, and go-live timeline.' },
       { by: fmtD(addD(21)), action: 'Champion business case review', detail: 'Walk your champion through this ROI document. Confirm the numbers are defensible for internal approvals.' },
     ];
-    if (stage === 'evaluation' || stage === 'technical review' || stage === 'proof of concept') return [
+    if (stage === 4) return [
       { by: fmtD(addD(7)),  action: 'Complete technical evaluation', detail: 'Finalise integration architecture, security questionnaire, and IT sign-off.' },
       { by: fmtD(addD(14)), action: 'Stakeholder alignment meeting', detail: 'Present ROI findings to economic buyer. Address objections with the sensitivity analysis.' },
       { by: fmtD(addD(21)), action: 'Pilot proposal and SOW', detail: 'Deliver a written pilot proposal with scope, success metrics, investment, and proposed go-live date.' },
     ];
-    if (stage === 'proposal' || stage === 'negotiation' || stage === 'verbal' || stage === 'contracting') return [
+    if (stage === 5 || stage === 6) return [
       { by: fmtD(addD(5)),  action: 'Proposal review and Q&A', detail: 'Address outstanding commercial, legal, or technical questions. Provide redlines if needed.' },
       { by: fmtD(addD(10)), action: 'Procurement and legal review', detail: 'Connect legal teams. Expedite any security or vendor approval processes.' },
       { by: fmtD(addD(14)), action: 'Contract signature', detail: 'Confirm signature authority and obtain executed agreement. Initiate implementation scheduling.' },
     ];
-    if (stage === 'closed won' || stage === 'won' || stage === 'implementation') return [
+    if (stage === 7 && (sv.dealOutcome||sv.outcome)==='won') return [
       { by: fmtD(addD(3)),  action: 'Implementation kick-off call', detail: 'Confirm implementation team, ERP integration scope, site list, and target go-live date.' },
       { by: fmtD(addD(14)), action: 'Data integration setup', detail: 'Complete ERP connector configuration, field mapping, and initial data validation.' },
       { by: fmtD(addD(30)), action: 'User training and go-live', detail: 'Complete end-user training. Sign off on UAT. Execute go-live and begin capturing live ROI data.' },
@@ -468,7 +461,7 @@ function render(v,mode){
   <div class="cover">
     <div class="cov-bg1"></div><div class="cov-bg2"></div>
     <div class="cover-inner">
-      <div class="cov-logos"><img class="cov-logo-ci" src="ci-logo-negative.png" alt="Cloud Inventory" onerror="this.style.display='none'"/>${pLogo}</div>
+      <div class="cov-logos"><img class="cov-logo-ci" data-ci-logo="logoNegative" alt="Cloud Inventory"/>${pLogo}</div>
       <div class="cov-eye">Business Value Assessment</div>
       <div class="cov-co">${sv.company||'Your Company'}</div>
       <div class="cov-meta"><span>${ind}</span><span>${today}</span>${sv.rep?`<span>${sv.rep}</span>`:''} ${audCfg&&aud!=='mixed'?`<span>${audCfg.icon} ${audCfg.label}</span>`:''}</div>
@@ -504,9 +497,9 @@ function render(v,mode){
     <!-- 3. Three Whys -->
     <div class="sec">
       <div class="sh"><div class="sn">${secNum()}</div><span class="st">The business case — three critical questions</span></div>
-      <div class="why" style="background:#FFF5F5;border:1px solid #FFCDD2;border-left:4px solid #C81E10;"><div class="why-lbl" style="color:#C81E10;">01 — Why act at all?</div><div class="why-sub">The cost of the status quo</div><div class="why-txt">${wa||'Complete the Three Whys in the Executive tab.'}</div></div>
-      <div class="why" style="background:#F0F7FF;border:1px solid #BBDEFB;border-left:4px solid #0089A6;"><div class="why-lbl" style="color:#0089A6;">02 — Why Cloud Inventory?</div><div class="why-sub">Why this solution, not an alternative</div><div class="why-txt">${wc||'Complete the Three Whys in the Executive tab.'}</div></div>
-      <div class="why" style="background:#F0FFF4;border:1px solid #C8E6C9;border-left:4px solid #2E7D32;"><div class="why-lbl" style="color:#2E7D32;">03 — Why now?</div><div class="why-sub">The urgency to act in this window</div><div class="why-txt">${wn||'Complete the Three Whys in the Executive tab.'}</div></div>
+      <div class="why" style="background:#FFF5F5;border:1px solid #FFCDD2;border-left:4px solid var(--doc-danger);"><div class="why-lbl" style="color:var(--doc-danger);">01 — Why act at all?</div><div class="why-sub">The cost of the status quo</div><div class="why-txt">${wa||'Complete the Three Whys in the Executive tab.'}</div></div>
+      <div class="why" style="background:#F0F7FF;border:1px solid #BBDEFB;border-left:4px solid var(--doc-accessible-accent);"><div class="why-lbl" style="color:var(--doc-accessible-accent);">02 — Why Cloud Inventory?</div><div class="why-sub">Why this solution, not an alternative</div><div class="why-txt">${wc||'Complete the Three Whys in the Executive tab.'}</div></div>
+      <div class="why" style="background:#F0FFF4;border:1px solid #C8E6C9;border-left:4px solid var(--doc-success);"><div class="why-lbl" style="color:var(--doc-success);">03 — Why now?</div><div class="why-sub">The urgency to act in this window</div><div class="why-txt">${wn||'Complete the Three Whys in the Executive tab.'}</div></div>
     </div>
 
     <!-- 4. Implementation Proviso -->
@@ -515,9 +508,9 @@ function render(v,mode){
       <div class="sh"><div class="sn">${secNum()}</div><span class="st">Implementation timeline &amp; ROI proviso</span></div>
       <div style="margin-bottom:.9rem;">${paybackTimeline(r,sv)}</div>
       <div class="prov-grid">
-        <div class="prov" style="border-left:4px solid #0089A6;"><div class="pv-icon">📅</div><div><div class="pv-lbl">Implementation</div><div class="pv-val">${sv.implMonths} months</div><div class="pv-det">No benefit accrues during implementation. Go-live month ${sv.implMonths+1}.</div></div></div>
+        <div class="prov" style="border-left:4px solid var(--doc-accessible-accent);"><div class="pv-icon">📅</div><div><div class="pv-lbl">Implementation</div><div class="pv-val">${sv.implMonths} months</div><div class="pv-det">No benefit accrues during implementation. Go-live month ${sv.implMonths+1}.</div></div></div>
         <div class="prov" style="border-left:4px solid #A6791E;"><div class="pv-icon">📈</div><div><div class="pv-lbl">Efficiency ramp</div><div class="pv-val">${Math.round(sv.ramp1*100)}% / ${Math.round(sv.ramp2*100)}% / ${Math.round(sv.ramp3*100)}%</div><div class="pv-det">Mo 1 / 2 / 3+ post go-live. Year 1: ${yr1p}% of steady-state (${ff(r.year1Benefit)}).</div></div></div>
-        <div class="prov" style="border-left:4px solid #2E7D32;"><div class="pv-icon">💰</div><div><div class="pv-lbl">Break-even</div><div class="pv-val">${ps}</div><div class="pv-det">From contract signing. ${pl} from go-live.</div></div></div>
+        <div class="prov" style="border-left:4px solid var(--doc-success);"><div class="pv-icon">💰</div><div><div class="pv-lbl">Break-even</div><div class="pv-val">${ps}</div><div class="pv-det">From contract signing. ${pl} from go-live.</div></div></div>
       </div>
     </div>`:``}
 
@@ -565,7 +558,7 @@ function render(v,mode){
     ${proofPts.length?`
     <div class="sec">
       <div class="sh"><div class="sn">${secNum()}</div><span class="st">Customer results — ${ind}</span></div>
-      <div class="proof-grid">${proofPts.map(p=>`<div class="pfc"><div class="pf-co">${p.company}</div><div class="pf-r">${p.result}</div><div class="pf-m">${p.metric}</div></div>`).join('')}</div>
+      <div class="proof-grid">${proofPts.map(p=>`<div class="pfc"><div class="pf-co">${p.displayName}</div><div class="pf-r">${p.result}</div><div class="pf-m">${p.metric||''}</div><div class="pf-r">Source: ${p.sourceDisplay||'Approved Cloud Inventory customer source'}</div></div>`).join('')}</div>
     </div>`:''}
 
     <!-- 12. Evaluation Criteria -->
@@ -625,17 +618,17 @@ function render(v,mode){
     const daR=daK.filter(k=>da[k+'_by']==='rep'&&da[k]);
     const pPct=daA.length?Math.round(daP.length/daA.length*100):0;
     const provSect=daA.length?`
-    <div style="border:1.5px solid #00AECF;border-radius:10px;padding:16px 20px;margin-bottom:20px;background:#F0F9FF;">
-      <div style="font-size:13px;font-weight:700;color:#1E2931;margin-bottom:6px;">
+    <div style="border:1.5px solid var(--doc-accent);border-radius:10px;padding:16px 20px;margin-bottom:20px;background:var(--doc-info-surface);">
+      <div style="font-size:13px;font-weight:700;color:var(--doc-heading);margin-bottom:6px;">
         🔍 ${daP.length} of ${daA.length} inputs supplied directly by ${sv.company||'the prospect'}
-        <span style="font-size:11px;font-weight:400;color:#64748B;"> — not vendor estimates</span>
+        <span style="font-size:11px;font-weight:400;color:var(--doc-muted);"> — not vendor estimates</span>
       </div>
-      <div style="font-size:12px;color:#334155;line-height:1.6;">
+      <div style="font-size:12px;color:var(--ci-neutral-700);line-height:1.6;">
         ${daP.length>0?`${pPct}% of answered inputs were provided by the prospect's own operations team. `:``}${daR.length>0?`${daR.length} figure${daR.length!==1?'s':''} entered by the Cloud Inventory rep. `:''}Industry benchmarks apply only where no prospect figure was provided.
       </div>
       <div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;">
         ${daP.length?`<span style="font-size:11px;padding:3px 10px;border-radius:99px;background:#D4EDDA;color:#155724;font-weight:700;">${pPct}% prospect data</span>`:''}
-        <span style="font-size:11px;padding:3px 10px;border-radius:99px;background:#E2E8F0;color:#334155;">${daP.length} prospect · ${daR.length} rep · industry defaults fill gaps</span>
+        <span style="font-size:11px;padding:3px 10px;border-radius:99px;background:var(--doc-border);color:var(--ci-neutral-700);">${daP.length} prospect · ${daR.length} rep · industry defaults fill gaps</span>
       </div>
     </div>`:''||'';
 
@@ -643,34 +636,34 @@ function render(v,mode){
     const ab=r.annualBenefit;
     const inact=ab>0?`
     <div style="border:1px solid #F2C4B0;border-radius:10px;padding:16px 20px;margin-bottom:20px;background:#FFF8F5;">
-      <div style="font-size:13px;font-weight:700;color:#1E2931;margin-bottom:8px;">⏱ Cost of delayed action</div>
+      <div style="font-size:13px;font-weight:700;color:var(--doc-heading);margin-bottom:8px;">⏱ Cost of delayed action</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:8px;">
         <div style="background:#fff;border:1px solid #E8D5C8;border-radius:8px;padding:12px;text-align:center;">
-          <div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Per month</div>
+          <div style="font-size:10px;font-weight:700;color:var(--doc-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Per month</div>
           <div style="font-size:18px;font-weight:700;color:#C24A1E;">${ff(ab/12)}</div>
         </div>
         <div style="background:#FFF0EB;border:1.5px solid #C24A1E;border-radius:8px;padding:12px;text-align:center;">
-          <div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">6-month delay</div>
+          <div style="font-size:10px;font-weight:700;color:var(--doc-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">6-month delay</div>
           <div style="font-size:22px;font-weight:700;color:#C24A1E;">${ff(ab/2)}</div>
-          <div style="font-size:10px;color:#64748B;">typical evaluation cycle</div>
+          <div style="font-size:10px;color:var(--doc-muted);">typical evaluation cycle</div>
         </div>
         <div style="background:#fff;border:1px solid #E8D5C8;border-radius:8px;padding:12px;text-align:center;">
-          <div style="font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">12-month delay</div>
+          <div style="font-size:10px;font-weight:700;color:var(--doc-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">12-month delay</div>
           <div style="font-size:18px;font-weight:700;color:#C24A1E;">${ff(ab)}</div>
         </div>
       </div>
-      <div style="font-size:11px;color:#64748B;font-style:italic;">Based on steady-state annual benefit of ${ff(ab)}. Excludes compounding effects of improved inventory turns.</div>
+      <div style="font-size:11px;color:var(--doc-muted);font-style:italic;">Based on steady-state annual benefit of ${ff(ab)}. Excludes compounding effects of improved inventory turns.</div>
     </div>`:'';
 
     /* Citations */
     const cit=typeof BENCHMARK_CITATIONS!=='undefined'?BENCHMARK_CITATIONS:{};
     const citKeys=Object.keys(cit);
-    const citRows=citKeys.map(k=>`<tr><td style="padding:5px 8px;font-size:10px;font-weight:600;color:#334155;border-bottom:1px solid #E2E8F0;">${k}</td><td style="padding:5px 8px;font-size:10px;color:#334155;border-bottom:1px solid #E2E8F0;">${cit[k].note}</td><td style="padding:5px 8px;font-size:10px;color:#64748B;border-bottom:1px solid #E2E8F0;white-space:nowrap;">${cit[k].source}, ${cit[k].year}</td></tr>`).join('');
+    const citRows=citKeys.map(k=>`<tr><td style="padding:5px 8px;font-size:10px;font-weight:600;color:var(--ci-neutral-700);border-bottom:1px solid var(--doc-border);">${k}</td><td style="padding:5px 8px;font-size:10px;color:var(--ci-neutral-700);border-bottom:1px solid var(--doc-border);">${cit[k].note}</td><td style="padding:5px 8px;font-size:10px;color:var(--doc-muted);border-bottom:1px solid var(--doc-border);white-space:nowrap;">${cit[k].source}, ${cit[k].year}</td></tr>`).join('');
     const citSect=citKeys.length?`
     <div style="margin-top:16px;">
-      <div style="font-size:12px;font-weight:700;color:#1E2931;margin-bottom:8px;">Benchmark assumptions &amp; sources</div>
-      <table style="width:100%;border-collapse:collapse;border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;">
-        <thead><tr style="background:#1E2931;">
+      <div style="font-size:12px;font-weight:700;color:var(--doc-heading);margin-bottom:8px;">Benchmark assumptions &amp; sources</div>
+      <table style="width:100%;border-collapse:collapse;border:1px solid var(--doc-border);border-radius:8px;overflow:hidden;">
+        <thead><tr style="background:var(--doc-heading);">
           <th style="padding:6px 8px;font-size:10px;color:#fff;text-align:left;width:130px;">Assumption</th>
           <th style="padding:6px 8px;font-size:10px;color:#fff;text-align:left;">Definition</th>
           <th style="padding:6px 8px;font-size:10px;color:#fff;text-align:left;width:200px;">Source</th>
@@ -683,11 +676,12 @@ function render(v,mode){
   })()}
 
   <div class="doc-ft">
-    <img class="ft-logo" src="ci-logo-full-color.png" alt="Cloud Inventory" onerror="this.style.display='none'"/>
-    <span class="ft-txt">Business Value Assessment · ${sv.company||'Prospect'} · ${today} · Analysis uses industry benchmarks and prospect-supplied inputs. Actual results may vary. · cloudinventory.com</span>
+    <img class="ft-logo" data-ci-logo="logoColor" alt="Cloud Inventory"/>
+    <span class="ft-txt">${window.CIBrand.audience('customer')} · Business Value Assessment · ${sv.company||'Prospect'} · ${today} · Analysis uses industry benchmarks and prospect-supplied inputs. Actual results may vary. · cloudinventory.com</span>
   </div>`;
 
   document.getElementById('out').innerHTML=html;
+  window.CIBrand.applyLogos(document.getElementById('out'));
   document.getElementById('tbTitle').textContent=`Business Value Assessment — ${sv.company||'Prospect'}`;
 }
 
@@ -699,6 +693,12 @@ function init(){
   }
   try{
     baseVals=JSON.parse(decodeURIComponent(escape(atob(hash.replace('#data=','')))));
+    if(baseVals._executiveStory){
+      const s=baseVals._executiveStory,e=s.economics,c=s.meta.currency,safe=v=>String(v==null?'':v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])),cash=n=>({USD:'$',GBP:'£',EUR:'€',AUD:'$',NZD:'$'}[c]||'')+Number(n||0).toLocaleString()+(['AUD','NZD'].includes(c)?' '+c:'');
+      document.getElementById('scenToggle').style.display='none';document.getElementById('tbTitle').textContent='Executive Business Case — '+s.meta.customer;
+      document.getElementById('out').innerHTML=`${baseVals._internalDraft?'<div class="err"><b>DRAFT — NOT READY FOR CUSTOMER SHARING</b></div>':''}<div class="cover"><h1>Executive Business Case</h1><h2>${safe(s.meta.customer)}</h2><p>${safe(s.meta.solution)} · ${safe(s.meta.generatedAt.slice(0,10))}</p></div><section><h2>The Executive Value Story</h2>${[['Why Change',s.threeWhys.whyChange],['Why Now',s.threeWhys.whyNow],['Why Cloud Inventory',s.threeWhys.whyCloudInventory]].map(([l,x])=>`<h3>${l}</h3><p>${safe(x.value)}</p><small>${safe(x.status)}</small>`).join('')}</section><section><h2>${safe(e.maturity.display)}</h2><table><tr><th>Annual Customer Benefit</th><td>${cash(e.annualBenefit)}</td></tr><tr><th>Total Contract Benefit</th><td>${cash(e.totalContractBenefit)}</td></tr><tr><th>Modeled Customer Investment</th><td>${cash(e.totalContractInvestment)}</td></tr><tr><th>Net Economic Benefit</th><td>${cash(e.netEconomicBenefit)}</td></tr><tr><th>Contract ROI</th><td>${Math.round(e.contractRoi)}%</td></tr><tr><th>NPV</th><td>${cash(e.npv)}</td></tr><tr><th>Payback</th><td>${e.payback==null?'Not within term':Number(e.payback).toFixed(1)+' months'}</td></tr><tr><th>Customer-Supported Annual Value</th><td>${e.customerSupportedValuePct}%</td></tr></table><p>All financial values in ${safe(c)}. No FX conversion applied.</p></section><section><h2>Modeled Value Drivers</h2><table>${e.activeDrivers.slice(0,5).map(d=>`<tr><td>${safe(d.label)}</td><td>${cash(d.annualValue)}/year</td><td>${safe(d.status)}</td></tr>`).join('')}</table></section><section><h2>Solution Alignment</h2><p>${s.solutionAlignment.exists?safe([s.solutionAlignment.products.join(', '),s.solutionAlignment.systemOfRecord,s.solutionAlignment.integrationApproach].filter(Boolean).join(' · ')):'Solution alignment to validate.'}</p><p><b>ROI modeling assumption:</b> ${s.implementationContext.modelingMonths||0} months to implementation/go-live. This is not a delivery commitment.</p></section><section><h2>Joint Next Steps</h2>${s.nextSteps.items.length?`<ul>${s.nextSteps.items.slice(0,5).map(x=>`<li>${safe(x.milestone)} — ${safe(x.owner)}${x.dueDate?' — '+safe(x.dueDate):''}</li>`).join('')}</ul>`:`<p>${safe(s.nextSteps.message)}</p>`}</section><div class="doc-ft"><span class="ft-txt">${window.CIBrand.audience('customer')} · Story ${safe(s.storyRevision)}</span></div>`;
+      if(new URLSearchParams(window.location.search).get('autoprint')==='1')setTimeout(()=>window.print(),1000);return;
+    }
     /* Preserve explicit zero ramp assumptions. Only missing or non-numeric values
        fall back to defaults; valid inputs are bounded to 0–100%. */
     const normalizeRamp=(val,dflt)=>{

@@ -1,8 +1,10 @@
-/* Sales Manager portfolio dashboard.
-   Synthesizes persisted application data only; it never invokes the ROI engine. */
+/* Sales Manager portfolio dashboard. Read-only synthesis of persisted deal data;
+   it deliberately never imports or invokes the ROI calculation engine. */
 const express = require('express');
 const { query } = require('../db');
 const { requireAuth, requireAnyRole } = require('../middleware/auth');
+const { hasPermission, customerScopeSql, scenarioAccess } = require('../authorization');
+const {evaluateLiveStageReadinessBatch,liveReadinessSummary}=require('../shared/stage-readiness-service');
 
 const router = express.Router();
 router.use(requireAuth, requireAnyRole('sales_manager', 'admin'));
@@ -11,50 +13,16 @@ const num = value => value === null || value === undefined || value === '' ? nul
 const text = value => String(value || '').trim();
 const lower = value => text(value).toLowerCase();
 
-const PRIORITIES = new Set(['low', 'medium', 'high', 'critical']);
-const STATUSES = new Set(['open', 'in_progress', 'done']);
-
-function validDateOrNull(value) {
-  if (value === null || value === '') return null;
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;
-  return value;
-}
-function bounded(value, max) {
-  if (value === null) return null;
-  if (value === undefined) return undefined;
-  const out = text(value);
-  return out.length <= max ? out : undefined;
-}
-function validateActionFields(body, { requireAction = false } = {}) {
-  const b = body || {};
-  const action = bounded(b.action, 4000);
-  const owner = bounded(b.owner, 255);
-  const relatedRisk = bounded(b.relatedRisk, 4000);
-  const expectedOutcome = bounded(b.expectedOutcome, 4000);
-  const customerCommitmentSought = bounded(b.customerCommitmentSought, 4000);
-  const dueDate = b.dueDate === undefined ? undefined : validDateOrNull(b.dueDate);
-  if (requireAction && !action) return { error: 'Scenario and action are required.' };
-  if (b.action !== undefined && action === undefined) return { error: 'Action must be 4,000 characters or fewer.' };
-  if (b.owner !== undefined && owner === undefined) return { error: 'Owner must be 255 characters or fewer.' };
-  if (b.relatedRisk !== undefined && relatedRisk === undefined) return { error: 'Related risk must be 4,000 characters or fewer.' };
-  if (b.expectedOutcome !== undefined && expectedOutcome === undefined) return { error: 'Expected outcome must be 4,000 characters or fewer.' };
-  if (b.customerCommitmentSought !== undefined && customerCommitmentSought === undefined) return { error: 'Customer commitment must be 4,000 characters or fewer.' };
-  if (b.dueDate !== undefined && dueDate === undefined) return { error: 'Due date must use YYYY-MM-DD format.' };
-  if (b.priority !== undefined && !PRIORITIES.has(b.priority)) return { error: 'Invalid priority.' };
-  if (b.status !== undefined && !STATUSES.has(b.status)) return { error: 'Invalid status.' };
-  return { action, owner, relatedRisk, expectedOutcome, customerCommitmentSought, dueDate };
-}
-
 function solutionFit(handoff) {
   if (!handoff) return { level: 'Not Assessed', reasons: ['No Solution Fit assessment saved'] };
   const data = handoff.data || {};
   const gaps = Array.isArray(data.gaps) ? data.gaps : [];
   const critical = gaps.filter(g => lower(g.priority).includes('must') || lower(g.severity).includes('critical') || lower(g.goLive) === 'yes');
   const unresolved = gaps.filter(g => !['closed','resolved','done'].includes(lower(g.status)));
-  let level = 'Low';
-  if (critical.length >= 2) level = 'Critical';
-  else if (critical.length || handoff.status === 'not_ready') level = 'High';
-  else if (unresolved.length || handoff.status === 'conditional') level = 'Moderate';
+  let level = 'Low Risk';
+  if (critical.length >= 2) level = 'Critical Risk';
+  else if (critical.length || handoff.status === 'not_ready') level = 'High Risk';
+  else if (unresolved.length || handoff.status === 'conditional') level = 'Moderate Risk';
   return { level, readiness: handoff.readiness, reasons: [
     `${handoff.readiness || 0}% readiness`,
     `${unresolved.length} unresolved gap${unresolved.length === 1 ? '' : 's'}`,
@@ -70,15 +38,9 @@ function planHealth(plan) {
   const overdue = open.filter(m => m.dueDate && new Date(`${m.dueDate}T23:59:59`) < now);
   const missingDates = open.filter(m => !m.dueDate).length;
   const missingOwners = open.filter(m => !m.owner).length;
-  const level = overdue.length ? 'At Risk' : (!ms.length || missingDates || missingOwners) ? 'Incomplete' : 'On Track';
-  return {
-    level, overdue: overdue.length, open: open.length, missingDates, missingOwners,
-    reasons: [
-      `${open.length} open milestone${open.length === 1 ? '' : 's'}`,
-      `${overdue.length} past due`,
-      `${missingDates + missingOwners} missing date/owner field${missingDates + missingOwners === 1 ? '' : 's'}`
-    ]
-  };
+  const level = overdue.length ? 'Past Due' : (!ms.length || missingDates || missingOwners) ? 'Incomplete' : 'On Track';
+  return { level, overdue: overdue.length, open: open.length, missingDates, missingOwners,
+    reasons: [`${open.length} open milestone${open.length === 1 ? '' : 's'}`, `${overdue.length} past due`, `${missingDates + missingOwners} missing date/owner field${missingDates + missingOwners === 1 ? '' : 's'}`] };
 }
 
 function stakeholderHealth(items) {
@@ -86,226 +48,118 @@ function stakeholderHealth(items) {
   const champion = list.find(s => s.role === 'champion' && s.engaged && Number(s.support) >= 4);
   const buyer = list.find(s => s.role === 'economic_buyer' && s.engaged);
   const blockers = list.filter(s => s.role === 'blocker' || (Number(s.influence) >= 4 && Number(s.support) <= 2));
-  let level = 'Healthy';
+  let level = 'Strong';
   if (!list.length) level = 'Missing';
   else if (!champion && !buyer) level = 'Critical';
-  else if (!champion || !buyer || blockers.length) level = 'At Risk';
-  return {
-    level,
-    reasons: [
-      champion ? 'Engaged champion identified' : 'Engaged champion missing',
-      buyer ? 'Economic buyer engaged' : 'Economic buyer not engaged',
-      `${blockers.length} blocker${blockers.length === 1 ? '' : 's'} identified`
-    ]
-  };
+  else if (!champion || !buyer || blockers.length) level = blockers.length ? 'Weak' : 'Developing';
+  return { level, reasons: [champion ? 'Engaged champion identified' : 'Engaged champion missing', buyer ? 'Economic buyer engaged' : 'Economic buyer not engaged', `${blockers.length} blocker${blockers.length === 1 ? '' : 's'} identified`] };
 }
 
 function dealHealth(deal) {
   const risks = [];
-  if (deal.plan.level === 'Missing' || deal.plan.overdue) {
-    risks.push(deal.plan.level === 'Missing' ? 'Joint Project Plan missing' : `${deal.plan.overdue} project item(s) past due`);
-  }
-  if (['High','Critical','Not Assessed'].includes(deal.solutionFit.level)) risks.push(`Solution Fit: ${deal.solutionFit.level}`);
-  if (['Critical','Missing','At Risk'].includes(deal.stakeholders.level)) risks.push(`Stakeholders: ${deal.stakeholders.level}`);
+  const g=deal.stageGovernance||{};
+  if(g.alignmentRisk==='Red')risks.push(`Current Stage is ${g.stageGap} stages ahead of buyer evidence`);
+  else if(g.alignmentRisk==='Yellow')risks.push('Current Stage is one stage ahead of buyer evidence');
+  if(g.blockingCriteria?.length)risks.push(`${g.blockingCriteria.length} mandatory stage requirement${g.blockingCriteria.length===1?' is':'s are'} incomplete`);
+  if(g.roiMaturityBlockingReason)risks.push(g.roiMaturityBlockingReason);
+  if(g.buyerCommitmentBlockingReason)risks.push(g.buyerCommitmentBlockingReason);
+  if(g.freshnessSummary?.stale)risks.push(`${g.freshnessSummary.stale} mandatory evidence item${g.freshnessSummary.stale===1?' is':'s are'} stale`);
+  if(g.freshnessSummary?.needsReview)risks.push(`${g.freshnessSummary.needsReview} mandatory evidence item${g.freshnessSummary.needsReview===1?' needs':'s need'} review`);
+  if (deal.plan.level === 'Missing' || deal.plan.overdue) risks.push(deal.plan.level === 'Missing' ? 'Joint Project Plan missing' : `${deal.plan.overdue} project item(s) past due`);
+  if (['High Risk','Critical Risk','Not Assessed'].includes(deal.solutionFit.level)) risks.push(`Solution Fit: ${deal.solutionFit.level}`);
+  if (['Critical','Missing','Weak','Developing'].includes(deal.stakeholders.level)) risks.push(`Stakeholders: ${deal.stakeholders.level}`);
   if (!deal.closeDate) risks.push('Target close date missing');
-  const updated = new Date(deal.updatedAt).getTime();
-  if (Number.isFinite(updated)) {
-    const age = Math.floor((Date.now() - updated) / 86400000);
-    if (age > 30) risks.push(`No scenario update for ${age} days`);
-  }
+  const age = Math.floor((Date.now() - new Date(deal.updatedAt).getTime()) / 86400000);
+  if (age > 30) risks.push(`No scenario update for ${age} days`);
   return { level: risks.length >= 3 ? 'Stalled' : risks.length ? 'At Risk' : 'Healthy', reasons: risks.length ? risks : ['Current data shows no material execution gaps'] };
 }
 
 function priority(deal) {
-  const critical = [
-    deal.health.level === 'Stalled',
-    deal.solutionFit.level === 'Critical',
-    deal.stakeholders.level === 'Critical',
-    deal.plan.overdue >= 2
-  ].filter(Boolean).length;
-  const level = critical >= 2 ? 'Critical'
-    : critical || deal.health.level === 'At Risk' ? 'High'
-    : deal.plan.level === 'Incomplete' ? 'Medium'
-    : 'Low';
-  return { level, reasons: [...deal.health.reasons, ...deal.solutionFit.reasons.slice(0, 1)] };
+  const g=deal.stageGovernance||{};
+  if(g.outcome)return{level:'No Intervention Needed',reasons:[`Closed ${g.outcome==='won'?'Won':'Lost'} — review outcome rather than active readiness.`]};
+  const immediate=g.alignmentRisk==='Red'||deal.solutionFit.level==='Critical Risk'||g.stageGap>=2;
+  const weekly=g.alignmentRisk==='Yellow'||g.blockingCriteria?.length||g.roiMaturityBlockingReason||g.buyerCommitmentBlockingReason||g.freshnessSummary?.stale||g.freshnessSummary?.needsReview||deal.plan.overdue||['High Risk','Not Assessed'].includes(deal.solutionFit.level)||['Critical','Missing','Weak'].includes(deal.stakeholders.level);
+  const level=immediate?'Immediate Attention':weekly?'Review This Week':deal.plan.level==='Incomplete'?'Monitor':'No Intervention Needed';
+  return { level, reasons: [...deal.health.reasons, ...deal.solutionFit.reasons.slice(0,1)] };
 }
 
 router.get('/dashboard', async (req, res) => {
   try {
+    const global=hasPermission(req.user,'view_all_customers');
     const [scenarios, handoffs, plans, stakeholders, actions, reps] = await Promise.all([
       query(`SELECT s.id,s.base_id,s.version,s.name,s.company,s.customer_id,s.industry,s.deal_stage,s.solution,s.data,s.updated_at,
+                    g.current_stage,g.rep_assessed_stage,g.outcome buy_cycle_outcome,g.opportunity_profile,
                     u.id owner_id,u.username owner_username
              FROM scenarios s JOIN users u ON u.id=s.owner_id
-             WHERE s.is_current=TRUE AND s.deleted_at IS NULL
-             ORDER BY s.updated_at DESC`),
-      query(`SELECT h.customer_id,h.data,h.readiness,h.status,h.updated_at FROM handoffs h`),
-      query(`SELECT id,scenario_id,company,title,target_close_date,milestones,groups,is_active,updated_at
-             FROM mutual_action_plans`),
-      query(`SELECT company,owner_id,role,influence,support,engaged,updated_at
-             FROM stakeholders`),
-      query(`SELECT a.*, s.base_id AS scenario_base_id
-             FROM sales_manager_actions a
-             JOIN scenarios s ON s.id = a.scenario_id
-             WHERE s.deleted_at IS NULL
-             ORDER BY a.due_date NULLS LAST,a.created_at DESC`),
-      query(`SELECT id,username FROM users
-             WHERE is_active=TRUE AND (role='rep' OR 'rep'=ANY(roles))
-             ORDER BY username`)
+             LEFT JOIN scenario_stage_governance g ON g.scenario_id=s.id
+             LEFT JOIN customers c ON c.id=s.customer_id
+             WHERE s.is_current=TRUE AND s.deleted_at IS NULL AND ($2 OR (c.id IS NOT NULL AND ${customerScopeSql('c','$1')})) ORDER BY s.updated_at DESC`,[req.user.id,global]),
+      query(`SELECT h.customer_id,h.data,h.readiness,h.status,h.updated_at FROM handoffs h JOIN customers c ON c.id=h.customer_id WHERE ($2 OR ${customerScopeSql('c','$1')})`,[req.user.id,global]),
+      query(`SELECT p.id,p.scenario_id,p.company,p.title,p.target_close_date,p.milestones,p.groups,p.token,p.is_active,p.updated_at FROM mutual_action_plans p WHERE ($2 OR p.owner_id=$1 OR EXISTS(SELECT 1 FROM sales_team_memberships me JOIN sales_team_memberships om ON om.team_id=me.team_id AND om.user_id=p.owner_id AND om.is_active=TRUE WHERE me.user_id=$1 AND me.is_active=TRUE))`,[req.user.id,global]),
+      query(`SELECT s.id,s.company,s.owner_id,s.name,s.title,s.role,s.influence,s.support,s.engaged,s.notes,s.updated_at FROM stakeholders s WHERE ($2 OR s.owner_id=$1 OR EXISTS(SELECT 1 FROM sales_team_memberships me JOIN sales_team_memberships om ON om.team_id=me.team_id AND om.user_id=s.owner_id AND om.is_active=TRUE WHERE me.user_id=$1 AND me.is_active=TRUE))`,[req.user.id,global]),
+      query(`SELECT * FROM sales_manager_actions ORDER BY due_date NULLS LAST,created_at DESC`),
+      query(`SELECT DISTINCT u.id,u.username FROM users u LEFT JOIN sales_team_memberships tm ON tm.user_id=u.id AND tm.is_active=TRUE LEFT JOIN sales_team_memberships me ON me.team_id=tm.team_id AND me.user_id=$1 AND me.is_active=TRUE WHERE u.is_active=TRUE AND (u.role='rep' OR 'rep'=ANY(u.roles)) AND ($2 OR u.id=$1 OR me.id IS NOT NULL) ORDER BY u.username`,[req.user.id,global])
     ]);
-
+    const liveByScenario=await evaluateLiveStageReadinessBatch(scenarios.rows);
     const handoffByCustomer = new Map(handoffs.rows.map(h => [String(h.customer_id), h]));
-    const actionsByBase = new Map();
-    actions.rows.forEach(a => {
-      const key = String(a.scenario_base_id);
-      const publicAction = { ...a };
-      delete publicAction.scenario_base_id;
-      actionsByBase.set(key, [...(actionsByBase.get(key) || []), publicAction]);
-    });
-
+    const actionsByScenario = new Map();
+    actions.rows.forEach(a => { const key=String(a.scenario_id); actionsByScenario.set(key,[...(actionsByScenario.get(key)||[]),a]); });
     const deals = scenarios.rows.map(s => {
-      const plan = plans.rows
-        .filter(p => (p.scenario_id && String(p.scenario_id) === String(s.id)) || lower(p.company) === lower(s.company))
-        .sort((a,b) => new Date(b.updated_at) - new Date(a.updated_at))[0];
+      const plan = plans.rows.filter(p => (p.scenario_id && String(p.scenario_id) === String(s.id)) || lower(p.company) === lower(s.company)).sort((a,b)=>new Date(b.updated_at)-new Date(a.updated_at))[0];
       const people = stakeholders.rows.filter(p => lower(p.company) === lower(s.company) && String(p.owner_id) === String(s.owner_id));
       const data = s.data || {};
+      const live=liveByScenario.get(String(s.id));
+      const governance=live?liveReadinessSummary(live):{currentStage:Number(s.current_stage||2),repAssessmentStage:Number(s.rep_assessed_stage||s.current_stage||2),evidenceStage:2,stageGap:Math.max(0,Number(s.current_stage||2)-2),alignmentRisk:'Red',readiness:null,blockingCriteria:[],freshnessSummary:{aging:0,stale:0,needsReview:0},setupNeeded:true};
+      const savedStage=governance.currentStage;
       const deal = {
-        id: s.id,
-        baseId: s.base_id,
-        version: s.version,
-        name: s.name,
-        company: s.company,
-        customerId: s.customer_id,
-        repId: s.owner_id,
-        rep: s.owner_username,
-        industry: s.industry || data.industry || 'Not set',
-        buyingStage: s.deal_stage || data.dealStage || 'Not set',
-        solution: s.solution || data.solution || 'Not set',
-        updatedAt: s.updated_at,
-        closeDate: plan && plan.target_close_date || null,
-        roi: {
-          annualBenefit: num(data.annualBenefit),
-          contractRoi: num(data.totalContractRoi),
-          contractNetBenefit: num(data.totalContractNetBenefit),
-          contractNpv: num(data.totalContractNpv),
-          contractMonths: num(data.contractMonths),
-          investment: num(data.totalContractInvestment)
-        },
-        solutionFit: solutionFit(s.customer_id ? handoffByCustomer.get(String(s.customer_id)) : null),
-        plan: planHealth(plan),
-        stakeholders: stakeholderHealth(people),
-        actions: actionsByBase.get(String(s.base_id)) || []
+        id:s.id, baseId:s.base_id, version:s.version, name:s.name, company:s.company, customerId:s.customer_id,
+        repId:s.owner_id, rep:s.owner_username, industry:s.industry || data.industry || 'Not set', buyingStage:savedStage===7&&s.buy_cycle_outcome?`Closed ${s.buy_cycle_outcome==='won'?'Won':'Lost'}`:`Stage ${savedStage}`,
+        solution:s.solution || data.solution || 'Not set', updatedAt:s.updated_at,
+        closeDate:plan && plan.target_close_date || null,
+        commercial:{opportunityValue:num(s.opportunity_profile?.estimatedOpportunityValue),currency:s.opportunity_profile?.currency||data.currency||'USD'},
+        roi:{ annualBenefit:num(data.annualBenefit), totalContractBenefit:num(data.totalContractBenefit), totalContractInvestment:num(data.totalContractInvestment), contractNetBenefit:num(data.totalContractNetBenefit), contractRoi:num(data.totalContractRoi), contractNpv:num(data.totalContractNpv), payback:num(data.payback), contractMonths:num(data.contractMonths), investment:num(data.totalContractInvestment) /* deprecated compatibility alias */ },
+        solutionFit:solutionFit(s.customer_id ? handoffByCustomer.get(String(s.customer_id)) : null),
+        plan:planHealth(plan), planRecord:plan || null, stakeholders:stakeholderHealth(people), stakeholderRecords:people,
+        actions:actionsByScenario.get(String(s.id)) || [],
+        stageGovernance:governance
       };
       deal.health = dealHealth(deal);
       deal.managementPriority = priority(deal);
-      deal.missing = [
-        !deal.closeDate && 'Target close date',
-        deal.plan.level === 'Missing' && 'Joint Project Plan',
-        deal.solutionFit.level === 'Not Assessed' && 'Solution Fit',
-        deal.stakeholders.level === 'Missing' && 'Stakeholder map'
-      ].filter(Boolean);
+      deal.missing = [deal.stageGovernance.stageGap>0 && `Stage evidence gap: ${deal.stageGovernance.stageGap}`, !deal.closeDate && 'Target close date', deal.plan.level === 'Missing' && 'Joint Project Plan', deal.solutionFit.level === 'Not Assessed' && 'Solution Fit', deal.stakeholders.level === 'Missing' && 'Stakeholder map'].filter(Boolean);
       return deal;
     });
-
-    res.json({ generatedAt: new Date().toISOString(), reps: reps.rows, deals });
-  } catch (err) {
-    console.error('Sales manager dashboard:', err.message);
-    res.status(500).json({ error: 'Failed to load the sales manager dashboard.' });
-  }
+    res.json({ generatedAt:new Date().toISOString(), reps:reps.rows, deals });
+  } catch (e) { console.error('Sales manager dashboard:', e.message); res.status(500).json({ error:'Failed to load the sales manager dashboard.' }); }
 });
 
-router.post('/actions', async (req, res) => {
-  const b = req.body || {};
-  if (!b.scenarioId) return res.status(400).json({ error: 'Scenario and action are required.' });
-  const fields = validateActionFields(b, { requireAction: true });
-  if (fields.error) return res.status(400).json({ error: fields.error });
-
+router.post('/actions', async (req,res) => {
+  const b=req.body||{};
+  if (!b.scenarioId || !text(b.action)) return res.status(400).json({error:'Scenario and action are required.'});
   try {
-    const { rows: scenarioRows } = await query(
-      `SELECT id, customer_id
-       FROM scenarios
-       WHERE id = $1 AND deleted_at IS NULL`,
-      [b.scenarioId]
-    );
-    if (!scenarioRows.length) return res.status(404).json({ error: 'Scenario not found.' });
-
-    const { rows } = await query(
-      `INSERT INTO sales_manager_actions
-        (scenario_id,customer_id,created_by,action,owner,due_date,priority,status,related_risk,expected_outcome,customer_commitment_sought)
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-       RETURNING *`,
-      [
-        b.scenarioId,
-        scenarioRows[0].customer_id || null,
-        req.user.id,
-        fields.action,
-        fields.owner || null,
-        fields.dueDate ?? null,
-        b.priority || 'medium',
-        b.status || 'open',
-        fields.relatedRisk || null,
-        fields.expectedOutcome || null,
-        fields.customerCommitmentSought || null
-      ]
-    );
+    const access=await scenarioAccess(req.user,b.scenarioId,'view');
+    if(!access.exists)return res.status(404).json({error:'Scenario not found.'});
+    if(!access.allowed)return res.status(403).json({error:'This scenario is outside your Sales Team scope.'});
+    const {rows}=await query(`INSERT INTO sales_manager_actions
+      (scenario_id,customer_id,created_by,action,owner,due_date,priority,status,related_risk,expected_outcome,customer_commitment_sought)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+      [b.scenarioId,b.customerId||null,req.user.id,text(b.action),text(b.owner)||null,b.dueDate||null,b.priority||'medium',b.status||'open',text(b.relatedRisk)||null,text(b.expectedOutcome)||null,text(b.customerCommitmentSought)||null]);
     res.status(201).json(rows[0]);
-  } catch (err) {
-    console.error('Create manager action:', err.message);
-    res.status(500).json({ error: 'Failed to save the manager action.' });
-  }
+  } catch(e){res.status(500).json({error:'Failed to save the manager action.'});}
 });
 
-router.patch('/actions/:id', async (req, res) => {
-  const b = req.body || {};
-  const fields = validateActionFields(b);
-  if (fields.error) return res.status(400).json({ error: fields.error });
-
-  const updates = [];
-  const values = [];
-  const push = (column, value) => {
-    values.push(value);
-    updates.push(`${column} = $${values.length}`);
-  };
-
-  if (b.action !== undefined) push('action', fields.action);
-  if (b.owner !== undefined) push('owner', fields.owner || null);
-  if (b.dueDate !== undefined) push('due_date', fields.dueDate);
-  if (b.priority !== undefined) push('priority', b.priority);
-  if (b.status !== undefined) push('status', b.status);
-  if (b.relatedRisk !== undefined) push('related_risk', fields.relatedRisk || null);
-  if (b.expectedOutcome !== undefined) push('expected_outcome', fields.expectedOutcome || null);
-  if (b.customerCommitmentSought !== undefined) push('customer_commitment_sought', fields.customerCommitmentSought || null);
-
-  if (!updates.length) return res.status(400).json({ error: 'No fields to update.' });
-  values.push(req.params.id);
-
-  try {
-    const { rows } = await query(
-      `UPDATE sales_manager_actions
-       SET ${updates.join(', ')}
-       WHERE id = $${values.length}
-       RETURNING *`,
-      values
-    );
-    if (!rows.length) return res.status(404).json({ error: 'Action not found.' });
-    res.json(rows[0]);
-  } catch (err) {
-    console.error('Update manager action:', err.message);
-    res.status(500).json({ error: 'Failed to update the manager action.' });
-  }
+router.patch('/actions/:id', async (req,res) => {
+  const b=req.body||{};
+  try { const existing=await query('SELECT scenario_id FROM sales_manager_actions WHERE id=$1',[req.params.id]);
+    if(!existing.rows.length)return res.status(404).json({error:'Action not found.'});
+    const access=await scenarioAccess(req.user,existing.rows[0].scenario_id,'view');
+    if(!access.allowed)return res.status(403).json({error:'This action is outside your Sales Team scope.'});
+    const {rows}=await query(`UPDATE sales_manager_actions SET action=COALESCE($1,action),owner=COALESCE($2,owner),due_date=$3,
+    priority=COALESCE($4,priority),status=COALESCE($5,status),related_risk=COALESCE($6,related_risk),expected_outcome=COALESCE($7,expected_outcome),customer_commitment_sought=COALESCE($8,customer_commitment_sought)
+    WHERE id=$9 RETURNING *`,[b.action||null,b.owner||null,b.dueDate||null,b.priority||null,b.status||null,b.relatedRisk||null,b.expectedOutcome||null,b.customerCommitmentSought||null,req.params.id]);
+    if(!rows.length)return res.status(404).json({error:'Action not found.'}); res.json(rows[0]);
+  } catch(e){res.status(500).json({error:'Failed to update the manager action.'});}
 });
 
-router.delete('/actions/:id', async (req, res) => {
-  try {
-    const { rows } = await query(
-      'DELETE FROM sales_manager_actions WHERE id = $1 RETURNING id',
-      [req.params.id]
-    );
-    if (!rows.length) return res.status(404).json({ error: 'Action not found.' });
-    res.json({ ok: true });
-  } catch (err) {
-    console.error('Delete manager action:', err.message);
-    res.status(500).json({ error: 'Failed to delete the manager action.' });
-  }
-});
+router.delete('/actions/:id', async(req,res)=>{try{const existing=await query('SELECT scenario_id FROM sales_manager_actions WHERE id=$1',[req.params.id]);if(!existing.rows.length)return res.status(404).json({error:'Action not found.'});const access=await scenarioAccess(req.user,existing.rows[0].scenario_id,'view');if(!access.allowed)return res.status(403).json({error:'This action is outside your Sales Team scope.'});const {rows}=await query('DELETE FROM sales_manager_actions WHERE id=$1 RETURNING id',[req.params.id]);res.json({ok:true});}catch(e){res.status(500).json({error:'Failed to delete the manager action.'});}});
 
 module.exports = router;

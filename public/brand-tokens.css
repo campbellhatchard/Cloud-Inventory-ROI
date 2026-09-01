@@ -1,0 +1,78 @@
+/* GENERATED from config/cloud-inventory-brand.json. Do not edit. */
+:root{
+  --ci-dark:#1E2931;
+  --ci-blue:#00A9CC;
+  --ci-orange:#F9642E;
+  --ci-red:#FF341F;
+  --ci-light-blue:#F5F8FA;
+  --ci-white:#FFFFFF;
+  --ci-blue-dark:#0089A6;
+  --ci-blue-pale:#E4F6FA;
+  --ci-green:#2E7D32;
+  --ci-deep-red:#C81E10;
+  --ci-orange-dark:#C24A1E;
+  --ci-canvas:#F4F7FA;
+  --ci-border:#E3E9EE;
+  --ci-muted:#6B7A8D;
+  --ci-text:#1E2931;
+  --ci-text-muted:#5D6B7C;
+  --ci-link:#006B80;
+  --ci-focus:#0089A6;
+  --ci-surface:#FFFFFF;
+  --ci-info-surface:#E4F6FA;
+  --ci-success-surface:#F0FDF4;
+  --ci-danger-surface:#FEF2F2;
+  --ci-warning-surface:#FFF7ED;
+  --ci-warning-text:#7A4A00;
+  --ci-danger-text:#991B1B;
+  --ci-success-text:#166534;
+  --ci-neutral50:#F8FAFC;
+  --ci-neutral100:#F1F5F9;
+  --ci-neutral200:#E2E8F0;
+  --ci-neutral300:#CBD5E1;
+  --ci-neutral400:#94A3B8;
+  --ci-neutral500:#64748B;
+  --ci-neutral600:#475569;
+  --ci-neutral700:#334155;
+  --ci-neutral800:#1E293B;
+  --ci-document-background:#FFFFFF;
+  --ci-document-canvas:#F8FAFC;
+  --ci-document-heading:#1E2931;
+  --ci-document-body:#1E2931;
+  --ci-document-muted:#5D6B7C;
+  --ci-document-accent:#00A9CC;
+  --ci-document-accessible-accent:#0089A6;
+  --ci-document-border:#E2E8F0;
+  --ci-document-table-header:#1E2931;
+  --ci-document-info-surface:#E4F6FA;
+  --ci-document-danger-surface:#FEF2F2;
+  --ci-document-danger:#991B1B;
+  --ci-document-success-surface:#F0FDF4;
+  --ci-document-success:#166534;
+  --ci-document-warning-surface:#FFF7ED;
+  --ci-document-warning:#C24A1E;
+  --ci-document-logo-role:logoOfficeHighResolution;
+  --doc-background:#FFFFFF;
+  --doc-canvas:#F8FAFC;
+  --doc-heading:#1E2931;
+  --doc-body:#1E2931;
+  --doc-muted:#5D6B7C;
+  --doc-accent:#00A9CC;
+  --doc-accessible-accent:#0089A6;
+  --doc-border:#E2E8F0;
+  --doc-table-header:#1E2931;
+  --doc-info-surface:#E4F6FA;
+  --doc-danger-surface:#FEF2F2;
+  --doc-danger:#991B1B;
+  --doc-success-surface:#F0FDF4;
+  --doc-success:#166534;
+  --doc-warning-surface:#FFF7ED;
+  --doc-warning:#C24A1E;
+  --doc-logo-role:logoOfficeHighResolution;
+  --ci-font:Inter, 'Segoe UI', system-ui, -apple-system, sans-serif;--ci-radius-sm:6px;--ci-radius-md:10px;--ci-radius-lg:14px;--ci-shadow-card:0 2px 8px rgba(30,41,49,.08);
+  --navy:var(--ci-dark);--cyan:var(--ci-blue);--cyan-dark:var(--ci-blue-dark);--cyan-pale:var(--ci-blue-pale);--green:var(--ci-green);--red:var(--ci-deep-red);--orange:var(--ci-orange-dark);--gray-bg:var(--ci-canvas);--gray-200:var(--ci-neutral200);--gray-500:var(--ci-neutral500);--font:var(--ci-font);
+}
+html,body,button,input,select,textarea{font-family:var(--ci-font)}
+:focus-visible{outline:3px solid var(--ci-focus);outline-offset:2px}
+.ci-status{display:inline-flex;align-items:center;gap:.35rem}.ci-status::before{content:attr(data-icon);font-weight:800}
+.ci-brand-footer{color:var(--ci-text-muted);font-size:.75rem}

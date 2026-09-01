@@ -17,9 +17,26 @@
     const api = factory();                 // Browser global
     root.OVERLAP_METHOD = api.OVERLAP_METHOD;
     root.calcROI = api.calcROI;
+    root.ROI_FORMULA_REGISTRY = api.ROI_FORMULA_REGISTRY;
   }
 })(typeof self !== 'undefined' ? self : this, function () {
   const OVERLAP_METHOD = 'incremental-after-turns';
+  const ROI_FORMULA_REGISTRY = Object.freeze({
+    workforce_productivity:{economicClass:'method_dependent',methods:{labor_waste:{economicClass:'direct_cost_savings',requiredInputs:['users','labor','laborWastePct','mLabor']},throughput:{economicClass:'capacity_value',requiredInputs:['ordersPerYr','costPerOrder','pickRateGainPct','mThroughput']}},overlapGroup:'workforce_productivity'},
+    labor_productivity:{economicClass:'method_dependent',aliasOf:'workforce_productivity',methods:{labor_waste:{economicClass:'direct_cost_savings',requiredInputs:['users','labor','laborWastePct','mLabor']},throughput:{economicClass:'capacity_value',requiredInputs:['ordersPerYr','costPerOrder','pickRateGainPct','mThroughput']}},overlapGroup:'workforce_productivity'},
+    count_labor:{economicClass:'direct_cost_savings',requiredInputs:['countDaysYr','countPeople','labor','mCount'],overlapGroup:null},
+    inventory_writeoff:{economicClass:'direct_cost_savings',requiredInputs:['effectiveShrinkBase','mShrinkage'],overlapGroup:'central_inventory_loss'},
+    inventory_carrying:{economicClass:'working_capital_carrying_benefit',requiredInputs:['inventory','carryRate'],overlapGroup:'inventory_carrying'},
+    service_revenue_margin:{economicClass:'recovered_contribution_margin',requiredInputs:['contributionMarginPct','mOtif'],overlapGroup:'service_revenue'},
+    service_penalties:{economicClass:'direct_cost_savings',requiredInputs:['servicePenaltyCostYr','mServicePenalty'],overlapGroup:'service_failure'},
+    expedite_premium:{economicClass:'direct_cost_savings',requiredInputs:['expediteSpendYr','mExpedite'],overlapGroup:'service_failure'},
+    downtime:{economicClass:'risk_avoidance',requiredInputs:['downtimeEventsYr','downtimeHrsPerEvent','downtimeCostPerHr','mDowntime'],overlapGroup:'service_failure'},
+    order_error:{economicClass:'direct_cost_savings',requiredInputs:['ordersPerYr','orderErrorPct','costPerError','mAccuracy'],overlapGroup:'fulfillment_error'},
+    first_time_fix:{economicClass:'direct_cost_savings',requiredInputs:['repeatVisitsYr','costPerTruckRoll','mFirstFix'],overlapGroup:'field_service'},
+    field_leakage:{economicClass:'direct_cost_savings',requiredInputs:['fieldInvValue','fieldLeakageRate','mFieldLeakage'],overlapGroup:'field_inventory_loss'},
+    field_reconciliation:{economicClass:'direct_cost_savings',requiredInputs:['fieldLocations','fieldReconcilePerYr','fieldReconcilePersonHours','labor','mFieldCount'],overlapGroup:null},
+    it_displacement:{economicClass:'direct_cost_savings',requiredInputs:['itCost','mIt'],overlapGroup:null}
+  });
 
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
@@ -37,12 +54,14 @@
       'expediteSpendYr','mExpedite','countDaysYr','countPeople','mCount','ordersPerYr','costPerOrder',
       'pickRateGainPct','mThroughput','orderErrorPct','costPerError','mAccuracy',
       'fieldInvValue','fieldLeakageRate','mFieldLeakage',
-      'fieldLocations','fieldReconcileCost','fieldReconcilePerYr','mFieldCount','currentAccuracy'];
+      'fieldLocations','fieldReconcileCost','fieldReconcilePerYr','fieldReconcilePersonHours','mFieldCount','currentAccuracy',
+      'servicePenaltyCostYr','mServicePenalty','lostSalesYr','contributionMarginPct',
+      'repeatVisitsYr','costPerTruckRoll','mFirstFix'];
     const _v = Object.assign({}, v);
     for (const k of _num) { const n = parseFloat(_v[k]); _v[k] = (isNaN(n) || n < 0) ? 0 : n; }
     const fractionFields = ['mLabor','mShrinkage','mCarrying','carryRate','mOtif','otifRisk','mIt',
       'discRate','laborWastePct','mDowntime','mExpedite','mCount','pickRateGainPct','mThroughput',
-      'orderErrorPct','mAccuracy','mFieldLeakage','mFieldCount'];
+      'orderErrorPct','mAccuracy','mFieldLeakage','mFieldCount','mServicePenalty','mFirstFix'];
     for (const k of fractionFields) _v[k] = clamp(_v[k], 0, 1);
     for (const k of ['otifBaseline','otifTarget','fieldLeakageRate','currentAccuracy']) {
       _v[k] = clamp(_v[k], 0, 100);
@@ -62,6 +81,7 @@
     _v.hasFieldInventory = v.hasFieldInventory === true || v.hasFieldInventory === 1
       || String(v.hasFieldInventory).toLowerCase() === 'true';
     _v.modelVersion = v.modelVersion;  // preserve (may be undefined for legacy)
+    _v.contributionMarginPct = _v.contributionMarginPct > 1 ? clamp(_v.contributionMarginPct/100,0,1) : clamp(_v.contributionMarginPct,0,1);
     v = _v;
 
   /* ── 1. Labor savings ──
@@ -76,7 +96,14 @@
   /* ── 2. Write-off / shrinkage savings ──
      Use prospect's actual $ write-off if supplied, else inventory × shrinkRate.
      This is a DIRECT saving — reduction in actual loss dollars.              */
-  const shrinkSav = v.effectiveShrinkBase * v.mShrinkage;
+  const accuracyDerivedRecovery=(v.modelVersion>=28&&v.currentAccuracy>0&&v.currentAccuracy<99.5)
+    ? Math.min(.60,((99.5-v.currentAccuracy)*5)/100):null;
+  const explicitRecoveryInputs=Array.isArray(_v.explicitRecoveryInputs)?_v.explicitRecoveryInputs:[];
+  const shrinkRecoveryExplicit=_v.mShrinkageExplicit===true||explicitRecoveryInputs.includes('mShrinkage');
+  const carryingRecoveryExplicit=_v.mCarryingExplicit===true||explicitRecoveryInputs.includes('mCarrying');
+  const effectiveShrinkRecovery=(v.modelVersion>=28&&accuracyDerivedRecovery!==null&&!shrinkRecoveryExplicit)?accuracyDerivedRecovery:v.mShrinkage;
+  const effectiveCarryingRecovery=(v.modelVersion>=28&&accuracyDerivedRecovery!==null&&!carryingRecoveryExplicit)?accuracyDerivedRecovery:v.mCarrying;
+  const shrinkSav = v.effectiveShrinkBase * effectiveShrinkRecovery;
 
   /* ── 3–4. Inventory carrying cost and turns ──
      Both approaches estimate carrying-cost savings on the same inventory
@@ -85,7 +112,7 @@
      benefit equal to the higher estimate instead of adding overlapping
      estimates or relying on an arbitrary fixed deduction.              */
   const annualCarryCost   = v.inventory * v.carryRate;
-  const carrySavGross     = annualCarryCost * v.mCarrying;
+  const carrySavGross     = annualCarryCost * effectiveCarryingRecovery;
 
   let capitalFreed = 0, turnsSav = 0;
   if (v.invTurnsCurrent > 0 && v.invTurnsBenchmark > 0 && v.invTurnsCurrent < v.invTurnsBenchmark) {
@@ -96,12 +123,15 @@
   const inventoryCarrySav = carrySav + turnsSav;
   const overlapAdj = Math.min(carrySavGross, turnsSav);
   /* ── 5. OTIF savings ── */
-  let otifSav = 0;
-  if (v.otifBaseline > 0 && v.otifTarget > 0 && v.otifTarget > v.otifBaseline) {
+  let otifSav = 0,serviceRevenueMethod=null,directLostMarginBase=0,modeledOtifMarginBase=0;
+  if(v.modelVersion>=28){
+    if(v.contributionMarginPct>0&&v.lostSalesYr>0){directLostMarginBase=v.lostSalesYr*v.contributionMarginPct;otifSav=directLostMarginBase*v.mOtif;serviceRevenueMethod='direct_lost_sales';}
+    else if(v.contributionMarginPct>0&&v.revenue>0&&v.otifBaseline>0&&v.otifTarget>v.otifBaseline){modeledOtifMarginBase=v.revenue*((v.otifTarget-v.otifBaseline)/100)*v.contributionMarginPct;otifSav=modeledOtifMarginBase*v.mOtif;serviceRevenueMethod='modeled_otif_margin';}
+  } else if (v.otifBaseline > 0 && v.otifTarget > 0 && v.otifTarget > v.otifBaseline) {
     /* Both entered and target > baseline: use the gap */
     const otifGapPp = (v.otifTarget - v.otifBaseline) / 100;
     otifSav = v.revenue * otifGapPp * v.mOtif;
-  } else if (!v.otifBaseline && !v.otifTarget) {
+  } else if (v.modelVersion<28&&!v.otifBaseline && !v.otifTarget) {
     /* Neither entered: use the industry-risk fallback so there is still
        some OTIF value in the model when the rep hasn't filled these in. */
     otifSav = v.revenue * v.otifRisk * v.mOtif;
@@ -121,6 +151,8 @@
   /* ── 8. Expedite / emergency procurement premium (v2.5 lever) ──
      annual expedite spend × premium % that better accuracy avoids.   */
   const expediteSav = (v.expediteSpendYr || 0) * (v.mExpedite || 0);
+  const servicePenaltySav=(v.modelVersion>=28)?(v.servicePenaltyCostYr||0)*(v.mServicePenalty||0):0;
+  const firstFixSav=(v.modelVersion>=28)?(v.repeatVisitsYr||0)*(v.costPerTruckRoll||0)*(v.mFirstFix||0):0;
 
   /* ── 9. Physical-count / cycle-count labor (v2.5 lever) ──
      count days/yr × people × daily labor cost, recovered fraction.   */
@@ -132,7 +164,7 @@
      scenarios — but we also hard-gate on modelVersion for clarity and
      to protect the documented "old scenarios recalculate identically". */
   const newLeverSav = (v.modelVersion >= 25)
-    ? (downtimeSav + expediteSav + countSav)
+    ? (downtimeSav + expediteSav + countSav + servicePenaltySav + firstFixSav)
     : 0;
 
   /* ── 10. Warehouse throughput / pick-rate productivity (v2.6 / WMS) ──
@@ -149,7 +181,11 @@
     ? (v.ordersPerYr || 0) * (v.orderErrorPct || 0) * (v.costPerError || 0) * (v.mAccuracy || 0)
     : 0;
 
-  const wmsLeverSav = throughputSav + accuracySav;
+  const laborProductivityGross=laborSav,throughputProductivityGross=throughputSav;
+  const productivityMethodUsed=(v.modelVersion>=28)?(v.laborWastePct>0&&laborProductivityGross>0?'labor_waste':throughputProductivityGross>0?'throughput':null):null;
+  const countedProductivitySav=(v.modelVersion>=28)?(productivityMethodUsed==='labor_waste'?laborProductivityGross:productivityMethodUsed==='throughput'?throughputProductivityGross:0):laborProductivityGross+throughputProductivityGross;
+  const productivityOverlapRemoved=(v.modelVersion>=28)?Math.max(0,laborProductivityGross+throughputProductivityGross-countedProductivitySav):0;
+  const wmsLeverSav = (v.modelVersion>=28?0:throughputSav) + accuracySav;
 
   /* ── Field inventory levers (opt-in; only when hasFieldInventory=true) ──
      Three distinct value drivers for stock held outside a fixed warehouse:
@@ -160,7 +196,7 @@
         rate × recovery %.
 
      2. Carrying cost on excess field stock — buffer stock held at distributed
-        locations because records are not trusted. fieldInventoryValue ×
+        locations because records are not trusted. fieldInvValue ×
         carryRate × (1 - invTurnsBenchmark/fieldTurns) × recovery %.
         Simplified: we apply the standard carryRate to the field inventory
         value × the same mCarrying recovery %.
@@ -171,14 +207,40 @@
     ? (v.fieldInvValue * (v.fieldLeakageRate / 100)) * v.mFieldLeakage
     : 0;
   const fiCarrySav = (v.hasFieldInventory && v.fieldInvValue)
-    ? v.fieldInvValue * v.carryRate * v.mCarrying
+    ? v.fieldInvValue * v.carryRate * effectiveCarryingRecovery
     : 0;
-  const fiCountSav = (v.hasFieldInventory && v.fieldLocations && v.fieldReconcileCost)
-    ? v.fieldLocations * v.fieldReconcileCost * v.fieldReconcilePerYr * v.mFieldCount
-    : 0;
+  const loadedHourlyLaborCost=(v.labor||0)/2080;
+  const fiCountSav = (v.modelVersion>=28&&v.hasFieldInventory&&v.fieldLocations&&v.fieldReconcilePerYr&&v.fieldReconcilePersonHours&&loadedHourlyLaborCost)
+    ? v.fieldLocations*v.fieldReconcilePerYr*v.fieldReconcilePersonHours*loadedHourlyLaborCost*v.mFieldCount
+    : (v.hasFieldInventory && v.fieldLocations && v.fieldReconcileCost)
+      ? v.fieldLocations * v.fieldReconcileCost * v.fieldReconcilePerYr * v.mFieldCount : 0;
   const fieldInvSav = fiLeakageSav + fiCarrySav + fiCountSav;
 
-  const annualBenefit = laborSav + shrinkSav + inventoryCarrySav + otifSav + itSav + newLeverSav + wmsLeverSav + fieldInvSav;
+  const annualBenefit = (v.modelVersion>=28?countedProductivitySav:laborSav) + shrinkSav + inventoryCarrySav + otifSav + itSav + newLeverSav + wmsLeverSav + fieldInvSav;
+  const overlapAdjustments=[
+    {pool:'inventory_carrying',candidateValues:{directCarrying:carrySavGross,turns:turnsSav},countedValue:inventoryCarrySav,removedValue:overlapAdj,method:'higher_estimate'},
+    {pool:'workforce_productivity',candidateValues:{laborProductivityGross,throughputProductivityGross},countedValue:v.modelVersion>=28?countedProductivitySav:laborProductivityGross+throughputProductivityGross,removedValue:productivityOverlapRemoved,method:v.modelVersion>=28?(productivityMethodUsed||'none'):'legacy_additive'},
+    {pool:'service_revenue',candidateValues:{directLostMarginBase,modeledOtifMarginBase},countedValue:otifSav,removedValue:v.modelVersion>=28?Math.max(0,(directLostMarginBase+modeledOtifMarginBase)*v.mOtif-otifSav):0,method:serviceRevenueMethod||'none'}
+  ];
+  const productivityEconomicClass=v.modelVersion>=28&&productivityMethodUsed==='throughput'?'capacity_value':'direct_cost_savings';
+  const activeValueDrivers=[
+    ['workforce_productivity',productivityMethodUsed==='throughput'?'Throughput capacity':'Workforce productivity — labor recovery',v.modelVersion>=28?countedProductivitySav:laborSav,productivityEconomicClass],
+    ['inventory_writeoff','Inventory write-off reduction',shrinkSav,'direct_cost_savings'],
+    ['inventory_carrying','Inventory carrying benefit',inventoryCarrySav,'working_capital_carrying_benefit'],
+    ['service_revenue_margin','Recovered contribution margin',otifSav,v.modelVersion>=28?'recovered_contribution_margin':'direct_cost_savings'],
+    ['service_penalties','Service penalties / credits',servicePenaltySav,'direct_cost_savings'],
+    ['expedite_premium','Expedite premium',expediteSav,'direct_cost_savings'],
+    ['downtime','Downtime reduction',downtimeSav,'risk_avoidance'],['count_labor','Count labor',countSav,'direct_cost_savings'],
+    ['order_error','Order-error operations',accuracySav,'direct_cost_savings'],['first_time_fix','First-time-fix / truck rolls',firstFixSav,'direct_cost_savings'],
+    ['field_leakage','Field leakage',fiLeakageSav,'direct_cost_savings'],['field_carrying','Field inventory carrying benefit',fiCarrySav,'working_capital_carrying_benefit'],['field_reconciliation','Field reconciliation',fiCountSav,'direct_cost_savings'],
+    ['it_displacement','IT displacement',itSav,'direct_cost_savings']
+  ].filter(x=>x[2]>0).map(([formulaId,label,annualValue,economicClass])=>({formulaId,label,annualValue,economicClass,counted:true}));
+  const categoryTotal=category=>activeValueDrivers.filter(d=>d.economicClass===category).reduce((sum,d)=>sum+d.annualValue,0);
+  const annualDirectCostSavings=categoryTotal('direct_cost_savings');
+  const annualRecoveredContributionMargin=categoryTotal('recovered_contribution_margin');
+  const annualWorkingCapitalBenefit=categoryTotal('working_capital_carrying_benefit');
+  const annualCapacityValue=categoryTotal('capacity_value');
+  const annualRiskAvoidance=categoryTotal('risk_avoidance');
 
   /* ── Ramp-up & implementation timeline ──
      implMonths: months from contract signing to go-live (0 benefit)
@@ -319,12 +381,16 @@
   const totalContractRoi = totalContractInvestment > 0 ? (totalContractNetBenefit / totalContractInvestment) * 100 : null;
 
   return {
-    laborSav, shrinkSav,
+    laborSav, laborProductivityGross,throughputProductivityGross,countedProductivitySav,productivityMethodUsed,productivityOverlapRemoved,
+    shrinkSav,effectiveShrinkRecovery,effectiveCarryingRecovery,accuracyDerivedRecovery,
     carrySav, carrySavGross, turnsSav, inventoryCarrySav, capitalFreed, otifSav, itSav,
-    downtimeSav, expediteSav, countSav, newLeverSav,
+    downtimeSav, expediteSav,servicePenaltySav,firstFixSav,countSav, newLeverSav,
     throughputSav, accuracySav, wmsLeverSav,
     fiLeakageSav, fiCarrySav, fiCountSav, fieldInvSav,
-    overlapAdj, annualCarryCost,
+    overlapAdj,overlapAdjustments, annualCarryCost,
+    serviceRevenueMethod,directLostMarginBase,modeledOtifMarginBase,
+    annualDirectCostSavings,annualRecoveredContributionMargin,annualWorkingCapitalBenefit,annualCapacityValue,annualRiskAvoidance,annualEconomicBenefit:annualBenefit,
+    activeValueDrivers,formulaRegistryVersion:28,
     annualBenefit, year1Benefit, year1Factor,
     totalInvestY1, netY1, roi,
     paybackFromSigning, paybackFromGoLive,
@@ -347,5 +413,5 @@
   };
 }
 
-  return { OVERLAP_METHOD, calcROI };
+  return { OVERLAP_METHOD, ROI_FORMULA_REGISTRY, calcROI };
 });

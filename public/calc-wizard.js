@@ -336,7 +336,7 @@ function renderGuidedNav() {
       <span class="gd-step-label">Step ${_guidedIdx + 1} of ${total} · ${stepLabels[_guidedIdx]}</span>
       <div class="gd-btns">
         <button class="btn btn-ghost btn-sm" onclick="guidedBack()" ${_guidedIdx === 0 ? 'disabled' : ''}>← Back</button>
-        <button class="btn btn-cta btn-sm" onclick="guidedNext()">${isLast ? 'Finish → Executive View' : 'Next →'}</button>
+        <button class="btn btn-primary btn-sm" onclick="guidedNext()">${isLast ? 'Finish → Executive View' : 'Next →'}</button>
       </div>
     </div>`;
 }

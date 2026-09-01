@@ -122,7 +122,6 @@ function loadFromObject(i) {
   }
   // restore confidence flags
   if (i.confidence) confirmedFields = new Set(i.confidence);
-  if (i.dealStage) document.getElementById('dealStage') && (document.getElementById('dealStage').value = i.dealStage);
   if (i.execAudience) { const el = document.getElementById('execAudience'); if (el) el.value = i.execAudience; }
   /* Restore Three Whys (saved from the Exec view) into both the textareas and
      the in-memory object, so exec-view narrative edits survive a reload. */
@@ -171,7 +170,9 @@ function loadFromObject(i) {
     // Backwards compat: old saves only had confirmed set
     fieldStates = {};
     (i.confidence || []).forEach(id => { fieldStates[id] = 'confirmed'; confirmedFields.add(id); });
-  }
+  } else fieldStates = {};
+  fieldProvenance = i.fieldProvenance ? { ...i.fieldProvenance } : {};
+  confirmedFields = new Set(Object.entries(fieldStates).filter(([,state]) => ['confirmed','confirmed_customer','confirmed_prospect'].includes(state)).map(([id]) => id));
   if (i.industry && IND[i.industry]) document.getElementById('benchBadge').style.display = 'inline-flex';
   /* Auto-expand the collapsed field-service group if this scenario actually
      has field-service data, so a loaded MEP deal shows its entered values. */
@@ -228,7 +229,7 @@ function renderComparison() {
     { label: 'One-time costs',     fn: s => fmtFull(s.inputs.otc) },
     { label: 'Revenue',            fn: s => fmtFull(s.inputs.revenue) },
     { label: 'Users',              fn: s => Math.round(s.inputs.users).toLocaleString() },
-    { label: 'Deal stage',         fn: s => s.dealStage || '—' },
+    { label: 'Current BuyCycle Stage', fn: s => typeof scenarioStageDisplay==='function'?scenarioStageDisplay(s):(s.dealStage||'Stage 2') },
   ];
 
   const best = (key, higherIsBetter = true) => {
@@ -380,7 +381,7 @@ function removeLogo() {
    5. CUSTOMER PROOF POINTS
    By industry — shown in exec view & sidebar
    ───────────────────────────────────────── */
-const PROOF_POINTS = {
+const LEGACY_UNVERIFIED_PROOF_POINTS = {
   telecom: [
     { company: 'Major Telecom Provider', result: '34% reduction in field inventory discrepancies', metric: '$2.1M annual savings' },
     { company: 'Regional Carrier', result: 'Cycle count time reduced from 3 days to 4 hours', metric: '99.2% inventory accuracy' },
@@ -423,20 +424,15 @@ const PROOF_POINTS = {
   ],
 };
 
-function renderProofPoints(industry) {
+window.selectedCustomerProofRecords=[];
+async function renderProofPoints(industry) {
   const el = document.getElementById('proofPointsPanel');
   if (!el) return;
-  const points = PROOF_POINTS[industry];
-  if (!points) { el.innerHTML = ''; return; }
-  el.innerHTML = `
-    <div class="proof-header">Customer results — ${IND[industry].label}</div>
-    ${points.map(p => `
-      <div class="proof-card">
-        <div class="proof-company">${p.company}</div>
-        <div class="proof-result">${p.result}</div>
-        <div class="proof-metric">${p.metric}</div>
-      </div>`).join('')}`;
+  const id=window._calcScenarioId;if(!id){window.selectedCustomerProofRecords=[];el.innerHTML='<div class="proof-header">Customer proof</div><p class="field-hint">Save this opportunity to select approved customer proof.</p>';return;}
+  try{const res=await apiFetch('/api/scenarios/'+encodeURIComponent(id)+'/customer-proof');if(!res.ok)throw Error();const data=await res.json();window.selectedCustomerProofRecords=data.selected||[];const selected=new Set(data.selectedIds||[]),items=data.available||[];el.innerHTML=`<div class="proof-header">Customer proof</div><p class="field-hint">Approved Cloud Inventory customer outcomes relevant to this opportunity. Select up to three.</p>${(data.unavailableSelectedIds||[]).length?'<div class="proposal-review-notice">Selected proof is no longer approved for customer use. It has been removed from external outputs.</div>':''}${items.length?items.map(p=>`<label class="proof-card"><input type="checkbox" ${selected.has(p.id)?'checked':''} onchange="saveCustomerProofSelection()" value="${p.id}"><span><b>${p.displayName}</b><span>${p.result}</span>${p.metric?`<strong>${p.metric}</strong>`:''}<small>Source: ${p.sourceDisplay}${p.sourceDate?' · '+p.sourceDate:''} · reviewed ${p.lastReviewedAt}</small></span></label>`).join(''):'<div class="empty-state"><p>No approved customer proof is currently available for this industry/use case. The executive output will omit the Customer Results section.</p></div>'}`;}catch(_){el.innerHTML='<p class="field-hint">Approved customer proof could not be loaded.</p>';}
 }
+async function saveCustomerProofSelection(){const boxes=[...document.querySelectorAll('#proofPointsPanel input[type=checkbox]:checked')];if(boxes.length>3){boxes.at(-1).checked=false;return showToast?.('Select no more than three proof points.');}const res=await apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/customer-proof',{method:'PUT',body:JSON.stringify({proofIds:boxes.map(x=>x.value)})});if(!res.ok)return showToast?.('Customer proof selection could not be saved.');const data=await res.json();window.selectedCustomerProofRecords=data.selected||[];showToast?.('Customer proof selection saved.');if(typeof renderExec==='function')renderExec();}
+window.saveCustomerProofSelection=saveCustomerProofSelection;
 
 /* ─────────────────────────────────────────
    6. CONFIDENCE SCORING
@@ -454,9 +450,27 @@ const CONFIDENCE_FIELDS = [
   { id: 'm_shrinkRate',    label: 'Shrinkage rate %',   weight: 8,  group: 'Assumptions' },
   { id: 'm_carryRate',     label: 'Carrying rate %',    weight: 7,  group: 'Assumptions' },
   { id: 'm_labor',         label: 'Labor gain %',       weight: 7,  group: 'Assumptions' },
+  { id: 'laborCost',       label: 'Labor cost',         weight: 10, group: 'Current-state inputs' },
+  { id: 'laborWastePct',   label: 'Labor waste %',      weight: 8,  group: 'Current-state inputs' },
+  { id: 'downtimeEventsYr',label: 'Downtime events',    weight: 6,  group: 'Current-state inputs' },
+  { id: 'downtimeHrsPerEvent',label: 'Downtime hours',  weight: 6,  group: 'Current-state inputs' },
+  { id: 'downtimeCostPerHr',label: 'Downtime cost',     weight: 6,  group: 'Current-state inputs' },
+  { id: 'expediteSpendYr', label: 'Expedite spend',     weight: 6,  group: 'Current-state inputs' },
+  { id: 'countDaysYr',     label: 'Count days',         weight: 5,  group: 'Current-state inputs' },
+  { id: 'countPeople',     label: 'Count participants', weight: 5,  group: 'Current-state inputs' },
+  { id: 'ordersPerYr',     label: 'Orders per year',    weight: 6,  group: 'Current-state inputs' },
+  { id: 'costPerOrder',    label: 'Cost per order',     weight: 5,  group: 'Current-state inputs' },
+  { id: 'orderErrorPct',   label: 'Order error rate',   weight: 5,  group: 'Current-state inputs' },
+  { id: 'costPerError',    label: 'Cost per error',     weight: 5,  group: 'Current-state inputs' },
+  { id: 'fieldInvValue',   label: 'Field inventory',    weight: 7,  group: 'Field inventory inputs' },
+  { id: 'fieldLeakageRate',label: 'Field leakage %',    weight: 5,  group: 'Field inventory inputs' },
+  { id: 'fieldLocations',  label: 'Field locations',    weight: 5,  group: 'Field inventory inputs' },
+  { id: 'fieldReconcileCost',label: 'Reconcile cost',   weight: 5,  group: 'Field inventory inputs' },
+  { id: 'fieldReconcilePerYr',label: 'Reconciliations', weight: 5,  group: 'Field inventory inputs' },
 ];
 
 let fieldStates = {};
+let fieldProvenance = {};
 let confirmedFields = new Set();
 
 function autoFlagConfidence() {
@@ -472,36 +486,38 @@ function autoFlagConfidence() {
   if (changed) renderConfidence();
 }
 
-function toggleConfidence(fieldId) {
+function openDataSourceMenu(fieldId) {
   const current = fieldStates[fieldId] || '';
-  if (current === 'confirmed_prospect') {
-    /* Prospect-verified is authoritative. Allow a rep to override, but only
-       with an explicit confirmation, since it erases customer provenance. */
-    if (!confirm('This input was verified by the prospect through discovery. Override that status? It will become a rep estimate.')) return;
-    fieldStates[fieldId] = 'estimated';
-    confirmedFields.delete(fieldId);
-  } else if (current === 'confirmed') {
-    fieldStates[fieldId] = 'estimated';
-    confirmedFields.delete(fieldId);
-  } else {
-    /* Rep manually confirming (plain 'confirmed' = rep-confirmed) */
-    fieldStates[fieldId] = 'confirmed';
-    confirmedFields.add(fieldId);
-  }
-  renderConfidence();
+  if(!current)return;
+  const f=CONFIDENCE_FIELDS.find(x=>x.id===fieldId)||{label:fieldId},p=fieldProvenance[fieldId]||{},old=document.getElementById('dataSourceModal');if(old)old.remove();
+  const wrap=document.createElement('div');wrap.id='dataSourceModal';wrap.className='data-source-modal';wrap.innerHTML=`<div class="data-source-card" role="dialog" aria-modal="true"><header><div><span>Value Source &amp; History</span><h3>${f.label}</h3></div><button type="button" onclick="document.getElementById('dataSourceModal').remove()">×</button></header><div class="value-history-summary"><b>${p.source||'Current working value'}</b><small>${p.date?'Evidence date '+p.date:'Customer validation has not been recorded for this value.'}</small></div><form onsubmit="saveDataSource(event,'${fieldId}')"><label><input type="radio" name="dataSourceState" value="estimated" ${current==='estimated'?'checked':''}> <b>Rep Estimate</b><small>Seller working value — needs customer validation</small></label><label><input type="radio" name="dataSourceState" value="confirmed" ${current==='confirmed'?'checked':''}> <b>Rep Confirmed</b><small>Internally reviewed; not customer supplied</small></label><label class="prospect-state"><input type="radio" name="dataSourceState" value="confirmed_prospect" ${current==='confirmed_prospect'?'checked':''} disabled> <b>Prospect Verified</b><small>Created only by an immutable Prospect Link submission</small></label><footer><button type="button" class="btn btn-ghost" onclick="openValueHistory('${fieldId}')">View history</button><button type="button" class="btn btn-ghost" onclick="openRevalidateValue('${fieldId}')">Revalidate Value</button><button type="button" class="btn btn-ghost" onclick="document.getElementById('dataSourceModal').remove()">Cancel</button><button class="btn btn-primary">Save working source</button></footer></form></div>`;document.body.appendChild(wrap);
 }
+function saveDataSource(event,fieldId){event.preventDefault();const prior=fieldStates[fieldId],state=document.querySelector('input[name="dataSourceState"]:checked')?.value;if(!state)return;if(prior==='confirmed_prospect'&&state!=='confirmed_prospect'&&!confirm('This input was verified directly by the prospect. Downgrade and remove that provenance?'))return;if(state==='confirmed_customer'){const source=document.getElementById('dataSourceName').value.trim(),date=document.getElementById('dataSourceDate').value,stakeholder=document.getElementById('dataSourceStakeholder').value.trim();if(!source||!date){showToast('Customer Provided requires a source and date.');return;}fieldProvenance[fieldId]={state,source,date,stakeholder};}else if(state!=='confirmed_prospect')delete fieldProvenance[fieldId];fieldStates[fieldId]=state;if(['confirmed','confirmed_customer','confirmed_prospect'].includes(state))confirmedFields.add(fieldId);else confirmedFields.delete(fieldId);document.getElementById('dataSourceModal')?.remove();renderConfidence();if(typeof markCalcDirty==='function')markCalcDirty();}
+function toggleConfidence(fieldId){openDataSourceMenu(fieldId);}
+document.addEventListener('input',function(e){const id=e.target&&e.target.id;if(!id||!CONFIDENCE_FIELDS.some(f=>f.id===id))return;const state=fieldStates[id],p=fieldProvenance[id]||{};if(!['confirmed_prospect','confirmed_customer'].includes(state))return;const current=Number(String(e.target.value||'').replace(/[$,%\s,]/g,'')),origin=Number(String(p.value??'').replace(/[$,%\s,]/g,''));if(Number.isFinite(current)&&Number.isFinite(origin)&&current!==origin){fieldStates[id]='estimated';fieldProvenance[id]={state:'estimated',source:'Rep updated — needs customer validation',previousEventId:p.eventId||null};confirmedFields.delete(id);renderConfidence();showToast?.('Value changed. Prospect/customer verification was removed; revalidate this working value.');}},true);
+
+async function openValueHistory(fieldId){
+  if(!window._calcScenarioId)return showToast?.('Save this scenario before viewing Value History.');document.getElementById('dataSourceModal')?.remove();
+  const old=document.getElementById('valueHistoryModal');if(old)old.remove();const wrap=document.createElement('div');wrap.id='valueHistoryModal';wrap.className='modal-overlay';wrap.innerHTML=`<div class="modal-card modal-wide"><div class="modal-header"><div><h2>Financial Value History</h2><p>${(CONFIDENCE_FIELDS.find(x=>x.id===fieldId)||{label:fieldId}).label} · opportunity-wide evidence</p></div><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button></div><div id="valueHistoryBody" class="modal-body">Loading…</div></div>`;document.body.appendChild(wrap);
+  try{const r=await apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/value-history?input='+encodeURIComponent(fieldId));if(!r.ok)throw Error();const x=await r.json(),h=x.inputs[fieldId]||{},used=h.valueUsed,supported=h.latestCustomerSupported,canApply=x.selectedScenario.isCurrent&&!x.selectedScenario.isClosed,body=document.getElementById('valueHistoryBody');body.innerHTML=`<div class="history-comparison"><div><small>Value used in Scenario v${x.selectedScenario.version}</small><b>${used?used.value_text:'Not captured'}</b></div><div><small>Latest customer-supported value</small><b>${supported?supported.value_text:'None'}</b><span>${h.supportedFreshness?.status||'Needs Review'}</span></div></div>${canApply?'':'<div class="history-immutable">🔒 Historical or closed scenario — values remain viewable but cannot be applied.</div>'}`+(h.events||[]).map(e=>`<article class="value-event"><div><b>${e.value_text||e.normalized_value}</b><small>${valueEventLabel(e.event_type)} · ${new Date(e.evidence_date||e.created_at).toLocaleDateString()}${e.source_scenario_version?' · Scenario v'+e.source_scenario_version:''}</small>${e.occurredAfterScenario?'<em>Occurred after this scenario</em>':''}</div>${canApply?`<button class="btn btn-ghost btn-sm" onclick="applyValueEvent('${fieldId}','${e.id}')">Apply to Current Business Case</button>`:''}</article>`).join('')||'<p>No value events have been recorded yet.</p>'; }catch(_){document.getElementById('valueHistoryBody').innerHTML='<p>Value History could not be loaded.</p>';}
+}
+function valueEventLabel(type){return ({prospect_submitted:'Prospect submitted',customer_revalidated:'Customer revalidated',customer_provided:'Customer provided',rep_updated:'Rep updated — needs validation',legacy_scenario_snapshot:'Legacy scenario value',legacy_prospect_recovered:'Recovered legacy Prospect Link'})[type]||String(type||'Value event').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());}
+async function openRevalidateValue(fieldId){if(!window._calcScenarioId)return showToast?.('Save this scenario first.');document.getElementById('dataSourceModal')?.remove();const company=(document.getElementById('companyName')||{}).value||'';let people=[];try{const r=await apiFetch('/api/stakeholders?company='+encodeURIComponent(company));if(r.ok)people=await r.json();}catch(_){}const current=(document.getElementById(fieldId)||{}).value||'';const wrap=document.createElement('div');wrap.id='valueHistoryModal';wrap.className='modal-overlay';wrap.innerHTML=`<div class="modal-card"><div class="modal-header"><div><h2>Revalidate Value</h2><p>Confirm unchanged or record the customer’s updated value. This adds evidence; it does not rewrite a saved scenario.</p></div><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button></div><form class="modal-body" onsubmit="submitRevalidation(event,'${fieldId}')"><label>Validated value<input id="revalidateValue" value="${String(current).replace(/"/g,'&quot;')}" required></label><label>Validating stakeholder<select id="revalidateStakeholder" required><option value="">Select stakeholder…</option>${people.map(p=>`<option value="${p.id}">${p.name} — ${p.title||p.role}</option>`).join('')}</select></label><label>Evidence date<input id="revalidateDate" type="date" max="${new Date().toISOString().slice(0,10)}" value="${new Date().toISOString().slice(0,10)}" required></label><label>Source<select id="revalidateSource" required><option>Value review meeting</option><option>Customer email</option><option>Customer spreadsheet</option><option>Executive business-case review</option></select></label><label>Evidence note (optional)<textarea id="revalidateNote"></textarea></label><label><input id="revalidateApply" type="checkbox"> Apply to the current working business case after recording</label><footer><button type="button" class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Cancel</button><button class="btn btn-primary">Record customer revalidation</button></footer></form></div>`;document.body.appendChild(wrap);}
+async function submitRevalidation(event,fieldId){event.preventDefault();const body={value:document.getElementById('revalidateValue').value,stakeholderId:document.getElementById('revalidateStakeholder').value,evidenceDate:document.getElementById('revalidateDate').value,source:document.getElementById('revalidateSource').value,note:document.getElementById('revalidateNote').value};const r=await apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/value-history/'+encodeURIComponent(fieldId)+'/revalidate',{method:'POST',body:JSON.stringify(body)});if(!r.ok){const x=await r.json().catch(()=>({}));return showToast?.(x.error||'Revalidation could not be recorded.');}const created=await r.json();if(document.getElementById('revalidateApply').checked)await applyValueEvent(fieldId,created.id);document.getElementById('valueHistoryModal')?.remove();showToast?.('Customer revalidation added to Value History.');}
+async function applyValueEvent(fieldId,eventId){const r=await apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/value-history/'+encodeURIComponent(fieldId)+'/apply',{method:'POST',body:JSON.stringify({eventId})});if(!r.ok)return showToast?.('This value cannot be applied here.');const x=await r.json(),a=x.apply,el=document.getElementById(fieldId);if(el)el.value=a.value;fieldStates[fieldId]=a.fieldState;fieldProvenance[fieldId]={...a.provenance,value:a.value};confirmedFields.add(fieldId);recalc?.();renderConfidence();markCalcDirty?.();document.getElementById('valueHistoryModal')?.remove();showToast?.('Validated value applied. Save a new scenario version when ready.');}
 
 function renderConfidence() {
   const el = document.getElementById('confidencePanel');
   if (!el) return;
   let confirmedW = 0, estimatedW = 0, totalW = 0;
-  let nProspect = 0, nRep = 0, nEstimated = 0;
+  let nProspect = 0, nCustomer = 0, nRep = 0, nEstimated = 0;
   CONFIDENCE_FIELDS.forEach(f => {
     totalW += f.weight;
     const s = fieldStates[f.id] || '';
-    if (s === 'confirmed' || s === 'confirmed_prospect') confirmedW += f.weight;  // both full weight
+    if (s === 'confirmed' || s === 'confirmed_customer' || s === 'confirmed_prospect') confirmedW += f.weight;
     if (s === 'estimated') estimatedW += f.weight * 0.5;
     if (s === 'confirmed_prospect') nProspect++;
+    else if (s === 'confirmed_customer') nCustomer++;
     else if (s === 'confirmed') nRep++;
     else if (s === 'estimated') nEstimated++;
   });
@@ -513,6 +529,7 @@ function renderConfidence() {
   /* Provenance summary line */
   const summaryBits = [];
   if (nProspect)  summaryBits.push(`<strong style="color:#12786F;">${nProspect} prospect-verified</strong>`);
+  if (nCustomer)  summaryBits.push(`<strong style="color:#087F8C;">${nCustomer} customer-provided</strong>`);
   if (nRep)       summaryBits.push(`${nRep} rep-confirmed`);
   if (nEstimated) summaryBits.push(`${nEstimated} rep-estimated`);
   const summary = summaryBits.length ? `<div class="conf-summary">${summaryBits.join(' · ')}</div>` : '';
@@ -530,6 +547,7 @@ function renderConfidence() {
       <span class="conf-legend-item"><span class="conf-dot" style="background:#6B7A8D;"></span>Empty</span>
       <span class="conf-legend-item"><span class="conf-dot" style="background:#C24A1E;"></span>Rep-estimated</span>
       <span class="conf-legend-item"><span class="conf-dot" style="background:#3B9C90;"></span>Rep-confirmed</span>
+      <span class="conf-legend-item"><span class="conf-dot" style="background:#087F8C;"></span>Customer-provided</span>
       <span class="conf-legend-item"><span class="conf-dot" style="background:#12786F;"></span>Prospect-verified</span>
     </div>
     ${groups.map(group => `
@@ -538,20 +556,23 @@ function renderConfidence() {
         ${CONFIDENCE_FIELDS.filter(f => f.group === group).map(f => {
           const state = fieldStates[f.id] || '';
           const cls = state === 'confirmed_prospect' ? 'conf-confirmed-prospect'
+                    : state === 'confirmed_customer' ? 'conf-confirmed-customer'
                     : state === 'confirmed' ? 'conf-confirmed'
                     : state === 'estimated' ? 'conf-estimated' : 'conf-empty';
           const icon = state === 'confirmed_prospect' ? '✓'
+                     : state === 'confirmed_customer' ? '✓'
                      : state === 'confirmed' ? '✓'
                      : state === 'estimated' ? '~' : '?';
-          const badge = state === 'confirmed_prospect' ? '<span class="conf-chip-badge" title="Verified by prospect via discovery">◉</span>' : '';
+          const badge = state === 'confirmed_prospect' ? '<span class="conf-chip-badge" title="Verified by prospect via discovery">◉</span>' : state === 'confirmed_customer' ? '<span class="conf-chip-badge" title="Customer source recorded">●</span>' : '';
           const tip = state === 'confirmed_prospect' ? 'Verified by prospect via discovery — click to override'
+                    : state === 'confirmed_customer' ? 'Customer provided — click to review source'
                     : state === 'confirmed' ? 'Rep-confirmed — click to revert'
                     : state === 'estimated' ? 'Auto-flagged from input — click to confirm'
                     : 'No value entered yet';
           return `<button class="conf-chip ${cls}" onclick="toggleConfidence('${f.id}')" title="${tip}" ${state === '' ? 'disabled' : ''}><span class="conf-chip-icon">${icon}</span>${f.label}${badge}</button>`;
         }).join('')}
       </div>`).join('')}
-    <div class="conf-hint">Values auto-flag as rep-estimated when entered. Prospect answers via the discovery link are verified automatically. Click a chip to confirm or override.</div>`;
+    <div class="conf-hint">Choose the source for each input. Customer Provided requires a source and date; Prospect Verified is set automatically from the Prospect Link.</div>`;
 }
 
 /* ─────────────────────────────────────────
@@ -709,7 +730,10 @@ Industry: ${IND[v.industry] ? IND[v.industry].label : '—'} | Users: ${Math.rou
    9. DEAL STAGE TRACKER
    Adds a deal stage field; filters saved list
    ───────────────────────────────────────── */
-const DEAL_STAGES = ['Discovery', 'Demo', 'Proposal', 'Negotiation', 'Closed Won', 'Closed Lost'];
+const BUY_CYCLE_FILTERS = [
+  ['2','Stage 2 · Economic Consequences'],['3','Stage 3 · Funding'],['4','Stage 4 · Decision Criteria'],
+  ['5','Stage 5 · Evaluation'],['6','Stage 6 · Vendor Selection'],['won','Closed Won'],['lost','Closed Lost']
+];
 let stageFilter     = '';
 let ownershipFilter = 'all'; // 'all' | 'mine' | 'shared' — default shows all visible scenarios
 let industryFilter  = '';     // '' = all industries, otherwise an IND key
@@ -756,7 +780,7 @@ async function toggleAdminViewAll() {
 function initAdminScenarioControls() {
   const me = window.ciAuth ? window.ciAuth.getUser() : {};
   const btn = document.getElementById('adminViewAllBtn');
-  if (btn && me.role === 'admin') btn.style.display = 'inline-flex';
+  if (btn && (typeof clientHasRole==='function'?clientHasRole(me,'admin','Admin'):me.role==='admin')) btn.style.display = 'inline-flex';
 }
 
 function setOwnershipFilter(filter) {
@@ -779,11 +803,11 @@ function setStageFilter(stage) {
 function renderStageFilters() {
   const el = document.getElementById('stageFilters');
   if (!el) return;
-  el.innerHTML = DEAL_STAGES.map(s => {
-    const count = savedScenarios.filter(sc => sc.dealStage === s).length;
-    return `<button class="stage-filter-btn ${stageFilter === s ? 'active' : ''}"
-      data-stage="${s}" onclick="setStageFilter('${s}')">
-      ${s} ${count > 0 ? `<span class="stage-count">${count}</span>` : ''}
+  el.innerHTML = BUY_CYCLE_FILTERS.map(([key,label]) => {
+    const count = savedScenarios.filter(sc => key==='won'||key==='lost'?sc.currentBuyCycleStage===7&&sc.outcome===key:String(sc.currentBuyCycleStage)===key).length;
+    return `<button class="stage-filter-btn ${stageFilter === key ? 'active' : ''}"
+      data-stage="${key}" onclick="setStageFilter('${key}')">
+      ${label} ${count > 0 ? `<span class="stage-count">${count}</span>` : ''}
     </button>`;
   }).join('');
 }
@@ -995,7 +1019,7 @@ async function renderAnalytics() {
   /* Show the natural-language deal query box for admins only */
   const currentUser = window.ciAuth ? window.ciAuth.getUser() : {};
   const queryCard = document.getElementById('dealQueryCard');
-  if (queryCard) queryCard.style.display = currentUser.role === 'admin' ? 'block' : 'none';
+  if (queryCard) queryCard.style.display = (typeof clientHasRole==='function'?clientHasRole(currentUser,'admin','Admin'):currentUser.role==='admin') ? 'block' : 'none';
   /* Team-wide events from the server (admin-gated). Falls back to empty
      if the current user isn't an admin or the call fails. */
   let serverSummary = null;
@@ -1017,10 +1041,10 @@ async function renderAnalytics() {
     byInd[label] = (byInd[label] || 0) + 1;
   });
 
-  // deal stage breakdown
+  // governed BuyCycle stage breakdown
   const byStage = {};
   savedScenarios.forEach(s => {
-    const st = s.dealStage || 'No stage';
+    const st = typeof scenarioStageDisplay==='function'?scenarioStageDisplay(s):'Stage 2';
     byStage[st] = (byStage[st] || 0) + 1;
   });
 
@@ -1081,7 +1105,7 @@ async function renderAnalytics() {
 
   /* ── Resonance / learning loop section (admin only) ── */
   const user = window.ciAuth ? window.ciAuth.getUser() : {};
-  if (user.role === 'admin') {
+  if (typeof clientHasRole==='function'?clientHasRole(user,'admin','Admin'):user.role==='admin') {
     const resonanceSection = document.createElement('div');
     resonanceSection.style.marginTop = '2rem';
     resonanceSection.innerHTML = `

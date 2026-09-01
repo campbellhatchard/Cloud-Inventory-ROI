@@ -135,27 +135,12 @@ function cgCreateNew() {
 }
 
 /* ── Existing customer list ── */
-function cgRenderList(term) {
+async function cgRenderList(term) {
   const host = document.getElementById('cgList');
   if (!host) return;
-  const q = (term || '').trim().toLowerCase();
-  const list = (typeof getCompanies === 'function' ? getCompanies() : [])
-    .filter(c => !q || c.name.toLowerCase().includes(q))
-    .sort((a, b) => a.name.localeCompare(b.name));
-  if (!list.length) {
-    host.innerHTML = `<div class="cg-empty">${q ? 'No matches.' : 'No customers yet — create one to start.'}</div>`;
-    return;
-  }
-  host.innerHTML = list.map(c => {
-    const meta = [];
-    if (c.scenarios)    meta.push(c.scenarios + ' scenario' + (c.scenarios !== 1 ? 's' : ''));
-    if (c.plans)        meta.push(c.plans + ' plan' + (c.plans !== 1 ? 's' : ''));
-    if (c.stakeholders) meta.push(c.stakeholders + ' stakeholder' + (c.stakeholders !== 1 ? 's' : ''));
-    return `<button class="cg-list-item" onclick="cgSelectExisting('${escapeHtml(c.name).replace(/'/g,"\\'")}')">
-      <span class="cg-li-name">${escapeHtml(c.name)}</span>
-      <span class="cg-li-meta">${escapeHtml(meta.join(' · ') || 'No records yet')}</span>
-    </button>`;
-  }).join('');
+  host.innerHTML='<div class="cg-empty">Loading authorized customers…</div>';
+  if(typeof renderLandingAuthorizedCustomers==='function')return renderLandingAuthorizedCustomers(host,term||'');
+  host.innerHTML='<div class="cg-empty">Customer workspace is still loading…</div>';
 }
 function cgSelectExisting(name) {
   const cn = document.getElementById('companyName');
@@ -181,11 +166,9 @@ function rememberRecentCustomer(name) {
 function cgRenderRecent() {
   const host = document.getElementById('cgRecent');
   if (!host) return;
-  if (!_recentCustomers.length) { host.innerHTML = ''; return; }
-  host.innerHTML = `<div class="cg-recent-label">Recent</div>
-    <div class="cg-recent-chips">${_recentCustomers.map(n =>
-      `<button class="cg-recent-chip" onclick="cgSelectExisting('${escapeHtml(n).replace(/'/g,"\\'")}')">${escapeHtml(n)}</button>`
-    ).join('')}</div>`;
+  /* Recents are rendered in the authorized in-context switcher. Never show
+     stale name-only entries here after a user's team access changes. */
+  host.innerHTML = '<button class="cg-skip" onclick="openCustomerSwitcher({targetTab:\'calc\'})">Open recent and team customers →</button>';
 }
 
 /* ── Breadcrumb: Company › Scenario ── */
@@ -195,7 +178,7 @@ function updateBreadcrumb() {
   const company = (document.getElementById('companyName')?.value || '').trim();
   const scenario = (document.getElementById('scenarioName')?.value || '').trim();
   if (!company) { bc.innerHTML = ''; return; }
-  bc.innerHTML = `<span class="bc-home" onclick="showCustomerGate()" title="Switch customer">⌂</span>` +
+  bc.innerHTML = `<span class="bc-home" onclick="openCustomerSwitcher()" title="Switch customer">⇄</span>` +
     `<span class="bc-sep">›</span><span class="bc-company">${escapeHtml(company)}</span>` +
     (scenario ? `<span class="bc-sep">›</span><span class="bc-scenario">${escapeHtml(scenario)}</span>` : '');
 }

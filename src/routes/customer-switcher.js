@@ -1,0 +1,19 @@
+/* Lightweight, server-authorized customer context search shared by the landing workspace and in-app switcher. */
+const express=require('express');
+const {query}=require('../db');
+const {requireAuth}=require('../middleware/auth');
+const {rolesOf,hasPermission,getUserTeams,getAuthorizedSalesReps,getTeamUsers,searchAuthorizedCustomers,resolveCustomerDecision,resolveSolutionFitDecision}=require('../authorization');
+const router=express.Router();router.use(requireAuth);
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const optionalUuid=(value)=>!value?null:(UUID.test(String(value))?String(value):false);
+router.get('/',async(req,res)=>{try{
+  const repId=optionalUuid(req.query.repId),seId=optionalUuid(req.query.seId),teamId=optionalUuid(req.query.teamId),customerId=optionalUuid(req.query.customerId);if([repId,seId,teamId,customerId].includes(false))return res.status(400).json({error:'Invalid filter.'});
+  const result=await searchAuthorizedCustomers(req.user,{search:req.query.search,repId,seId,teamId,customerId,stage:req.query.stage,solutionFitStatus:req.query.solutionFitStatus,state:['active','closed','all'].includes(req.query.state)?req.query.state:'active',limit:req.query.limit,offset:req.query.offset});
+  const teams=hasPermission(req.user,'view_all_customers')?(await query(`SELECT id,name FROM sales_teams WHERE status='active' ORDER BY name`)).rows:await getUserTeams(req.user.id);
+  const reps=await getAuthorizedSalesReps(req.user);
+  const ses=(hasPermission(req.user,'view_team_solution_fits')||hasPermission(req.user,'view_all_solution_fits'))?(hasPermission(req.user,'view_all_solution_fits')?(await query(`SELECT id,username FROM users WHERE is_active=TRUE AND (role='se' OR 'se'=ANY(roles)) ORDER BY username`)).rows:await getTeamUsers(req.user.id,'se')):[];
+  const teamNames=teams.map(t=>t.name);const scope=hasPermission(req.user,'view_all_customers')?'All Customers':hasPermission(req.user,'view_team_customers')?(teamNames.length===1?teamNames[0]:'My Team Customers'):'My Customers';
+  const items=result.rows.map(r=>{const customerScope={owned:r.is_owner,shared:r.explicitly_shared,teamScoped:r.team_scoped};const sfScope={...customerScope,assigned:String(r.primary_se_id||'')===String(req.user.id)};return {id:r.id,name:r.name,ownerId:r.owner_id,owner:r.owner_username,opportunity:r.opportunity_name||'',scenarioId:r.scenario_id||null,baseId:r.base_id||null,scenarioVersion:r.version||null,scenarioCount:Number(r.scenario_count)||0,currentStage:r.current_stage||null,evidenceStage:r.evidence_stage||null,readiness:Number(r.stage_readiness)||0,targetClose:r.target_close||null,opportunityValue:r.opportunity_value===null?null:Number(r.opportunity_value),currency:r.opportunity_currency||'USD',lastUpdated:r.scenario_updated_at||null,outcome:r.outcome||'',product:r.solution||'',solutionFit:{readiness:r.solution_fit_readiness===null?null:Number(r.solution_fit_readiness),status:r.solution_fit_status||'not_started',primarySeId:r.primary_se_id||null,primarySe:r.primary_se||'',canView:resolveSolutionFitDecision(req.user,sfScope,'view'),canEdit:resolveSolutionFitDecision(req.user,sfScope,'edit')},teams:r.team_names||[],canEditCustomer:resolveCustomerDecision(req.user,customerScope,'edit'),access:r.is_owner?'owner':r.explicitly_shared?'shared':r.team_scoped?'team':'global'};});
+  res.json({items,total:result.total,limit:result.limit,offset:result.offset,scopeLabel:scope,roles:rolesOf(req.user),filters:{reps,ses,teams:teams.map(t=>({id:t.id,name:t.name}))}});
+ }catch(e){console.error('Customer switcher:',e);res.status(500).json({error:'Failed to search authorized customers.'});}});
+module.exports=router;

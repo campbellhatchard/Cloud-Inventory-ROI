@@ -15,7 +15,7 @@
   function user(){ try { return (window.ciAuth && window.ciAuth.getUser) ? (window.ciAuth.getUser()||{}) : {}; } catch(e){ return {}; } }
 
   async function initAdminCustomers() {
-    if (user().role !== 'admin') { app().innerHTML = '<div class="empty-state"><p>Admin access required.</p></div>'; return; }
+    if (!(typeof clientHasRole==='function'&&clientHasRole(user(),'admin','Admin'))) { app().innerHTML = '<div class="empty-state"><p>Admin access required.</p></div>'; return; }
     app().innerHTML = '<div class="ac-loading">Loading customers…</div>';
     try {
       const resp = await apiFetch('/api/customers');   // admin → all customers

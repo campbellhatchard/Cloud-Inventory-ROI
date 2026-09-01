@@ -22,9 +22,11 @@
      scenario-aware KPI header that responds to the Conservative/Base/Aggressive
      toggle; the global (unscaled) livebar would contradict it, so we hide it here. */
   var LIVE_TABS = ['calc', 'sensitivity', 'compare'];
+  var CONTEXT_TABS = ['calc','disc','exec','proposal','solfit','comp','sensitivity','coach','readiness','map','stake','compare','impact'];
 
   function syncLivebar(name) {
     document.body.classList.toggle('livebar-off', LIVE_TABS.indexOf(name) === -1);
+    document.body.classList.toggle('context-off', CONTEXT_TABS.indexOf(name) === -1);
   }
 
   function hookSwitchTab() {

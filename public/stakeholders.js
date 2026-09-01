@@ -31,7 +31,7 @@ function populateStakeCompanySelect() {
   updateStakeGate();
   /* Show rep filter for admins */
   const user = window.ciAuth ? window.ciAuth.getUser() : {};
-  const isAdmin = user.role === 'admin';
+  const isAdmin = (typeof clientHasRole==='function'&&clientHasRole(user,'admin','Admin')) || (user.roleKeys||[]).includes('sales_manager') || (user.roles||[]).some(r=>r==='Sales Leader'||r==='Sales Manager');
   const repFilter = document.getElementById('stakeRepFilter');
   if (repFilter) repFilter.style.display = isAdmin ? '' : 'none';
 }
@@ -106,7 +106,7 @@ async function loadStakeholders() {
       return;
     }
     const user = window.ciAuth ? window.ciAuth.getUser() : {};
-    const isAdmin = user.role === 'admin';
+    const isAdmin = (typeof clientHasRole==='function'&&clientHasRole(user,'admin','Admin')) || (user.roleKeys||[]).includes('sales_manager') || (user.roles||[]).some(r=>r==='Sales Leader'||r==='Sales Manager');
     let url = isAdmin ? '/api/stakeholders?all=true' : '/api/stakeholders';
     if (_stakeCompany) url += (url.includes('?') ? '&' : '?') + 'company=' + encodeURIComponent(_stakeCompany);
     const resp = await apiFetch(url);
@@ -195,7 +195,7 @@ function renderStakeList() {
   const el = document.getElementById('stakeList');
   if (!el) return;
   const user = window.ciAuth ? window.ciAuth.getUser() : {};
-  const isAdmin = user.role === 'admin';
+  const isAdmin = (typeof clientHasRole==='function'&&clientHasRole(user,'admin','Admin')) || (user.roleKeys||[]).includes('sales_manager') || (user.roles||[]).some(r=>r==='Sales Leader'||r==='Sales Manager');
 
   if (!_stakeholders.length) {
     el.innerHTML = '<div class="empty-state"><p>No stakeholders mapped yet. Add the people who will decide this deal.</p></div>';
@@ -249,7 +249,7 @@ function stakeholderModal(s) {
     <div class="field"><label>Notes / win strategy</label><textarea id="skNotes" rows="3" style="width:100%;font-family:var(--font);font-size:13px;padding:8px;border:1.5px solid var(--gray-200);border-radius:7px;">${escapeHtml(s.notes || '')}</textarea></div>
     <div id="skErr" class="field-hint" style="color:var(--red);display:none;"></div>
     <div class="btn-row" style="margin-top:1rem;">
-      <button class="btn btn-cta" onclick="saveStakeholder('${s.id || ''}')">${isEdit ? 'Save changes' : 'Add stakeholder'}</button>
+      <button class="btn btn-primary" onclick="saveStakeholder('${s.id || ''}')">${isEdit ? 'Save changes' : 'Add stakeholder'}</button>
       <button class="btn btn-ghost" onclick="document.getElementById('stakeModal').remove()">Cancel</button>
     </div>
   </div>`;
@@ -298,7 +298,7 @@ function suggestStakeholdersFromDiscovery() {
     ${rows}
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="document.getElementById('sugModal').remove()">Cancel</button>
-      <button class="btn btn-cta" onclick="importSuggestedStakeholders(${suggestions.length})">Import selected</button>
+      <button class="btn btn-primary" onclick="importSuggestedStakeholders(${suggestions.length})">Import selected</button>
     </div>
   </div>`;
   document.body.appendChild(modal);
@@ -382,7 +382,7 @@ async function aiAnalyzeStakeholders() {
       `${s.name} (${s.title || 'title unknown'}) — role: ${s.role}, influence ${s.influence}/5, support ${s.support}/5, ${s.engaged ? 'engaged' : 'NOT engaged'}${s.notes ? ', notes: ' + s.notes.slice(0, 100) : ''}`
     ).join('\n');
 
-    const prompt = `You are an enterprise sales coach analyzing a stakeholder map for a Cloud Inventory (inventory SaaS) deal${_stakeCompany ? ' at ' + _stakeCompany : ''}${v.dealStage ? ' at ' + v.dealStage + ' stage' : ''}.
+    const prompt = `You are an enterprise sales coach analyzing a stakeholder map for a Cloud Inventory (inventory SaaS) deal${_stakeCompany ? ' at ' + _stakeCompany : ''} at ${window.getCurrentBuyCycleStageLabel?.()||'Stage 2 — Define Economic Consequences'}.
 
 Stakeholders:
 ${summary}

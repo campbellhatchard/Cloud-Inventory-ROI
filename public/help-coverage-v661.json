@@ -1,0 +1,18 @@
+{
+  "version": "6.6.1",
+  "requiredDimensions": ["purpose", "whenToUse", "authoritativeData", "primaryAction", "noAutomaticEffect", "nextStep"],
+  "workspaces": {
+    "customerScenario": ["switching", "versions"],
+    "roiCalculator": ["roi", "model", "financial"],
+    "discoveryProspectLink": ["discovery", "questions", "value-history"],
+    "buyerEvidence": ["stages", "evidence", "commitment", "close"],
+    "stakeholders": ["stakeholders"],
+    "solutionFit": ["solution-fit"],
+    "competitiveIntelligence": ["competitive-intelligence"],
+    "jointProjectPlan": ["jpp"],
+    "dealCoach": ["christie"],
+    "executiveOutputs": ["outputs", "readiness", "proposal", "proof"],
+    "salesManager": ["manager", "manager-actions"],
+    "administration": ["roles", "teamadmin", "cleanup", "audit"]
+  }
+}

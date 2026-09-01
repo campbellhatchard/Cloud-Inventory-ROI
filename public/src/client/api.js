@@ -64,31 +64,26 @@
 
     var modal = document.createElement('div');
     modal.id = 'sessionExpiryModal';
-    modal.style.cssText = [
-      'position:fixed','inset:0','z-index:99999',
-      'background:rgba(14,20,27,.72)',
-      'display:flex','align-items:center','justify-content:center',
-      'padding:20px','backdrop-filter:blur(3px)'
-    ].join(';');
+    modal.className = 'ci-session-expiry';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'sessionExpiryTitle');
 
     modal.innerHTML = [
-      '<div style="background:#fff;border-radius:16px;padding:32px 36px;max-width:420px;',
-        'width:100%;box-shadow:0 24px 64px rgba(0,0,0,.22);text-align:center;">',
-        '<div style="font-size:36px;margin-bottom:16px;">&#128274;</div>',
-        '<div style="font-size:18px;font-weight:700;color:#1E2931;margin-bottom:8px;">',
+      '<div class="ci-session-expiry__dialog">',
+        '<div class="ci-session-expiry__icon" aria-hidden="true">&#128274;</div>',
+        '<div id="sessionExpiryTitle" class="ci-session-expiry__title">',
           'Your session has expired',
         '</div>',
-        '<div style="font-size:14px;color:#6B7A8D;line-height:1.6;margin-bottom:24px;">',
+        '<div class="ci-session-expiry__copy">',
           'For security, sessions time out after a period of inactivity. ',
           'Your work is saved &mdash; sign in again to pick up right where you left off.',
         '</div>',
         '<button id="sessionExpiryBtn" onclick="window.location.href=\'/login.html?expired=1\'" ',
-          'style="background:#00AECF;color:#fff;border:none;border-radius:10px;',
-          'padding:12px 28px;font-size:15px;font-weight:700;cursor:pointer;',
-          'width:100%;font-family:inherit;transition:background .15s;">',
+          'class="ci-session-expiry__action">',
           'Sign in again',
         '</button>',
-        '<div id="sessionExpiryCountdown" style="font-size:12px;color:#A7B4C0;margin-top:14px;">',
+        '<div id="sessionExpiryCountdown" class="ci-session-expiry__countdown" aria-live="polite">',
           'Redirecting automatically in <span id="sessionExpirySecs">12</span> seconds\u2026',
         '</div>',
       '</div>'
@@ -96,12 +91,9 @@
 
     document.body.appendChild(modal);
 
-    /* Hover state on the button */
+    /* Move keyboard focus to the deliberate Primary action. */
     var btn = document.getElementById('sessionExpiryBtn');
-    if (btn) {
-      btn.addEventListener('mouseenter', function(){ btn.style.background = '#0089A6'; });
-      btn.addEventListener('mouseleave', function(){ btn.style.background = '#00AECF'; });
-    }
+    if (btn) btn.focus();
 
     /* Countdown and auto-redirect */
     var secs = 12;
@@ -183,8 +175,8 @@
       .trim().split(/\s+/)
       .map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
-    const roleColors = { admin: '#5B2D8E', rep: '#1E2931' };
     const roleLabels = { admin: 'Admin', rep: 'Rep/SE' };
+    const roleClass = user.role === 'admin' ? 'ud-role--admin' : 'ud-role--rep';
 
     right.innerHTML = `
       <span class="topbar-date" id="todayDate"></span>
@@ -195,7 +187,7 @@
         <div class="user-dropdown" id="userDropdown" style="display:none;">
           <div class="ud-header">
             <div class="ud-name">${user.username}</div>
-            <div class="ud-role" style="background:${(roleColors[user.role]||'#1E2931')}20;color:${roleColors[user.role]||'#1E2931'}">${roleLabels[user.role]||user.role}</div>
+            <div class="ud-role ${roleClass}">${roleLabels[user.role]||user.role}</div>
             <div class="ud-email">${user.email || ''}</div>
           </div>
           <div class="ud-items">

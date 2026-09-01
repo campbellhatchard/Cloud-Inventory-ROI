@@ -5,6 +5,7 @@ const express   = require('express');
 const { query } = require('../db');
 const { log }   = require('../audit');
 const { requireAuth, hasRole } = require('../middleware/auth');
+const {hasPermission}=require('../authorization');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -15,7 +16,7 @@ const ROLES = ['champion','economic_buyer','technical_buyer','influencer','block
 router.get('/', async (req, res) => {
   try {
     const { company } = req.query;
-    const canViewTeam = hasRole(req.user, 'admin') || hasRole(req.user, 'sales_manager');
+    const canViewTeam = hasPermission(req.user,'view_team_customers') || hasPermission(req.user,'view_all_customers');
     const showAll = canViewTeam && req.query.all === 'true';
     let sql, params;
     if (showAll) {
@@ -23,9 +24,10 @@ router.get('/', async (req, res) => {
                     s.support, s.engaged, s.notes, s.updated_at,
                     u.username AS owner_username
              FROM stakeholders s JOIN users u ON u.id = s.owner_id
-             ${company ? 'WHERE LOWER(s.company) = LOWER($1)' : ''}
+             WHERE ($2 OR s.owner_id=$1 OR EXISTS(SELECT 1 FROM sales_team_memberships me JOIN sales_team_memberships om ON om.team_id=me.team_id AND om.user_id=s.owner_id AND om.is_active=TRUE WHERE me.user_id=$1 AND me.is_active=TRUE))
+             ${company ? 'AND LOWER(s.company) = LOWER($3)' : ''}
              ORDER BY s.influence DESC, s.name ASC LIMIT 500`;
-      params = company ? [company] : [];
+      params = company ? [req.user.id,hasPermission(req.user,'view_all_customers'),company] : [req.user.id,hasPermission(req.user,'view_all_customers')];
     } else {
       sql = `SELECT id, company, name, title, role, influence, support, engaged, notes, updated_at
              FROM stakeholders WHERE owner_id = $1
@@ -41,12 +43,12 @@ router.get('/', async (req, res) => {
 /* Distinct companies for the picker — admins see all reps' companies */
 router.get('/companies', async (req, res) => {
   try {
-    const canViewTeam = hasRole(req.user, 'admin') || hasRole(req.user, 'sales_manager');
+    const canViewTeam = hasPermission(req.user,'view_team_customers') || hasPermission(req.user,'view_all_customers');
     const showAll = canViewTeam && req.query.all === 'true';
     let sql, params;
     if (showAll) {
-      sql = `SELECT DISTINCT company FROM stakeholders WHERE company != '' ORDER BY company`;
-      params = [];
+      sql = `SELECT DISTINCT s.company FROM stakeholders s WHERE s.company != '' AND ($2 OR s.owner_id=$1 OR EXISTS(SELECT 1 FROM sales_team_memberships me JOIN sales_team_memberships om ON om.team_id=me.team_id AND om.user_id=s.owner_id AND om.is_active=TRUE WHERE me.user_id=$1 AND me.is_active=TRUE)) ORDER BY s.company`;
+      params = [req.user.id,hasPermission(req.user,'view_all_customers')];
     } else {
       sql = `SELECT DISTINCT company FROM stakeholders WHERE owner_id = $1 AND company != '' ORDER BY company`;
       params = [req.user.id];

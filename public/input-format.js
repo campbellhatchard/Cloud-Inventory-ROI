@@ -27,7 +27,6 @@ const DOLLAR_FIELDS = {
   hwCost:             { label: 'Hardware',          floor: 100,     hint: 'One-time whole dollars (e.g. 30,000)' },
   trainCost:          { label: 'Training',          floor: 100,     hint: 'One-time whole dollars (e.g. 10,000)' },
   costPerTruckRoll:   { label: 'Cost per truck roll', floor: 10,   hint: 'Whole dollars per visit (e.g. 300)' },
-  revenuePerJob:      { label: 'Revenue per job',  floor: 10,      hint: 'Whole dollars per job (e.g. 250)' },
   costPerOrder:       { label: 'Cost per order',   floor: 0.1,     hint: 'Dollars per order (e.g. 3.50)' },
   costPerError:       { label: 'Cost per error',   floor: 1,       hint: 'Dollars per mis-ship (e.g. 120)' },
   downtimeCostPerHr:  { label: 'Downtime cost/hr', floor: 10,      hint: 'Whole dollars per hour (e.g. 5,000)' }

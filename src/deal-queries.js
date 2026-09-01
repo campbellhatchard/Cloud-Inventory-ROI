@@ -10,22 +10,30 @@
    validates and executes, the model never touches the database layer.
    ═══════════════════════════════════════════════════════════════════ */
 
+/* If a governance row exists, its outcome is authoritative even when null.
+   Legacy scenario outcome is used only when no governance record exists. */
+const EFFECTIVE_OUTCOME_SQL = `CASE
+  WHEN g.scenario_id IS NOT NULL THEN g.outcome
+  ELSE s.outcome
+END`;
+
 const QUERY_CATALOG = {
   win_rate_by_rep: {
     description: 'Win rate (won / (won + lost)) for each rep, with deal counts.',
     params: [],
     sql: `
       SELECT u.username AS rep,
-             COUNT(*) FILTER (WHERE s.outcome = 'won')  AS won,
-             COUNT(*) FILTER (WHERE s.outcome = 'lost') AS lost,
-             COUNT(*) FILTER (WHERE s.outcome IN ('won','lost')) AS decided,
-             ROUND(100.0 * COUNT(*) FILTER (WHERE s.outcome = 'won')
-               / NULLIF(COUNT(*) FILTER (WHERE s.outcome IN ('won','lost')), 0), 1) AS win_rate_pct
+             COUNT(*) FILTER (WHERE ${EFFECTIVE_OUTCOME_SQL} = 'won')  AS won,
+             COUNT(*) FILTER (WHERE ${EFFECTIVE_OUTCOME_SQL} = 'lost') AS lost,
+             COUNT(*) FILTER (WHERE ${EFFECTIVE_OUTCOME_SQL} IN ('won','lost')) AS decided,
+             ROUND(100.0 * COUNT(*) FILTER (WHERE ${EFFECTIVE_OUTCOME_SQL} = 'won')
+               / NULLIF(COUNT(*) FILTER (WHERE ${EFFECTIVE_OUTCOME_SQL} IN ('won','lost')), 0), 1) AS win_rate_pct
       FROM scenarios s
       JOIN users u ON u.id = s.owner_id
+      LEFT JOIN scenario_stage_governance g ON g.scenario_id=s.id
       WHERE s.is_current = TRUE AND s.deleted_at IS NULL
       GROUP BY u.username
-      HAVING COUNT(*) FILTER (WHERE s.outcome IN ('won','lost')) > 0
+      HAVING COUNT(*) FILTER (WHERE ${EFFECTIVE_OUTCOME_SQL} IN ('won','lost')) > 0
       ORDER BY win_rate_pct DESC NULLS LAST
       LIMIT 50`
   },
@@ -35,14 +43,15 @@ const QUERY_CATALOG = {
     params: [],
     sql: `
       SELECT s.industry,
-             COUNT(*) FILTER (WHERE s.outcome = 'won')  AS won,
-             COUNT(*) FILTER (WHERE s.outcome = 'lost') AS lost,
-             ROUND(100.0 * COUNT(*) FILTER (WHERE s.outcome = 'won')
-               / NULLIF(COUNT(*) FILTER (WHERE s.outcome IN ('won','lost')), 0), 1) AS win_rate_pct
+             COUNT(*) FILTER (WHERE ${EFFECTIVE_OUTCOME_SQL} = 'won')  AS won,
+             COUNT(*) FILTER (WHERE ${EFFECTIVE_OUTCOME_SQL} = 'lost') AS lost,
+             ROUND(100.0 * COUNT(*) FILTER (WHERE ${EFFECTIVE_OUTCOME_SQL} = 'won')
+               / NULLIF(COUNT(*) FILTER (WHERE ${EFFECTIVE_OUTCOME_SQL} IN ('won','lost')), 0), 1) AS win_rate_pct
       FROM scenarios s
+      LEFT JOIN scenario_stage_governance g ON g.scenario_id=s.id
       WHERE s.is_current = TRUE AND s.deleted_at IS NULL AND s.industry IS NOT NULL
       GROUP BY s.industry
-      HAVING COUNT(*) FILTER (WHERE s.outcome IN ('won','lost')) > 0
+      HAVING COUNT(*) FILTER (WHERE ${EFFECTIVE_OUTCOME_SQL} IN ('won','lost')) > 0
       ORDER BY win_rate_pct DESC NULLS LAST
       LIMIT 50`
   },
@@ -66,13 +75,14 @@ const QUERY_CATALOG = {
           WHEN (p.prospect_answers::float / p.total_answers) >= 0.5 THEN 'majority prospect-supplied'
           ELSE 'majority rep-supplied'
         END AS provenance_bucket,
-        COUNT(*) FILTER (WHERE s.outcome = 'won')  AS won,
-        COUNT(*) FILTER (WHERE s.outcome = 'lost') AS lost,
-        ROUND(100.0 * COUNT(*) FILTER (WHERE s.outcome = 'won')
-          / NULLIF(COUNT(*) FILTER (WHERE s.outcome IN ('won','lost')), 0), 1) AS win_rate_pct
+        COUNT(*) FILTER (WHERE ${EFFECTIVE_OUTCOME_SQL} = 'won')  AS won,
+        COUNT(*) FILTER (WHERE ${EFFECTIVE_OUTCOME_SQL} = 'lost') AS lost,
+        ROUND(100.0 * COUNT(*) FILTER (WHERE ${EFFECTIVE_OUTCOME_SQL} = 'won')
+          / NULLIF(COUNT(*) FILTER (WHERE ${EFFECTIVE_OUTCOME_SQL} IN ('won','lost')), 0), 1) AS win_rate_pct
       FROM scenarios s
       LEFT JOIN provenance p ON p.scenario_id = s.id
-      WHERE s.is_current = TRUE AND s.deleted_at IS NULL AND s.outcome IN ('won','lost')
+      LEFT JOIN scenario_stage_governance g ON g.scenario_id=s.id
+      WHERE s.is_current = TRUE AND s.deleted_at IS NULL AND ${EFFECTIVE_OUTCOME_SQL} IN ('won','lost')
       GROUP BY provenance_bucket
       ORDER BY win_rate_pct DESC NULLS LAST`
   },
@@ -95,17 +105,18 @@ const QUERY_CATALOG = {
     description: 'Compares the number of mapped stakeholders in won vs lost deals — tests whether more stakeholder coverage correlates with winning.',
     params: [],
     sql: `
-      SELECT s.outcome,
+      SELECT ${EFFECTIVE_OUTCOME_SQL} AS outcome,
              ROUND(AVG(stake_count.n), 1) AS avg_stakeholders,
              COUNT(DISTINCT s.id) AS deal_count
       FROM scenarios s
+      LEFT JOIN scenario_stage_governance g ON g.scenario_id=s.id
       LEFT JOIN (
         SELECT company, COUNT(*) AS n
         FROM stakeholders
         GROUP BY company
       ) stake_count ON stake_count.company = s.company
-      WHERE s.is_current = TRUE AND s.deleted_at IS NULL AND s.outcome IN ('won','lost')
-      GROUP BY s.outcome
+      WHERE s.is_current = TRUE AND s.deleted_at IS NULL AND ${EFFECTIVE_OUTCOME_SQL} IN ('won','lost')
+      GROUP BY ${EFFECTIVE_OUTCOME_SQL}
       ORDER BY avg_stakeholders DESC NULLS LAST`
   },
 
@@ -130,8 +141,9 @@ const QUERY_CATALOG = {
     sql: `
       SELECT s.deal_stage, COUNT(*) AS count
       FROM scenarios s
+      LEFT JOIN scenario_stage_governance g ON g.scenario_id=s.id
       WHERE s.is_current = TRUE AND s.deleted_at IS NULL
-        AND (s.outcome IS NULL OR s.outcome = 'no_decision')
+        AND ${EFFECTIVE_OUTCOME_SQL} IS NULL
         AND s.deal_stage IS NOT NULL
       GROUP BY s.deal_stage
       ORDER BY count DESC
@@ -155,4 +167,4 @@ async function runCatalogQuery(name, query) {
   return rows;
 }
 
-module.exports = { QUERY_CATALOG, VALID_QUERY_NAMES, getCatalogDescriptions, runCatalogQuery };
+module.exports = { EFFECTIVE_OUTCOME_SQL, QUERY_CATALOG, VALID_QUERY_NAMES, getCatalogDescriptions, runCatalogQuery };

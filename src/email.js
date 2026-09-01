@@ -7,70 +7,74 @@
 
    Required env vars:
      SENDGRID_API_KEY  — from SendGrid dashboard
-     FROM_EMAIL        — verified sender address (e.g. noreply@cloudinventory.com)
+     FROM_EMAIL        — a SendGrid-verified sender address
      APP_URL           — e.g. https://your-service.onrender.com
    ═══════════════════════════════════════════════════════════════════ */
 
 const sgMail = require('@sendgrid/mail');
 
-const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@cloudinventory.com';
+const FROM_EMAIL = String(process.env.FROM_EMAIL || '').trim();
+const SENDGRID_API_KEY = String(process.env.SENDGRID_API_KEY || '').trim();
 const { getAppUrl } = require('./config');
+const brand = require('./shared/brand-system');
+const emailBrand = brand.emailTheme();
 const APP_URL    = getAppUrl();
 
 /* Configure SendGrid — silently skip if key not set (dev mode) */
-if (process.env.SENDGRID_API_KEY) {
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+if (SENDGRID_API_KEY && FROM_EMAIL) {
+  sgMail.setApiKey(SENDGRID_API_KEY);
 } else {
-  console.warn('⚠️  SENDGRID_API_KEY not set — emails will be logged to console only.');
+  console.warn('[email] provider not configured; SENDGRID_API_KEY and a verified FROM_EMAIL are both required.');
+}
+
+function providerState() {
+  return { provider: 'sendgrid', configured: Boolean(SENDGRID_API_KEY && FROM_EMAIL), state: SENDGRID_API_KEY && FROM_EMAIL ? 'configured' : 'not_configured' };
 }
 
 /* ── Internal send helper ──────────────────────────────────────────
    Always resolves, never rejects. Logs failures to console.
    ────────────────────────────────────────────────────────────────── */
-async function send({ to, subject, html, text }) {
-  if (!process.env.SENDGRID_API_KEY) {
-    /* Dev mode: log email to console instead of sending */
-    console.log('\n📧 [EMAIL — dev mode, not sent]');
-    console.log(`   To:      ${to}`);
-    console.log(`   Subject: ${subject}`);
-    console.log(`   Body:\n${text || html}`);
-    console.log('────────────────────────────────────\n');
-    return { ok: true, dev: true };
+async function send({ to, subject, html, text, type='application' }) {
+  const timestamp=new Date().toISOString();
+  if (!providerState().configured) {
+    console.warn(`[email] timestamp=${timestamp} provider=sendgrid state=not_configured type=${type}`);
+    return { ok: false, configured: false, state: 'not_configured' };
   }
 
   try {
-    await sgMail.send({ from: FROM_EMAIL, to, subject, html, text });
-    return { ok: true };
+    const response=await sgMail.send({ from: FROM_EMAIL, to, subject, html, text });
+    const providerMessageId=response?.[0]?.headers?.['x-message-id'] || null;
+    console.info(`[email] timestamp=${timestamp} provider=sendgrid state=sent type=${type} providerMessageId=${providerMessageId||'unavailable'}`);
+    return { ok: true, configured: true, state: 'sent', providerMessageId };
   } catch (err) {
     /* Log the full error for debugging, but never throw */
-    const detail = err.response?.body?.errors || err.message;
-    console.error(`[email] Failed to send "${subject}" to ${to}:`, detail);
-    return { ok: false, error: err.message };
+    console.error(`[email] timestamp=${timestamp} provider=sendgrid state=failed type=${type} category=${err.code||'provider_error'}`);
+    return { ok: false, configured: true, state: 'failed', category: err.code || 'provider_error' };
   }
 }
 
 /* ── Shared styles for all HTML emails ── */
 const baseStyle = `
   <style>
-    body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #F0F4F8; margin: 0; padding: 0; }
-    .wrap { max-width: 540px; margin: 40px auto; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,.08); }
-    .header { background: #042C53; padding: 28px 32px; text-align: center; }
+    body { font-family: ${emailBrand.font}; background: ${emailBrand.background}; margin: 0; padding: 0; }
+    .wrap { max-width: 540px; margin: 40px auto; background: ${emailBrand.surface}; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,.08); }
+    .header { background: ${emailBrand.header}; padding: 28px 32px; text-align: center; }
     .header img { height: 36px; }
     .header-sub { color: rgba(255,255,255,.45); font-size: 12px; margin-top: 6px; }
-    .accent { height: 4px; background: linear-gradient(90deg, #00AEEF, rgba(0,174,239,.2)); }
-    .body { padding: 32px; color: #334155; font-size: 15px; line-height: 1.65; }
-    .body h2 { color: #042C53; font-size: 20px; margin: 0 0 12px; }
-    .btn { display: inline-block; background: #042C53; color: #fff !important; padding: 13px 28px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 15px; margin: 20px 0; }
-    .btn:hover { background: #0A3D6B; }
-    .mono { font-family: 'Courier New', monospace; background: #F1F5F9; border: 1px solid #E2E8F0; border-radius: 6px; padding: 10px 14px; font-size: 18px; font-weight: 700; letter-spacing: 2px; color: #042C53; display: inline-block; margin: 14px 0; }
-    .note { font-size: 13px; color: #94A3B8; margin-top: 20px; padding-top: 16px; border-top: 1px solid #E2E8F0; }
-    .footer { background: #F8FAFC; padding: 18px 32px; text-align: center; font-size: 12px; color: #94A3B8; border-top: 1px solid #E2E8F0; }
+    .accent { height: 4px; background: ${emailBrand.accent}; }
+    .body { padding: 32px; color: ${emailBrand.body}; font-size: 15px; line-height: 1.65; }
+    .body h2 { color: ${emailBrand.header}; font-size: 20px; margin: 0 0 12px; }
+    .btn { display: inline-block; background: ${emailBrand.button}; color: ${emailBrand.surface} !important; padding: 13px 28px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 15px; margin: 20px 0; }
+    .btn:hover { background: ${emailBrand.buttonHover}; }
+    .mono { font-family: 'Courier New', monospace; background: ${emailBrand.background}; border: 1px solid ${emailBrand.border}; border-radius: 6px; padding: 10px 14px; font-size: 18px; font-weight: 700; letter-spacing: 2px; color: ${emailBrand.header}; display: inline-block; margin: 14px 0; }
+    .note { font-size: 13px; color: ${emailBrand.muted}; margin-top: 20px; padding-top: 16px; border-top: 1px solid ${emailBrand.border}; }
+    .footer { background: ${emailBrand.background}; padding: 18px 32px; text-align: center; font-size: 12px; color: ${emailBrand.muted}; border-top: 1px solid ${emailBrand.border}; }
   </style>
 `;
 
 function logo() {
   /* Inline logo as text fallback — avoids image hosting dependency */
-  return `<div style="color:#fff;font-size:18px;font-weight:800;letter-spacing:.02em;">Cloud Inventory</div>`;
+  return `<div style="color:${emailBrand.surface};font-size:18px;font-weight:800;letter-spacing:.02em;">Cloud Inventory</div>`;
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -91,7 +95,7 @@ async function sendPasswordReset(toEmail, username, resetToken) {
           <a class="btn" href="${resetUrl}">Reset my password</a>
         </div>
         <p>This link expires in <strong>1 hour</strong>. If you didn't request a password reset, you can safely ignore this email — your password hasn't changed.</p>
-        <p class="note">If the button doesn't work, copy and paste this URL into your browser:<br/><span style="word-break:break-all;font-size:12px;color:#64748B;">${resetUrl}</span></p>
+        <p class="note">If the button doesn't work, copy and paste this URL into your browser:<br/><span style="word-break:break-all;font-size:12px;color:${emailBrand.muted};">${resetUrl}</span></p>
       </div>
       <div class="footer">Cloud Inventory · Nextworld Company · Internal tool</div>
     </div>
@@ -107,6 +111,7 @@ If you didn't request this, ignore this email.
 — Cloud Inventory`;
 
   return send({
+    type:    'password_reset',
     to:      toEmail,
     subject: 'Reset your Cloud Inventory password',
     html,
@@ -130,12 +135,12 @@ async function sendWelcomeWithTempPassword(toEmail, username, tempPassword, crea
         <p>Your account has been created${createdByUsername ? ` by <strong>${escapeHtml(createdByUsername)}</strong>` : ''}. Use the credentials below to sign in — you'll be prompted to set a new password immediately after your first login.</p>
         <table style="margin:20px 0;border-collapse:collapse;width:100%;">
           <tr>
-            <td style="padding:8px 12px;background:#F1F5F9;border:1px solid #E2E8F0;font-size:13px;font-weight:600;color:#475569;width:130px;">Username</td>
-            <td style="padding:8px 12px;border:1px solid #E2E8F0;font-size:13px;font-family:monospace;color:#042C53;">${escapeHtml(username)}</td>
+            <td style="padding:8px 12px;background:${emailBrand.background};border:1px solid ${emailBrand.border};font-size:13px;font-weight:600;color:${emailBrand.body};width:130px;">Username</td>
+            <td style="padding:8px 12px;border:1px solid ${emailBrand.border};font-size:13px;font-family:monospace;color:${emailBrand.header};">${escapeHtml(username)}</td>
           </tr>
           <tr>
-            <td style="padding:8px 12px;background:#F1F5F9;border:1px solid #E2E8F0;font-size:13px;font-weight:600;color:#475569;">Temp. password</td>
-            <td style="padding:8px 12px;border:1px solid #E2E8F0;">
+            <td style="padding:8px 12px;background:${emailBrand.background};border:1px solid ${emailBrand.border};font-size:13px;font-weight:600;color:${emailBrand.body};">Temp. password</td>
+            <td style="padding:8px 12px;border:1px solid ${emailBrand.border};">
               <span class="mono">${escapeHtml(tempPassword)}</span>
             </td>
           </tr>
@@ -164,6 +169,7 @@ You will be required to set a new password on first login.
 — Cloud Inventory`;
 
   return send({
+    type:    'welcome_temp_password',
     to:      toEmail,
     subject: 'Your Cloud Inventory account is ready',
     html,
@@ -180,8 +186,8 @@ async function sendPurgeConfirmation(toEmail, adminUsername, summary) {
 
   const breakdownHtml = breakdown.map(row =>
     `<tr>
-      <td style="padding:6px 10px;border:1px solid #E2E8F0;font-size:12px;">${escapeHtml(row.action)}</td>
-      <td style="padding:6px 10px;border:1px solid #E2E8F0;font-size:12px;text-align:right;">${row.count.toLocaleString()}</td>
+      <td style="padding:6px 10px;border:1px solid ${emailBrand.border};font-size:12px;">${escapeHtml(row.action)}</td>
+      <td style="padding:6px 10px;border:1px solid ${emailBrand.border};font-size:12px;text-align:right;">${row.count.toLocaleString()}</td>
     </tr>`
   ).join('');
 
@@ -195,26 +201,26 @@ async function sendPurgeConfirmation(toEmail, adminUsername, summary) {
         <p>The scheduled audit log retention check has found <strong>${recordCount.toLocaleString()} records</strong> that are older than 2 years and are eligible for deletion.</p>
         <table style="margin:16px 0;border-collapse:collapse;width:100%;">
           <tr>
-            <td style="padding:7px 10px;background:#F1F5F9;border:1px solid #E2E8F0;font-size:13px;font-weight:600;color:#475569;">Records to delete</td>
-            <td style="padding:7px 10px;border:1px solid #E2E8F0;font-size:13px;font-weight:700;color:#C62828;">${recordCount.toLocaleString()}</td>
+            <td style="padding:7px 10px;background:${emailBrand.background};border:1px solid ${emailBrand.border};font-size:13px;font-weight:600;color:${emailBrand.body};">Records to delete</td>
+            <td style="padding:7px 10px;border:1px solid ${emailBrand.border};font-size:13px;font-weight:700;color:${emailBrand.danger};">${recordCount.toLocaleString()}</td>
           </tr>
           <tr>
-            <td style="padding:7px 10px;background:#F1F5F9;border:1px solid #E2E8F0;font-size:13px;font-weight:600;color:#475569;">Date range</td>
-            <td style="padding:7px 10px;border:1px solid #E2E8F0;font-size:13px;">${oldestDate} → ${cutoffDate}</td>
+            <td style="padding:7px 10px;background:${emailBrand.background};border:1px solid ${emailBrand.border};font-size:13px;font-weight:600;color:${emailBrand.body};">Date range</td>
+            <td style="padding:7px 10px;border:1px solid ${emailBrand.border};font-size:13px;">${oldestDate} → ${cutoffDate}</td>
           </tr>
         </table>
         <p><strong>Breakdown by action type:</strong></p>
         <table style="margin:8px 0 20px;border-collapse:collapse;width:100%;">
           <thead><tr>
-            <th style="padding:7px 10px;background:#042C53;color:#fff;font-size:12px;text-align:left;">Action</th>
-            <th style="padding:7px 10px;background:#042C53;color:#fff;font-size:12px;text-align:right;">Count</th>
+            <th style="padding:7px 10px;background:${emailBrand.header};color:${emailBrand.surface};font-size:12px;text-align:left;">Action</th>
+            <th style="padding:7px 10px;background:${emailBrand.header};color:${emailBrand.surface};font-size:12px;text-align:right;">Count</th>
           </tr></thead>
           <tbody>${breakdownHtml}</tbody>
         </table>
         <p>To proceed with the deletion, click <strong>Confirm purge</strong> below. To keep all records, click <strong>Cancel</strong>. If neither link is clicked within <strong>48 hours</strong>, the purge will <strong>not</strong> proceed automatically.</p>
         <div style="display:flex;gap:12px;margin:20px 0;">
-          <a href="${confirmUrl}" style="display:inline-block;background:#C62828;color:#fff!important;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;">Confirm purge (delete ${recordCount.toLocaleString()} records)</a>
-          <a href="${cancelUrl}" style="display:inline-block;background:#475569;color:#fff!important;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;">Cancel — keep all records</a>
+          <a href="${confirmUrl}" style="display:inline-block;background:${emailBrand.danger};color:${emailBrand.surface}!important;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;">Confirm purge (delete ${recordCount.toLocaleString()} records)</a>
+          <a href="${cancelUrl}" style="display:inline-block;background:${emailBrand.body};color:${emailBrand.surface}!important;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;">Cancel — keep all records</a>
         </div>
         <p class="note">This email was sent to all Admin users. Only one confirmation is needed. All Admins will receive a confirmation once the purge is completed or cancelled.</p>
       </div>
@@ -240,6 +246,7 @@ If no action is taken within 48 hours, the purge will NOT proceed.
 — Cloud Inventory`;
 
   return send({
+    type:    'audit_purge_confirmation',
     to:      toEmail,
     subject: `Action required: Audit log purge pending — ${recordCount.toLocaleString()} records`,
     html,
@@ -290,6 +297,7 @@ ${discUrl}
 — Cloud Inventory`;
 
   return send({
+    type:    'prospect_submission',
     to:      toEmail,
     subject: `${company} submitted their discovery answers (${answerCount} responses)`,
     html,
@@ -299,34 +307,36 @@ ${discUrl}
 
 async function sendProspectAssumptionChange(toEmail, repName, company, adjustments, aiInsight) {
   const rows = Object.entries(adjustments).map(([k, v]) =>
-    `<tr><td style="padding:6px 10px;font-size:13px;border-bottom:1px solid #E2E8F0;">${k}</td>
-     <td style="padding:6px 10px;font-size:13px;font-weight:600;border-bottom:1px solid #E2E8F0;">${v}</td></tr>`
+    `<tr><td style="padding:6px 10px;font-size:13px;border-bottom:1px solid ${emailBrand.border};">${k}</td>
+     <td style="padding:6px 10px;font-size:13px;font-weight:600;border-bottom:1px solid ${emailBrand.border};">${v}</td></tr>`
   ).join('');
   const insightHtml = aiInsight
-    ? `<div style="background:#F0F9FF;border:1.5px solid #00AECF;border-radius:8px;padding:12px 16px;margin:16px 0;">
-        <div style="font-size:11px;font-weight:700;color:#0089A6;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">What this signals</div>
-        <div style="font-size:13.5px;color:#1E2931;line-height:1.5;">${aiInsight}</div>
+    ? `<div style="background:${emailBrand.infoSurface};border:1.5px solid ${emailBrand.accent};border-radius:8px;padding:12px 16px;margin:16px 0;">
+        <div style="font-size:11px;font-weight:700;color:${emailBrand.buttonHover};text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">What this signals</div>
+        <div style="font-size:13.5px;color:${emailBrand.header};line-height:1.5;">${aiInsight}</div>
       </div>`
     : '';
   const insightText = aiInsight ? `\n\nWHAT THIS SIGNALS: ${aiInsight}\n` : '';
   return send({
+    type: 'prospect_assumption_change',
     to: toEmail,
     subject: `[CI ROI] ${company} adjusted assumptions on their shared business case`,
     text: `${repName},\n\n${company} just adjusted assumptions on the shared business case link.\n\nAdjusted fields:\n${Object.entries(adjustments).map(([k,v]) => `  ${k}: ${v}`).join('\n')}${insightText}\nReview before your next call.\n\nCloud Inventory ROI Builder`,
-    html: `<div style="font-family:'Inter',sans-serif;max-width:560px;margin:0 auto;padding:24px;">
-      <h2 style="color:#1E2931;">📊 ${company} adjusted business case assumptions</h2>
-      <p style="color:#334155;font-size:14px;">${repName}, the prospect just stress-tested the shared business case and changed the following assumptions. This tells you exactly which numbers they're pushing back on before your next call.</p>
+    html: `<div style="font-family:${emailBrand.font};max-width:560px;margin:0 auto;padding:24px;">
+      <h2 style="color:${emailBrand.header};">📊 ${company} adjusted business case assumptions</h2>
+      <p style="color:${emailBrand.body};font-size:14px;">${repName}, the prospect just stress-tested the shared business case and changed the following assumptions. This tells you exactly which numbers they're pushing back on before your next call.</p>
       ${insightHtml}
-      <table style="width:100%;border-collapse:collapse;border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;margin:16px 0;">
-        <thead><tr><th style="background:#1E2931;color:#fff;padding:8px 10px;text-align:left;font-size:12px;">Assumption changed</th><th style="background:#1E2931;color:#fff;padding:8px 10px;text-align:left;font-size:12px;">Value they used</th></tr></thead>
+      <table style="width:100%;border-collapse:collapse;border:1px solid ${emailBrand.border};border-radius:8px;overflow:hidden;margin:16px 0;">
+        <thead><tr><th style="background:${emailBrand.header};color:${emailBrand.surface};padding:8px 10px;text-align:left;font-size:12px;">Assumption changed</th><th style="background:${emailBrand.header};color:${emailBrand.surface};padding:8px 10px;text-align:left;font-size:12px;">Value they used</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
-      <p style="color:#64748B;font-size:12px;margin-top:16px;">Review these before your next conversation. If they reduced a recovery assumption significantly, that's the objection to address.</p>
+      <p style="color:${emailBrand.muted};font-size:12px;margin-top:16px;">Review these before your next conversation. If they reduced a recovery assumption significantly, that's the objection to address.</p>
     </div>`
   });
 }
 
 module.exports = {
+  providerState,
   sendPasswordReset,
   sendWelcomeWithTempPassword,
   sendPurgeConfirmation,

@@ -13,25 +13,16 @@
 
   /* The 6-slot rotation used for the value-driver breakdown chart
      (Exec View) — 2 core brand colors + 4 extended categorical colors. */
-  const DRIVER_CHART_COLORS = ['#0089A6', '#2E7D32', '#12786F', '#A6791E', '#6A4C93', '#45688A'];
+  const brand = window.CIBrand;
+  const DRIVER_CHART_COLORS = brand.charts.categorical.slice();
 
   /* Deal-stage tag colors — SINGLE definition (was duplicated in app.js
      and versioning.js). */
-  const STAGE_COLORS = {
-    Discovery: '#0089A6',
-    Demo: '#A6791E',
-    Proposal: '#12786F',
-    Negotiation: '#6A4C93',
-    'Closed Won': '#2E7D32',
-    'Closed Lost': '#C81E10'
-  };
+  const STAGE_COLORS = Object.fromEntries(Object.entries(brand.colors.status).map(([key,value]) => [key, value.color]));
 
   /* Named extended-palette colors, for anywhere a semantic name reads
      better than an array index (audience tags, stakeholder roles, etc). */
-  const CHART = {
-    teal: '#12786F', violet: '#6A4C93', gold: '#A6791E',
-    slate: '#45688A', berry: '#A23E5C'
-  };
+  const CHART = Object.fromEntries(['teal','violet','gold','slate','berry'].map((key,index)=>[key,brand.charts.categorical[index+2]]));
 
   if (typeof window !== 'undefined') {
     window.DRIVER_CHART_COLORS = DRIVER_CHART_COLORS;

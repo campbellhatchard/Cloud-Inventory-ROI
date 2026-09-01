@@ -1,0 +1,33 @@
+{
+  "knowledgeVersion":"1.0",
+  "applicationVersion":"6.8.2",
+  "roiModel":{"version":"2.8","modelVersion":28,"contractHorizon":"configured contract term"},
+  "brandVersion":"1.0",
+  "productTerminology":["Cloud Inventory Platform","Mobile Enterprise Platform (MEP)","Enterprise Printing Platform (EPP)"],
+  "financialSemantics":["Estimated Opportunity Value is rep-entered commercial context and not CRM authority","Modeled Customer Investment is the customer cost used by ROI","Annual Customer Benefit is annual modeled economic value","Total Contract Benefit follows the configured contract term","Net Economic Benefit is contract benefit less modeled investment","Contract ROI, NPV and Payback require modeled investment"],
+  "roiKnowledge":["ROI Model v2.8 separates direct cost savings, recovered contribution margin, working-capital benefit, capacity value and risk avoidance","Direct lost-sales contribution margin takes precedence over modeled OTIF-gap contribution margin","Service penalties and expedite premium are separate economic drivers","Workforce productivity methods do not stack within their overlap pool","Carrying and turns estimates do not double count","Inventory accuracy calibrates recovery assumptions but does not create dollars alone","Field Inventory, first-time-fix truck rolls and field reconciliation remain separate","No governed default should be invented"],
+  "valueHistory":["Prospect draft is not submitted evidence","Prospect submitted is immutable submitted evidence","Customer provided and Customer revalidated are customer-supported states","Rep updated needs customer validation","Current, Aging and Stale describe evidence freshness","Historical scenarios preserve what was used at that time; Value History preserves what was learned across the opportunity"],
+  "outputGovernance":["Ready to Share, Review Before Sharing and Draft Only govern presentation readiness only","Output Readiness does not change BuyCycle Stage, ROI Maturity or Buyer Commitment","Customer Proof is approved peer evidence, not current-customer validation; omit it when no approved proof exists"],
+  "competitiveGovernance":["Competitive Company and Competitive Product are distinct","RFgen and RF-SMART are separate competitive products","A Research Run is not approved intelligence","Only governed source/finding approval can publish a Battlecard revision","Approved intelligence may be Current, Aging or Stale"],
+  "cleanup":["Remove is recoverable; permanent delete is separately governed","Recently Removed supports Restore","Current-scenario protection, share-link inactivity, immutable submission preservation, Value History and audit history remain governed"],
+  "email":{"provider":"SendGrid","configuredWhen":["SENDGRID_API_KEY","FROM_EMAIL"],"productionLinks":"APP_URL or Render external URL","failureRule":"Notification failure never rolls back a valid business transaction"},
+  "workspaces":[
+    ["roi","ROI Calculator","Build and save the governed economic baseline","Save Scenario","Does not update stage, evidence, or CRM","Discovery"],
+    ["discovery","Discovery","Capture current-state and Prospect questionnaire information","Create or review Prospect Link","Draft answers are not submitted evidence","Buyer Evidence"],
+    ["readiness","Buyer Evidence","Capture criterion-specific customer evidence and govern stage","Review readiness","Does not advance automatically","Stakeholders"],
+    ["stakeholders","Stakeholders","Map buyer roles, engagement, influence and support","Save stakeholder map","Mapping does not prove unrelated criteria","Solution Fit"],
+    ["solution-fit","Solution Fit","Validate workflows, integrations, gaps and technical readiness","Save Solution Fit","Does not change ROI or stage","Joint Project Plan"],
+    ["jpp","Joint Project Plan","Track customer and joint commitments, owners and dates","Save plan","A plan alone does not prove criteria","Deal Coach"],
+    ["outputs","Executive Outputs","Create governed customer-facing deliverables","Review readiness and export","Does not advance BuyCycle","Proposal"],
+    ["coach","Deal Coach / Christie","Coach the next buyer commitment from saved evidence","Coach Me","Christie recommends but never writes governed data","Execute the recommended customer action"],
+    ["sensitivity","Sensitivity","Model alternate assumptions","Compare alternate case","Does not replace the saved case","Save deliberately if selected"],
+    ["impact","Impact Map","View the authoritative questionnaire-to-ROI methodology","Review driver mapping","Is not a second economic model","ROI Calculator"],
+    ["compare","Compare","Compare saved scenarios and versions","Select scenarios to compare","Does not merge or modify scenarios","Saved Scenarios"],
+    ["saved","Saved Scenarios","Inspect current version, lineage, links and Value History","Open version or manage link","Historical versions remain immutable","Compare"],
+    ["manager","Sales Manager","Review authorized portfolio exceptions and coach reps","Coach This Deal","Does not forecast or modify CRM","Opportunity workspace"],
+    ["analytics","Analytics","Analyze saved governed records","Run saved-record analysis","Does not modify opportunities or act as CRM forecasting","Sales Manager"],
+    ["customers","Customers Administration","Manage authorized customer records","Create or update customer","Does not grant roles or team scope","ROI Calculator"],
+    ["admin","Admin","Manage users, teams, competitive governance and recovery","Use the governed admin action","Does not expose secrets or bypass authorization","Audit results"],
+    ["guided","Guided Mode","Show calculator sections one step at a time","Toggle Guided Mode","Does not change ROI math or create evidence","Save Scenario"]
+  ]
+}

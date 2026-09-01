@@ -51,7 +51,7 @@ const RANGE_RULES = {
   laborWastePct:   { min: 0,  max: 80,  label: 'Productivity loss', unit: '%', hint: 'Usually 5–40%.' },
   pickRateGainPct: { min: 0,  max: 80,  label: 'Pick-rate gain', unit: '%', hint: 'Usually 5–40%.' },
   orderErrorPct:   { min: 0,  max: 30,  label: 'Order error rate', unit: '%', hint: 'Usually 0.5–8%.' },
-  fieldLeakagePct: { min: 0,  max: 40,  label: 'Field parts leakage', unit: '%', hint: 'Usually 1–15%.' }
+  fieldLeakageRate: { min: 0,  max: 40,  label: 'Field parts leakage', unit: '%', hint: 'Enter the field-only annual loss rate.' }
 };
 function checkFieldRange(id) {
   const el = document.getElementById(id);
@@ -111,6 +111,19 @@ function renderSaveStatus() {
    Shows "Acme Corp · FY26 Scenario" on every tab so the rep never loses
    track of which customer they're working in. Updates on tab switch and
    when the identity fields change. */
+let _contextStageReadiness = null;
+let _contextStageScenarioId = null;
+let _contextStageLoading = false;
+async function loadContextStageReadiness(scenarioId) {
+  if (!scenarioId || _contextStageLoading || (_contextStageScenarioId === scenarioId && _contextStageReadiness)) return;
+  _contextStageLoading = true;
+  try {
+    const response = await apiFetch('/api/stage-readiness/' + encodeURIComponent(scenarioId));
+    _contextStageReadiness = response && response.ok ? await response.json() : null;
+    _contextStageScenarioId = scenarioId;
+  } catch (_) { _contextStageReadiness = null; }
+  finally { _contextStageLoading = false; updateContextHeader(); }
+}
 function updateContextHeader() {
   const bar = document.getElementById('contextHeader');
   if (!bar) return;
@@ -118,15 +131,23 @@ function updateContextHeader() {
   const scenario = (document.getElementById('scenarioName')?.value || '').trim();
   if (!company) { bar.style.display = 'none'; return; }
   bar.style.display = 'flex';
+  const customerId=window.currentScenarioCustomerId||window._currentCustomerId||null;
   const scenarios = (typeof savedScenarios !== 'undefined' && Array.isArray(savedScenarios))
-    ? savedScenarios.filter(s => s && s.company === company && s.isCurrent !== false) : [];
+    ? savedScenarios.filter(s => s && s.isCurrent !== false && (customerId?s.customerId===customerId:s.company===company)) : [];
   const activeId = window._calcScenarioId || '';
+  if (activeId && _contextStageScenarioId !== activeId) loadContextStageReadiness(activeId);
   const scenarioControl = scenarios.length ? `<label class="ctx-scenario-picker"><span>Scenario</span><select onchange="onCalcScenarioPick(this.value)" title="Switch scenario for this customer">${scenarios.map(s => `<option value="${escapeHtmlUX(s.id)}"${s.id===activeId?' selected':''}>${escapeHtmlUX(s.name || 'Untitled')}${s.version?' (v'+s.version+')':''}</option>`).join('')}</select></label>${activeId?`<button class="ctx-versions" onclick="openCurrentVersionHistory()" title="View previous versions of this scenario">🕘 Versions</button>`:''}` : (scenario ? `<span class="ctx-scenario"><span>Scenario</span>${escapeHtmlUX(scenario)}</span>` : '');
+  const g = _contextStageScenarioId === activeId ? _contextStageReadiness : null;
+  const stageControl = activeId ? `<span class="ctx-sep">/</span><div class="ctx-stage-picker"><span>Current BuyCycle stage</span><strong>${g?`Stage ${g.currentStageNumber} — ${escapeHtmlUX(g.currentStage?.name||'')}`:'Loading…'}</strong><small id="contextStageStatus" class="${g&&g.stageGap>0?'has-gap':''}">${g ? (g.stageGap>0?`Evidence supports Stage ${g.evidenceStage}`:`${g.readiness}% ready`) : 'Loading evidence'}</small><button onclick="switchTab('readiness')">Review</button></div>` : '';
+  const meta=window._activeCustomerMeta||null;
+  const attribution=meta&&meta.access!=='owner'?`<span class="ctx-attribution"><span>Viewing ${escapeHtmlUX(meta.owner||'another rep')}'s opportunity</span>${meta.solutionFit?.primarySe?`<b>Primary SE: ${escapeHtmlUX(meta.solutionFit.primarySe)}</b>`:''}${meta.teams?.length?`<b>${escapeHtmlUX(meta.teams.join(', '))}</b>`:''}</span>`:'';
   bar.innerHTML = `<span class="ctx-icon" aria-hidden="true">${ctxInitialsUX(company)}</span>
     <span class="ctx-details"><span class="ctx-label">Customer workspace</span><span class="ctx-company">${escapeHtmlUX(company)}</span></span>` +
-    (scenarioControl ? `<span class="ctx-sep">/</span>${scenarioControl}` : '') +
-    `<button class="ctx-switch" onclick="showCustomerGate()" title="Search and switch customer"><span aria-hidden="true">⇄</span> Switch customer</button>`;
+    attribution+(scenarioControl ? `<span class="ctx-sep">/</span>${scenarioControl}` : '') + stageControl +
+    `<button class="ctx-switch" onclick="openCustomerSwitcher()" title="Search and switch customer"><span aria-hidden="true">⇄</span> Switch customer</button>`;
 }
+window.resetContextStageReadiness=()=>{_contextStageReadiness=null;_contextStageScenarioId=null;_contextStageLoading=false;};
+
 function ctxInitialsUX(name) {
   return String(name || '').trim().split(/\s+/).slice(0, 2)
     .map(w => w.charAt(0).toUpperCase()).join('') || '—';
@@ -247,7 +268,7 @@ function renderEmptyState(el, opts) {
   const title = escapeHtmlUX(opts.title || 'Nothing here yet');
   const sub = escapeHtmlUX(opts.sub || '');
   const action = opts.actionLabel && opts.onAction
-    ? `<button class="btn btn-cta btn-sm ux-empty-action">${escapeHtmlUX(opts.actionLabel)}</button>` : '';
+    ? `<button class="btn btn-primary btn-sm ux-empty-action">${escapeHtmlUX(opts.actionLabel)}</button>` : '';
   el.innerHTML = `<div class="ux-empty">
       <div class="ux-empty-icon">${icon}</div>
       <div class="ux-empty-title">${title}</div>
@@ -373,7 +394,7 @@ function maybeShowOnboarding() {
       <li><strong>Share &amp; track</strong> — send a trackable business-case link and see when they open it.</li>
     </ol>
     <div class="onboard-actions">
-      <button class="btn btn-cta btn-sm" id="onboardStart">Start with a customer</button>
+      <button class="btn btn-primary btn-sm" id="onboardStart">Start with a customer</button>
       <button class="btn btn-ghost btn-sm" id="onboardSkip">Skip for now</button>
     </div>`;
   document.body.appendChild(coach);

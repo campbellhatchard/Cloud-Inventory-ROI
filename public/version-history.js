@@ -7,17 +7,235 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.8.2', date: '2026-09-01', tag: 'fix',
+    title: 'AI Knowledge & Christie Runtime Completion',
+    changes: ['Regenerated current Help coverage and expanded specialist AI capability documentation', 'Added actual Manager and Sales Engineer Christie launch paths with server-controlled perspectives', 'Corrected competitive freshness and mapped Value History priority to counted ROI driver contribution', 'Aligned the final customer Business Case methodology wording']
+  },
+  {
+    version: '6.8.1', date: '2026-09-01', tag: 'integrity',
+    title: 'AI Context, Help & Production Email Integrity',
+    changes: ['Unified Christie grounding across authorized opportunity workspaces', 'Made generated Help visible with deterministic curated overrides and registry-backed field semantics', 'Made admin email success reflect actual SendGrid provider acceptance with safe operational logging']
+  },
+  {
+    version: '6.8.0', date: '2026-08-31', tag: 'ai',
+    title: 'Help, AI Knowledge & Christie Coach Governance',
+    changes: ['Introduced Application Knowledge 1.0, dedicated server-owned AI Help and prospect-safe field Help, Christie Persona 1.0, scenario-authorized coaching context, Coach Me preferences, and production-safe SendGrid configuration. ROI Model remains v2.8 and Brand System remains v1.0.']
+  },
+  {
+    version: '6.7.2', date: '2026-08-31', tag: 'brand',
+    title: 'Brand System Final Enforcement',
+    changes: ['Completed final Brand System 1.0 enforcement across customer Business Case, Prospect Link components, session-expiry UX, provenance banners and server-generated Admin purge pages. Expanded Brand System regression coverage to prevent legacy corporate-blue, font and server-theme bypasses.']
+  },
+  {
+    version: '6.7.1', date: '2026-08-31', tag: 'brand',
+    title: 'Brand System Integrity Completion',
+    changes: ['Completed centralized branding across Word battlecards and proposals, Solution Fit documents, browser print/PDF exports, email, semantic logo roles, document typography and audience footers; added bypass detection and literal-count audit reporting without changing Brand System v1.0 or ROI Model v2.8.']
+  },
+  {
+    version: '6.7.0', date: '2026-08-31', tag: 'brand',
+    title: 'Central Cloud Inventory Brand System',
+    changes: ['Introduced the centralized Cloud Inventory Brand System across the web application, Prospect experiences, Executive Outputs, Proposal, PDF, PowerPoint, Word exports, methodology documents, Competitive Intelligence and authentication screens. Brand colors, typography, logos, charts, semantic statuses and document treatments now resolve from one governed source of truth.']
+  },
+  {
+    version: '6.6.4', date: '2026-08-31', tag: 'integrity',
+    title: 'Competitive Product Identity Integrity',
+    changes: ['Corrected Competitive Intelligence product identity so vendors with multiple products can share a company/domain without being incorrectly deduplicated. Product-level identity now relies on product names, aliases, and governed product-specific evidence, while company domains resolve company identity. Admin source governance now distinguishes Proposed, Approved, Rejected, and Retired sources.']
+  },
+  {
+    version: '6.6.3', date: '2026-08-31', tag: 'security',
+    title: 'Competitive Intelligence Security & Migration Integrity',
+    changes: ['Completed Competitive Intelligence governance with opportunity-level authorization, comprehensive legacy competitor migration and compatibility, Battlecard-safe duplicate merging, complete Admin product/source management, EPP competitive context, and restored Customer Proof release artifacts.']
+  },
+  {
+    version: '6.6.2', date: '2026-08-31', tag: 'governance',
+    title: 'Competitive Intelligence Memory & Governance',
+    changes: ['Introduced persistent Competitive Intelligence with reusable product records, research history, source provenance, freshness, governed finding approval, versioned Battlecards, opportunity memory, and Admin competitive-content management. Newly researched competitors can now be reused rather than re-entered or researched repeatedly. RFgen and RF-SMART are maintained as independent competitive products.']
+  },
+  {
+    version: '6.6.1', date: '2026-08-31', tag: 'integrity',
+    title: 'Help, Admin Cleanup & UX Integrity Completion',
+    changes: ['Replaced test-data cleanup with dependency-aware, recoverable Data Cleanup & Recovery; rebuilt Help around current tasks and governed terminology; and completed action hierarchy and responsive UX integrity without changing ROI Model v2.8.']
+  },
+  {
+    version: '6.6.0', date: '2026-08-31', tag: 'experience',
+    title: 'Application UX & Sales Manager Experience',
+    changes: ['Redesigned the Sales Manager workspace around management attention, buying progress, customer commitments and explainable risk; simplified portfolio inspection across team, rep and buying-stage views; and introduced a consistent application-wide navigation and action hierarchy with responsive, accessible controls.']
+  },
+  {
+    version: '6.5.3', date: '2026-08-31', tag: 'governance',
+    title: 'Prospect Evidence Trust & Submission Integrity',
+    changes: ['Strengthened Prospect Value History so immutable evidence is now classified from a server-authoritative questionnaire schema, Prospect Links are bound to authorized saved opportunities, Review / Sync uses actual submitted evidence rather than mutable drafts, and Discovery surfaces submission lineage and value-history actions directly.']
+  },
+  {
+    version: '6.5.2', date: '2026-08-31', tag: 'architecture',
+    title: 'Prospect Value Validation & Cross-Version History',
+    changes: ['Added immutable Prospect Link submission snapshots and opportunity-wide ROI Value History', 'Reps can view prospect-submitted values across scenario versions, revalidate values with customer stakeholders, preserve original evidence, and compare current versus customer-supported values', 'Each ROI scenario version now traces exactly which value and provenance it used without changing ROI Model v2.8']
+  },
+  {
+    version: '6.5.1', date: '2026-08-31', tag: 'fix',
+    title: 'ROI Model v2.8 Integrity Completion',
+    changes: ['Unified in-app and printable Impact Maps around the authoritative questionnaire and formula registries', 'Removed ghost technician-revenue methodology and made generated methodology consume counted engine drivers, overlaps, methods, and economic classes', 'Corrected questionnaire semantics and central/field boundaries, added complete documentation, actual-question tests, and frozen v27 fixtures']
+  },
+  {
+    version: '6.5.0', date: '2026-08-31', tag: 'architecture',
+    title: 'Economic & Questionnaire Integrity',
+    changes: ['Established ROI Model v2.8 and an authoritative questionnaire-to-formula registry', 'Separated contribution-margin service value, penalties, expedite, first-time-fix, and field reconciliation economics', 'Added accuracy-derived recovery, explicit overlap decisions, prospect investment integrity, v2.7 compatibility, and governed methodology documentation']
+  },
+  {
+    version: '6.4.19', date: '2026-08-31', tag: 'fix',
+    title: 'Executive Credibility Integrity Patch',
+    changes: ['Corrected Executive Value Story revision identity so Proposal review state no longer changes the story itself. Added safe unsaved draft outputs, removed legacy customer-story fallback on authoritative-story failure, aligned Proposal PDF with persisted Proposal editorial content, and strengthened Proposal story review governance.']
+  },
+  {
+    version: '6.4.18', date: '2026-08-31', tag: 'governance',
+    title: 'Unified Executive Value Story & Output Readiness',
+    changes: ['Established one server-authoritative Executive Value Story for the Executive View, PDF, PowerPoint, proposal, Word export, and share flows', 'Added visible Ready, Review Before Sharing, and Draft Only readiness with explicit blockers, warnings, acknowledgement, and internal-draft controls', 'Made proposal editorial content persistent while governed facts remain traceable to a deterministic story revision']
+  },
+  {
+    version: '6.4.17', date: '2026-08-31', tag: 'governance',
+    title: 'Evidence-Driven Executive PowerPoint',
+    changes: ['Rebuilt Executive PowerPoint around customer evidence and ROI provenance. Removed unsupported current-state, root-cause, implementation, and next-step fallbacks; added evidence-aware financial presentation, customer-safe Solution Fit context, joint next steps, and dynamic slide inclusion.']
+  },
+  {
+    version: '6.4.16', date: '2026-08-31', tag: 'governance',
+    title: 'PowerPoint Customer Proof Governance',
+    changes: ['PowerPoint customer proof now uses only scenario-selected, source-backed approved Customer Proof Catalog records', 'Removed legacy hard-coded customer stories and omit the optional Customer Proof slide and navigation item when no approved proof exists', 'Kept visible slide numbering sequential and stored included proof IDs and revisions in deck metadata without changing ROI or Buyer Evidence']
+  },
+  {
+    version: '6.4.15', date: '2026-08-31', tag: 'governance',
+    title: 'Approved Customer Proof',
+    changes: ['Replaced hard-coded customer-result claims with a source-backed, approval-governed server Customer Proof Catalog', 'Customer-facing outputs now resolve scenario-selected stable proof IDs and omit Customer Results when no approved proof exists', 'Added provenance, naming, status, external-use, maximum-selection, safe-projection, AI guardrail, and legacy-claim audit controls without changing ROI or Buyer Evidence']
+  },
+  {
+    version: '6.4.14', date: '2026-08-31', tag: 'architecture',
+    title: 'Authoritative Proposal Persistence',
+    changes: ['Made Executive Proposals scenario-scoped and server persisted across authorized sessions and devices', 'Added debounced autosave, visible save state, revision conflict protection, safe legacy browser-draft import, and proposal carry-forward between ROI versions', 'Connected Buyer Evidence, Christie, Word export, and PDF output to the same authoritative proposal without changing ROI math, Opportunity Value, or BuyCycle progression']
+  },
+  {
+    version: '6.4.13', date: '2026-08-31', tag: 'architecture',
+    title: 'R10 Opportunity Value Semantics',
+    summary: 'Added explicit Estimated Opportunity Value, separated commercial opportunity value from modeled investment and customer benefit, and made management portfolio values currency aware.'
+  },
+  {
+    version: '6.4.12', date: '2026-08-31', tag: 'fix',
+    title: 'R6.2 Analytics Outcome Authority',
+    summary: 'Governed opportunity outcome now remains authoritative in Win/Loss analytics; legacy outcomes are used only for records without Buyer Evidence governance.'
+  },
+  {
+    version: '6.4.11', date: '2026-08-31', tag: 'architecture',
+    title: 'R6.1 Authoritative Opportunity Outcome Integrity',
+    summary: 'Made governed Stage 7 Closed Won/Lost the sole current outcome, retired the Phase 1 outcome editor and API, separated realized value, and aligned switching, versioning, and analytics.'
+  },
+  {
+    version: '6.4.10', date: '2026-08-31', tag: 'architecture',
+    title: 'R9 Live Management Readiness',
+    summary: 'Sales Manager and Customer Switcher now use the same live Buyer Readiness service as the governed workspace, while Stage History remains an immutable event snapshot.'
+  },
+  {
+    version: '6.4.9', date: '2026-08-30', tag: 'feature',
+    title: 'R8 Christie & AI BuyCycle Alignment',
+    summary: 'Aligned Christie, AI Help, contextual guidance, and Rep Assessment UX to the governed Current Stage, Rep Assessment, and Evidence-Supported Stage model across BuyCycle Stages 2–7.'
+  },
+  {
+    version: '6.4.8', date: '2026-08-30', tag: 'architecture',
+    title: 'R7 Unified BuyCycle Stage Architecture',
+    summary: 'Established Current BuyCycle Stage as the single governed opportunity stage, separated Rep Assessment and evidence-supported stage, preserved governance across ROI versions, and retired the editable seller-stage taxonomy.'
+  },
+  {
+    version: '6.4.7', date: '2026-08-30', tag: 'feature',
+    title: 'Governed opportunity close',
+    changes: ['Replaced ambiguous native Won/Lost prompts with an explicit two-step Cloud Inventory close workflow', 'Added controlled loss reasons, customer feedback, conditional competitor details, separate lessons learned, and server-owned Stage at Loss', 'Required governed Stage 6 readiness and five actual user certifications for Closed Won', 'Removed role-only manager/admin bypasses and required a current relevant Manager Exception plus explicit acknowledgement', 'Added server-generated final value-case, value-realization, stakeholder, evidence, readiness, and team snapshots with terminal Stage 7 summaries, CRM-independent messaging, audit detail, and close-specific regression coverage']
+  },
+  {
+    version: '6.4.6', date: '2026-08-30', tag: 'fix',
+    title: 'Criterion-specific Buyer Evidence integrity',
+    changes: ['Replaced broad source-presence matching with explicit validators for every Stage 2–6 readiness criterion', 'Prevented generic stakeholders, Discovery activity, proposals, competitors, Joint Project Plans, or partial Solution Fits from completing unrelated requirements', 'Required exact criterion-linked evidence with quality, customer validation, freshness, and mapped stakeholders where appropriate', 'Added semantic Solution Fit, workflow-validation, implementation-readiness, ROI baseline, economic-impact, and contract-economics checks', 'Added transparent proof summaries, precise blockers, mapped-stakeholder evidence entry, Christie context, Help, and a dedicated false-positive regression matrix without changing ROI formulas, stage thresholds, or history']
+  },
+  {
+    version: '6.4.5', date: '2026-08-30', tag: 'fix',
+    title: 'Buyer Commitment integrity',
+    changes: ['Replaced the dated-milestone and Economic Buyer shortcut with one explainable buyer-action commitment service', 'Capped generic current customer and joint milestones at Moderate while treating overdue and seller-owned work as non-qualifying', 'Mapped current validated funding, decision, evaluation, ROI, procurement, and preference evidence to Strong commitment', 'Reserved Very Strong for explicit Cloud Inventory selection, funding reconfirmation, or Closed Won', 'Added commitment details, active/completed/overdue plan signals, stage blockers, Christie context, Help, and dedicated regression coverage without moving stages or rewriting history']
+  },
+  {
+    version: '6.4.4', date: '2026-08-30', tag: 'fix',
+    title: 'Evidence freshness integrity',
+    changes: ['Made the customer Evidence Date authoritative for Current, Aging, Stale, and Needs Review status while retaining Last Updated only for audit', 'Added deterministic date-only aging, criterion-specific windows, future-date validation, and live freshness details', 'Made stale saved evidence block readiness and added an intentional Revalidate Evidence path without changing the rep-selected stage', 'Applied configurable 90-day freshness to customer ROI validation and Economic Buyer approval', 'Updated Christie context, Buyer Evidence cards, contextual Help, and regression coverage without changing ROI formulas or customer-value provenance']
+  },
+  {
+    version: '6.4.3', date: '2026-08-30', tag: 'fix',
+    title: 'OTIF maturity provenance correction',
+    changes: ['Separated customer-baseline OTIF value from the industry-risk fallback when evaluating ROI maturity', 'Kept fallback OTIF value seller-supported even when revenue is prospect-verified', 'Added calculation-mode and support-reason detail to the ROI Maturity explanation', 'Added regression coverage for both OTIF modes while preserving the existing ROI formulas and maturity thresholds']
+  },
+  {
+    version: '6.4.2', date: '2026-08-30', tag: 'feature',
+    title: 'Customer-owned ROI maturity',
+    changes: ['Rebuilt ROI Maturity around customer-supported annual value rather than generic Discovery completion', 'Added an authoritative 50% customer-value coverage threshold across every positive ROI driver', 'Separated Rep Estimate, Rep Confirmed, Customer Provided, and Prospect Verified provenance with source and date persistence', 'Added structured customer validation and explicit mapped Economic Buyer approval for Levels 3 and 4', 'Added a transparent ROI Maturity drawer, stage-blocking explanations, Christie context, export provenance, and dedicated regression coverage without changing ROI formulas']
+  },
+  {
+    version: '6.4.1', date: '2026-08-30', tag: 'fix',
+    title: 'Authoritative BuyCycle stage model',
+    changes: ['Centralized governed BuyCycle parsing, validation, labels, and active progression for Stages 2–7', 'Preserved legacy Stage 6 and terminal Stage 7 records during loading and evidence saves instead of reducing them to Stage 5', 'Retired the obsolete stage-advance endpoint and retained the governed Stage 2→3→4→5→6 workflow', 'Kept Stage 7 exclusive to explicit Closed Won or Closed Lost actions and aligned Christie with the governed stage model', 'Added dedicated stage-model and regression coverage without changing ROI calculations or BuyCycle criteria']
+  },
+  {
+    version: '6.4.0', date: '2026-08-30', tag: 'feature',
+    title: 'Structured Sales Team administration',
+    changes: ['Separated Primary and Additional Sales Leaders, Sales Reps, and Sales Engineers into clear team-editor panels', 'Added role-aware searchable multi-select pickers, multi-role badges, live composition counts, member search, and mobile full-screen selection', 'Kept professional role assignment in User Management while validating team eligibility and preventing duplicate memberships', 'Added explicit removal and deactivation impact warnings plus leader, Rep, SE, activation, and deactivation audit events', 'Clarified Team SE collaboration versus opportunity-level Primary SE responsibility', 'Closed inactive-team scope gaps in the centralized authorization service used by customer switching, Solution Fit, dashboards, direct access, and Christie']
+  },
+  {
+    version: '6.3.0', date: '2026-08-30', tag: 'feature',
+    title: 'Authorized in-context customer switching',
+    changes: ['Replaced the normal return-to-landing switch flow with a responsive customer workspace overlay', 'Added one server-authorized lightweight search for customer-first, Rep-first, SE, Team, stage, status, and Solution Fit filtering', 'Preserved the current functional workspace while isolating customer scenarios, versions, discovery, Solution Fit, and Christie context', 'Added per-user authorized Recents, unsaved-work protection, view attribution, and direct Solution Fit entry', 'Updated the initial workspace, global customer search, Help, and AI guidance to use the same role-and-team authorization service']
+  },
+  {
+    version: '6.2.0', date: '2026-08-29', tag: 'feature',
+    title: 'Sales Teams, additive roles, and collaborative Solution Fit security',
+    changes: ['Added first-class Sales Teams and many-to-many dated memberships for reps, SEs, and leaders', 'Centralized additive role permissions and server-side customer, scenario, stage, dashboard, and Solution Fit scope', 'Added same-team SE collaboration, Primary and Additional SE responsibility, permanent Created By attribution, and field-level Solution Fit change history', 'Added Admin Sales Teams workflow, searchable multi-role members, role multi-selects, access diagnostics, and historical close snapshots', 'Separated functionality demonstrated from customer validation in Solution Fit and its outputs']
+  },
+  {
+    version: '6.1.1', date: '2026-08-29', tag: 'fix',
+    title: 'Login release version stays synchronized',
+    changes: ['Removed the hard-coded v4.0.0 login footer', 'Login now reads the deployed package version from the server health endpoint without caching', 'Added regression coverage that fails if a hard-coded login release version returns']
+  },
+  {
+    version: '6.1.0', date: '2026-08-29', tag: 'feature',
+    title: 'Task-oriented Help and current-workflow AI guidance',
+    changes: ['Added searchable workflows for new opportunities, BuyCycle stages 2–7, buyer evidence, blockers, outputs, roles, managers, and CRM-independent operation', 'Added a replayable two-minute tour and contextual “Why is this blocking me?” guidance', 'Clarified the boundaries between application AI Help, Christie deal coaching, and prospect-safe question Help', 'Updated AI Help knowledge for Buyer Evidence & Stage Readiness and rep-owned stage selection']
+  },
+  {
+    version: '6.0.0', date: '2026-08-28', tag: 'feature',
+    title: 'Evidence-Based BuyCycle Deal Workspace',
+    summary: 'The ROI application now owns BuyCycle Stages 2–7, critical buyer evidence, governed advancement and regression, and explicit Won/Lost outcomes without simulating CRM integration.',
+    changes: ['Added a dedicated Buyer Evidence & Stage Readiness workspace inside every customer scenario', 'Reworked stages to Economic Consequences, Funding, Decision Criteria, Evaluation, Vendor Selection, and Closed', 'Added evidence provenance, strength, confidence, freshness, stakeholder, date, amount, timing, and customer validation', 'Added governed advancement, rep certification, stage regression, manager exceptions, and immutable history', 'Added Closed Won and Closed Lost with stage-at-loss preservation', 'Renamed leadership reporting to ROI Deal Governance Dashboard', 'Documented authoritative cross-app data sources and preserved legacy records as Setup Needed']
+  },
+  {
+    version: '5.10.0', date: '2026-08-28', tag: 'design',
+    title: 'Select once, assess automatically',
+    summary: 'The rep maintains the deal stage once in the persistent Customer Workspace while Christie concentrates on evidence gaps and the next customer action.',
+    changes: ['Added an autosaving Rep-Selected Deal Stage control to the persistent customer header', 'Added inline evidence alignment or evidence-supported-stage feedback', 'Removed duplicate stage entry from Deal Coach', 'Kept Deal Coach notes only for evidence not already captured elsewhere', 'Synchronized the rep selection with the saved scenario and manager governance view']
+  },
+  {
+    version: '5.9.1', date: '2026-08-28', tag: 'fix',
+    title: 'Rep-owned deal stages',
+    summary: 'Removed CRM assumptions: the opportunity owner selects the working deal stage and Christie provides a separate advisory evidence assessment.',
+    changes: ['Renamed CRM stage references to Rep-Selected Deal Stage', 'Made stage gaps compare the rep selection with the evidence-supported position', 'Updated Christie prompts, fallback output, and Sales Manager governance views']
+  },
+  {
+    version: '5.9.0', date: '2026-08-28', tag: 'feature',
+    title: 'Buyer Evidence & Stage Readiness Governance',
+    summary: 'Buyer-stage decisions are now grounded in persisted customer evidence, governed advancement rules, and auditable manager exceptions.',
+    items: ['Configurable buyer-evidence criteria for BuyCycle stages 1–5', 'Independent CRM, rep-assessed, and evidence-supported stage positions', 'Hard-gated advancement, rep certification, manager exceptions, and stage history', 'Offline-safe Christie assessment when live AI is unavailable', 'Stage gaps and readiness evidence in Sales Manager inspection']
+  },
+  {
+    version: '5.8.1', date: '2026-08-28', tag: 'design',
+    title: 'Sales Manager prototype-aligned experience',
+    summary: 'The Sales Manager workspace now follows the approved leadership cockpit design and inspection workflow.',
+    items: ['Restored the prototype leadership cockpit hierarchy and density', 'Added eight interactive management KPIs and portfolio distribution panels', 'Expanded the opportunity inspection table and next-customer-commitment visibility', 'Rebuilt the deal drawer around evidence, recovery, milestones, stakeholders, and internal actions']
+  },
+  {
     version: '5.8.0', date: '2026-08-28', tag: 'feature',
     title: 'Sales Manager Deal Management',
-    summary: 'Adds a server-enforced Sales Manager workspace that synthesizes current team deals, buying progress, Solution Fit, Joint Project Plan execution, stakeholder health, contract economics, and internal management actions without recalculating ROI.',
-    changes: [
-      'Added additive migration 024 for multi-role user access and internal Sales Manager actions',
-      'Added Sales Manager portfolio views by team, rep, buying stage, deal health, Solution Fit, execution health, stakeholder coverage, and management priority',
-      'Added server-side Sales Manager role enforcement while preserving the user’s primary Account Executive, Solution Engineer, or Admin role',
-      'Kept saved ROI metrics authoritative and read-only in the manager dashboard; the dashboard does not invoke the ROI calculation engine',
-      'Made management actions follow the scenario base record across later scenario versions and update only fields explicitly supplied',
-      'Removed unnecessary prospect-link tokens and raw stakeholder records from the manager dashboard response'
-    ]
+    summary: 'Sales leaders receive a role-gated portfolio view of deal health, execution, stakeholders, and interventions.',
+    items: ['Multi-role Sales Manager access with server-side enforcement', 'Team, rep, and buying-stage portfolio views', 'Separate deal, Solution Fit, execution, stakeholder, and management-priority dimensions', 'Past-due and missing work visibility plus internal manager action plans']
   },
   {
     version: '5.7.6', date: '2026-08-28', tag: 'fix',

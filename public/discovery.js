@@ -13,15 +13,15 @@
    - type: 'text' | 'number' | 'percent' | 'select'
    - placeholder: example answer
    ───────────────────────────────────────── */
+/* Previous visible labels retained only for regression traceability: View Submission History; Review / Sync Prospect Answers. v6.6 shows Review Prospect Answers plus explicit draft/submitted states. */
 const DISC_QUESTIONS = {
   default: [
     { section: 'Labor & Productivity', questions: [
       { id:'dq1', text:'How many people directly touch inventory as part of their daily role - warehouse staff, field technicians, and office-based inventory controllers?', why:'Drives user count and total labor savings baseline.', sync:'userCount', type:'number', placeholder:'e.g. 45' },
-      { id:'dq2', text:'What percentage of a typical worker day is consumed by manual counts, paper processes, spreadsheet updates, or reconciliation rework?', why:'Identifies productivity gain potential. Benchmark: 20-35%.', sync:'laborWastePct', type:'percent', placeholder:'e.g. 25' },
-      { id:'dq3', text:'How many hours per week does the team spend investigating and resolving inventory discrepancies?', why:'Quantifies hidden labor cost of inaccuracy.', sync:'laborWastePct', syncConv:'hoursPerWeek', type:'number', placeholder:'e.g. 20' },
+      { id:'dq2', text:'What percentage of a typical worker day is consumed by paper processes, spreadsheet updates, inventory searching, and informal reconciliation rework—excluding scheduled physical/cycle counts and separately captured field reconciliations?', why:'Customer productivity input; formal counts are modeled separately.', sync:'laborWastePct', type:'percent', placeholder:'e.g. 25' },
     ]},
     { section: 'Inventory Accuracy & Write-offs', questions: [
-      { id:'dq4', text:'What is your current inventory accuracy rate (%)?', why:'CI benchmark: 99.5% accuracy. The gap drives shrinkage opportunity.', sync:'currentAccuracy', type:'percent', placeholder:'e.g. 92' },
+      { id:'dq4', text:'What is your current inventory accuracy rate (%)?', why:'Current customer accuracy calibrates an internal v2.8 model assumption.', sync:'currentAccuracy', type:'percent', placeholder:'e.g. 92' },
       { id:'dq5', text:'What is the total dollar value of inventory you write off annually due to loss, damage, expiry, or unaccounted shrinkage?', why:'Direct input for write-off savings calculation.', sync:'annualWriteOff', type:'number', placeholder:'e.g. 250000' },
       { id:'dq6a', text:'How many physical count days per year does your team perform (people-days total)?', why:'Count-labor lever: total person-days spent counting per year.', sync:'countDaysYr', type:'number', placeholder:'e.g. 12' },
       { id:'dq6b', text:'How many people are involved in those counts?', why:'Count-labor lever: people counting.', sync:'countPeople', type:'number', placeholder:'e.g. 6' },
@@ -33,7 +33,6 @@ const DISC_QUESTIONS = {
     { section: 'Order Accuracy & OTIF', questions: [
       { id:'dq9', text:'What is your current on-time, in-full (OTIF) or order accuracy rate (%)?', why:'Baseline for improvement. Industry avg improves 8-15% with CI.', sync:'otifBaseline', type:'percent', placeholder:'e.g. 93' },
       { id:'dq10', text:'What is your target OTIF rate (%)?', why:'OTIF gap (target - baseline) drives revenue-at-risk recovery.', sync:'otifTarget', type:'percent', placeholder:'e.g. 98' },
-      { id:'dq11', text:'What percentage of orders require re-picking, re-packing, or expedited shipping due to inventory errors?', why:'Quantifies true cost of fulfillment inaccuracy.', type:'percent', placeholder:'e.g. 8' },
     ]},
     { section: 'Downtime & Expediting', questions: [
       { id:'dq18', text:'How many times per year does work stop or slow due to stockouts caused by inaccurate records?', why:'Downtime lever: events per year.', sync:'downtimeEventsYr', type:'number', placeholder:'e.g. 100' },
@@ -52,17 +51,18 @@ const DISC_QUESTIONS = {
       { id:'dqw2', text:'What is the fully-loaded labor cost to process one order/line today?', why:'Throughput lever: current cost per order.', sync:'costPerOrder', type:'number', placeholder:'e.g. 3.50' },
       { id:'dqw3', text:'What pick-rate or throughput improvement do you expect from mobile-first workflows?', why:'Throughput lever: pick-rate gain %.', sync:'pickRateGainPct', type:'percent', placeholder:'e.g. 20' },
       { id:'dqw4', text:'What is your current order error or mis-ship rate?', why:'Accuracy lever: error rate %.', sync:'orderErrorPct', type:'percent', placeholder:'e.g. 2' },
-      { id:'dqw5', text:'What is the fully-loaded cost of one order error (return + re-ship + chargeback)?', why:'Accuracy lever: cost per error.', sync:'costPerError', type:'number', placeholder:'e.g. 120' },
+      { id:'dqw5', text:'What is the fully-loaded operational cost of one fulfillment error, including internal rework, return handling, and normal reship handling—excluding separately captured expedited freight, penalties, credits, deductions, and lost sales?', why:'Order-error operations only; service consequences are modeled separately.', sync:'costPerError', type:'number', placeholder:'e.g. 120' },
     ]},
   ],
   telecom: [
     { section: 'Field Operations & Labor', questions: [
       { id:'dq1', text:'How many field technicians, warehouse staff, and network operations personnel handle inventory or spare parts?', why:'Drives user count and labor savings baseline.', sync:'userCount', type:'number', placeholder:'e.g. 85' },
-      { id:'dq2', text:'What percentage of a field technician time is non-productive - driving back for wrong parts, manual ordering, paperwork?', why:'High in telecom - benchmark 25-40% non-productive.', sync:'laborWastePct', type:'percent', placeholder:'e.g. 30' },
-      { id:'dq3', text:'How many truck rolls per year are caused by incorrect or unavailable parts?', why:'Each unnecessary truck roll = $200-$500 fully loaded.', type:'number', placeholder:'e.g. 780' },
+      { id:'dq2', text:'What percentage of technician time is spent on manual ordering, inventory searching/reconciliation, paperwork, and other non-productive inventory activity—excluding repeat truck rolls captured separately?', why:'Workforce productivity input; repeat trips are a separate pool.', sync:'laborWastePct', type:'percent', placeholder:'e.g. 30' },
+      { id:'dq3', text:'How many repeat truck rolls per year are caused by incorrect or unavailable parts?', why:'First-time-fix input.', sync:'repeatVisitsYr', type:'number', placeholder:'e.g. 780' },
+      { id:'dq3b', text:'What is the approximate fully-loaded cost of one repeat truck roll caused by a wrong or unavailable part?', why:'Includes vehicle, travel, field labor, and direct trip cost.', sync:'costPerTruckRoll', type:'number', placeholder:'e.g. 300' },
     ]},
     { section: 'Parts Inventory & Write-offs', questions: [
-      { id:'dq4', text:'What is your current parts inventory accuracy rate (%) across warehouse and vehicle stock?', why:'CI benchmark: 99.5%. Gap drives shrinkage and truck-roll exposure.', sync:'currentAccuracy', type:'percent', placeholder:'e.g. 88' },
+      { id:'dq4', text:'What is your current parts inventory accuracy rate (%) across warehouse and vehicle stock?', why:'Current customer accuracy calibrates an internal v2.8 model assumption.', sync:'currentAccuracy', type:'percent', placeholder:'e.g. 88' },
       { id:'dq5', text:'What is the annual dollar value of parts written off due to loss, theft, or unreconciled field consumption?', why:'Direct write-off input - typically 2-4% of telecom parts inventory.', sync:'annualWriteOff', type:'number', placeholder:'e.g. 400000' },
       { id:'dq6a', text:'How many physical/cycle count days per year (people-days total)?', why:'Count-labor lever: person-days counting per year.', sync:'countDaysYr', type:'number', placeholder:'e.g. 12' },
       { id:'dq6b', text:'How many people are involved in those counts?', why:'Count-labor lever: people counting.', sync:'countPeople', type:'number', placeholder:'e.g. 6' },
@@ -70,12 +70,12 @@ const DISC_QUESTIONS = {
     { section: 'Network & SLA Performance', questions: [
       { id:'dq9', text:'What is your current on-time delivery rate for CPE installations (%)?', why:'CPE accuracy drives NPS and churn.', sync:'otifBaseline', type:'percent', placeholder:'e.g. 87' },
       { id:'dq9b', text:'What is your target on-time delivery rate (%)?', why:'OTIF gap drives revenue-at-risk recovery.', sync:'otifTarget', type:'percent', placeholder:'e.g. 95' },
-      { id:'dq10', text:'What annual SLA penalties or customer credits did parts delays cause ($)?', why:'Direct financial impact - contributes to expedite/penalty recovery.', sync:'expediteSpendYr', type:'number', placeholder:'e.g. 650000' },
+      { id:'dq10', text:'What annual SLA penalties or customer credits did parts delays cause ($)?', why:'Direct service-penalty economic input.', sync:'servicePenaltyCostYr', type:'number', placeholder:'e.g. 650000' },
     ]},
     { section: 'Downtime & Expediting', questions: [
       { id:'dq18', text:'How many network incidents per year have restoration extended by parts unavailability?', why:'Downtime lever: events per year.', sync:'downtimeEventsYr', type:'number', placeholder:'e.g. 200' },
       { id:'dq19', text:'Average hours added to MTTR per such incident?', why:'Downtime lever: hours per event.', sync:'downtimeHrsPerEvent', type:'number', placeholder:'e.g. 3' },
-      { id:'dq20', text:'Cost per hour of extended outage/SLA exposure ($)?', why:'Downtime lever: cost per hour.', sync:'downtimeCostPerHr', type:'number', placeholder:'e.g. 4000' },
+      { id:'dq20', text:'What is the internal/network operating cost per hour of the extended outage, excluding separately captured SLA penalties and customer credits?', why:'Downtime operating impact only.', sync:'downtimeCostPerHr', type:'number', placeholder:'e.g. 4000' },
       { id:'dq21', text:'Annual emergency/expedited parts procurement spend ($)?', why:'Expedite lever: annual expedite spend.', sync:'expediteSpendYr', type:'number', placeholder:'e.g. 500000' },
     ]},
     { section: 'Inventory & Financial Baseline', questions: [
@@ -113,7 +113,7 @@ const DISC_QUESTIONS = {
     { section: 'Supply Chain & OTIF', questions: [
       { id:'dq9', text:'Current customer OTIF / on-time delivery rate (%)?', why:'OTIF gap is a primary value driver in manufacturing.', sync:'otifBaseline', type:'percent', placeholder:'e.g. 91' },
       { id:'dq9b', text:'Target OTIF rate (%)?', why:'Gap drives revenue-at-risk recovery.', sync:'otifTarget', type:'percent', placeholder:'e.g. 97' },
-      { id:'dq10', text:'Annual financial penalties, chargebacks, or expediting costs from late/incomplete shipments ($)?', why:'Hard-dollar OTIF cost.', sync:'expediteSpendYr', type:'number', placeholder:'e.g. 280000' },
+      { id:'dq10', text:'Annual customer penalties or chargebacks from late or incomplete shipments, excluding expedited inbound materials ($)?', why:'Hard-dollar service penalties.', sync:'servicePenaltyCostYr', type:'number', placeholder:'e.g. 280000' },
     ]},
     { section: 'Inventory & Working Capital', questions: [
       { id:'dq7', text:'Total value of raw materials, WIP, and finished goods on hand?', why:'Full inventory base for carrying cost and turns.', sync:'inventoryValue', type:'number', placeholder:'e.g. 14000000' },
@@ -136,10 +136,9 @@ const DISC_QUESTIONS = {
     { section: 'Site & Labor Management', questions: [
       { id:'dq1', text:'How many people across sites, yard, and office manage or transact inventory - materials, tools, equipment, consumables?', why:'User count drives labor savings baseline.', sync:'userCount', type:'number', placeholder:'e.g. 70' },
       { id:'dq2', text:'Hours per week site supervisors spend searching for materials, investigating shortages, or on manual paperwork?', why:'Benchmark: 5-10 hrs/week per supervisor.', sync:'laborWastePct', syncConv:'hoursPerWeek', type:'number', placeholder:'e.g. 6' },
-      { id:'dq3', text:'How many active job sites are you managing inventory across simultaneously?', why:'Multi-site complexity multiplies visibility value.', type:'number', placeholder:'e.g. 12' },
+      { id:'dq3', text:'How many active job sites hold field inventory outside central warehouse or yard locations?', why:'One authoritative field-location count.', sync:'fieldLocations', type:'number', placeholder:'e.g. 12' },
     ]},
     { section: 'Material Loss & Write-offs', questions: [
-      { id:'dq4', text:'What percentage of materials ordered are unaccounted for at closeout - loss, theft, waste beyond plan?', why:'Construction shrinkage benchmark: 2-5%.', type:'percent', placeholder:'e.g. 3' },
       { id:'dq5', text:'Annual dollar value of tools, equipment, materials written off due to loss, theft, or unaccounted consumption?', why:'Direct write-off savings input.', sync:'annualWriteOff', type:'number', placeholder:'e.g. 450000' },
       { id:'dq6a', text:'How many physical/cycle count days per year (people-days total)?', why:'Count-labor lever: person-days counting per year.', sync:'countDaysYr', type:'number', placeholder:'e.g. 12' },
       { id:'dq6b', text:'How many people are involved in those counts?', why:'Count-labor lever: people counting.', sync:'countPeople', type:'number', placeholder:'e.g. 6' },
@@ -182,7 +181,7 @@ const DISC_QUESTIONS = {
       { id:'dq21', text:'Annual emergency/unplanned procurement spend from stockouts ($)?', why:'Expedite lever: annual expedite spend.', sync:'expediteSpendYr', type:'number', placeholder:'e.g. 900000' },
     ]},
     { section: 'Parts Inventory & Write-offs', questions: [
-      { id:'dq4', text:'Current inventory accuracy rate for critical spares and maintenance materials (%)?', why:'CI benchmark: 99.5%. Below 95% = downtime risk.', sync:'currentAccuracy', type:'percent', placeholder:'e.g. 91' },
+      { id:'dq4', text:'Current inventory accuracy rate for critical spares and maintenance materials (%)?', why:'Current customer accuracy calibrates an internal v2.8 model assumption.', sync:'currentAccuracy', type:'percent', placeholder:'e.g. 91' },
       { id:'dq5', text:'Annual value of parts/materials written off - dead stock, unreconciled consumption, obsolescence?', why:'Direct write-off savings.', sync:'annualWriteOff', type:'number', placeholder:'e.g. 800000' },
       { id:'dq6a', text:'How many physical/cycle count days per year (people-days total)?', why:'Count-labor lever: person-days counting per year.', sync:'countDaysYr', type:'number', placeholder:'e.g. 12' },
       { id:'dq6b', text:'How many people are involved in those counts?', why:'Count-labor lever: people counting.', sync:'countPeople', type:'number', placeholder:'e.g. 6' },
@@ -214,7 +213,7 @@ const DISC_QUESTIONS = {
       { id:'dq3', text:'Current pick accuracy rate (%)?', why:'Accuracy baseline for rework reduction.', type:'percent', placeholder:'e.g. 97.5' },
     ]},
     { section: 'Inventory Accuracy & Shrinkage', questions: [
-      { id:'dq4', text:'Perpetual inventory (location) accuracy rate (%)?', why:'CI benchmark: 99.8%. Gap drives chargebacks.', sync:'currentAccuracy', type:'percent', placeholder:'e.g. 96' },
+      { id:'dq4', text:'Perpetual inventory (location) accuracy rate (%)?', why:'Current customer accuracy calibrates an internal v2.8 model assumption.', sync:'currentAccuracy', type:'percent', placeholder:'e.g. 96' },
       { id:'dq5', text:'Annual dollar value written off due to shrinkage, damage, or variances?', why:'Direct write-off savings input.', sync:'annualWriteOff', type:'number', placeholder:'e.g. 180000' },
       { id:'dq6a', text:'How many physical/cycle count days per year (people-days total)?', why:'Count-labor lever: person-days counting per year.', sync:'countDaysYr', type:'number', placeholder:'e.g. 12' },
       { id:'dq6b', text:'How many people are involved in those counts?', why:'Count-labor lever: people counting.', sync:'countPeople', type:'number', placeholder:'e.g. 6' },
@@ -222,7 +221,7 @@ const DISC_QUESTIONS = {
     { section: 'Customer OTIF & Chargebacks', questions: [
       { id:'dq9', text:'Current OTIF rate across top customers (%)?', why:'OTIF gap sizes value-at-risk.', sync:'otifBaseline', type:'percent', placeholder:'e.g. 95.2' },
       { id:'dq9b', text:'Contractual target OTIF rate (%)?', why:'Gap drives chargeback recovery.', sync:'otifTarget', type:'percent', placeholder:'e.g. 98.5' },
-      { id:'dq10', text:'Total annual customer chargebacks/deductions/fines from OTIF failures ($)?', why:'Hard-dollar OTIF cost - key CFO metric.', sync:'expediteSpendYr', type:'number', placeholder:'e.g. 420000' },
+      { id:'dq10', text:'Total annual customer chargebacks, deductions, or fines from OTIF failures ($)?', why:'Hard-dollar service penalties.', sync:'servicePenaltyCostYr', type:'number', placeholder:'e.g. 420000' },
     ]},
     { section: 'Downtime & Expediting', questions: [
       { id:'dq18', text:'How many times per year does fulfillment halt/slow due to inaccurate inventory?', why:'Downtime lever: events per year.', sync:'downtimeEventsYr', type:'number', placeholder:'e.g. 90' },
@@ -248,8 +247,7 @@ const DISC_QUESTIONS = {
   food: [
     { section: 'Production & Warehouse Labor', questions: [
       { id:'dq1', text:'How many staff are in inventory operations across receiving, production stores, cold storage, dispatch?', why:'User count drives labor savings baseline.', sync:'userCount', type:'number', placeholder:'e.g. 55' },
-      { id:'dq2', text:'Percentage of team time on manual lot tracking, FEFO verification, or expiry monitoring?', why:'Automated FEFO is a primary CI value driver.', sync:'laborWastePct', type:'percent', placeholder:'e.g. 20' },
-      { id:'dq3', text:'Hours per week on compliance documentation - traceability reports, temp logs, lot reconciliations?', why:'Compliance documentation labor is directly reducible.', sync:'laborWastePct', syncConv:'hoursPerWeek', type:'number', placeholder:'e.g. 25' },
+      { id:'dq2', text:'What percentage of team time is spent on manual lot tracking, FEFO verification, expiry monitoring, inventory-related compliance documentation, and informal reconciliation—excluding scheduled counts?', why:'One canonical food inventory labor burden.', sync:'laborWastePct', type:'percent', placeholder:'e.g. 20' },
     ]},
     { section: 'Expiry, Waste & Write-offs', questions: [
       { id:'dq4', text:'Current inventory accuracy for lot-tracked and date-coded products (%)?', why:'Low accuracy = expiry failures and write-offs.', sync:'currentAccuracy', type:'percent', placeholder:'e.g. 94' },
@@ -260,7 +258,7 @@ const DISC_QUESTIONS = {
     { section: 'Customer Service & OTIF', questions: [
       { id:'dq9', text:'Current OTIF / order fill rate to retail, food service, or export (%)?', why:'Baseline for OTIF improvement value.', sync:'otifBaseline', type:'percent', placeholder:'e.g. 93' },
       { id:'dq9b', text:'Target OTIF / fill rate (%)?', why:'Gap drives revenue-at-risk recovery.', sync:'otifTarget', type:'percent', placeholder:'e.g. 98' },
-      { id:'dq10', text:'Annual penalties, deductions, or returns from incorrect product, wrong lot, or late delivery ($)?', why:'Customer chargeback input.', sync:'expediteSpendYr', type:'number', placeholder:'e.g. 350000' },
+      { id:'dq10', text:'Annual penalties, deductions, or customer service charges from wrong product, wrong lot, or late delivery—excluding return handling captured in cost per error ($)?', why:'Customer service-penalty input.', sync:'servicePenaltyCostYr', type:'number', placeholder:'e.g. 350000' },
     ]},
     { section: 'Downtime & Expediting', questions: [
       { id:'dq18', text:'How many times per year does production stop/slow due to material stockouts or inaccurate records?', why:'Downtime lever: events per year.', sync:'downtimeEventsYr', type:'number', placeholder:'e.g. 80' },
@@ -288,7 +286,6 @@ const DISC_QUESTIONS = {
     { section: 'Store Operations & Labor', questions: [
       { id:'dq1', text:'How many store associates, warehouse staff, inventory controllers manage inventory across the network?', why:'User count drives labor savings baseline.', sync:'userCount', type:'number', placeholder:'e.g. 180' },
       { id:'dq2', text:'Hours per week associates spend on manual stock counts, discrepancy investigation, or stockroom organisation?', why:'Benchmark: 4-8 hrs/week per store.', sync:'laborWastePct', syncConv:'hoursPerWeek', type:'number', placeholder:'e.g. 150' },
-      { id:'dq3', text:'Current phantom inventory rate - % of SKUs shown in-stock but not on shelf?', why:'Phantom inventory = lost sales.', type:'percent', placeholder:'e.g. 8' },
     ]},
     { section: 'Shrink & Write-offs', questions: [
       { id:'dq4', text:'Current inventory accuracy rate at store/SKU level (%)?', why:'CI delivers 99.3%+. Gap drives shrink and lost sales.', sync:'currentAccuracy', type:'percent', placeholder:'e.g. 92' },
@@ -299,7 +296,7 @@ const DISC_QUESTIONS = {
     { section: 'In-stock Rate & Customer Impact', questions: [
       { id:'dq9', text:'Current in-stock rate / on-shelf availability (%)?', why:'In-stock rate drives revenue recovery and NPS.', sync:'otifBaseline', type:'percent', placeholder:'e.g. 93' },
       { id:'dq9b', text:'Target in-stock rate (%)?', why:'Gap drives revenue-at-risk recovery.', sync:'otifTarget', type:'percent', placeholder:'e.g. 98' },
-      { id:'dq10', text:'Estimated annual lost sales from phantom inventory, out-of-stocks, or omnichannel errors ($)?', why:'Recovered lost sales is the primary revenue driver in retail.', sync:'expediteSpendYr', type:'number', placeholder:'e.g. 2200000' },
+      { id:'dq10', text:'Observed annual sales lost because phantom inventory, out-of-stocks, or service failures prevented fulfillment ($)?', why:'Direct observed lost-sales input; contribution margin is applied before ROI.', sync:'lostSalesYr', type:'number', placeholder:'e.g. 2200000' },
     ]},
     { section: 'Downtime & Expediting', questions: [
       { id:'dq18', text:'How many times per year do out-of-stocks halt sales/fulfillment due to inaccurate records?', why:'Downtime lever: events per year.', sync:'downtimeEventsYr', type:'number', placeholder:'e.g. 200' },
@@ -334,7 +331,7 @@ const DISC_QUESTIONS = {
       { id:'dq21', text:'Annual emergency procurement spend from stockouts ($)?', why:'Expedite lever: annual expedite spend.', sync:'expediteSpendYr', type:'number', placeholder:'e.g. 1500000' },
     ]},
     { section: 'Spares Inventory & Write-offs', questions: [
-      { id:'dq4', text:'Current critical spares inventory accuracy rate (%)?', why:'CI benchmark: 99.5%. Below 95% = downtime risk.', sync:'currentAccuracy', type:'percent', placeholder:'e.g. 89' },
+      { id:'dq4', text:'Current critical spares inventory accuracy rate (%)?', why:'Current customer accuracy calibrates an internal v2.8 model assumption.', sync:'currentAccuracy', type:'percent', placeholder:'e.g. 89' },
       { id:'dq5', text:'Annual value of spares/materials written off - obsolescence, loss, unreconciled consumption?', why:'Direct write-off savings - typically 2-3% of spares.', sync:'annualWriteOff', type:'number', placeholder:'e.g. 1100000' },
       { id:'dq6a', text:'How many physical/cycle count days per year (people-days total)?', why:'Count-labor lever: person-days counting per year.', sync:'countDaysYr', type:'number', placeholder:'e.g. 12' },
       { id:'dq6b', text:'How many people are involved in those counts?', why:'Count-labor lever: people counting.', sync:'countPeople', type:'number', placeholder:'e.g. 6' },
@@ -360,6 +357,27 @@ const DISC_QUESTIONS = {
     ]},
   ],
 };
+/* One operational error-cost definition across every industry. Expedited
+   freight, penalties/credits, and lost sales have their own governed pools. */
+Object.values(DISC_QUESTIONS).flat().forEach(section=>(section.questions||[]).forEach(q=>{
+  if(q.sync==='costPerError'){
+    q.text='What is the fully-loaded operational cost of one fulfillment error, including internal rework, return handling, and normal reship handling—excluding expedited freight, penalties, credits, deductions, and lost sales?';
+    q.why='Order-error operations only; service consequences are modeled separately.';
+  }
+  if(q.sync==='countDaysYr'){
+    q.text='How many days per year does the team perform formal physical or cycle counts? Enter count/event days, not person-days.';
+    q.why='Count-labor method: count days × people involved × loaded daily labor × recovery.';
+  }
+  if(q.syncConv==='hoursPerWeek'){
+    q.text='On average, how many hours per week does each affected employee spend on inventory searching, discrepancy work, manual paperwork, and informal reconciliation?';
+    q.why='Per-affected-person weekly hours are converted to a share of a 40-hour work week.';
+  }
+  if(q.sync==='currentAccuracy') q.why='Customer-provided current accuracy calibrates a documented Cloud Inventory v2.8 model assumption; it is not an industry benchmark.';
+  if(q.sync==='downtimeCostPerHr'){
+    q.text='What is the approximate incremental internal operating and labor cost per hour of this disruption, excluding lost sales, service penalties or credits, and expedited freight reported separately?';
+    q.why='Distinct internal operating/risk-cost pool; separately captured service economics are excluded.';
+  }
+}));
 
 /* ─────────────────────────────────────────
    getDiscoveryQuestions(industry)
@@ -452,6 +470,9 @@ const SECTION_INDUSTRY_RELEVANCE = {
   /* Warehouse throughput & order accuracy: DC/warehouse-heavy verticals. */
   'Warehouse throughput & order accuracy': ['distribution', 'mfg', 'retail', 'food', 'default'],
 };
+const SERVICE_ECONOMICS_QUESTIONS={section:'Service economics',questions:[
+  {id:'dq_margin',text:'What approximate gross or contribution margin applies to revenue affected by fulfillment or service performance?',why:'Required to convert recovered sales into economic contribution. Optional; no 100% fallback is used.',sync:'contributionMarginPct',type:'percent',placeholder:'e.g. 30'}
+]};
 
 function isSectionRelevant(sectionLabel, industry) {
   const allow = SECTION_INDUSTRY_RELEVANCE[sectionLabel];
@@ -468,7 +489,7 @@ function getDiscoveryQuestions(industry) {
   /* VE core first (strategic framing), then the relevant quantitative
      industry set, then the qualitative industry-context questions.
      Field inventory is injected by getProspectQuestions when the flag is set. */
-  return [VE_CORE_QUESTIONS, ...filteredBase, ctx];
+  return [VE_CORE_QUESTIONS, ...filteredBase, SERVICE_ECONOMICS_QUESTIONS, ctx];
 }
 
 /* Prospect-facing set excludes internal-only questions. */
@@ -482,8 +503,10 @@ const FIELD_INVENTORY_QUESTIONS = {
       why:'Sizes the count-labor lever: locations \xd7 reconciliation cost.', placeholder:'e.g. 12', type:'number', sync:'fieldLocations' },
     { id:'fi2', text:'What is the approximate total value of inventory held at those field locations?',
       why:'Primary input for the carrying-cost and leakage levers.', placeholder:'e.g. 2,000,000', type:'number', sync:'fieldInvValue' },
-    { id:'fi3', text:'How often do you reconcile or count field inventory at each location, and roughly how long does it take?',
-      why:'Drives the reconciliation-labor saving calculation.', placeholder:'e.g. quarterly, half a day each', type:'context' },
+    { id:'fi3a', text:'How many times per year is inventory reconciled at each field location?',
+      why:'Reconciliation frequency input; location count alone creates no benefit.', placeholder:'e.g. 4', type:'number', sync:'fieldReconcilePerYr' },
+    { id:'fi3b', text:'Approximately how many total person-hours does one reconciliation require per field location?',
+      why:'Reconciliation effort input; loaded hourly labor cost is applied by the model.', placeholder:'e.g. 3', type:'number', sync:'fieldReconcilePersonHours' },
     { id:'fi4', text:'What percentage of field inventory do you estimate goes unaccounted for each year \u2014 lost, consumed without record, or simply missing?',
       why:'Direct input for the leakage / shrinkage lever.', placeholder:'e.g. 4%', type:'percent', sync:'fieldLeakageRate' },
     { id:'fi5', text:'Have you had situations where field stock ran out unexpectedly, requiring emergency orders or project delays?',
@@ -497,16 +520,22 @@ function getProspectQuestions(industry, options) {
   var hasFieldInventory = options && options.hasFieldInventory;
   var base = getDiscoveryQuestions(industry).map(section => ({
     ...section,
-    questions: section.questions.filter(q => !q.internal)
+    questions: section.questions.filter(q => !q.internal).map(q=>({...q}))
   })).filter(section => section.questions.length > 0);
   /* Inject field inventory section before the final context section
      when the flag is set. */
   if (hasFieldInventory) {
+    base.forEach(section=>section.questions.forEach(q=>{
+      if(q.sync==='inventoryValue') q.text='What is the value of inventory held in warehouses or central inventory locations, excluding trucks, vans, contractor sites, job sites, remote field stores, and other field inventory reported separately?';
+      if(q.sync==='annualWriteOff') q.text='What are annual warehouse or central-inventory write-offs, excluding field losses reported separately?';
+    }));
     var lastIdx = base.length - 1;
-    base = [...base.slice(0, lastIdx), FIELD_INVENTORY_QUESTIONS, base[lastIdx]];
+    var fieldSection={...FIELD_INVENTORY_QUESTIONS,questions:FIELD_INVENTORY_QUESTIONS.questions.filter(q=>!(industry==='construction'&&q.sync==='fieldLocations')).map(q=>({...q}))};
+    base = [...base.slice(0, lastIdx), fieldSection, base[lastIdx]];
   }
   return base;
 }
+if(typeof buildQuestionnaireRoiRegistry==='function')window.QUESTIONNAIRE_ROI_REGISTRY=buildQuestionnaireRoiRegistry({...DISC_QUESTIONS,_ve:[VE_CORE_QUESTIONS],_context:Object.values(INDUSTRY_CONTEXT),_field:[FIELD_INVENTORY_QUESTIONS],_service:[SERVICE_ECONOMICS_QUESTIONS]});
 
 /* ─────────────────────────────────────────
    DISCOVERY STATE MANAGEMENT
@@ -525,6 +554,7 @@ let discoverySessionToken = null; // current active token (from DB)
 let discoveryDbSessionId  = null; // DB row id (UUID) for the session
 let discoveryScenarioId   = null; // scenario this discovery session belongs to
 let discoveryEngagement   = null; // { openCount, firstOpened, lastOpened } for the active session
+let latestSubmittedEvidence=null; // immutable submission + answer/value-event maps
 
 /* Called when a scenario is loaded or a new one is started.
    Clears any in-memory discovery state from the PREVIOUS scenario so a
@@ -537,6 +567,7 @@ async function resetDiscoveryForScenario(scenarioId) {
   discoveryScenarioId   = scenarioId || null;
   discoveryAnswers      = {};
   discoveryEngagement   = null;
+  latestSubmittedEvidence=null;
 
   /* Re-attach to this scenario's existing active session, if any */
   if (scenarioId) {
@@ -548,13 +579,18 @@ async function resetDiscoveryForScenario(scenarioId) {
           const s = sessions[0]; // most recent active session for this scenario
           discoverySessionToken = s.token;
           discoveryDbSessionId  = s.id;
-          discoveryEngagement   = { openCount: s.open_count || 0, firstOpened: s.first_opened, lastOpened: s.last_opened, submittedAt: s.submitted_at, answerCount: s.answer_count };
-          (s.answers || []).forEach(a => { discoveryAnswers[a.questionId] = a.answer; });
+          discoveryEngagement   = { openCount: s.open_count || 0, firstOpened: s.first_opened, lastOpened: s.last_opened, submittedAt: s.submitted_at, lastSubmittedAt:s.last_submitted_at, submissionCount:s.submission_count||0, latestSubmissionId:s.latest_submission_id, latestSubmissionNumber:s.latest_submission_number, answerCount: s.answer_count };
+          discoveryAnswers=answersToCache(s.answers||[]);
+          await loadLatestSubmittedEvidence();
         }
       }
     } catch (e) { /* leave cleared — a fresh link can be generated */ }
   }
   if (typeof renderDiscoveryTab === 'function') renderDiscoveryTab();
+}
+async function loadLatestSubmittedEvidence(){
+  latestSubmittedEvidence=null;if(!window._calcScenarioId)return null;
+  try{const listRes=await apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/discovery-submissions');if(!listRes.ok)return null;const list=await listRes.json(),submission=list.submissions&&list.submissions[0];if(!submission)return null;const [snapshotRes,historyRes]=await Promise.all([apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/discovery-submissions/'+encodeURIComponent(submission.id)),apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/value-history')]);if(!snapshotRes.ok||!historyRes.ok)return null;const snapshot=await snapshotRes.json(),history=await historyRes.json(),byQuestion={},byInput={};snapshot.answers.forEach(a=>{byQuestion[a.question_id]=a;if(a.canonical_input)byInput[a.canonical_input]=a;});latestSubmittedEvidence={submission:snapshot.submission,byQuestion,byInput,history};return latestSubmittedEvidence;}catch(_){return null;}
 }
 let _answerSaveTimer      = null; // debounce timer for answer writes
 
@@ -571,13 +607,13 @@ function answersToCache(rows) {
 
 /* Push a single answer to the DB — called after every rep keystroke (debounced) */
 async function pushAnswerToDb(questionId, answer, enteredBy) {
-  if (!discoverySessionToken) return;
+  if (!discoveryDbSessionId) return;
   try {
     await apiFetch(
-      '/api/discovery/sessions/' + encodeURIComponent(discoverySessionToken) + '/answers',
+      '/api/discovery/session-records/' + encodeURIComponent(discoveryDbSessionId) + '/answers',
       {
         method: 'PUT',
-        body: JSON.stringify({ questionId, answer, enteredBy: enteredBy || 'rep' })
+        body: JSON.stringify({ questionId, answer })
       }
     );
   } catch(e) {
@@ -624,8 +660,8 @@ async function generateProspectLink() {
   const company   = (document.getElementById('companyName')?.value || '').trim();
 
   /* Hard gate: never generate a link without an active customer. */
-  if (!company) {
-    if (typeof showToast === 'function') showToast('Select a customer first — discovery links are tied to a customer.');
+  if (!company || !(discoveryScenarioId || window._calcScenarioId)) {
+    if (typeof showToast === 'function') showToast('Save or select this customer scenario first — prospect links require an authorized saved opportunity.');
     if (typeof switchTab === 'function') switchTab('calc');
     return;
   }
@@ -732,6 +768,8 @@ async function importProspectAnswers() {
       }
     });
 
+    await loadLatestSubmittedEvidence();
+
     if (typeof renderDiscoveryTab === 'function') renderDiscoveryTab();
     if (typeof renderCalcIndustryQuestions === 'function') renderCalcIndustryQuestions();
     if (typeof showToast === 'function') showToast('Prospect answers refreshed from the database.');
@@ -766,51 +804,28 @@ async function loadDiscoverySession() {
     const session = sessions[0];
     discoverySessionToken = session.token;
     discoveryDbSessionId  = session.id;
+    discoveryEngagement = {
+      openCount: session.open_count || 0,
+      firstOpened: session.first_opened,
+      lastOpened: session.last_opened,
+      submittedAt: session.submitted_at,
+      lastSubmittedAt: session.last_submitted_at,
+      submissionCount: session.submission_count || 0,
+      latestSubmissionId: session.latest_submission_id,
+      latestSubmissionNumber: session.latest_submission_number,
+      answerCount: session.answer_count || 0
+    };
 
     /* Populate answer cache from DB answers */
     discoveryAnswers = answersToCache(session.answers || []);
+    await loadLatestSubmittedEvidence();
 
-    /* Apply discovery answers to calculator fields.
-       Rules:
-       - ALWAYS restore fieldState / provenance (so confidence chips
-         show correctly even when the field already has a saved value).
-       - Only overwrite the DOM field value if:
-           (a) the field is empty, OR
-           (b) the answer came from the prospect (prospect-verified
-               answers take precedence over saved scenario values). */
-    const industry = (document.getElementById('industry') || {}).value || 'default';
-    const allQs = getDiscoveryQuestions(industry).flatMap(function(s){ return s.questions; });
-
-    Object.keys(discoveryAnswers).forEach(function(k) {
-      if (k.endsWith('_by')) return;
-      const v = discoveryAnswers[k];
-      if (!v) return;
-      const enteredBy = discoveryAnswers[k + '_by'] || 'rep';
-      const q = allQs.find(function(q){ return q.id === k; });
-      if (!q || !q.sync) return;
-
-      const num = parseFloat(String(v).replace(/[^0-9.]/g, ''));
-      if (isNaN(num) || num <= 0) return;
-
-      /* Always restore provenance so confidence chips are correct */
-      if (typeof fieldStates !== 'undefined') {
-        fieldStates[q.sync] = enteredBy === 'prospect' ? 'confirmed_prospect' : 'estimated';
-      }
-      if (typeof confirmedFields !== 'undefined' && enteredBy === 'prospect') {
-        confirmedFields.add(q.sync);
-      }
-
-      /* Write field value: prospect answers override; rep answers fill empty fields */
-      const el = document.getElementById(q.sync);
-      if (el && (enteredBy === 'prospect' || !el.value)) {
-        el.value = num;
-      }
-    });
+    /* Working answers and immutable submissions are evidence available for
+       deliberate Review / Sync. Loading Discovery never mutates the selected
+       scenario's saved inputs, field state, ROI, NPV, or payback. */
 
     if (typeof renderCalcIndustryQuestions === 'function') renderCalcIndustryQuestions();
-    if (typeof autoFlagConfidence === 'function') autoFlagConfidence();
-    if (typeof renderConfidence === 'function') renderConfidence();
-    if (typeof recalc === 'function') recalc();
+    if (typeof renderValueHistoryNotice === 'function') renderValueHistoryNotice();
 
   } catch(e) {
     console.error('loadDiscoverySession error:', e.message);
@@ -859,10 +874,13 @@ function renderDiscoveryTab() {
   /* ── Prospect link card ── */
   var engHtml = '';
   if (discoveryEngagement) {
-    if (discoveryEngagement.submittedAt) {
-      engHtml = '<span class="disc-submitted-badge">&#10003; Submitted</span> '
-        + discoveryEngagement.answerCount + ' answer' + (discoveryEngagement.answerCount!==1?'s':'')
-        + ' &middot; ' + new Date(discoveryEngagement.submittedAt).toLocaleString();
+    if (discoveryEngagement.lastSubmittedAt || discoveryEngagement.submittedAt) {
+      var submittedAt = discoveryEngagement.lastSubmittedAt || discoveryEngagement.submittedAt;
+      var submissionCount = discoveryEngagement.submissionCount || 1;
+      engHtml = '<span class="disc-submitted-badge">&#10003; Submitted ' + submissionCount
+        + ' time' + (submissionCount!==1?'s':'') + '</span> '
+        + (discoveryEngagement.answerCount || 0) + ' current answer' + (discoveryEngagement.answerCount!==1?'s':'')
+        + ' &middot; latest ' + new Date(submittedAt).toLocaleString();
     } else if (discoveryEngagement.openCount > 0) {
       engHtml = '&#128065; Opened <strong>' + discoveryEngagement.openCount + '</strong> time'
         + (discoveryEngagement.openCount!==1?'s':'')
@@ -889,9 +907,10 @@ function renderDiscoveryTab() {
       + (engHtml ? '<div class="disc-engagement">' + engHtml + '</div>' : '')
       + '</div>'
       + '<div class="disc-link-card-actions">'
-      + '<button class="btn btn-cta btn-sm" onclick="copyProspectLink()">Copy link</button>'
-      + '<button class="btn btn-ghost btn-sm" onclick="importProspectAnswers()">&#8635; Sync answers</button>'
-      + '<button class="btn btn-ghost btn-sm" onclick="rotateProspectToken()">Rotate</button>'
+      + '<button class="btn btn-primary btn-sm" onclick="copyProspectLink()">Copy Link</button>'
+      + '<button class="btn btn-secondary btn-sm" onclick="openSubmissionHistory()">Review Prospect Answers</button>'
+      + '<button class="btn btn-tertiary btn-sm" onclick="importProspectAnswers()">&#8635; Refresh</button>'
+      + '<button class="btn btn-tertiary btn-sm" onclick="rotateProspectToken()">Rotate</button>'
       + '<button class="btn btn-danger btn-sm" onclick="revokeProspectLink()">Revoke</button>'
       + '</div></div>'
       + '<div class="disc-prospect-link-url" id="discProspectUrl"></div>'
@@ -899,7 +918,7 @@ function renderDiscoveryTab() {
   } else {
     linkHtml = '<div class="disc-link-card disc-link-card-empty">'
       + '<div class="disc-link-card-title">For customer: <strong>' + escapeHtml(activeCompany) + '</strong></div>'
-      + '<button class="btn btn-cta btn-sm" onclick="generateProspectLink()" style="margin-top:8px;">&#128279; Generate prospect link</button>'
+      + '<button class="btn btn-primary btn-sm" onclick="generateProspectLink()" style="margin-top:8px;">&#128279; Generate Prospect Link</button>'
       + '</div>';
   }
 
@@ -975,7 +994,7 @@ function renderDiscoveryTab() {
     + '</div>'
     + '</div>'
     + '<div class="disc-prog-actions">'
-    + '<button class="btn btn-cta btn-sm" onclick="applyDiscoveryToCalc()" title="Apply all answers to calculator fields">Apply to calculator &#8594;</button>'
+    + '<button class="btn btn-primary btn-sm" onclick="applyDiscoveryToCalc()" title="Compare and deliberately apply the latest submitted prospect evidence">Review Prospect Answers &#8594;</button>'
     + '<button class="btn btn-ghost btn-sm" id="discSaveBtn" onclick="discManualSave()" title="Save discovery notes">Save notes</button>'
     + '</div></div>'
     + '<div class="disc-filter-bar">'
@@ -1029,16 +1048,34 @@ function renderDiscQuestion(q, num) {
   var enteredBy = discoveryAnswers[q.id + '_by'] || '';
   var isSynced  = q.sync && answer;
   var isAnswered = answer && answer.trim();
-  var byPill    = enteredBy === 'prospect'
-    ? '<span class="disc-by-pill disc-by-pros">prospect</span>'
-    : enteredBy === 'rep' && isAnswered
-      ? '<span class="disc-by-pill disc-by-rep">rep</span>' : '';
   var syncChip  = isSynced
     ? '<span class="disc-sync-chip">&#8594;&thinsp;' + escapeHtml(q.sync) + '</span>'
     : (q.sync ? '<span class="disc-sync-chip disc-sync-empty">&#8594;&thinsp;' + escapeHtml(q.sync) + '</span>' : '');
   var numHtml   = num ? '<span class="disc-q-num">' + num + '</span>' : '';
   var inputCls  = enteredBy === 'prospect' ? 'disc-q-input disc-ans-pros'
                 : enteredBy === 'rep' && isAnswered ? 'disc-q-input disc-ans-rep' : 'disc-q-input';
+  var submitted = latestSubmittedEvidence && (latestSubmittedEvidence.byQuestion[q.id] || (q.sync && latestSubmittedEvidence.byInput[q.sync]));
+  var draftDiff = submitted && String(answer || '').trim() !== String(submitted.answer_text || '').trim();
+  var submittedMatch = submitted && !draftDiff;
+  var byPill    = enteredBy === 'prospect'
+    ? submittedMatch
+      ? '<span class="disc-by-pill disc-by-pros">Prospect submitted</span>'
+      : '<span class="disc-by-pill disc-by-draft">Prospect draft</span><small class="disc-draft-note">Not yet submitted</small>'
+    : enteredBy === 'rep' && isAnswered
+      ? '<span class="disc-by-pill disc-by-rep">Rep entered</span>' : '';
+  var evidenceMeta = '';
+  if (submitted) {
+    var submission = latestSubmittedEvidence.submission || {};
+    var selected = latestSubmittedEvidence.history && latestSubmittedEvidence.history.selectedScenario;
+    var mayChange = selected && selected.isCurrent && !selected.isClosed;
+    evidenceMeta = '<div class="disc-evidence-meta"><div><strong>Prospect submitted</strong> '
+      + escapeHtml(submitted.answer_text || '—') + '<small>Submission ' + (submission.submission_number || '?')
+      + ' &middot; ' + new Date(submission.submitted_at).toLocaleString() + '</small>'
+      + (draftDiff ? '<em>Working answer differs from the latest submitted evidence.</em>' : '') + '</div>'
+      + (q.sync ? '<div class="disc-evidence-actions"><button type="button" class="btn btn-ghost btn-sm" onclick="openValueHistory(\'' + q.sync + '\')">View History</button>'
+      + (mayChange ? '<button type="button" class="btn btn-ghost btn-sm" onclick="openRevalidateValue(\'' + q.sync + '\')">Revalidate</button>' : '') + '</div>' : '')
+      + '</div>';
+  }
 
   if (q.type === 'context') {
     var tags = '<span class="disc-tag disc-tag-ctx">Context</span>'
@@ -1055,6 +1092,7 @@ function renderDiscQuestion(q, num) {
       + byPill
       + (isAnswered ? '<button class="btn btn-ghost btn-sm disc-extract-btn" onclick="extractFiguresFromContext(\'' + q.id + '\')" title="Check this answer for numbers that could fill in ROI fields">\u2728 Extract numbers</button>' : '')
       + '</div>'
+      + evidenceMeta
       + '<div id="ctx-suggest-' + q.id + '" class="disc-extract-suggestions" style="display:none;"></div>'
       + '</div></div></div>';
   }
@@ -1070,7 +1108,7 @@ function renderDiscQuestion(q, num) {
     + ' placeholder="' + escapeHtml(q.placeholder || '') + '"'
     + ' oninput="handleDiscInput(\'' + q.id + '\',this.value,\'rep\')"/>'
     + byPill + syncChip
-    + '</div></div></div></div>';
+    + '</div>' + evidenceMeta + '</div></div></div>';
 }
 
 /* Rep types an answer — update cache, push to DB, sync to calc */
@@ -1143,7 +1181,7 @@ async function extractFiguresFromContext(questionId) {
             + '<span class="disc-extract-value">' + s.value.toLocaleString() + '</span>'
             + '<span class="disc-extract-reason">' + escapeHtml(s.reason) + '</span>'
             + '</div>'
-            + '<button class="btn btn-cta btn-sm" onclick="applyExtractedFigure(\'' + questionId + '\',' + i + ')">Apply</button>'
+            + '<button class="btn btn-secondary btn-sm" onclick="applyExtractedFigure(\'' + questionId + '\',' + i + ')">Apply Value</button>'
             + '</div>';
         }).join('')
       + '<button class="btn btn-ghost btn-sm" onclick="dismissExtractSuggestions(\'' + questionId + '\')" style="margin-top:6px;">Dismiss</button>';
@@ -1197,37 +1235,30 @@ function dismissExtractSuggestions(questionId) {
   if (suggestEl) suggestEl.style.display = 'none';
 }
 
-function applyDiscoveryToCalc() {
-  const industry = (document.getElementById('industry') || {}).value || 'default';
-  const qs = getDiscoveryQuestions(industry);
-  let applied = 0;
-  qs.flatMap(function(s){ return s.questions; }).forEach(function(q) {
-    const answer    = discoveryAnswers[q.id];
-    const enteredBy = discoveryAnswers[q.id + '_by'] || 'rep';
-    if (answer && q.sync) {
-      let num = parseFloat(String(answer).replace(/[^0-9.]/g, ''));
-      if (!isNaN(num) && num > 0) {
-        if (q.syncConv === 'hoursPerWeek') num = Math.min(100, Math.round((num / 40) * 100));
-        const el = document.getElementById(q.sync);
-        if (el) {
-          el.value = num;
-          applied++;
-          /* Restore provenance so confidence chips update correctly */
-          if (typeof fieldStates !== 'undefined') {
-            fieldStates[q.sync] = enteredBy === 'prospect' ? 'confirmed_prospect' : 'estimated';
-          }
-          if (typeof confirmedFields !== 'undefined' && enteredBy === 'prospect') {
-            confirmedFields.add(q.sync);
-          }
-        }
-      }
-    }
+async function applyDiscoveryToCalc() {
+  if(!window._calcScenarioId)return showToast?.('Save or select a scenario before reviewing prospect evidence.');
+  await loadLatestSubmittedEvidence();
+  if(!latestSubmittedEvidence)return showToast?.('No immutable prospect submission is available yet. Working draft answers cannot be applied as prospect-verified.');
+  const submission=latestSubmittedEvidence.submission,history=latestSubmittedEvidence.history;
+  const selected=history.selectedScenario||{},canApply=selected.isCurrent&&!selected.isClosed;
+  const rows=[];
+  Object.keys(latestSubmittedEvidence.byInput).forEach(function(input){
+    const answer=latestSubmittedEvidence.byInput[input],h=history.inputs&&history.inputs[input]||{};
+    const event=(h.events||[]).find(function(e){return e.event_type==='prospect_submitted'&&String(e.discovery_submission_id)===String(submission.id);});
+    const el=document.getElementById(input),current=el?el.value:(h.valueUsed&&h.valueUsed.value_text)||'Not captured';
+    const working=discoveryAnswers[answer.question_id]||'',draftDiff=String(working).trim()!==String(answer.answer_text||'').trim();
+    rows.push('<article class="disc-sync-review"><div><small>'+escapeHtml(answer.question_text||input)+'</small><strong>'+escapeHtml(input)+'</strong></div><div><small>Current working value</small><b>'+escapeHtml(current||'Not captured')+'</b></div><div><small>Latest submitted value</small><b>'+escapeHtml(answer.answer_text||'—')+'</b><span>Submission '+submission.submission_number+' · '+new Date(submission.submitted_at).toLocaleDateString()+'</span>'+(draftDiff?'<em>Working draft has changed since submission.</em>':'')+'</div><div>'+(event&&canApply?'<button class="btn btn-primary btn-sm" onclick="applySubmittedEvidence(\''+input+'\',\''+event.id+'\')">Use Prospect Value</button>':event?'<span class="history-immutable">Read only for this scenario</span>':'<span class="disc-no-event">No verified value event</span>')+'<button class="btn btn-ghost btn-sm" onclick="openValueHistory(\''+input+'\')">View History</button></div></article>');
   });
-  if (typeof recalc === 'function') recalc();
-  if (typeof autoFlagConfidence === 'function') autoFlagConfidence();
-  if (typeof renderConfidence === 'function') renderConfidence();
-  if (typeof showToast === 'function') showToast('Applied ' + applied + ' answers to calculator.');
-  if (typeof switchTab === 'function') switchTab('calc');
+  const old=document.getElementById('prospectSyncModal');if(old)old.remove();
+  const modal=document.createElement('div');modal.id='prospectSyncModal';modal.className='modal-overlay';modal.innerHTML='<div class="modal-card modal-wide"><div class="modal-header"><div><h2>Review Prospect Evidence</h2><p>Latest immutable Submission '+submission.submission_number+'. Values are applied individually and never overwrite the business case automatically.</p></div><button class="modal-close" onclick="this.closest(\'.modal-overlay\').remove()">&times;</button></div><div class="modal-body">'+(canApply?'':'<div class="history-immutable">Historical or closed scenario — evidence is viewable but cannot be applied.</div>')+(rows.join('')||'<div class="empty-state"><p>This submission contains no mapped financial values.</p></div>')+'</div></div>';document.body.appendChild(modal);
+}
+
+async function applySubmittedEvidence(input,eventId){
+  if(!eventId)return showToast?.('A verified submission event is required.');
+  await applyValueEvent(input,eventId);
+  await loadLatestSubmittedEvidence();
+  document.getElementById('prospectSyncModal')?.remove();
+  showToast?.('Prospect-submitted value applied. Save a new scenario version when ready.');
 }
 
 function clearDiscoveryAnswers() {
@@ -1235,6 +1266,14 @@ function clearDiscoveryAnswers() {
   discoveryAnswers = {};
   renderDiscoveryTab();
 }
+
+async function openSubmissionHistory(){
+  if(!window._calcScenarioId)return showToast?.('Save or select a scenario first.');
+  const old=document.getElementById('submissionHistoryModal');if(old)old.remove();
+  const modal=document.createElement('div');modal.id='submissionHistoryModal';modal.className='modal-overlay';modal.innerHTML='<div class="modal-card modal-wide"><div class="modal-header"><div><h2>Prospect Submission History</h2><p>Immutable questionnaire evidence across every scenario version in this opportunity.</p></div><button class="modal-close" onclick="this.closest(\'.modal-overlay\').remove()">&times;</button></div><div id="submissionHistoryBody" class="modal-body">Loading…</div></div>';document.body.appendChild(modal);
+  try{const r=await apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/discovery-submissions');if(!r.ok)throw Error();const x=await r.json(),body=document.getElementById('submissionHistoryBody');body.innerHTML=x.submissions.length?x.submissions.map(s=>`<button class="history-row" onclick="viewSubmissionSnapshot('${s.id}')"><span><b>Submission ${s.submission_number}</b><small>${new Date(s.submitted_at).toLocaleString()} · Scenario v${s.source_scenario_version||'?'} · ${s.answer_count} answers</small></span><span>${s.selected_scenario_source?'This scenario':'Historical source'} ›</span></button>`).join(''):'<div class="empty-state"><p>No immutable submissions yet. The next Confirm and Send will create Submission 1.</p></div>';}catch(_){document.getElementById('submissionHistoryBody').innerHTML='<p>Submission History could not be loaded.</p>';}
+}
+async function viewSubmissionSnapshot(id){const body=document.getElementById('submissionHistoryBody');body.innerHTML='Loading snapshot…';try{const r=await apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/discovery-submissions/'+encodeURIComponent(id));if(!r.ok)throw Error();const x=await r.json(),groups={};x.answers.forEach(a=>(groups[a.section||'Other']||(groups[a.section||'Other']=[])).push(a));body.innerHTML=`<button class="btn btn-ghost btn-sm" onclick="openSubmissionHistory()">← All submissions</button><div class="history-immutable">🔒 Read-only evidence · Submission ${x.submission.submission_number} · Scenario v${x.submission.source_scenario_version||'?'}</div>`+Object.entries(groups).map(([name,items])=>`<section class="history-section"><h3>${escapeHtml(name)}</h3>${items.map(a=>`<article><b>${escapeHtml(a.question_text)}</b><p>${escapeHtml(a.answer_text||'—')}</p><small>${escapeHtml(a.classification.replace(/_/g,' '))}${a.canonical_input?' · '+escapeHtml(a.canonical_input):''}</small></article>`).join('')}</section>`).join('');}catch(_){body.innerHTML='<p>Submission snapshot could not be loaded.</p>';}}
 if (typeof escapeHtml !== 'function') {
   function escapeHtml(str) {
     return String(str || '')
@@ -1246,91 +1285,4 @@ if (typeof escapeHtml !== 'function') {
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   downloadImpactMap() — generates a CI-branded PDF of the
-   Discovery → Calculator impact map (all industries), built live from
-   DISC_QUESTIONS so it always matches the app. Uses a print window →
-   the browser's "Save as PDF".
-   ═══════════════════════════════════════════════════════════════════ */
-const IMPACT_LABELS = {
-  userCount:          ['Labor savings', 'users × labor rate × recovery% → laborSav'],
-  laborWastePct:      ['Labor savings', 'scales laborSav by measured productivity waste %'],
-  currentAccuracy:    ['Shrink & carrying (suggested)', 'accuracy gap suggests shrink/carrying recovery %'],
-  annualWriteOff:     ['Write-off / shrink savings', 'write-off $ × shrink-recovery% → shrinkSav'],
-  inventoryValue:     ['Carrying cost + turns', 'inventory × carrying% and turns gap → carrySav + turnsSav'],
-  invTurnsCurrent:    ['Working capital (turns)', 'inventory × (1 − current/benchmark) × carry rate → turnsSav'],
-  otifBaseline:       ['OTIF revenue-at-risk', 'revenue × (target − baseline) × OTIF-recovery% → otifSav'],
-  otifTarget:         ['OTIF revenue-at-risk', 'sets the OTIF gap ceiling → otifSav'],
-  itCost:             ['IT displacement', 'IT cost × IT-recovery% → itSav'],
-  revenue:            ['Revenue base', 'multiplier for OTIF value-at-risk'],
-  discRate:           ['NPV', 'discount rate for NPV 3/5-year'],
-  downtimeEventsYr:   ['Production downtime (NEW)', 'events × hrs × $/hr × recovery% → downtimeSav'],
-  downtimeHrsPerEvent:['Production downtime (NEW)', 'component of downtimeSav'],
-  downtimeCostPerHr:  ['Production downtime (NEW)', 'component of downtimeSav'],
-  expediteSpendYr:    ['Expedite premium (NEW)', 'expedite spend × recovery% → expediteSav'],
-  countDaysYr:        ['Count labor (NEW)', 'days × people × daily labor × recovery% → countSav'],
-  countPeople:        ['Count labor (NEW)', 'component of countSav']
-};
-const IMPACT_IND_LABELS = {
-  default:'Default / Generic', telecom:'Telecommunications', mfg:'Manufacturing',
-  construction:'Engineering & Construction', oil:'Oil & Gas', distribution:'Wholesale Distribution',
-  food:'Food & Beverage', retail:'Medical Devices / Life Sciences', mining:'Minerals & Mining'
-};
-
-function downloadImpactMap() {
-  const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  let sections = '';
-  Object.keys(IMPACT_IND_LABELS).forEach(ind => {
-    const qs = (typeof DISC_QUESTIONS !== 'undefined' && DISC_QUESTIONS[ind]) ? DISC_QUESTIONS[ind] : null;
-    if (!qs) return;
-    let rows = '';
-    qs.flatMap(s => s.questions).forEach(q => {
-      let field, impact;
-      if (q.note) { field = '— (qualitative note)'; impact = 'Context only — not calculated'; }
-      else if (q.sync) {
-        field = q.sync + (q.syncConv === 'hoursPerWeek' ? ' (hrs/wk → %)' : '');
-        const m = IMPACT_LABELS[q.sync] || ['—','—'];
-        impact = '<strong>' + m[0] + ':</strong> ' + m[1];
-      } else { field = '—'; impact = 'Diagnostic — informs the conversation'; }
-      rows += `<tr><td>${esc(q.text)}</td><td>${esc(q.type)}</td><td><code>${esc(field)}</code></td><td>${impact}</td></tr>`;
-    });
-    sections += `<h2>${esc(IMPACT_IND_LABELS[ind])}</h2>
-      <table><thead><tr><th style="width:42%">Question</th><th>Type</th><th>Calculator field</th><th>ROI impact</th></tr></thead>
-      <tbody>${rows}</tbody></table>`;
-  });
-
-  const leverRef = `<h2>ROI levers reference</h2>
-    <p><strong>Original 6 levers:</strong> laborSav, shrinkSav, carrySav, turnsSav, otifSav, itSav.
-    <strong>New in v2.5:</strong> downtimeSav (events × hrs × $/hr × recovery%),
-    expediteSav (spend × recovery%), countSav (days × people × daily labor × recovery%).</p>
-    <p style="color:#64748B;font-size:11px;">Scenarios saved before v2.5 compute an unchanged annual benefit — new levers contribute $0 until the new fields are entered.</p>`;
-
-  const w = window.open('', '_blank');
-  if (!w) { if (typeof showToast==='function') showToast('Pop-up blocked — allow pop-ups to download.'); return; }
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Discovery → Calculator Impact Map</title>
-    <style>
-      @page { margin: 0.5in; }
-      * { box-sizing:border-box; margin:0; padding:0; }
-      body { font-family:'Helvetica Neue',Arial,sans-serif; color:#1E2931; padding:0; }
-      .head { display:flex; align-items:center; gap:14px; border-bottom:3px solid #00A9CC; padding-bottom:12px; margin-bottom:16px; }
-      .head img { height:40px; } .head .t { font-size:12px; color:#64748B; }
-      h1 { font-size:22px; margin-bottom:4px; }
-      .intro { font-size:12px; color:#64748B; margin-bottom:16px; }
-      h2 { font-size:14px; color:#00A9CC; margin:20px 0 6px; padding-bottom:3px; border-bottom:1.5px solid #E2E8F0; }
-      table { width:100%; border-collapse:collapse; margin-bottom:12px; }
-      th { background:#1E2931; color:#fff; font-size:10px; text-align:left; padding:6px 8px; }
-      td { font-size:11px; padding:5px 8px; border-bottom:1px solid #F1F5F9; vertical-align:top; }
-      tr:nth-child(even) td { background:#F5F8FA; }
-      code { font-size:10px; background:#F1F5F9; padding:1px 4px; border-radius:3px; }
-      .foot { margin-top:20px; padding-top:10px; border-top:1px solid #E2E8F0; font-size:10px; color:#6B7A8D; text-align:center; }
-      @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
-    </style></head><body>
-    <div class="head"><img src="${window.location.origin}/ci-logo.png" onerror="this.style.display='none'"/><div class="t">Discovery → Calculator Impact Map</div></div>
-    <h1>Discovery Guide → Calculator Impact Map</h1>
-    <div class="intro">Every quantifiable discovery question and the ROI line it drives. Version 2.5.</div>
-    ${sections}${leverRef}
-    <div class="foot">Generated ${new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})} · Cloud Inventory ROI Business Case Builder</div>
-    <script>window.onload=function(){setTimeout(function(){window.print();},400);};<\/script>
-    </body></html>`);
-  w.document.close();
-}
+/* Impact Map display and download are owned by impact-map.js and share buildImpactMapModel(). */

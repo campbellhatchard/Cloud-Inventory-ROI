@@ -1,0 +1,12 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict');
+const {evaluateExecutiveOutputReadiness}=require('../src/shared/executive-output-readiness');
+function story(){
+ return {meta:{scenarioId:'s1',customer:'Acme'},storyRevision:'rev1',threeWhys:{whyChange:{value:'A',status:'Opportunity narrative'},whyNow:{value:'B',status:'Opportunity narrative'},whyCloudInventory:{value:'C',status:'Opportunity narrative'}},economics:{annualBenefit:10,totalContractBenefit:30,totalContractInvestment:5,netEconomicBenefit:25,contractRoi:500,npv:20,payback:3,maturity:{level:2,display:'Customer-Data Value Case'},customerSupportedValuePct:80,activeDrivers:[{label:'Labor',customerSupported:true}]},solutionAlignment:{exists:true},implementationContext:{modelingMonths:0,authoritativeDeliveryCommitment:false},nextSteps:{items:[{milestone:'Validate',owner:'Joint'}]},unavailableProofIds:[],proposalContext:{exists:true,storyRevisionReviewed:'rev1'}};
+}
+test('ready when mandatory customer story elements are present',()=>assert.equal(evaluateExecutiveOutputReadiness(story(),{outputType:'pptx'}).status,'ready'));
+test('warnings create review without blocking',()=>{const s=story();s.nextSteps.items=[];assert.equal(evaluateExecutiveOutputReadiness(s,{outputType:'pdf'}).status,'review');});
+test('missing narrative creates draft only',()=>{const s=story();s.threeWhys.whyNow={value:'To validate',status:'To validate'};const r=evaluateExecutiveOutputReadiness(s,{outputType:'share'});assert.equal(r.status,'draft_only');assert.ok(r.blockers.some(x=>x.id==='whyNow'));});
+test('stale proposal revision is visible but not silently replaced',()=>{const s=story();s.proposalContext.storyRevisionReviewed='old';const r=evaluateExecutiveOutputReadiness(s,{outputType:'proposal'});assert.equal(r.status,'review');assert.ok(r.warnings.some(x=>x.id==='proposal_story_stale'));});
+test('existing proposal with no reviewed story requires review',()=>{const s=story();s.proposalContext.storyRevisionReviewed='';const r=evaluateExecutiveOutputReadiness(s,{outputType:'proposal'});assert.equal(r.status,'review');assert.ok(r.warnings.some(x=>x.id==='proposal_story_unreviewed'&&x.title==='Value Story Has Not Been Reviewed'));});
+test('proposal reviewed against current story clears story warning',()=>{const r=evaluateExecutiveOutputReadiness(story(),{outputType:'proposal'});assert.equal(r.status,'ready');assert.equal(r.warnings.some(x=>x.id.startsWith('proposal_story_')),false);});

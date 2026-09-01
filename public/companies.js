@@ -76,7 +76,7 @@ function checkCompanyOnEntry(typedName, onResolved) {
       <div id="companyNewErr" class="field-hint" style="color:var(--red);display:none;"></div>
     </div>
     <div class="btn-row">
-      <button class="btn btn-cta" id="companyUseExisting" onclick="_companyUseExisting('${escapeHtml(canonical).replace(/'/g,"\\'")}')">Use existing</button>
+      <button class="btn btn-primary" id="companyUseExisting" onclick="_companyUseExisting('${escapeHtml(canonical).replace(/'/g,"\\'")}')">Use existing</button>
       <button class="btn btn-ghost" id="companyCreateNew" onclick="_companyShowNewName()">Create separate company</button>
       <button class="btn btn-ghost" onclick="_companyCancel()">Cancel</button>
     </div>
@@ -115,13 +115,22 @@ function _companyCleanup() {
    Offers to load one of the company's scenarios, create a new one, or
    continue. Uses the in-memory savedScenarios cache — no API call.
    onContinue() is called when the user chooses to stay put.            */
-async function promptScenarioForCompany(company, onContinue) {
+async function promptScenarioForCompany(company, onContinue, customerId) {
   /* This is the decision point for loading a customer's scenario, so always
      refresh rather than trusting an earlier in-memory list. */
   if (typeof fetchScenarios === 'function') { try { await fetchScenarios(); } catch(e) {} }
+  const normalizedCustomerId = String(customerId || '').trim();
   const matches = (typeof savedScenarios !== 'undefined' ? savedScenarios : [])
-    .filter(s => s.company && s.company.toLowerCase() === company.toLowerCase()
-                 && s.isCurrent !== false);
+    .filter(s => {
+      /* Customer ID is authoritative whenever the caller has it. The name
+         fallback remains only for older create/map flows that pre-date the
+         centralized customer workspace. This prevents same-name customers
+         owned by different reps from sharing a scenario picker. */
+      const belongsToCustomer = normalizedCustomerId
+        ? String(s.customerId || s.customer_id || '').trim() === normalizedCustomerId
+        : Boolean(s.company && s.company.toLowerCase() === company.toLowerCase());
+      return belongsToCustomer && s.isCurrent !== false;
+    });
 
   const modal = document.createElement('div');
   modal.className = 'modal-overlay open';
@@ -134,13 +143,13 @@ async function promptScenarioForCompany(company, onContinue) {
         Start a new ROI scenario for this company, or continue building here.
       </p>
       <div class="btn-row">
-        <button class="btn btn-cta" onclick="_scenPromptCreateNew('${escapeHtml(company).replace(/'/g,"\\'")}')">Create new scenario</button>
+        <button class="btn btn-primary" onclick="_scenPromptCreateNew('${escapeHtml(company).replace(/'/g,"\\'")}')">Create new scenario</button>
         <button class="btn btn-ghost" onclick="_scenPromptContinue()">Continue without loading</button>
       </div>
     </div>`;
   } else {
     const user    = window.ciAuth ? window.ciAuth.getUser() : {};
-    const isAdmin = user.role === 'admin';
+    const isAdmin = typeof clientHasRole==='function' ? clientHasRole(user,'admin','Admin') : user.role === 'admin';
     const rows = matches.map(s => {
       const roi = (s.roi !== undefined && s.roi !== null) ? Math.round(s.roi) + '% ROI' : '';
       const ben = (s.annualBenefit) ? '$' + (Math.abs(s.annualBenefit) >= 1e6
@@ -160,7 +169,7 @@ async function promptScenarioForCompany(company, onContinue) {
       </p>
       <div class="scenario-pick-list">${rows}</div>
       <div class="btn-row" style="margin-top:1rem;">
-        <button class="btn btn-cta" onclick="_scenPromptLoad()">Load selected</button>
+        <button class="btn btn-primary" onclick="_scenPromptLoad()">Load selected</button>
         <button class="btn btn-ghost" onclick="_scenPromptCreateNew('${escapeHtml(company).replace(/'/g,"\\'")}')">Create new scenario</button>
         <button class="btn btn-ghost" onclick="_scenPromptContinue()">Continue without loading</button>
       </div>

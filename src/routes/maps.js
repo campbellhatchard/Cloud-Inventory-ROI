@@ -7,6 +7,7 @@ const crypto    = require('crypto');
 const { query } = require('../db');
 const { log }   = require('../audit');
 const { requireAuth, hasRole } = require('../middleware/auth');
+const {hasPermission}=require('../authorization');
 
 const router = express.Router();
 
@@ -61,7 +62,7 @@ router.use(requireAuth);
 /* List own plans — admins can pass ?all=true to see all reps' plans */
 router.get('/', async (req, res) => {
   try {
-    const canViewTeam = hasRole(req.user, 'admin') || hasRole(req.user, 'sales_manager');
+    const canViewTeam = hasPermission(req.user,'view_team_customers') || hasPermission(req.user,'view_all_customers');
     const showAll = canViewTeam && req.query.all === 'true';
     let sql, params;
     if (showAll) {
@@ -70,8 +71,9 @@ router.get('/', async (req, res) => {
                     u.username AS owner_username
              FROM mutual_action_plans m
              JOIN users u ON u.id = m.owner_id
+             WHERE ($2 OR m.owner_id=$1 OR EXISTS(SELECT 1 FROM sales_team_memberships me JOIN sales_team_memberships om ON om.team_id=me.team_id AND om.user_id=m.owner_id AND om.is_active=TRUE WHERE me.user_id=$1 AND me.is_active=TRUE))
              ORDER BY m.updated_at DESC LIMIT 200`;
-      params = [];
+      params = [req.user.id,hasPermission(req.user,'view_all_customers')];
     } else {
       sql = `SELECT id, company, title, target_close_date, token, is_active,
                     milestones, groups, created_at, updated_at

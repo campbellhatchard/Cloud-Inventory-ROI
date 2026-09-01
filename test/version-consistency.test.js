@@ -36,6 +36,7 @@ const appVersion = appVersionMatch ? appVersionMatch[1] : null;
 const vhSrc = fs.readFileSync(path.join(root, 'public/version-history.js'), 'utf8');
 const firstVersionMatch = vhSrc.match(/version:\s*'([^']+)'/);
 const historyVersion = firstVersionMatch ? firstVersionMatch[1] : null;
+const loginHtml = fs.readFileSync(path.join(root, 'public/login.html'), 'utf8');
 
 console.log('Version sources:');
 console.log('  package.json:          ' + pkgVersion);
@@ -54,7 +55,15 @@ if (pkgVersion && historyVersion && pkgVersion !== historyVersion)
 if (pkgVersion === appVersion && appVersion === historyVersion)
   pass(`all three version sources agree (${pkgVersion})`);
 
-/* 4. Every VERSION_HISTORY entry is well-formed. Parse the array leniently:
+/* 4. Login must use the server-authoritative version, not a release literal. */
+if (/Internal tool · v\d+\.\d+\.\d+/.test(loginHtml))
+  fail('login.html contains a hard-coded release version');
+else if (!/fetch\('\/health'/.test(loginHtml))
+  fail('login.html does not load the server-authoritative /health version');
+else
+  pass('login page loads the deployed package version automatically');
+
+/* 5. Every VERSION_HISTORY entry is well-formed. Parse the array leniently:
    count version entries and ensure each has a changes array or summary. */
 const entryVersions = [...vhSrc.matchAll(/version:\s*'([^']+)'/g)].map(m => m[1]);
 /* Split into blocks between version markers to inspect each entry's fields. */
@@ -72,7 +81,7 @@ if (malformed === 0) pass(`all ${blocks.length} version-history entries are well
 
 console.log('');
 if (failures === 0) {
-  console.log('🟢 ' + (2 + (malformed === 0 ? 1 : 0)) + ' checks passed, 0 failed');
+  console.log('🟢 ' + (3 + (malformed === 0 ? 1 : 0)) + ' checks passed, 0 failed');
   process.exit(0);
 } else {
   console.log('🔴 ' + failures + ' failed');

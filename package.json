@@ -1,7 +1,7 @@
 {
   "name": "cloud-inventory-roi-builder",
-  "version": "5.8.0",
-  "description": "Cloud Inventory ROI Business Case Builder \u2014 database-backed multi-user edition",
+  "version": "6.8.2",
+  "description": "Cloud Inventory ROI Business Case Builder — database-backed multi-user edition",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -9,7 +9,12 @@
     "migrate": "node src/migrate.js",
     "test:engine": "node test/roi-engine.test.js",
     "test:routes": "node --test test/routes.test.js",
-    "test": "node test/roi-engine.test.js && node --test test/routes.test.js test/ui-regression.test.js"
+    "test:brand": "node --test test/v670-brand-system.test.js test/v671-brand-integrity.test.js test/v672-brand-final-enforcement.test.js",
+    "test:v680": "node scripts/generate-application-knowledge.js --check && node --test test/v680-ai-knowledge-christie-email.test.js",
+    "test:v681": "node scripts/generate-application-knowledge.js --check && node --test test/v681-ai-context-help-email.test.js",
+    "test:v682": "node scripts/generate-application-knowledge.js --check && node --test test/v682-runtime-completion.test.js",
+    "test": "node scripts/generate-application-knowledge.js --check && node test/roi-engine.test.js && node --test test/routes.test.js test/ui-regression.test.js test/buycycle-stage.test.js test/roi-maturity.test.js test/evidence-freshness.test.js test/buyer-commitment.test.js test/criterion-evidence.test.js test/opportunity-close.test.js test/christie-buycycle-alignment.test.js test/r9-live-manager-readiness.test.js test/outcome-integrity.test.js test/analytics-outcome-authority.test.js test/opportunity-value-semantics.test.js test/authorization-foundation.test.js test/customer-switcher.test.js test/migration-schema-compat.test.js test/phase1.test.js test/sales-teams-admin.test.js test/version-consistency.test.js test/proposal-persistence.test.js test/customer-proof-catalog.test.js test/pptx-customer-proof.test.js test/pptx-evidence-context.test.js test/executive-value-story.test.js test/executive-output-readiness.test.js test/executive-credibility-integrity.test.js test/roi-v28.test.js test/questionnaire-roi-registry.test.js test/v651-integrity.test.js test/v652-value-history.test.js test/v653-prospect-evidence-integrity.test.js test/v653-postgres-integration.test.js test/v660-ux-manager.test.js test/v661-cleanup-help-ux.test.js test/v662-competitive-intelligence.test.js test/v663-competitive-integrity.test.js test/v663-postgres-authorization.test.js test/v664-product-identity.test.js test/v664-postgres-product-identity.test.js test/v670-brand-system.test.js test/v671-brand-integrity.test.js test/v672-brand-final-enforcement.test.js test/v27-locked-fixtures.test.js test/v680-ai-knowledge-christie-email.test.js test/v681-ai-context-help-email.test.js test/v682-runtime-completion.test.js test/production-regression-locks.test.js",
+    "test:production-locks": "node --test test/production-regression-locks.test.js"
   },
   "engines": {
     "node": ">=22.0.0 <23.0.0"

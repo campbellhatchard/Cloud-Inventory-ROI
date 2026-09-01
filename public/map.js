@@ -89,12 +89,12 @@ function renderMapList() {
   document.getElementById('mapEditorWrap').style.display = 'none';
   el.style.display = 'block';
   const user = window.ciAuth ? window.ciAuth.getUser() : {};
-  const isAdmin = user.role === 'admin';
+  const isAdmin = (typeof clientHasRole==='function'&&clientHasRole(user,'admin','Admin')) || (user.roleKeys||[]).includes('sales_manager') || (user.roles||[]).some(r=>r==='Sales Leader'||r==='Sales Manager');
   const me = user.username || '';
 
   if (!_maps.length) {
     el.innerHTML = '<div class="empty-state"><p>No Joint Project Plans yet. Create one to build a shared path to value with your prospect.</p>'
-      + '<button class="btn btn-cta" onclick="newMap()" style="margin-top:.75rem;">+ New Joint Project Plan</button></div>';
+      + '<button class="btn btn-primary" onclick="newMap()" style="margin-top:.75rem;">+ New Joint Project Plan</button></div>';
     return;
   }
 
@@ -214,7 +214,7 @@ function renderMapList() {
     el.innerHTML = '<div class="map-list-head">'
       + '<div><h2 class="map-list-title">Joint Project Plans</h2>'
       + '<p class="map-list-sub">All plans across all reps.</p></div>'
-      + '<button class="btn btn-cta" onclick="newMap()">+ New Joint Project Plan</button>'
+      + '<button class="btn btn-primary" onclick="newMap()">+ New Joint Project Plan</button>'
       + '</div>'
       + statsHtml
       + overdueAlertHtml
@@ -227,7 +227,7 @@ function renderMapList() {
     el.innerHTML = '<div class="map-list-head">'
       + '<div><h2 class="map-list-title">Joint Project Plans</h2>'
       + '<p class="map-list-sub">Your shared plans for validating value and moving the project forward.</p></div>'
-      + '<button class="btn btn-cta" onclick="newMap()">+ New Joint Project Plan</button>'
+      + '<button class="btn btn-primary" onclick="newMap()">+ New Joint Project Plan</button>'
       + '</div>'
       + statsHtml
       + overdueAlertHtml
@@ -289,14 +289,14 @@ function renderMapEditor() {
           <div style="font-size:12px;font-weight:600;color:var(--green);">🔗 Live prospect link active</div>
           <div class="map-share-url" id="mapShareUrl">${window.location.origin}/prospect-map.html?token=${m.token}</div>
           <div style="display:flex;gap:6px;margin-top:6px;">
-            <button class="btn btn-cta btn-sm" onclick="copyMapLink()">Copy link</button>
+            <button class="btn btn-secondary btn-sm" onclick="copyMapLink()">Copy link</button>
             <button class="btn btn-ghost btn-sm" onclick="emailMapLink()">✉️ Email via my mail client</button>
             <button class="btn btn-ghost btn-sm" onclick="shareMap()">🔄 Rotate</button>
             <button class="btn btn-danger btn-sm" onclick="revokeMapLink()">Revoke</button>
           </div>
           <div class="field-hint" style="margin-top:5px;">The prospect sees a live view and can check off their own items. Updates appear when you reopen the plan.</div>
         </div>`
-      : `<button class="btn btn-cta btn-sm" onclick="shareMap()">🔗 Share with prospect</button>`)
+      : `<button class="btn btn-primary btn-sm" onclick="shareMap()">🔗 Share with prospect</button>`)
     : `<span class="field-hint">Save the plan first to generate a prospect link.</span>`;
 
   ed.innerHTML = `
@@ -322,7 +322,7 @@ function renderMapEditor() {
       </div>
       <div id="mapCompanyGate" class="field-hint" style="color:var(--amber);display:${m.company ? 'none' : 'block'};margin-top:6px;">Select or create a company before saving this plan.</div>
       <div class="btn-row" style="margin-top:.85rem;align-items:center;flex-wrap:wrap;">
-        <button class="btn btn-cta" id="mapSaveBtn" onclick="saveMap()">Save plan</button>
+        <button class="btn btn-primary" id="mapSaveBtn" onclick="saveMap()">Save plan</button>
         <button class="btn btn-primary" onclick="aiGenerateMap()" id="mapAiBtn">✨ Generate milestones with AI</button>
         <span class="export-divider"></span>
         <button class="btn btn-ghost btn-sm" onclick="printActionPlan('internal')" title="Print / save internal PDF">🖨 PDF (internal)</button>
@@ -338,7 +338,7 @@ function renderMapEditor() {
         <div class="map-add-controls">
           <select id="mapAddGroup" aria-label="Group for new milestone">${m.groups.map(g => `<option value="${escapeHtml(g.id)}">${escapeHtml(g.name)}</option>`).join('')}</select>
           <select id="mapAddPosition" aria-label="Position for new milestone"><option value="end">At end</option><option value="start">At beginning</option></select>
-          <button class="btn btn-cta btn-sm" onclick="addMilestone()">+ Add milestone</button>
+          <button class="btn btn-primary btn-sm" onclick="addMilestone()">+ Add milestone</button>
         </div>
       </div>
       <div class="map-group-create"><input id="mapNewGroupName" type="text" placeholder="New grouping name" maxlength="60" onkeydown="if(event.key==='Enter'){event.preventDefault();addMapGroup();}"/><button class="btn btn-ghost btn-sm" onclick="addMapGroup()">+ Add grouping</button></div>
@@ -629,7 +629,7 @@ async function aiGenerateMap() {
     const company   = (_mapCurrent.company || '').trim() || v.company || 'the prospect';
     const closeDate = document.getElementById('mapCloseDate').value || '';
     const industry  = (typeof IND !== 'undefined' && IND[v.industry]) ? IND[v.industry].label : 'general';
-    const stage     = v.dealStage || 'Discovery';
+    const stage     = window.getCurrentBuyCycleStageLabel?.() || 'Stage 2 — Define Economic Consequences';
     const impl      = v.implMonths || 3;
     mapNormalizeStructure(_mapCurrent);
     const groupNames = _mapCurrent.groups.map(g => g.name);
