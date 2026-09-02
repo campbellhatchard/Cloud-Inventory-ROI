@@ -27,6 +27,7 @@ const { validateSelection, resolveApproved, relevant } = require('../shared/cust
 const { buildPptxContext } = require('../shared/pptx-context');
 const { buildExecutiveValueStory } = require('../shared/executive-value-story');
 const { evaluateExecutiveOutputReadiness } = require('../shared/executive-output-readiness');
+const { buildExecutivePptx } = require('../exports/executive-pptx');
 const { FINANCIAL_INPUTS, EVENT_TYPES, normalizeValue, sameValue, freshness, isFinancialInput, isCustomerEvent, unitFor, buildSnapshotRows, enforceProvenance, summarize } = require('../shared/value-history');
 
 const router = express.Router();
@@ -83,6 +84,29 @@ async function executiveStoryFor(user,id){const source=await loadExecutiveSource
 router.get('/:id/executive-value-story',async(req,res)=>{try{const story=await executiveStoryFor(req.user,req.params.id);if(story.error)return res.status(story.status).json({error:story.error});res.json(story);}catch(err){console.error('Executive Value Story error:',err.message);res.status(500).json({error:'Failed to build Executive Value Story.'});}});
 router.get('/:id/executive-output-readiness',async(req,res)=>{try{const story=await executiveStoryFor(req.user,req.params.id);if(story.error)return res.status(story.status).json({error:story.error});res.json(evaluateExecutiveOutputReadiness(story,{outputType:String(req.query.output||'executive_view')}));}catch(err){res.status(err.status||500).json({error:err.message||'Failed to evaluate executive output readiness.'});}});
 router.post('/:id/executive-output-readiness/acknowledge',async(req,res)=>{try{const story=await executiveStoryFor(req.user,req.params.id);if(story.error)return res.status(story.status).json({error:story.error});const outputType=String(req.body?.outputType||'pptx'),readiness=evaluateExecutiveOutputReadiness(story,{outputType});if(readiness.status!=='review')return res.status(409).json({error:'Acknowledgement is only available for Review Before Sharing outputs.',readiness});await log({userId:req.user.id,action:'executive_output.review_acknowledged',entityType:'scenario',entityId:req.params.id,detail:{outputType,storyRevision:story.storyRevision,warningIds:readiness.warnings.map(x=>x.id)},ipAddress:req.ip});res.json({acknowledged:true,storyRevision:story.storyRevision});}catch(err){res.status(500).json({error:'Failed to record review acknowledgement.'});}});
+
+router.get('/:id/export-pptx',async(req,res)=>{
+  const started=Date.now(),scenarioId=String(req.params.id),internalDraft=req.query.internalDraft==='true',reviewAcknowledged=req.query.reviewAcknowledged==='true';
+  console.info('executive_pptx.started',{scenarioId,internalDraft});
+  try{
+    const story=await executiveStoryFor(req.user,scenarioId);
+    if(story.error)return res.status(story.status).json({error:story.error});
+    const readiness=evaluateExecutiveOutputReadiness(story,{outputType:'pptx'});
+    if(readiness.status==='draft_only'&&!internalDraft)return res.status(409).json({error:'This output is available only as an internal draft.',readiness});
+    if(readiness.status==='review'&&!reviewAcknowledged)return res.status(409).json({error:'Review acknowledgement is required before export.',readiness});
+    const buffer=await buildExecutivePptx(story,{internalDraft:readiness.status==='draft_only'||internalDraft});
+    const customer=String(story.meta.customer||'Prospect').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').slice(0,80)||'Prospect';
+    res.set('Content-Type','application/vnd.openxmlformats-officedocument.presentationml.presentation');
+    res.set('Content-Disposition',`attachment; filename="Cloud-Inventory-Business-Case-${customer}-${new Date().toISOString().slice(0,10)}.pptx"`);
+    res.set('X-Executive-Readiness',readiness.status);
+    console.info('executive_pptx.completed',{scenarioId,status:readiness.status,bytes:buffer.length,elapsedMs:Date.now()-started});
+    return res.send(buffer);
+  }catch(err){
+    const errorId=`pptx-${Date.now().toString(36)}`;
+    console.error('executive_pptx.failed',{scenarioId,errorId,elapsedMs:Date.now()-started,message:err.message});
+    return res.status(500).json({error:'PowerPoint could not be generated. Please retry.',errorId});
+  }
+});
 
 /* Thin R13 compatibility adapter over the one authoritative story. */
 router.get('/:id/pptx-context',async(req,res)=>{

@@ -1,4 +1,6 @@
-# Cloud Inventory ROI v6.8.2 Deployment Validation
+# Cloud Inventory ROI v6.8.4 Deployment Validation
+
+Complete the output-specific checklist in `DEPLOYMENT_VALIDATION_V6.8.4.md`. Render output certification remains pending until those checks run against the deployed service.
 
 ## Render deployment configuration
 
@@ -31,9 +33,9 @@ Add these in the Render dashboard when the corresponding feature is needed:
 `APP_URL` is optional on Render because the application uses Render's external URL automatically.
 
 
-## Production-baseline hardening applied during v6.8.2 validation
+## Production-baseline hardening applied during v6.8.4 validation
 
-This deployment candidate is validated against live production v5.8.0 commit `5e91ce8eab1917f52d6b473de40dc764a535363d` and preserves the established production controls while retaining the v6 architecture. The corrected candidate removes duplicate `requireAuth` aliases, preserves explicit zero ramp assumptions, restores `fieldInvSav`, retains customer-input-only Medical Devices / Life Sciences behavior, keeps contract-term metrics server-authoritative, recomputes contract economics for historical shared business cases, restores bounded prospect AI message history, routes Three Whys AI through authenticated `apiFetch`, exposes the final Three Whys logout flush hook, and expands CI to execute the complete regression suite including v6.8.1/v6.8.2 and production-lock tests.
+This deployment candidate is validated against live production v6.8.2 commit `810e7f6d48c8c74a01d53c0c52309210a2f5db11`. It retains the approved v6.8.3 customer-loading and Executive-output recovery plus the v6.8.4 output-certification work while preserving the v6.8.2 production locks: one canonical early `requireAuth` binding, explicit-zero ramps, `fieldInvSav`, customer-input-only Medical Devices / Life Sciences behavior, server-authoritative contract-term metrics, historical shared-business-case recomputation, bounded prospect AI history, authenticated Three Whys persistence, complete CI coverage, and the governed ROI/Brand/Knowledge/Christie versions. The final package restores the cumulative production-lock test and includes the v6.8.3/v6.8.4 suites.
 
 Migration 026 intentionally replaces only the governed `buycycle_stage_config` reference rows. Every migration is executed inside the migration runner's per-file PostgreSQL transaction, so a failure rolls back the entire migration before `schema_migrations` is updated. No migration 025–034 contains destructive customer/opportunity data deletion.
 
@@ -43,9 +45,9 @@ Before uploading or syncing the Blueprint:
 
 1. Run `npm ci` with Node.js 22.
 2. Run `npm run migrate` against a disposable PostgreSQL 16 database.
-3. Run `npm test`; it includes the complete application regression suite, v6.8.1/v6.8.2 completion tests, and production-lock regression tests.
-4. Confirm `package.json`, `package-lock.json`, the UI version, and version history all report `6.8.2`.
-5. After deployment, confirm `/health` reports version `6.8.2` and `database: connected`.
+3. Run `npm test`; it includes the complete application regression suite, v6.8.1/v6.8.2/v6.8.3/v6.8.4 completion tests, and production-lock regression tests.
+4. Confirm `package.json`, `package-lock.json`, the UI version, and version history all report `6.8.4`.
+5. After deployment, confirm `/health` reports version `6.8.4` and `database: connected`.
 6. Configure both `SENDGRID_API_KEY` and a SendGrid-verified `FROM_EMAIL`. Configure `APP_URL` with the public HTTPS origin or allow Render external URL discovery. Never use localhost in production.
 7. Perform one password-reset and one Prospect notification smoke test. Confirm only status/category/provider message ID are logged; never tokens, temporary passwords, message bodies or API keys.
 

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   server.js  —  Cloud Inventory ROI Builder  v6.8.2
+   server.js  —  Cloud Inventory ROI Builder  v6.8.4
    Database-backed multi-user edition — production hardened
 
    Security layers applied (Phase 10):
@@ -286,12 +286,14 @@ app.get('/api/solution-engineers', requireAuth, async (req, res) => {
 
 /* First-class customers (stable IDs). SE/admin see all; AE sees their own. */
 app.get('/api/customers', requireAuth, async (req, res) => {
+  const started=Date.now();console.info('landing_customers.started',{userId:req.user.id});
   try {
     const { listAuthorizedCustomers } = require('./src/authorization');
     const rows=await listAuthorizedCustomers(req.user);
-    res.json(rows.map(r=>({id:r.id,name:r.name,ownerId:r.owner_id,ownerUsername:r.owner_username,scenarioCount:Number(r.scenario_count)||0})));
+    const customers=rows.map(r=>({id:r.id,name:r.name,ownerId:r.owner_id,ownerUsername:r.owner_username,scenarioCount:Number(r.scenario_count)||0}));
+    console.info('landing_customers.completed',{userId:req.user.id,status:200,count:customers.length,elapsedMs:Date.now()-started});res.json(customers);
   } catch (err) {
-    console.error('List customers error:', err.message);
+    console.error('landing_customers.failed',{userId:req.user.id,status:500,elapsedMs:Date.now()-started,message:err.message});
     res.status(500).json({ error: 'Failed to load customers.' });
   }
 });
@@ -333,6 +335,15 @@ async function validatePurgeToken(rawToken) {
    GET /api/admin/export/:entity  — download CSV for one entity
    Entities: scenarios | customers | discovery | users
    ══════════════════════════════════════════════════════════════════ */
+function brandedWordStyles(theme){
+  const paragraphStyles=[
+    ['Title','Title',theme.type.display,true,theme.heading,180,100],
+    ['Heading1','Heading 1',theme.type.pageTitle,true,theme.heading,280,100],
+    ['Heading2','Heading 2',theme.type.sectionHeading,true,theme.heading,240,80],
+    ['Heading3','Heading 3',theme.type.label,true,theme.accessibleAccent,180,60]
+  ].map(([id,name,size,bold,color,before,after])=>({id,name,basedOn:'Normal',next:'Normal',quickFormat:true,run:{font:theme.font,size,bold,color},paragraph:{spacing:{before,after},keepNext:true}}));
+  return{default:{document:{run:{font:theme.font,size:theme.type.body,color:theme.body},paragraph:{spacing:{after:100,line:276}}},title:{run:{font:theme.font,size:theme.type.display,bold:true,color:theme.heading}},heading1:{run:{font:theme.font,size:theme.type.pageTitle,bold:true,color:theme.heading}},heading2:{run:{font:theme.font,size:theme.type.sectionHeading,bold:true,color:theme.heading}},heading3:{run:{font:theme.font,size:theme.type.label,bold:true,color:theme.accessibleAccent}}},paragraphStyles};
+}
 app.get('/api/admin/export/:entity', requireAuth, async (req, res) => {
   if (!hasRole(req.user,'admin')) return res.status(403).json({ error: 'Admin only.' });
   const { query } = db();
@@ -1296,7 +1307,7 @@ app.post('/api/export/battlecard-docx', requireAuth, async (req, res) => {
       }));
     }
 
-    const doc  = new Document({ sections: [{
+    const doc  = new Document({ styles:brandedWordStyles(wordBrand), sections: [{
       footers: {
         default: new Footer({ children: [
           new Paragraph({
@@ -1309,7 +1320,7 @@ app.post('/api/export/battlecard-docx', requireAuth, async (req, res) => {
     }] });
     const buf  = await Packer.toBuffer(doc);
     const safe = esc(competitorName).replace(/[^a-zA-Z0-9]/g, '-');
-    const filename = `Battlecard-${safe}-${new Date().toISOString().split('T')[0]}.docx`;
+    const filename = `Cloud-Inventory-Internal-Battlecard-${safe}-${new Date().toISOString().split('T')[0]}.docx`;
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -1385,11 +1396,11 @@ app.post('/api/export/proposal-docx', requireAuth, async (req, res) => {
       heading('Success and next steps'), new Paragraph({ text:'How we will measure success', heading:HeadingLevel.HEADING_3, spacing:{after:60} }), table(story.economics.activeDrivers.slice(0,5).map(x=>({metric:x.label,target:x.annualValue.toLocaleString()+' '+story.meta.currency+' / year · '+x.status})), 'metric', 'target'),
       new Paragraph({ text:'Joint next steps', heading:HeadingLevel.HEADING_3, spacing:{before:140,after:60} }), ...bullets(story.nextSteps.items.map(x=>[x.milestone,x.owner,x.dueDate].filter(Boolean).join(' — ')))
     ];
-    const doc = new Document({ sections:[{ footers:{ default:new Footer({ children:[new Paragraph({ children:[text(wordBrand.footer+' · Prepared for '+company+' · Story '+story.storyRevision, {size:wordBrand.type.caption,color:wordBrand.muted})], alignment:AlignmentType.CENTER })] }) }, children }] });
+    const doc = new Document({ styles:brandedWordStyles(wordBrand), sections:[{ footers:{ default:new Footer({ children:[new Paragraph({ children:[text(wordBrand.footer+' · Prepared for '+company+' · Story '+story.storyRevision, {size:wordBrand.type.caption,color:wordBrand.muted})], alignment:AlignmentType.CENTER })] }) }, children }] });
     const buffer = await Packer.toBuffer(doc);
     const safe = company.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'Prospect';
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename="Executive-Proposal-${safe}.docx"`);
+    res.setHeader('Content-Disposition', `attachment; filename="Cloud-Inventory-Proposal-${safe}-${new Date().toISOString().slice(0,10)}.docx"`);
     res.send(buffer);
   } catch (err) {
     console.error('proposal-docx error:', err.message);

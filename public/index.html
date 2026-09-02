@@ -770,11 +770,11 @@
     <div><div class="page-title">Executive presentation</div><div class="page-subtitle">Business value assessment — write your narrative, then download or share.</div></div>
     <div class="btn-row exec-toolbar" style="margin-top:0;flex-wrap:wrap;gap:6px;">
       <!-- Primary: most-used actions -->
-      <button class="btn btn-primary" onclick="downloadPDF()">
+      <button class="btn btn-primary" id="pdfDownloadBtn" onclick="downloadPDF()">
         <svg viewBox="0 0 16 16" fill="none"><path d="M8 1v9M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         Download PDF
       </button>
-      <button class="btn btn-primary" id="pptxExportBtn" data-label="Export to PowerPoint" onclick="exportToPowerPoint()">
+      <button class="btn btn-secondary" id="pptxExportBtn" data-label="Export to PowerPoint" onclick="exportToPowerPoint()">
         <svg viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 6h3a1.5 1.5 0 010 3H5V6zM5 9v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Export to PowerPoint
       </button>
@@ -787,7 +787,7 @@
         <button class="btn btn-ghost" id="execMoreBtn" onclick="toggleExecMore()" title="More export options">More exports ▾</button>
         <div id="execMoreMenu" style="display:none;position:absolute;top:calc(100% + 4px);right:0;background:var(--white);border:1px solid var(--gray-200);border-radius:10px;box-shadow:var(--shadow-md);z-index:50;min-width:210px;padding:6px 0;">
           <button class="exec-menu-item" id="championPackBtn" onclick="toggleExecMore();buildChampionPack()">🏆 Champion pack <span class="exec-menu-hint">4-slide internal deck</span></button>
-          <button class="exec-menu-item" onclick="toggleExecMore();exportOnePager()" id="onePagerBtn">📄 Role one-pager <span class="exec-menu-hint">Based on audience selector</span></button>
+          <button class="exec-menu-item" onclick="toggleExecMore();exportOnePager()" id="onePagerBtn">📄 Role one-pager <span class="exec-menu-hint">Internal only · based on audience</span></button>
           <button class="exec-menu-item" onclick="toggleExecMore();roiMethodologyPDF()" id="roiMethodPdfBtn">📋 ROI methodology PDF</button>
           <button class="exec-menu-item" onclick="toggleExecMore();roiMethodologyPPT()" id="roiMethodPptBtn">📊 ROI methodology PPT</button>
           <div style="height:1px;background:var(--gray-100);margin:4px 0;"></div>
@@ -929,7 +929,7 @@
           <div class="exec-side-sub">Annual benefit by driver</div>
         </div>
         <div class="exec-side-body" id="execSideBreakdown">
-          <div class="empty-state" style="padding:1rem;font-size:12px;">Calculate to see breakdown</div>
+          <div class="empty-state" style="padding:1rem;font-size:12px;">No modeled value drivers yet.</div>
         </div>
         <div class="exec-side-total" id="execSideTotal" style="display:none;">
           <span class="exec-side-total-lbl">Total annual benefit</span>
@@ -1556,7 +1556,7 @@
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="6.8.2";</script>
+<script>const APP_VERSION="6.8.4";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
 <script src="ai-session.js"></script>

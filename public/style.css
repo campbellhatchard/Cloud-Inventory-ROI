@@ -864,6 +864,19 @@ body.impact-active .impact-fab-group{display:flex;}
 .field-note-inline{font-size:var(--fs-xs);color:var(--gray-500);font-style:italic;margin:8px 0 6px;}
 
 /* ══ v2.8 data-driven business case framing (Executive View) ══ */
+.exec-preview-wrap{max-width:960px;margin:0 auto 32px;}
+#execPrintTarget{background:var(--white);border:1px solid var(--gray-200);border-radius:14px;overflow:hidden;box-shadow:var(--shadow-sm);}
+.e-cover{padding:38px 44px;background:linear-gradient(135deg,var(--navy),#263C48);color:var(--white);}
+.e-cover img{width:130px;max-height:42px;object-fit:contain;object-position:left center;margin-bottom:34px;filter:brightness(0) invert(1);}
+.e-tagline{text-transform:uppercase;letter-spacing:.12em;font-size:11px;font-weight:700;color:var(--cyan);}
+.e-company{font-size:32px;font-weight:750;line-height:1.15;margin:8px 0;}.e-date{font-size:13px;color:rgba(255,255,255,.72)}
+.e-body{padding:36px 44px 42px;}.e-section{margin:0 0 34px;}.e-section:last-of-type{margin-bottom:14px}.e-h2{font-size:18px;font-weight:750;color:var(--navy);padding-bottom:9px;border-bottom:2px solid var(--cyan);margin-bottom:16px}
+.e-whys-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.e-why-card{border:1px solid var(--gray-200);border-radius:10px;padding:16px;background:var(--gray-50)}.e-why-card strong{color:var(--navy)}.e-why-card p{font-size:13px;line-height:1.55;margin:8px 0}.e-why-card small{color:var(--gray-500)}
+.e-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.e-kpi-grid>div{border:1px solid var(--gray-200);border-radius:9px;padding:13px;background:var(--white)}.e-kpi-grid span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--gray-500);min-height:27px}.e-kpi-grid strong{display:block;font-size:18px;color:var(--navy);margin-top:5px}.e-note{font-size:11px;color:var(--gray-500);margin-top:10px}
+.e-bar-row{grid-template-columns:190px 1fr 42px 92px;}.e-bar-row small{grid-column:2/5;color:var(--gray-500);font-size:10px;margin-top:-4px}
+@media(max-width:1024px){.exec-preview-wrap{max-width:900px}.e-body{padding:30px 34px}.e-cover{padding:34px}.e-kpi-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:768px){.e-whys-grid{grid-template-columns:1fr}.e-body{padding:24px}.e-cover{padding:28px}.e-bar-row{grid-template-columns:130px 1fr 38px 78px}}
+@media(max-width:480px){.e-body{padding:18px}.e-cover{padding:22px}.e-company{font-size:25px}.e-kpi-grid{grid-template-columns:1fr}.e-bar-row{grid-template-columns:105px 1fr 34px}.e-bar-val{grid-column:2/4;text-align:left}.e-bar-row small{grid-column:2/4}}
 .e-approach{background:linear-gradient(135deg,#F7F9FA,#EEF3F6);border:1px solid var(--gray-200);border-radius:12px;padding:22px 24px;margin-bottom:1.25rem;}
 .e-approach-title{font-size:18px;font-weight:700;color:var(--navy);letter-spacing:-.01em;margin-bottom:6px;}
 .e-approach-lede{font-size:var(--fs-sm);color:var(--gray-700);line-height:1.6;max-width:760px;}
@@ -882,6 +895,10 @@ body.impact-active .impact-fab-group{display:flex;}
 .e-bar-val{font-size:12.5px;font-weight:600;color:var(--gray-800);text-align:right;white-space:nowrap;}
 .e-bar-total{display:grid;grid-template-columns:220px 1fr 40px 90px;gap:8px;border-top:2px solid var(--gray-200);padding-top:8px;margin-top:4px;font-size:13px;font-weight:700;color:var(--navy);}
 @media(max-width:560px){.e-bar-row,.e-bar-total{grid-template-columns:120px 1fr 36px 70px;gap:5px;}}
+/* v6.8.3 presentation layout wins over the older executive chart rules. */
+.e-body .e-bar-row{grid-template-columns:190px minmax(90px,1fr) 42px 92px;}
+@media(max-width:768px){.e-body .e-bar-row{grid-template-columns:130px minmax(70px,1fr) 38px 78px;}}
+@media(max-width:480px){.e-body .e-bar-row{grid-template-columns:105px minmax(60px,1fr) 34px}.e-body .e-bar-val{grid-column:2/4;text-align:left}.e-body .e-bar-row small{grid-column:2/4}}
 @media(max-width:720px){.e-approach-pillars{grid-template-columns:1fr 1fr;}}
 @media print{.e-approach{background:#F7F9FA !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;break-inside:avoid;}.e-approach-pillars{break-inside:avoid;}}
 

@@ -768,7 +768,7 @@
   /* ── Branded handoff documents (ported from prototype) ──────────── */
   function docHeadBrand(title, subtitle, badge) {
     return `<div class="hd-head">
-      <div><div class="hd-brand">CLOUD INVENTORY<span class="hd-reg">®</span></div>
+      <div><img class="hd-logo" src="${window.location.origin}/${window.CIBrand.logo('logoColor')}" alt="Cloud Inventory" onerror="this.style.display='none'"/>
         <h1 class="hd-title">${esc(title)}</h1>
         <p class="hd-sub">${subtitle}</p></div>
       <div class="hd-badge">${esc(badge)}</div>
@@ -859,6 +859,7 @@
       *{box-sizing:border-box}body{margin:0;font-family:var(--doc-font);color:var(--doc-body);line-height:1.5;padding:44px 52px;}
       .hd-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid var(--doc-accent);padding-bottom:16px;margin-bottom:22px;}
       .hd-brand{font-weight:700;letter-spacing:.5px;color:var(--doc-heading);font-size:15px;}
+      .hd-logo{width:118px;height:auto;display:block;margin-bottom:7px;}
       .hd-reg{font-size:9px;vertical-align:super;}
       .hd-title{font-size:24px;margin:6px 0 2px;color:var(--doc-heading);}
       .hd-sub{margin:0;color:var(--doc-muted);font-size:13px;}
@@ -1098,7 +1099,7 @@
     @media print{body{padding:20px 30px;}}</style>
     </head><body>
     <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid var(--doc-accent);padding-bottom:14px;margin-bottom:22px;">
-      <div><div style="font-size:12px;font-weight:700;color:var(--doc-heading);letter-spacing:.5px;">CLOUD INVENTORY</div>
+      <div><img src="${window.location.origin}/${window.CIBrand.logo('logoColor')}" alt="Cloud Inventory" onerror="this.style.display='none'" style="width:118px;height:auto;display:block;margin-bottom:7px;">
         <h1>What you should know before you commit</h1>
         <div style="color:var(--doc-muted);font-size:13px;">${esc(company)} · ${today}</div>
       </div>

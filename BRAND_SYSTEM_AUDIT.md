@@ -1,4 +1,8 @@
-# Cloud Inventory Brand System Audit - v6.7.2
+# Cloud Inventory Brand System Audit - v6.8.4
+
+## v6.8.4 output certification
+
+The active polished-output inventory is governed by `src/shared/output-registry.js`; the human-readable matrix is `OUTPUT_CERTIFICATION_V6.8.4.md`. Customer and internal variants declare separate audience labels, use governed logo and document/Office themes, and are covered by executable release checks. Legacy browser builders retained for unsaved compatibility are not the primary server path for saved Joint Project Plan or Stakeholder PowerPoint output.
 
 ## Release scope
 

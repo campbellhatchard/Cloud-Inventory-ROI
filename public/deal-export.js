@@ -54,8 +54,8 @@ function dePrintWindow(title, innerHtml, extraCss, audience = 'customer') {
     h2{font-size:13px;color:var(--doc-accent);text-transform:uppercase;letter-spacing:.06em;margin:20px 0 8px;padding-bottom:4px;border-bottom:1.5px solid var(--doc-border)}
     table{width:100%;border-collapse:collapse;margin:8px 0 16px}th{background:var(--doc-heading);color:#fff;font-size:11px;text-align:left;padding:7px 9px}
     td{font-size:12px;padding:6px 9px;border-bottom:1px solid var(--doc-canvas);vertical-align:top}tr:nth-child(even) td{background:var(--doc-canvas)}
-    .foot{margin-top:28px;padding-top:12px;border-top:1px solid var(--doc-border);font-size:11px;color:#6B7A8D;text-align:center}
-    .customer-purpose{margin:0 0 14px;padding:10px 13px;background:var(--doc-info);border-left:3px solid var(--doc-accent);border-radius:0 7px 7px 0;font-size:12px;line-height:1.55;color:#475569}
+    .foot{margin-top:28px;padding-top:12px;border-top:1px solid var(--doc-border);font-size:11px;color:var(--doc-muted);text-align:center}
+    .customer-purpose{margin:0 0 14px;padding:10px 13px;background:var(--doc-info);border-left:3px solid var(--doc-accent);border-radius:0 7px 7px 0;font-size:12px;line-height:1.55;color:var(--doc-body)}
     @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.no-print{display:none}}
     ${extraCss || ''}</style></head><body>${innerHtml}
     <div class="foot">${theme.footer} · Prepared for the intended recipient</div>
@@ -68,7 +68,7 @@ function dePrintWindow(title, innerHtml, extraCss, audience = 'customer') {
       msg.innerHTML = '<span>Pop-up blocked. <a href="' + blobUrl + '" target="_blank" style="color:var(--doc-accent);font-weight:600;text-decoration:underline;">Open ' + deEsc(title) + ' ↗</a></span>'
         + '<button onclick="this.parentElement.remove()" style="background:none;border:none;color:rgba(255,255,255,.6);cursor:pointer;font-size:18px;padding:0 4px;">×</button>';
       document.body.appendChild(msg);
-      setTimeout(function(){ if (msg.parentElement) { msg.remove(); URL.revokeObjectURL(blobUrl); } }, 15000);
+      /* Keep recovery visible until the user opens it or dismisses it. */
     } catch(e) { showToast('Pop-up blocked — please allow pop-ups for this site to use PDF exports.'); }
     return;
   }
@@ -76,7 +76,7 @@ function dePrintWindow(title, innerHtml, extraCss, audience = 'customer') {
     <style>${themeCss}
       @page { margin: 0.6in; }
       * { box-sizing: border-box; margin: 0; padding: 0; }
-      body { font-family: 'Inter','Segoe UI',system-ui,sans-serif; color: var(--doc-heading); line-height: 1.5; }
+      body { font-family: var(--doc-font); color: var(--doc-body); line-height: 1.5; }
       .doc-head { display: flex; align-items: center; gap: 14px; border-bottom: 3px solid var(--doc-accent); padding-bottom: 14px; margin-bottom: 20px; }
       .doc-head img { height: 42px; }
       .doc-head .ht { font-size: 12px; color: var(--doc-muted); }
@@ -91,14 +91,14 @@ function dePrintWindow(title, innerHtml, extraCss, audience = 'customer') {
       .prog-wrap { height: 12px; background: var(--doc-canvas); border-radius: 6px; overflow: hidden; max-width: 320px; margin: 6px 0 14px; }
       .prog-fill { height: 100%; background: linear-gradient(90deg,var(--doc-accent),var(--doc-success)); }
       .meta-line { font-size: 12px; color: var(--doc-muted); margin-bottom: 3px; }
-      .foot { margin-top: 28px; padding-top: 12px; border-top: 1px solid var(--doc-border); font-size: 11px; color: #6B7A8D; text-align: center; }
-      .customer-purpose { margin: 0 0 14px; padding: 10px 13px; background: var(--doc-info); border-left: 3px solid var(--doc-accent); border-radius: 0 7px 7px 0; font-size: 12px; line-height: 1.55; color: #475569; }
+      .foot { margin-top: 28px; padding-top: 12px; border-top: 1px solid var(--doc-border); font-size: 11px; color: var(--doc-muted); text-align: center; }
+      .customer-purpose { margin: 0 0 14px; padding: 10px 13px; background: var(--doc-info); border-left: 3px solid var(--doc-accent); border-radius: 0 7px 7px 0; font-size: 12px; line-height: 1.55; color: var(--doc-body); }
       .overdue { color: var(--doc-danger); font-weight: 700; }
-      .done td { color: #6B7A8D; }
-      .quad { position: relative; width: 460px; height: 340px; border: 1.5px solid #CBD5E1; margin: 10px 0 8px; }
+      .done td { color: var(--doc-muted); }
+      .quad { position: relative; width: 460px; height: 340px; border: 1.5px solid var(--doc-border); margin: 10px 0 8px; }
       .quad-line { position: absolute; background: var(--doc-border); }
-      .quad-dot { position: absolute; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; }
-      .quad-lbl { position: absolute; font-size: 9px; color: #6B7A8D; font-weight: 700; }
+      .quad-dot { position: absolute; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; color: var(--doc-bg); font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 2px solid var(--doc-bg); }
+      .quad-lbl { position: absolute; font-size: 9px; color: var(--doc-muted); font-weight: 700; }
       @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display: none; } }
       ${extraCss || ''}
     </style></head><body>${innerHtml}
@@ -1024,6 +1024,28 @@ async function exportOnePager() {
 }
 window.exportOnePager = exportOnePager;
 
+/* v6.8.4 governed replacement. The legacy builder above is retained only for
+   rollback inspection and is no longer bound to an active control. This output
+   is Internal Only until a separately approved customer-safe product exists. */
+async function exportGovernedOnePager(){
+  if(!(await deChk('library')))return;
+  const btn=document.getElementById('onePagerBtn'),orig=btn?.innerHTML;
+  if(btn){btn.disabled=true;btn.textContent='Building…';}
+  try{
+    if(!window._calcScenarioId)throw new Error('Save the opportunity before creating the one-pager.');
+    const story=await loadExecutiveValueStory(true),e=story.economics,c=story.meta.currency,audience=(typeof getVals==='function'?getVals().execAudience:'mixed')||'mixed',labels={cfo:'CFO',coo:'VP Operations',ceo:'CEO / Executive Sponsor',cio:'CIO / IT',mixed:'Executive'},pptx=new pptxgen();
+    pptx.defineLayout({name:'CI',width:PPT.W,height:PPT.H});pptx.layout='CI';pptx.title=`Internal ${labels[audience]||labels.mixed} One-Pager — ${story.meta.customer}`;
+    const s=pptx.addSlide();s.background={color:PPT.GRAY_BG};pptChrome(s,1);s.addShape('rect',{x:4.6,y:PPT.H-.43,w:5.1,h:.3,fill:{color:PPT.GRAY_BG},line:{color:PPT.GRAY_BG}});s.addText(window.CIBrand.audience('internal'),{x:5,y:PPT.H-.4,w:4.4,h:.2,fontSize:7.5,color:PPT.GRAY_TXT,align:'right',fontFace:PPT.FONT});s.addText('CONFIDENTIAL — INTERNAL USE ONLY',{x:.45,y:.35,w:4.4,h:.25,fontSize:9,bold:true,color:PPT.RED,fontFace:PPT.FONT});pptTitle(s,`${labels[audience]||labels.mixed} value-case brief`);
+    s.addText(story.meta.customer,{x:.5,y:1.35,w:4.4,h:.35,fontSize:18,bold:true,color:PPT.NAVY,fontFace:PPT.FONT});
+    [['Annual Customer Benefit',pptMoney(e.annualBenefit,c)],['Total Contract Benefit',pptMoney(e.totalContractBenefit,c)],['Modeled Customer Investment',pptMoney(e.totalContractInvestment,c)],['Net Economic Benefit',pptMoney(e.netEconomicBenefit,c)],['Contract ROI',Number.isFinite(Number(e.contractRoi))?Math.round(e.contractRoi)+'%':'—'],['NPV',pptMoney(e.npv,c)],['Payback',e.payback==null?'Not within term':Number(e.payback).toFixed(1)+' months'],['Customer-Supported Value',`${e.customerSupportedValuePct}%`]].forEach(([k,v],i)=>{const x=.5+(i%2)*2.25,y=1.9+Math.floor(i/2)*.68;s.addText(k,{x,y,w:2.05,h:.2,fontSize:8,color:PPT.GRAY_TXT,fontFace:PPT.FONT});s.addText(v,{x,y:y+.2,w:2.05,h:.3,fontSize:13,bold:true,color:PPT.NAVY,fontFace:PPT.FONT});});
+    s.addText('Executive Value Story',{x:5.25,y:1.35,w:4.2,h:.3,fontSize:15,bold:true,color:PPT.CYAN_DARK,fontFace:PPT.FONT});[['Why Change',story.threeWhys.whyChange],['Why Now',story.threeWhys.whyNow],['Why Cloud Inventory',story.threeWhys.whyCloudInventory]].forEach(([k,v],i)=>{const y=1.8+i*1.05;s.addText(k,{x:5.25,y,w:4.2,h:.23,fontSize:10,bold:true,color:PPT.NAVY,fontFace:PPT.FONT});s.addText(v.value,{x:5.25,y:y+.25,w:4.2,h:.55,fontSize:9.5,color:PPT.GRAY_TXT,fontFace:PPT.FONT,fit:'shrink'});});
+    s.addText('Uses the authoritative Executive Value Story. No independent ROI, cost-of-delay, benchmark, competitor, or implementation claim is generated.',{x:5.25,y:5.0,w:4.2,h:.3,fontSize:7.5,italic:true,color:PPT.GRAY_TXT,fontFace:PPT.FONT});
+    const safe=story.meta.customer.replace(/[^a-z0-9]+/gi,'-');await pptx.writeFile({fileName:`Cloud-Inventory-Internal-${labels[audience]||labels.mixed}-One-Pager-${safe}-${new Date().toISOString().slice(0,10)}.pptx`});showToast?.('Internal one-pager downloaded.');
+  }catch(err){console.error('governed_one_pager.failed',{message:err.message});showToast?.(err.message||'One-pager could not be generated.');}
+  finally{if(btn){btn.disabled=false;btn.innerHTML=orig||'Role one-pager';}}
+}
+window.exportOnePager=exportGovernedOnePager;
+
 /* ═══════════════════════════════════════════════════════════════════
    COMPETITIVE BATTLECARD EXPORTS
    exportCompPDF()  — branded print window → Save as PDF
@@ -1170,7 +1192,7 @@ async function exportCompDocx() {
     var safe = c.name.replace(/[^a-zA-Z0-9]/g, '-');
     var a    = document.createElement('a');
     a.href     = url;
-    a.download = 'Battlecard-' + safe + '-' + new Date().toISOString().split('T')[0] + '.docx';
+    a.download = 'Cloud-Inventory-Internal-Battlecard-' + safe + '-' + new Date().toISOString().split('T')[0] + '.docx';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -1187,3 +1209,11 @@ async function exportCompDocx() {
 
 window.exportCompPDF  = exportCompPDF;
 window.exportCompDocx = exportCompDocx;
+
+/* Primary production paths for saved operational PowerPoints. The older
+   builders remain compatibility fallbacks only for unsaved local drafts. */
+async function deServerPpt(url,button,fileName,retry){const old=button?.innerHTML;if(button){button.disabled=true;button.textContent='Generating…';}try{const r=await fetch(url,{credentials:'same-origin',headers:{Accept:'application/vnd.openxmlformats-officedocument.presentationml.presentation'}});if(!r.ok)throw new Error((await r.json().catch(()=>({}))).error||`Request failed (${r.status})`);const blob=await r.blob(),a=document.createElement('a'),objectUrl=URL.createObjectURL(blob);a.href=objectUrl;a.download=fileName;a.click();setTimeout(()=>URL.revokeObjectURL(objectUrl),1000);showToast('PowerPoint downloaded.');return true;}catch(e){console.error('operational_pptx.failed',{message:e.message});let n=document.getElementById('operationalPptRetry');if(!n){n=document.createElement('div');n.id='operationalPptRetry';n.className='proposal-review-notice';n.innerHTML='<b>PowerPoint could not be generated.</b> <button class="btn btn-secondary btn-sm">Retry</button>';n.querySelector('button').onclick=retry;(document.querySelector('.pane.active .page-header')||document.querySelector('.pane.active')||document.body).prepend(n);}showToast('PowerPoint could not be generated.');return false;}finally{if(button){button.disabled=false;button.innerHTML=old||'PowerPoint';}}}
+const legacyPptActionPlan=pptActionPlan;
+window.pptActionPlan=pptActionPlan=async function(variant){if(!_mapCurrent?.id)return legacyPptActionPlan(variant);const customer=String(_mapCurrent.company||'Customer').replace(/[^a-z0-9]+/gi,'-'),button=document.getElementById(variant==='customer'?'mapPptCustBtn':'mapPptIntBtn'),name=`Cloud-Inventory-${variant==='internal'?'Internal-':''}Joint-Project-Plan-${customer}-${new Date().toISOString().slice(0,10)}.pptx`;await deServerPpt(`/api/maps/${encodeURIComponent(_mapCurrent.id)}/export-pptx?audience=${variant}`,button,name,()=>window.pptActionPlan(variant));};
+const legacyPptStakeholderMap=pptStakeholderMap;
+window.pptStakeholderMap=pptStakeholderMap=async function(){if(!_stakeCompany)return legacyPptStakeholderMap();const company=String(_stakeCompany).replace(/[^a-z0-9]+/gi,'-'),button=document.getElementById('stakePptBtn');await deServerPpt(`/api/stakeholders/export-pptx?company=${encodeURIComponent(_stakeCompany)}`,button,`Cloud-Inventory-Internal-Stakeholder-Map-${company}-${new Date().toISOString().slice(0,10)}.pptx`,()=>window.pptStakeholderMap());};

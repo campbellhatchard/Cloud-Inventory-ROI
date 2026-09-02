@@ -183,4 +183,4 @@ Edit `public/scenario-templates.js`, add an entry to `SCENARIO_TEMPLATES`:
 
 ## Version
 
-Current: **v6.8.2** — AI Knowledge & Christie Runtime Completion. Help and AI documentation now match every active runtime, Manager and SE workspaces launch the correct server-authorized Christie lens, competitive freshness uses the governed status, Value History materiality uses counted ROI driver contribution rather than raw input size, and customer methodology wording is consistent. ROI Model remains v2.8 and Brand System remains v1.0.
+Current: **v6.8.4** — Customer Output Reliability & Brand Certification. Active customer and internal outputs are registered by audience, use governed branding and confidentiality labels, and expose deterministic generation and retry behavior. Executive PDF, PowerPoint, proposal, Joint Project Plan, Solution Fit, competitive, methodology, stakeholder, Champion Pack, Role One-Pager, and Impact Map outputs are covered by the certification inventory. ROI Model remains v2.8, Brand System remains v1.0, Knowledge remains v1.0, and Christie Persona remains v1.0.

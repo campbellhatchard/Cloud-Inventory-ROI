@@ -7,6 +7,16 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.8.4', date: '2026-09-01', tag: 'certification',
+    title: 'Customer Output Reliability & Brand Certification',
+    changes: ['Established an authoritative audience and data-source registry for every polished output', 'Certified customer and internal footers, governed logos, Office formats, filenames, popup recovery and local PowerPoint dependencies', 'Migrated saved Joint Project Plan and Stakeholder PowerPoints to authenticated server generation', 'Preserved ROI Model v2.8, Brand System v1.0, Application Knowledge v1.0 and Christie Persona v1.0']
+  },
+  {
+    version: '6.8.3', date: '2026-09-01', tag: 'hotfix',
+    title: 'Production Customer & Executive Export Recovery',
+    changes: ['Recovered customer loading with the lightweight authorized customer list, local filtering, timeout, empty, error and retry states', 'Rebuilt Executive View and print/PDF presentation around the authoritative Executive Value Story', 'Added authenticated server-generated PowerPoint export with governed readiness and internal-draft handling', 'Preserved ROI Model v2.8, Brand System v1.0, Application Knowledge v1.0 and Christie Persona v1.0']
+  },
+  {
     version: '6.8.2', date: '2026-09-01', tag: 'fix',
     title: 'AI Knowledge & Christie Runtime Completion',
     changes: ['Regenerated current Help coverage and expanded specialist AI capability documentation', 'Added actual Manager and Sales Engineer Christie launch paths with server-controlled perspectives', 'Corrected competitive freshness and mapped Value History priority to counted ROI driver contribution', 'Aligned the final customer Business Case methodology wording']
