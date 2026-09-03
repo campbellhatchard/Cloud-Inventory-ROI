@@ -1,4 +1,4 @@
-# Cloud Inventory ROI v6.8.4 Deployment Validation
+# Cloud Inventory ROI v6.8.5 Deployment Validation
 
 Complete the output-specific checklist in `DEPLOYMENT_VALIDATION_V6.8.4.md`. Render output certification remains pending until those checks run against the deployed service.
 
@@ -33,9 +33,9 @@ Add these in the Render dashboard when the corresponding feature is needed:
 `APP_URL` is optional on Render because the application uses Render's external URL automatically.
 
 
-## Production-baseline hardening applied during v6.8.4 validation
+## Production-baseline hardening applied during v6.8.5 validation
 
-This deployment candidate is validated against live production v6.8.2 commit `810e7f6d48c8c74a01d53c0c52309210a2f5db11`. It retains the approved v6.8.3 customer-loading and Executive-output recovery plus the v6.8.4 output-certification work while preserving the v6.8.2 production locks: one canonical early `requireAuth` binding, explicit-zero ramps, `fieldInvSav`, customer-input-only Medical Devices / Life Sciences behavior, server-authoritative contract-term metrics, historical shared-business-case recomputation, bounded prospect AI history, authenticated Three Whys persistence, complete CI coverage, and the governed ROI/Brand/Knowledge/Christie versions. The final package restores the cumulative production-lock test and includes the v6.8.3/v6.8.4 suites.
+This deployment candidate is validated against live production v6.8.2 commit `810e7f6d48c8c74a01d53c0c52309210a2f5db11`. It retains the approved v6.8.3 customer-loading and Executive-output recovery plus the v6.8.5 output-certification work while preserving the v6.8.2 production locks: one canonical early `requireAuth` binding, explicit-zero ramps, `fieldInvSav`, customer-input-only Medical Devices / Life Sciences behavior, server-authoritative contract-term metrics, historical shared-business-case recomputation, bounded prospect AI history, authenticated Three Whys persistence, complete CI coverage, and the governed ROI/Brand/Knowledge/Christie versions. The final package restores the cumulative production-lock test and includes the v6.8.3/v6.8.5 suites.
 
 Migration 026 intentionally replaces only the governed `buycycle_stage_config` reference rows. Every migration is executed inside the migration runner's per-file PostgreSQL transaction, so a failure rolls back the entire migration before `schema_migrations` is updated. No migration 025–034 contains destructive customer/opportunity data deletion.
 
@@ -45,7 +45,7 @@ Before uploading or syncing the Blueprint:
 
 1. Run `npm ci` with Node.js 22.
 2. Run `npm run migrate` against a disposable PostgreSQL 16 database.
-3. Run `npm test`; it includes the complete application regression suite, v6.8.1/v6.8.2/v6.8.3/v6.8.4 completion tests, and production-lock regression tests.
+3. Run `npm test`; it includes the complete application regression suite, v6.8.1/v6.8.2/v6.8.3/v6.8.5 completion tests, and production-lock regression tests.
 4. Confirm `package.json`, `package-lock.json`, the UI version, and version history all report `6.8.4`.
 5. After deployment, confirm `/health` reports version `6.8.4` and `database: connected`.
 6. Configure both `SENDGRID_API_KEY` and a SendGrid-verified `FROM_EMAIL`. Configure `APP_URL` with the public HTTPS origin or allow Render external URL discovery. Never use localhost in production.
@@ -171,3 +171,9 @@ Before uploading or syncing the Blueprint:
 6. Remove a test user's customer access, focus the open browser again, and confirm the application blocks the stale customer context.
 7. Confirm broader-role users get a read-only customer view unless they also have record edit authority.
 8. Repeat the switcher test at a 390-pixel mobile width. Confirm the full-height panel, one-column results, and 44-pixel controls remain usable.
+
+## v6.8.5 stabilization validation
+
+v6.8.5 adds centralized customer ROI report data plus authenticated server-generated Executive PDF and Word outputs, aligns PowerPoint to the same report source, and restores contract-value visualization in Executive View/customer outputs. The release is rebuilt from the live v6.8.4 tree and preserves all production regression locks. Migrations remain 001-034 and the dependency graph is unchanged.
+
+The guarded deployment must pass `npm ci`, the complete cumulative `npm test` suite (including v6.8.5 and production locks), route tests, and the exact canonical Git tree comparison before commit/push.

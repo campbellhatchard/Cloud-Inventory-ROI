@@ -15,6 +15,12 @@ dist/
 build/
 *.zip
 *.bak
+/tmp/
+/temp/
+/exports/
+*.pdf
+*.pptx
+*.docx
 
 # OS / editor
 .DS_Store
@@ -28,6 +34,7 @@ Thumbs.db
 # Test coverage
 coverage/
 .nyc_output/
+.cache/
 
 # Logs
 logs/

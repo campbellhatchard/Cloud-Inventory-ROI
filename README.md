@@ -8,7 +8,7 @@ A multi-user SaaS application for Cloud Inventory sales reps and Solution Engine
 
 - **ROI Calculator** — Live-updating model with 10 value drivers (labor, shrinkage, carrying cost, inventory turns, OTIF, downtime, expediting, field inventory, IT displacement, WMS levers)
 - **Discovery guide** — Industry-specific question sets with a shareable prospect link so prospects can contribute their own data
-- **Executive view** — CFO-ready narrative, Three Whys framework, PDF and PowerPoint exports
+- **Executive view** — CFO-ready narrative, Three Whys framework, authenticated server-generated PDF, PowerPoint and Word exports
 - **Solution Fit** — Pre-sales handoff document for Services / Solution Engineering
 - **Action plans** — Mutual action plan builder with milestone tracking and a shareable prospect link
 - **Stakeholder map** — Influence/support matrix with AI gap analysis
@@ -183,4 +183,4 @@ Edit `public/scenario-templates.js`, add an entry to `SCENARIO_TEMPLATES`:
 
 ## Version
 
-Current: **v6.8.4** — Customer Output Reliability & Brand Certification. Active customer and internal outputs are registered by audience, use governed branding and confidentiality labels, and expose deterministic generation and retry behavior. Executive PDF, PowerPoint, proposal, Joint Project Plan, Solution Fit, competitive, methodology, stakeholder, Champion Pack, Role One-Pager, and Impact Map outputs are covered by the certification inventory. ROI Model remains v2.8, Brand System remains v1.0, Knowledge remains v1.0, and Christie Persona remains v1.0.
+Current: **v6.8.5** — Customer Output Reliability & Brand Certification. Active customer and internal outputs are registered by audience, use governed branding and confidentiality labels, and expose deterministic generation and retry behavior. Executive PDF, PowerPoint, proposal, Joint Project Plan, Solution Fit, competitive, methodology, stakeholder, Champion Pack, Role One-Pager, and Impact Map outputs are covered by the certification inventory. ROI Model remains v2.8, Brand System remains v1.0, Knowledge remains v1.0, and Christie Persona remains v1.0.

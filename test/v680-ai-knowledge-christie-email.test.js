@@ -4,7 +4,7 @@ const root=path.resolve(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p
 const knowledge=require('../src/shared/application-knowledge'),christie=require('../src/shared/christie-context');
 
 test('release locks application, ROI, brand, knowledge and persona versions',()=>{
- assert.equal(require('../package.json').version,'6.8.4');assert.equal(knowledge.knowledge.applicationVersion,'6.8.4');
+ assert.equal(require('../package.json').version,'6.8.5');assert.equal(knowledge.knowledge.applicationVersion,'6.8.5');
  assert.equal(knowledge.knowledge.roiModel.version,'2.8');assert.equal(knowledge.knowledge.roiModel.modelVersion,28);assert.equal(knowledge.knowledge.brandVersion,'1.0');
  assert.equal(knowledge.knowledge.knowledgeVersion,'1.0');assert.equal(christie.persona.personaVersion,'1.0');
 });

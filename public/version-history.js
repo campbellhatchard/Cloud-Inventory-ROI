@@ -7,6 +7,11 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.8.5', date: '2026-09-02', tag: 'stabilization',
+    title: 'Executive Output & Production Stabilization',
+    changes: ['Centralized customer ROI report data across PDF, PowerPoint and Word', 'Replaced browser-print PDF handoff with authenticated server-side PDF download', 'Restored contract-value charts in Executive View and customer outputs', 'Improved output status, retry behavior, deployment guidance and release regression coverage']
+  },
+  {
     version: '6.8.4', date: '2026-09-01', tag: 'certification',
     title: 'Customer Output Reliability & Brand Certification',
     changes: ['Established an authoritative audience and data-source registry for every polished output', 'Certified customer and internal footers, governed logos, Office formats, filenames, popup recovery and local PowerPoint dependencies', 'Migrated saved Joint Project Plan and Stakeholder PowerPoints to authenticated server generation', 'Preserved ROI Model v2.8, Brand System v1.0, Application Knowledge v1.0 and Christie Persona v1.0']
