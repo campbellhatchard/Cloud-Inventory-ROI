@@ -13,8 +13,9 @@
   const STANDARD_PROCESSES = ['Receiving','Putaway','Inventory Movement','Picking','Packing','Shipping','Cycle Counting','Replenishment','Production Issue / Return','Field Inventory','Returns','Printing / Labeling'];
   const CLASSIFICATIONS = ['UNKNOWN','CONFIGURATION','PROCESS CHANGE','EXTENSION','INTEGRATION','REPORT / PRINT','DATA','NON-FUNCTIONAL','ROADMAP','OUT OF SCOPE'];
 
-  const PRODUCTS = ['MEP','CIP','CPP','Platform'];
-  const blankProcess = (name, i) => ({ id:`P-${String(i+1).padStart(3,'0')}`, name, selected:false, demoStatus:'Not reviewed', fit:'Not reviewed', customerValidation:'Not validated', notes:'' });
+  const PRODUCTS = ['MEP','CIP','EPP'];
+  const PRODUCT_LABELS = {MEP:'Mobile Enterprise Platform (MEP)',CIP:'Cloud Inventory Platform',EPP:'Enterprise Printing Platform (EPP)'};
+  const blankProcess = (name, i, extra={}) => ({ id:`P-${String(i+1).padStart(3,'0')}`, name, selected:false, demoStatus:'Not reviewed', fit:'Not reviewed', customerValidation:'Not validated', notes:'',source:'legacy_process',...extra });
   const blankState = () => ({
     opportunity:{customer:'',solutionEngineer:'',solutionEngineerId:'',stage:'Stage 2 — Define Economic Consequences',products:[],productsOther:'',goLive:'',users:'',locations:'',problem:'',outcome:'',
       businessOwnerName:'',businessOwnerTitle:'',businessOwnerEmail:'',businessOwnerPhone:'',
@@ -22,6 +23,7 @@
     architecture:{relationship:'',erp:'',version:'',otherSystems:'',integrationMethod:'',integrationOwner:'',integrationNotes:'',
       hasCustomizations:'',customizations:[]},
     partner:{involved:'',company:'',role:'',contactName:'',email:'',phone:'',title:''},
+    solutionScope:{primaryProduct:'',additionalProducts:[],erp:'',erpVersion:'',catalogId:'',catalogVersion:'',catalogSource:'',selectedApps:[]},
     processes:STANDARD_PROCESSES.map(blankProcess), gaps:[], interfaces:[],
     drivers:{offline:'Unknown',offlineDuration:'',devices:'',peripherals:'',customOutput:'Unknown',volumeConcern:'Unknown',volume:'',otherConstraint:''},
     handoffType:'internal'
@@ -31,6 +33,7 @@
   /* Module state */
   let S = blankState();
   let customerId = null, customerName = '', canWrite = false, exists = false;
+  let capabilities={canView:false,canEdit:false,canCreate:false,canRestore:false},mepCatalog=null,loadState='idle';
   let openGapId = null, activeTab = 'context', saveTimer = null, dirty = false;
   let showMissingOnly = false, activeTemplate = 'field', knownStakeholders = [];
   let knownSources = {}, sfKeyboardBound = false, sfActionsDelegated = false;
@@ -48,7 +51,7 @@
       processes:['Receiving','Putaway','Inventory Movement','Picking','Packing','Shipping','Cycle Counting','Replenishment']
     },
     erp: {
-      label:'ERP inventory extension', products:['CIP','Platform'],
+      label:'ERP inventory extension', products:['CIP'],
       relationship:'Integrated to system of record', integrationMethod:'Cloud Inventory REST API', integrationOwner:'Shared', partner:'No', offline:'Unknown',
       processes:['Receiving','Inventory Movement','Shipping','Cycle Counting','Returns']
     }
@@ -90,14 +93,21 @@
   /* ── Server load / save ─────────────────────────────────────────── */
   async function loadHandoff(custId) {
     customerId = custId;
+    renderGateState('loading');
     try {
       const resp = await apiFetch('/api/handoffs/' + encodeURIComponent(custId));
-      if (!resp || !resp.ok) { renderGate('Could not load the handoff for this customer.'); return false; }
+      if (!resp || !resp.ok) {
+        if(resp&&resp.status===403)renderGateState('permission');
+        else renderGateState('error',await safeError(resp));
+        return false;
+      }
       const data = await resp.json();
       lastEditedByName = data.lastEditedByName || '';
       lastEditedAt = data.updatedAt || '';
       customerName = data.customerName || '';
       exists = !!data.exists;
+      capabilities=data.capabilities||{};
+      canWrite=!!capabilities.canEdit;
       knownSources = {};
       activeTemplate = inferTemplate();
       S = mergeState(blankState(), data.data || {});
@@ -116,13 +126,15 @@
       }
       await loadSEList();
       /* Permission: can this user write? (server is authoritative; we mirror for UI). */
-      canWrite = await resolveCanWrite();
       await loadKnownStakeholders();
-      const prefilled = await applyKnownData({ mutate:!exists, save:false });
-      if (prefilled && !exists && canWrite) scheduleSave();
+      if(!exists){renderGateState(data.removedRecoverable?'removed':'not-created',data);return false;}
+      await applyKnownData({ mutate:false, save:false });
+      loadState='ready';
       return true;
-    } catch (e) { console.error('loadHandoff error:', e.message); renderGate('Could not load the handoff — check your connection.'); return false; }
+    } catch (e) { console.error('loadHandoff error:', e.message); renderGateState('error','Check your connection and try again.'); return false; }
   }
+
+  async function safeError(resp){try{const b=await resp.json();return b&&b.error?b.error:'';}catch(_){return '';}}
 
   /* Tolerate handoffs saved under the previous field shapes (no data loss). */
   function migrateState(s) {
@@ -140,6 +152,13 @@
     if (a.hasCustomizations === undefined) a.hasCustomizations = '';
     if (!Array.isArray(a.customizations)) a.customizations = [];
     if (!Array.isArray(s.interfaces)) s.interfaces = [];
+    if(!s.solutionScope||typeof s.solutionScope!=='object')s.solutionScope={primaryProduct:'',additionalProducts:[],erp:'',erpVersion:'',catalogId:'',catalogVersion:'',catalogSource:'',selectedApps:[]};
+    const scope=s.solutionScope;
+    if(!scope.primaryProduct){const first=o.products[0];scope.primaryProduct=first==='MEP'?'MEP':first==='CIP'?'CIP':first==='CPP'?'LEGACY_CPP':first==='Platform'?'LEGACY_PLATFORM':first||'';}
+    if(!Array.isArray(scope.additionalProducts))scope.additionalProducts=[];
+    if(!Array.isArray(scope.selectedApps))scope.selectedApps=[];
+    if(scope.erp&&!a.erp)a.erp=scope.erp;if(a.erp&&!scope.erp)scope.erp=a.erp;
+    if(scope.erpVersion&&!a.version)a.version=scope.erpVersion;if(a.version&&!scope.erpVersion)scope.erpVersion=a.version;
     s.processes.forEach(p=>{if(p.customerValidation===undefined)p.customerValidation='Not validated';});
     s.interfaces.forEach(it=>{
       if (it.direction === undefined) it.direction = 'Bidirectional';
@@ -326,10 +345,10 @@
   async function initSolutionFit() {
     const custId = resolveCurrentCustomerId();
     if (!custId) { renderGate(); return; }
-    $('sfGate').style.display = 'none';
-    $('sfApp').style.display = 'block';
+    $('sfGate').style.display = 'block';
+    $('sfApp').style.display = 'none';
     const ok = await loadHandoff(custId);
-    if (ok) renderApp();
+    if (ok) {$('sfGate').style.display='none';$('sfApp').style.display='block';renderApp();}
   }
 
   /* Resolve the customer to work on: the scenario currently loaded on the
@@ -355,6 +374,27 @@
     </div>`;
     loadCustomerPicker();
   }
+
+  function gateActions(primary=''){
+    return `<div class="sf-gate-actions">${primary}<button class="btn btn-ghost" data-sfgate="switch">Switch Customer</button><button class="btn btn-ghost" data-sfgate="return">Return to ROI Calculator</button></div>`;
+  }
+  function bindGateActions(){
+    document.querySelector('[data-sfgate="retry"]')?.addEventListener('click',()=>initSolutionFit());
+    document.querySelector('[data-sfgate="switch"]')?.addEventListener('click',()=>window.openCustomerSwitcher?.({targetTab:'solfit'}));
+    document.querySelector('[data-sfgate="return"]')?.addEventListener('click',()=>window.switchTab?.('calc'));
+    document.querySelector('[data-sfgate="create"]')?.addEventListener('click',()=>openScopeWizard('create'));
+    document.querySelector('[data-sfgate="restore"]')?.addEventListener('click',()=>restoreSolutionFit());
+  }
+  function renderGateState(state,detail){
+    loadState=state;$('sfApp').style.display='none';const gate=$('sfGate');gate.style.display='block';
+    if(state==='loading')gate.innerHTML='<div class="sf-gate-card" role="status"><div class="sf-gate-kicker">Solution Fit</div><h3>Loading Solution Fit…</h3><p>Retrieving the latest governed assessment for this customer.</p></div>';
+    else if(state==='permission')gate.innerHTML=`<div class="sf-gate-card" role="alert"><div class="sf-gate-kicker">Access</div><h3>You do not have permission to view this Solution Fit.</h3><p>Your customer access remains available.</p>${gateActions()}</div>`;
+    else if(state==='error')gate.innerHTML=`<div class="sf-gate-card" role="alert"><div class="sf-gate-kicker">Unable to load</div><h3>Solution Fit could not be loaded.</h3><p>${esc(detail||'The service did not return the assessment. Try again.')}</p>${gateActions('<button class="btn btn-primary" data-sfgate="retry">Retry</button>')}</div>`;
+    else if(state==='removed')gate.innerHTML=`<div class="sf-gate-card"><div class="sf-gate-kicker">Removed assessment</div><h3>A previously removed Solution Fit exists.</h3><p>It is not treated as the active assessment.${capabilities.canRestore?' Restore it to continue with its history.':''}</p>${gateActions(capabilities.canRestore?'<button class="btn btn-primary" data-sfgate="restore">Restore Solution Fit</button>':'')}</div>`;
+    else if(state==='not-created')gate.innerHTML=`<div class="sf-gate-card"><div class="sf-gate-kicker">Not started</div><h3>${capabilities.canCreate?'No Solution Fit has been created for this customer.':'No Solution Fit has been created yet.'}</h3><p>${capabilities.canCreate?'Set the product scope intentionally, then begin the governed assessment.':'A Sales Engineer or Admin can create the assessment.'}</p>${gateActions(capabilities.canCreate?'<button class="btn btn-primary" data-sfgate="create">Create Solution Fit</button>':'')}</div>`;
+    bindGateActions();
+  }
+  async function restoreSolutionFit(){const r=await apiFetch('/api/handoffs/'+encodeURIComponent(customerId)+'/restore',{method:'POST',body:'{}'});if(r&&r.ok){window.showToast?.('Solution Fit restored.');initSolutionFit();}else window.showToast?.((await safeError(r))||'Solution Fit could not be restored.');}
   async function loadCustomerPicker() {
     try {
       const resp = await apiFetch('/api/customers');
@@ -370,6 +410,71 @@
     } catch (e) { console.error('customer picker error:', e.message); }
   }
 
+  let scopeDraft=null;
+  async function ensureMepCatalog(){
+    if(mepCatalog)return mepCatalog;
+    const r=await apiFetch('/api/solution-fit/catalog/mep-standard-apps');
+    if(!r||!r.ok)throw new Error('The governed MEP application catalog could not be loaded.');
+    mepCatalog=await r.json();return mepCatalog;
+  }
+  function currentScope(){return S.solutionScope||{};}
+  function scopeProduct(){const p=currentScope().primaryProduct;return PRODUCTS.includes(p)?p:'';}
+  function productLabel(p){return PRODUCT_LABELS[p]||({LEGACY_CPP:'Legacy CPP — review classification',LEGACY_PLATFORM:'Legacy Platform — review classification'}[p]||p||'Product not selected');}
+  function scopeSummary(){const x=currentScope(),count=(x.selectedApps||[]).length;return x.primaryProduct==='MEP'?`MEP · ${x.erp||'ERP not selected'} · ${count} app${count===1?'':'s'} in scope`:productLabel(x.primaryProduct);}
+  async function openScopeWizard(mode){
+    try{await ensureMepCatalog();}catch(e){renderGateState('error',e.message);return;}
+    const scope=currentScope(),custom=S.processes.filter(p=>p.source==='non_standard').map(p=>({name:p.name,reason:p.reason||'',id:p.id}));
+    scopeDraft={mode,primaryProduct:scopeProduct()||(mode==='create'?'MEP':''),additionalProducts:[...(scope.additionalProducts||[])],erp:scope.erp||'',erpVersion:scope.erpVersion||'',selectedApps:[...(scope.selectedApps||S.processes.filter(p=>p.source==='standard_app'&&p.selected).map(p=>p.name))],custom,search:''};
+    renderScopeWizard();
+  }
+  function renderScopeWizard(){
+    document.getElementById('sfScopeWizard')?.remove();const d=scopeDraft,apps=d.erp?(mepCatalog.erps[d.erp]||[]):[],visible=apps.filter(x=>x.toLowerCase().includes(d.search.toLowerCase()));
+    const overlay=document.createElement('div');overlay.id='sfScopeWizard';overlay.className='sf-scope-overlay';overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-labelledby','sfScopeTitle');
+    overlay.innerHTML=`<section class="sf-scope-wizard"><header><div><div class="sf-gate-kicker">Solution Fit setup</div><h2 id="sfScopeTitle">${d.mode==='create'?'Create':'Edit'} Solution Fit scope</h2><p>${esc(customerName||'Customer')} · Product → ERP → Applications</p></div><button class="sf-scope-close" aria-label="Close">×</button></header>
+      <div class="sf-scope-step"><div class="sf-step-number">1</div><div><h3>Primary Cloud Inventory product</h3><div class="sf-product-cards">${PRODUCTS.map(p=>`<label class="sf-product-card ${d.primaryProduct===p?'selected':''}"><input type="radio" name="sfPrimaryProduct" value="${p}" ${d.primaryProduct===p?'checked':''}><strong>${esc(PRODUCT_LABELS[p])}</strong><span>${p==='MEP'?'Configure the ERP-specific standard applications.':p==='CIP'?'Cloud inventory visibility and control.':'Enterprise document and label printing.'}</span></label>`).join('')}</div><fieldset class="sf-additional-products"><legend>Additional products <span>(optional)</span></legend>${PRODUCTS.filter(p=>p!==d.primaryProduct).map(p=>`<label><input type="checkbox" data-sfadditional="${p}" ${d.additionalProducts.includes(p)?'checked':''}> ${esc(PRODUCT_LABELS[p])}</label>`).join('')}</fieldset></div></div>
+      ${d.primaryProduct==='MEP'?`<div class="sf-scope-step"><div class="sf-step-number">2</div><div><h3>ERP</h3><div class="sf-erp-cards">${Object.entries(mepCatalog.erps).map(([erp,list])=>`<label class="sf-erp-card ${d.erp===erp?'selected':''}"><input type="radio" name="sfErp" value="${esc(erp)}" ${d.erp===erp?'checked':''}><strong>${esc(erp)}</strong><span>${list.length} standard apps</span></label>`).join('')}</div><label class="sf-version-field">ERP Version <input id="sfScopeErpVersion" value="${esc(d.erpVersion)}" placeholder="Optional — enter the customer version"></label></div></div>
+      <div class="sf-scope-step"><div class="sf-step-number">3</div><div class="sf-app-picker"><div class="sf-app-picker-head"><div><h3>Applications in scope</h3><p>${d.erp?`${esc(d.erp)} Standard Applications · ${apps.length} available`:'Select an ERP first'}</p></div><strong>${d.selectedApps.length} of ${apps.length} selected</strong></div>${d.erp?`<div class="sf-app-tools"><input id="sfAppSearch" value="${esc(d.search)}" placeholder="Search applications" aria-label="Search applications"><button class="btn btn-ghost btn-sm" data-sfscope="all">Select all</button><button class="btn btn-ghost btn-sm" data-sfscope="clear">Clear all</button></div><div class="sf-app-list">${visible.map(name=>`<label><input type="checkbox" data-sfapp="${esc(name)}" ${d.selectedApps.includes(name)?'checked':''}><span>${esc(name)}</span><em>Standard App</em></label>`).join('')||'<p>No applications match the search.</p>'}</div>`:''}<div class="sf-custom-apps"><h4>Non-standard applications</h4>${d.custom.map((x,i)=>`<div><strong>${esc(x.name)}</strong><span>${esc(x.reason||'Customer-specific requirement')}</span><button data-sfremove-custom="${i}" aria-label="Remove ${esc(x.name)}">×</button></div>`).join('')}<div class="sf-custom-entry"><input id="sfCustomName" placeholder="Application / workflow name"><input id="sfCustomReason" placeholder="Reason / customer need"><button class="btn btn-ghost btn-sm" data-sfscope="custom">+ Add non-standard application</button></div></div></div></div>`:''}
+      <footer><button class="btn btn-ghost" data-sfscope="cancel">Cancel</button><button class="btn btn-primary" data-sfscope="save">${d.mode==='create'?'Create Solution Fit':'Save scope'}</button></footer></section>`;
+    document.body.appendChild(overlay);bindScopeWizard();
+  }
+  function bindScopeWizard(){
+    const root=document.getElementById('sfScopeWizard');root.querySelector('.sf-scope-close').onclick=closeScopeWizard;root.querySelector('[data-sfscope="cancel"]').onclick=closeScopeWizard;root.onclick=e=>{if(e.target===root)closeScopeWizard();};
+    root.querySelectorAll('[name="sfPrimaryProduct"]').forEach(x=>x.onchange=()=>{scopeDraft.primaryProduct=x.value;scopeDraft.additionalProducts=scopeDraft.additionalProducts.filter(p=>p!==x.value);scopeDraft.erp='';scopeDraft.selectedApps=[];renderScopeWizard();});
+    root.querySelectorAll('[data-sfadditional]').forEach(x=>x.onchange=()=>{const p=x.dataset.sfadditional;scopeDraft.additionalProducts=x.checked?[...new Set([...scopeDraft.additionalProducts,p])]:scopeDraft.additionalProducts.filter(v=>v!==p);});
+    root.querySelectorAll('[name="sfErp"]').forEach(x=>x.onchange=()=>{scopeDraft.erp=x.value;scopeDraft.selectedApps=[];renderScopeWizard();});
+    root.querySelector('#sfScopeErpVersion')?.addEventListener('input',e=>scopeDraft.erpVersion=e.target.value);
+    root.querySelector('#sfAppSearch')?.addEventListener('input',e=>{scopeDraft.search=e.target.value;const pos=e.target.selectionStart;renderScopeWizard();const n=document.getElementById('sfAppSearch');n?.focus();n?.setSelectionRange(pos,pos);});
+    root.querySelectorAll('[data-sfapp]').forEach(x=>x.onchange=()=>{const n=x.dataset.sfapp;scopeDraft.selectedApps=x.checked?[...new Set([...scopeDraft.selectedApps,n])]:scopeDraft.selectedApps.filter(v=>v!==n);root.querySelector('.sf-app-picker-head strong').textContent=`${scopeDraft.selectedApps.length} of ${(mepCatalog.erps[scopeDraft.erp]||[]).length} selected`;});
+    root.querySelector('[data-sfscope="all"]')?.addEventListener('click',()=>{scopeDraft.selectedApps=[...(mepCatalog.erps[scopeDraft.erp]||[])];renderScopeWizard();});
+    root.querySelector('[data-sfscope="clear"]')?.addEventListener('click',()=>{scopeDraft.selectedApps=[];renderScopeWizard();});
+    root.querySelector('[data-sfscope="custom"]')?.addEventListener('click',()=>{const name=root.querySelector('#sfCustomName').value.trim(),reason=root.querySelector('#sfCustomReason').value.trim();if(!name)return window.showToast?.('Enter the non-standard application name.');scopeDraft.custom.push({name,reason});renderScopeWizard();});
+    root.querySelectorAll('[data-sfremove-custom]').forEach(x=>x.onclick=()=>{scopeDraft.custom.splice(+x.dataset.sfremoveCustom,1);renderScopeWizard();});
+    root.querySelector('[data-sfscope="save"]').onclick=commitScope;
+  }
+  function closeScopeWizard(){document.getElementById('sfScopeWizard')?.remove();scopeDraft=null;document.querySelector('[data-sfaction="editScope"],[data-sfgate="create"]')?.focus();}
+  async function commitScope(){
+    const d=scopeDraft;if(!d.primaryProduct)return window.showToast?.('Select the primary product.');
+    if(d.primaryProduct==='MEP'&&!d.erp)return window.showToast?.('Select the customer ERP.');
+    if(d.primaryProduct==='MEP'&&!d.selectedApps.length&&!d.custom.length)return window.showToast?.('Select at least one standard or non-standard application.');
+    const priorScope=JSON.parse(JSON.stringify(currentScope()));
+    if(d.mode==='edit'&&priorScope.erp&&priorScope.erp!==d.erp&&!confirm('Changing ERP will load a different standard-app catalog. Matching application assessments will be retained where possible. Applications not present in the new catalog will leave active scope but remain in Solution Fit change history. Continue?'))return;
+    const previous=new Map(S.processes.map(p=>[p.name,p]));
+    if(d.mode==='edit'&&(priorScope.primaryProduct!==d.primaryProduct||priorScope.erp!==d.erp)){S.scopeHistory=S.scopeHistory||[];S.scopeHistory.push({changedAt:new Date().toISOString(),scope:priorScope,processes:S.processes});}
+    const standard=d.primaryProduct==='MEP'?d.selectedApps.map((name,i)=>{const old=previous.get(name);return old?{...old,selected:true,source:'standard_app',product:'MEP',erp:d.erp,catalogVersion:mepCatalog.catalogVersion,scope_carried_forward:priorScope.erp&&priorScope.erp!==d.erp}:blankProcess(name,i,{selected:true,source:'standard_app',product:'MEP',erp:d.erp,catalogVersion:mepCatalog.catalogVersion});}):[];
+    const custom=d.custom.map((x,i)=>{const old=previous.get(x.name);return old?{...old,selected:true,source:'non_standard',reason:x.reason||old.reason||''}:blankProcess(x.name,standard.length+i,{selected:true,source:'non_standard',reason:x.reason||'',product:d.primaryProduct});});
+    if(d.primaryProduct==='MEP')S.processes=[...standard,...custom];
+    S.solutionScope={primaryProduct:d.primaryProduct,additionalProducts:d.additionalProducts,erp:d.primaryProduct==='MEP'?d.erp:'',erpVersion:d.primaryProduct==='MEP'?d.erpVersion:'',catalogId:d.primaryProduct==='MEP'?mepCatalog.catalogId:'',catalogVersion:d.primaryProduct==='MEP'?mepCatalog.catalogVersion:'',catalogSource:d.primaryProduct==='MEP'?mepCatalog.source:'',selectedApps:d.primaryProduct==='MEP'?[...d.selectedApps]:[]};
+    S.opportunity.products=[d.primaryProduct,...d.additionalProducts];S.architecture.erp=S.solutionScope.erp;S.architecture.version=S.solutionScope.erpVersion;
+    if(d.mode==='create'){
+      if(!S.opportunity.customer)S.opportunity.customer=customerName;
+      const u=currentUser();if(!S.opportunity.solutionEngineer){S.opportunity.solutionEngineer=u.username||u.name||'';S.opportunity.solutionEngineerId=u.id||'';}
+      const r=await apiFetch('/api/handoffs/'+encodeURIComponent(customerId),{method:'POST',body:JSON.stringify({data:S})});
+      if(!r||!r.ok){window.showToast?.((await safeError(r))||'Solution Fit could not be created.');return;}
+      closeScopeWizard();window.showToast?.('Solution Fit created.');await initSolutionFit();return;
+    }
+    closeScopeWizard();renderApp();scheduleSave();window.showToast?.('Solution Fit scope updated. Review carried-forward assessments.');
+  }
+
   /* ── Main render ────────────────────────────────────────────────── */
   function renderApp() {
     const app = $('sfApp');
@@ -381,7 +486,8 @@
     const integrationMissing = r.miss.filter(x=>/integration|system of record|ERP|relationship/i.test(x.label)).length;
     const defaultCount = templateDefaultCount();
     const templateOptions = Object.entries(SOLUTION_TEMPLATES).map(([key,t])=>`<option value="${key}" ${key===activeTemplate?'selected':''}>${esc(t.label)}</option>`).join('');
-    const productsSummary = fmtProducts(S.opportunity);
+    const productsSummary = scopeSummary();
+    const legacyMep=currentScope().primaryProduct==='MEP'&&!currentScope().catalogVersion;
     const user=window.ciAuth?.getUser?.()||{},roleKeys=[user.role,...(user.roles||[]),...(user.roleKeys||[])].map(x=>String(x||'').toLowerCase()),canUseSeChristie=roleKeys.some(x=>['admin','se','solution_engineer','solution engineer','value_engineering','value engineering'].includes(x));
     const tabs = [
       { k:'context',     l:'Context' },
@@ -391,16 +497,18 @@
       { k:'handoff',     l:'Readiness',   badge: missingCount || null, badgeCls:'sf-tab-badge-warn' }
     ];
     app.innerHTML = `
+      ${legacyMep?'<div class="sf-legacy-banner"><div><strong>This Solution Fit uses the legacy generic workflow checklist.</strong><span>Select the ERP and governed applications before treating the assessment as MEP application evidence.</span></div>'+(canWrite?'<button class="btn btn-primary btn-sm" data-sfaction="editScope">Upgrade to ERP Standard Apps</button>':'')+'</div>':''}
       <div class="sf-topbar">
         <div class="sf-topbar-left">
           <span class="sf-ctx-name">${esc(customerName || S.opportunity.customer || 'Customer')}</span>
           ${S.opportunity.stage ? `<span class="sf-stage-pill">${esc(S.opportunity.stage)}</span>` : ''}
-          ${productsSummary!=='—' ? `<span class="sf-stage-pill">${esc(productsSummary)}${S.opportunity.users?` · ${esc(S.opportunity.users)} users`:''}</span>` : ''}
+          ${productsSummary ? `<span class="sf-stage-pill">${esc(productsSummary)}</span>` : ''}
           ${!canWrite ? '<span class="sf-ro-badge">Read-only</span>' : ''}
           ${lastEditedByName ? `<span class="sf-last-edit">Last updated by ${esc(lastEditedByName)}${lastEditedAt?' · '+new Date(lastEditedAt).toLocaleString():''}</span>` : ''}
         </div>
         <div class="sf-topbar-actions">
           ${canUseSeChristie?'<button class="btn btn-ghost btn-sm sf-topbar-btn" data-sfaction="askChristie">Ask Christie</button>':''}
+          ${canWrite?'<button class="btn btn-ghost btn-sm sf-topbar-btn" data-sfaction="editScope">Edit Scope</button>':''}
           ${canWrite ? '<button class="btn btn-ghost btn-sm sf-topbar-btn" data-sfaction="refreshKnown">Refresh known data</button>' : ''}
           ${canWrite && defaultCount ? `<button class="btn btn-primary btn-sm" data-sfaction="applyDefaults">Apply ${defaultCount} recommended default${defaultCount===1?'':'s'}</button>` : ''}
           <div class="sf-topbar-right" id="sfSaveStateMini"></div>
@@ -515,12 +623,7 @@
     const seField = `<div class="sf-field" data-sfmissing="${isBlank(o.solutionEngineer)}"><label>Solution Engineer${sourceTag('opportunity.solutionEngineer')}</label><select data-sfbind="opportunity.solutionEngineer">${seOpts}</select></div>`;
 
     /* Products checkboxes + Other. */
-    const prodChecks = PRODUCTS.map(pr => `<label class="sf-check"><input type="checkbox" data-sfprod="${esc(pr)}" ${o.products.includes(pr)?'checked':''}><span>${esc(pr)}</span></label>`).join('');
-    const otherChecked = o.products.includes('Other');
-    const productsField = `<div class="sf-field" data-sfmissing="${!o.products.length}"><label>Cloud Inventory product(s)${sourceTag('opportunity.products')}</label>
-      <div class="sf-checks">${prodChecks}<label class="sf-check"><input type="checkbox" data-sfprod="Other" ${otherChecked?'checked':''}><span>Other</span></label></div>
-      <div id="sfProductsOther" class="${otherChecked?'':'sf-hidden'}" style="margin-top:8px;"><input data-sfbind="opportunity.productsOther" value="${esc(o.productsOther)}" placeholder="Describe other product(s)"></div>
-    </div>`;
+    const productsField = `<div class="sf-field sf-current-scope" data-sfmissing="${!currentScope().primaryProduct}"><label>Primary Cloud Inventory product</label><div><strong>${esc(productLabel(currentScope().primaryProduct))}</strong>${currentScope().primaryProduct==='MEP'?`<span>${esc(currentScope().erp||'ERP not selected')} · ${(currentScope().selectedApps||[]).length} application${(currentScope().selectedApps||[]).length===1?'':'s'} · Catalog ${esc(currentScope().catalogVersion||'Legacy')}</span>`:''}${canWrite?'<button class="btn btn-ghost btn-sm" type="button" data-sfaction="editScope">Edit scope</button>':''}</div></div>`;
 
     /* Owners reuse Stakeholder Map entries; optional contact details stay collapsed. */
     const ownerBlock = (title, k) => {
@@ -565,7 +668,7 @@
     const archBody = `
       ${sel('Deployment relationship','architecture.relationship',['','Standalone','Integrated to system of record','Hybrid'])}
       <div id="sfIntFields" class="${a.relationship==='Standalone'?'sf-hidden':''}">
-        <div class="sf-row2">${f('ERP / system of record','architecture.erp')}${f('Version','architecture.version')}</div>
+        <div class="sf-row2">${currentScope().primaryProduct==='MEP'?`<div class="sf-field"><label>ERP / system of record</label><input value="${esc(currentScope().erp||'Not selected')}" readonly></div>`:f('ERP / system of record','architecture.erp')}${f('ERP version','architecture.version')}</div>
         <div class="sf-row2">
           ${sel('Primary integration method','architecture.integrationMethod',['','Cloud Inventory REST API','SOAP / web service','File','Middleware / iPaaS','Connector','Other'])}
           ${sel('Integration delivery owner','architecture.integrationOwner',['','Cloud Inventory','Customer','Partner','Shared'])}
@@ -618,20 +721,20 @@
       + '<div class="sf-bulk-actions"><span>Apply to in-scope:</span>'
       + '<button type="button" id="sfBulkDemoBtn" class="btn btn-ghost btn-sm">Demonstrated</button>'
       + '<button type="button" id="sfBulkFitBtn" class="btn btn-ghost btn-sm">Full fit</button>'
-      + '<button type="button" class="btn btn-accent btn-sm sf-add-process" data-sfaction="addProcess">&#xff0b; Add process</button></div>'
+      + '<button type="button" class="btn btn-accent btn-sm sf-add-process" data-sfaction="editScope">Edit application scope</button></div>'
       + '</div>'
-      + '<div class="sf-table-wrap"><table class="sf-table sf-process-table"><thead><tr><th style="width:44px">Scope</th><th>Workflow</th><th style="width:150px">Demo status</th><th style="width:140px">Fit</th><th style="width:150px">Customer validation</th><th>Evidence / exception</th></tr></thead><tbody>'
+      + '<div class="sf-table-wrap"><table class="sf-table sf-process-table"><thead><tr><th style="width:44px">Scope</th><th>Application / Process</th><th style="width:150px">Demo status</th><th style="width:140px">Fit</th><th style="width:150px">Customer validation</th><th>Evidence / exception</th></tr></thead><tbody>'
       + S.processes.map(function(p,i){return renderProcessRow(p,i);}).join('') + '</tbody></table></div>';
   }
   function renderProcessRow(p,i) {
     var showNote = p.fit==='Partial fit'||p.fit==='Gap'||p.fit==='Unknown'||p.demoStatus==='Discussed only'||p.demoStatus==='Not demonstrated';
     return '<tr class="' + (p.selected?'sf-process-selected':'') + '" data-sfproc="' + i + '">'
       + '<td class="sf-process-scope"><input type="checkbox" aria-label="Include ' + esc(p.name) + '" data-sfpsel="' + i + '" ' + (p.selected?'checked':'') + '></td>'
-      + '<td><strong class="sf-proc-name">' + esc(p.name) + '</strong></td>'
+      + '<td><strong class="sf-proc-name">' + esc(p.name) + '</strong><span class="sf-app-kind ' + (p.source==='non_standard'?'custom':'standard') + '">' + (p.source==='standard_app'?'Standard App':p.source==='non_standard'?'Non-standard':'Legacy process') + '</span></td>'
       + '<td><select class="sf-table-input" data-sfpdemo="' + i + '" ' + (p.selected?'':'disabled') + '>' + ['Not reviewed','Demonstrated','Discussed only','Not demonstrated','Not applicable'].map(function(x){return '<option ' + (p.demoStatus===x?'selected':'') + '>' + esc(x) + '</option>';}).join('') + '</select></td>'
       + '<td><select class="sf-table-input" data-sfpfit="' + i + '" ' + (p.selected?'':'disabled') + '>' + ['Not reviewed','Full fit','Partial fit','Gap','Unknown'].map(function(x){return '<option ' + (p.fit===x?'selected':'') + '>' + esc(x) + '</option>';}).join('') + '</select></td>'
       + '<td><select class="sf-table-input" data-sfpvalidation="' + i + '" ' + (p.selected?'':'disabled') + '>' + ['Not validated','Validation pending','Customer validated','Customer rejected'].map(function(x){return '<option ' + (p.customerValidation===x?'selected':'') + '>' + esc(x) + '</option>';}).join('') + '</select></td>'
-      + '<td>' + (p.selected && showNote ? '<input class="sf-table-input" data-sfpnote="' + i + '" value="' + esc(p.notes) + '" placeholder="Evidence, exception, or workaround">' : '<span class="sf-table-muted">' + (p.selected?'Only needed for exceptions':'—') + '</span>') + '</td>'
+      + '<td>' + (p.selected && showNote ? '<input class="sf-table-input" data-sfpnote="' + i + '" value="' + esc(p.notes) + '" placeholder="Evidence, exception, or workaround">' : '<span class="sf-table-muted">' + (p.selected?'Only needed for exceptions':'—') + '</span>') + ((p.fit==='Partial fit'||p.fit==='Gap')?'<button type="button" class="sf-create-gap" data-sfaction="gapFromProcess" data-process-index="'+i+'">Create Gap</button>':'') + '</td>'
       + '</tr>';
   }
 
@@ -783,7 +886,7 @@
         `${esc(o.customer||'Customer not entered')}`,
         `INTERNAL · ${r.score}% READY`)}
     <div class="hd-summary">
-      <div><b>${sel.length}</b><span>Processes in scope</span></div>
+      <div><b>${sel.length}</b><span>Applications in scope</span></div>
       <div><b>${demoed.length}</b><span>Actually demoed</span></div>
       <div><b>${S.gaps.length}</b><span>Gaps / exceptions</span></div>
       <div><b>${S.interfaces.length}</b><span>Additional interfaces</span></div>
@@ -791,6 +894,7 @@
     <h2 class="hd-h2">Business context</h2>
     <p><strong>Solution Engineer:</strong> ${esc(o.solutionEngineer||'—')} &nbsp;·&nbsp; <strong>Stage:</strong> ${esc(o.stage||'—')}</p>
     <p><strong>Products:</strong> ${esc(fmtProducts(o))} &nbsp;·&nbsp; <strong>Users:</strong> ${esc(o.users||'—')} &nbsp;·&nbsp; <strong>Locations:</strong> ${esc(o.locations||'—')} &nbsp;·&nbsp; <strong>Target go-live:</strong> ${esc(o.goLive||'—')}</p>
+    <p><strong>Primary Product:</strong> ${esc(productLabel(currentScope().primaryProduct))} &nbsp;·&nbsp; <strong>ERP:</strong> ${esc(currentScope().erp||'—')} &nbsp;·&nbsp; <strong>ERP Version:</strong> ${esc(currentScope().erpVersion||'—')} &nbsp;·&nbsp; <strong>Catalog Version:</strong> ${esc(currentScope().catalogVersion||'Legacy')}</p>
     <p><strong>Business owner:</strong> ${esc(fmtOwner(o,'businessOwner'))} &nbsp;·&nbsp; <strong>Technical owner:</strong> ${esc(fmtOwner(o,'technicalOwner'))}</p>
     <p><strong>Business problem:</strong> ${esc(o.problem||'—')}</p>
     <p><strong>Desired outcome:</strong> ${esc(o.outcome||'—')}</p>
@@ -800,7 +904,7 @@
     ${a.hasCustomizations==='Yes' && a.customizations.length ? `<p><strong>Known SOR customizations:</strong></p><ul class="hd-ul">${a.customizations.map(c=>`<li><strong>${esc(c.module||'Module')}</strong> — ${esc(c.description||'—')} <em>(impact: ${esc(c.impact||'None')})</em></li>`).join('')}</ul>` : (a.hasCustomizations==='No'?'<p><strong>Known SOR customizations:</strong> None reported.</p>':'')}
     <p><strong>Partner involved:</strong> ${esc(p.involved||'—')}${p.involved==='Yes'?` &nbsp;·&nbsp; <strong>Partner:</strong> ${esc(p.company||'—')} &nbsp;·&nbsp; <strong>Contact:</strong> ${esc(p.contactName||'—')} (${esc(p.email||'—')})`:''}</p>
     <h2 class="hd-h2">Demo &amp; fit evidence</h2>
-    ${sel.length?`<table class="hd-table"><thead><tr><th>Process</th><th>Demo status</th><th>Fit</th><th>Customer validation</th><th>Evidence / note</th></tr></thead><tbody>${sel.map(x=>`<tr><td><strong>${esc(x.name)}</strong></td><td>${esc(x.demoStatus)}</td><td>${esc(x.fit)}</td><td>${esc(x.customerValidation||'Not validated')}</td><td>${esc(x.notes||'—')}</td></tr>`).join('')}</tbody></table>`:'<p>No process scope recorded.</p>'}
+    ${sel.length?`<table class="hd-table"><thead><tr><th>Application / Process</th><th>Type</th><th>Demo status</th><th>Fit</th><th>Customer validation</th><th>Evidence / note</th></tr></thead><tbody>${sel.map(x=>`<tr><td><strong>${esc(x.name)}</strong></td><td>${x.source==='standard_app'?'Standard':x.source==='non_standard'?'Non-standard':'Legacy'}</td><td>${esc(x.demoStatus)}</td><td>${esc(x.fit)}</td><td>${esc(x.customerValidation||'Not validated')}</td><td>${esc(x.notes||'—')}</td></tr>`).join('')}</tbody></table>`:'<p>No application scope recorded.</p>'}
     <h2 class="hd-h2">Gap register</h2>
     ${S.gaps.length?S.gaps.map(g=>`<div class="hd-gap"><h3 class="hd-h3">${esc(g.id)} · ${esc(g.process||'—')} · ${esc(g.classification)} · ${esc(g.priority)}</h3>
       <p><strong>Required outcome:</strong> ${esc(g.need||'—')}<br>
@@ -816,7 +920,7 @@
   function customerOpenItems(){
     const out=[]; const a=S.architecture;
     if(!a.relationship) out.push('Confirm whether Cloud Inventory will be integrated or standalone.');
-    if(!a.version) out.push('Confirm ERP / system-of-record version.');
+    if(!a.version&&currentScope().primaryProduct!=='MEP') out.push('Confirm ERP / system-of-record version.');
     if(a.relationship && a.relationship!=='Standalone' && !a.integrationMethod) out.push('Confirm the primary integration method.');
     S.gaps.filter(g=>g.priority==='Must Have' && g.openQuestions).forEach(g=>out.push(`${g.id}: ${g.openQuestions}`));
     return out;
@@ -833,11 +937,12 @@
     <p><strong>Desired outcome:</strong> ${esc(o.outcome||'To be confirmed')}</p>
     <h2 class="hd-h2">Proposed solution context</h2>
     <p><strong>Cloud Inventory product(s):</strong> ${esc(fmtProducts(o) || 'To be confirmed')} &nbsp;·&nbsp; <strong>Estimated users:</strong> ${esc(o.users||'To be confirmed')} &nbsp;·&nbsp; <strong>Operating scope:</strong> ${esc(o.locations||'To be confirmed')}</p>
+    <p><strong>Primary Product:</strong> ${esc(productLabel(currentScope().primaryProduct))} &nbsp;·&nbsp; <strong>ERP:</strong> ${esc(currentScope().erp||'To be confirmed')} &nbsp;·&nbsp; <strong>ERP Version:</strong> ${esc(currentScope().erpVersion||'To be confirmed')} &nbsp;·&nbsp; <strong>Catalog Version:</strong> ${esc(currentScope().catalogVersion||'Legacy')}</p>
     <p><strong>System relationship:</strong> ${esc(a.relationship||'To be confirmed')} &nbsp;·&nbsp; <strong>System of record:</strong> ${esc(a.erp||'To be confirmed')} &nbsp;·&nbsp; <strong>Version:</strong> ${esc(a.version||'To be confirmed')}</p>
     ${a.relationship!=='Standalone'?`<p><strong>Expected integration approach:</strong> ${esc(a.integrationMethod||'To be confirmed')} &nbsp;·&nbsp; <strong>Expected delivery responsibility:</strong> ${esc(a.integrationOwner||'To be confirmed')}</p>`:''}
     ${p.involved==='Yes'?`<p><strong>Partner participation:</strong> ${esc(p.company||'Partner to be confirmed')} ${p.role?`(${esc(p.role)})`:''}</p>`:''}
     <h2 class="hd-h2">Functionality reviewed</h2>
-    ${sel.length?`<table class="hd-table"><thead><tr><th>Business process</th><th>Review status</th><th>Current fit</th><th>Customer validation</th></tr></thead><tbody>${sel.map(x=>`<tr><td><strong>${esc(x.name)}</strong></td><td>${esc(x.demoStatus)}</td><td>${esc(x.fit)}</td><td>${esc(x.customerValidation||'Not validated')}</td></tr>`).join('')}</tbody></table>`:'<p>Process scope is still being confirmed.</p>'}
+    ${sel.length?`<table class="hd-table"><thead><tr><th>Application / process</th><th>Type</th><th>Review status</th><th>Current fit</th><th>Customer validation</th></tr></thead><tbody>${sel.map(x=>`<tr><td><strong>${esc(x.name)}</strong></td><td>${x.source==='standard_app'?'Standard':x.source==='non_standard'?'Non-standard':'Legacy'}</td><td>${esc(x.demoStatus)}</td><td>${esc(x.fit)}</td><td>${esc(x.customerValidation||'Not validated')}</td></tr>`).join('')}</tbody></table>`:'<p>Application scope is still being confirmed.</p>'}
     <h2 class="hd-h2">Requirements requiring validation or extension</h2>
     ${exceptions.length?exceptions.map(g=>`<div class="hd-gap"><h3 class="hd-h3">${esc(g.process||'Requirement')} — ${esc(g.priority)}</h3><p>${esc(g.need||'Requirement to be confirmed')}${g.acceptance?`<br><strong>Expected outcome:</strong> ${esc(g.acceptance)}`:''}</p></div>`).join(''):'<p>No non-standard requirements have been identified at this stage.</p>'}
     <h2 class="hd-h2">Integration &amp; shared responsibilities</h2>
@@ -970,7 +1075,7 @@
       sfActionsDelegated = true;
       document.addEventListener('click', e=>{
         const actionEl = e.target.closest('#sfApp [data-sfaction]');
-        if (actionEl) handleAction(actionEl.dataset.sfaction);
+        if (actionEl) handleAction(actionEl.dataset.sfaction,actionEl);
       });
     }
     /* handoff doc type toggle (allowed read-only too) */
@@ -1011,6 +1116,7 @@
     if (!sfKeyboardBound) {
       sfKeyboardBound = true;
       document.addEventListener('keydown', e=>{
+        if(e.key==='Escape'&&document.getElementById('sfScopeWizard')){e.preventDefault();closeScopeWizard();return;}
         const sfTab = document.getElementById('tab-solfit');
         if (!sfTab || sfTab.style.display==='none') return;
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==='s') { e.preventDefault(); clearTimeout(saveTimer); saveHandoff(); }
@@ -1018,18 +1124,25 @@
       });
     }
   }
-  function onEdit(path){ scheduleSave(); }
+  function onEdit(path){if(path==='architecture.version'&&currentScope().primaryProduct==='MEP')S.solutionScope.erpVersion=S.architecture.version;scheduleSave();}
 
   function rerenderChecklist(){ const pane=document.querySelector('[data-sfpane="checklist"]'); if(pane){pane.innerHTML=renderChecklist(); wireBindings(); if(!canWrite)disableInputs();} }
   function rerenderGaps(){ const pane=document.querySelector('[data-sfpane="gaps"]'); if(pane){pane.innerHTML=renderGaps(); wireBindings(); if(!canWrite)disableInputs();} }
   function rerenderIntegration(){ const pane=document.querySelector('[data-sfpane="integration"]'); if(pane){pane.innerHTML=renderIntegration(); wireBindings(); if(!canWrite)disableInputs();} }
 
-  async function handleAction(a){
+  async function handleAction(a,sourceEl){
     /* Print and copy are allowed for everyone with read access (AEs included). */
     if(a==='printDoc'){ printHandoffDoc(); return; }
     if(a==='copyDoc'){ copyDocText(); return; }
     /* All other actions mutate state → require write access. */
     if(!canWrite){ if(typeof showToast==='function') showToast('Read-only — a Solution Engineer completes the handoff.'); return; }
+    if(a==='editScope'){await openScopeWizard('edit');return;}
+    if(a==='gapFromProcess'){
+      const p=S.processes[Number(sourceEl?.dataset.processIndex)];if(!p)return;
+      const existing=S.gaps.find(g=>g.process===p.name);if(existing){openGapId=existing.id;activeTab='gaps';renderApp();return;}
+      S.gaps.push(newGap({process:p.name,demoEvidence:p.demoStatus==='Demonstrated'?'Yes':p.demoStatus==='Discussed only'?'Partially':'No',need:p.reason||'',standardBehavior:p.notes||'',gapDescription:p.fit==='Gap'?'Customer requirement is not met by the demonstrated standard application.':'Customer requirement is only partially met by the demonstrated standard application.'}));
+      openGapId=S.gaps.at(-1).id;activeTab='gaps';scheduleSave();renderApp();return;
+    }
     if(a==='bulkDemo'){
       let count=0; S.processes.forEach(p=>{ if(p.selected){ p.demoStatus='Demonstrated'; count++; } });
       rerenderChecklist(); scheduleSave(); if(typeof showToast==='function') showToast(`${count} in-scope workflow${count===1?'':'s'} marked demonstrated.`); return;
@@ -1121,6 +1234,7 @@
     setTimeout(() => { try { w.print(); } catch(e){} }, 400);
     if (typeof trackEvent === 'function') trackEvent('risk_ledger_printed', { company, gapCount: gaps.length });
   }
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('sfScopeWizard')){e.preventDefault();closeScopeWizard();}});
   window.printRiskLedger = printRiskLedger;
 
   /* Expose entry point for the tab switch. */

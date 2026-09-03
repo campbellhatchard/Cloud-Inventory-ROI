@@ -1,6 +1,6 @@
 {
   "knowledgeVersion":"1.0",
-  "applicationVersion":"6.8.5",
+  "applicationVersion":"6.9.0",
   "roiModel":{"version":"2.8","modelVersion":28,"contractHorizon":"configured contract term"},
   "brandVersion":"1.0",
   "productTerminology":["Cloud Inventory Platform","Mobile Enterprise Platform (MEP)","Enterprise Printing Platform (EPP)"],
@@ -9,6 +9,7 @@
   "valueHistory":["Prospect draft is not submitted evidence","Prospect submitted is immutable submitted evidence","Customer provided and Customer revalidated are customer-supported states","Rep updated needs customer validation","Current, Aging and Stale describe evidence freshness","Historical scenarios preserve what was used at that time; Value History preserves what was learned across the opportunity"],
   "outputGovernance":["Ready to Share, Review Before Sharing and Draft Only govern presentation readiness only","Output Readiness does not change BuyCycle Stage, ROI Maturity or Buyer Commitment","Customer Proof is approved peer evidence, not current-customer validation; omit it when no approved proof exists"],
   "competitiveGovernance":["Competitive Company and Competitive Product are distinct","RFgen and RF-SMART are separate competitive products","A Research Run is not approved intelligence","Only governed source/finding approval can publish a Battlecard revision","Approved intelligence may be Current, Aging or Stale"],
+  "solutionFitKnowledge":["A missing Solution Fit is a not-created state, not a load error","Sales Engineers and Admins may create Solution Fits within authorized customer scope; Reps and Sales Managers are read-only unless another role grants edit capability","MEP scope is selected in Product, ERP, Applications order","The governed MEP ERP choices are JDE, EBS, Oracle Fusion, SAP ECC6 and SAP Hana","A Standard App means the application exists in the governed ERP catalog; it never implies Full Fit, demonstrated, or customer validated","Changing ERP changes active catalog scope while preserving exact-name assessments, custom applications and prior history","ERP version is optional and ERP is entered once in Solution Scope","Partial Fit and Gap applications can create a pre-populated gap record","Solution Fit readiness uses selected applications only and still requires Demo Status, Fit and Customer Validation"],
   "cleanup":["Remove is recoverable; permanent delete is separately governed","Recently Removed supports Restore","Current-scenario protection, share-link inactivity, immutable submission preservation, Value History and audit history remain governed"],
   "email":{"provider":"SendGrid","configuredWhen":["SENDGRID_API_KEY","FROM_EMAIL"],"productionLinks":"APP_URL or Render external URL","failureRule":"Notification failure never rolls back a valid business transaction"},
   "workspaces":[
@@ -16,7 +17,7 @@
     ["discovery","Discovery","Capture current-state and Prospect questionnaire information","Create or review Prospect Link","Draft answers are not submitted evidence","Buyer Evidence"],
     ["readiness","Buyer Evidence","Capture criterion-specific customer evidence and govern stage","Review readiness","Does not advance automatically","Stakeholders"],
     ["stakeholders","Stakeholders","Map buyer roles, engagement, influence and support","Save stakeholder map","Mapping does not prove unrelated criteria","Solution Fit"],
-    ["solution-fit","Solution Fit","Validate workflows, integrations, gaps and technical readiness","Save Solution Fit","Does not change ROI or stage","Joint Project Plan"],
+    ["solution-fit","Solution Fit","Create a governed Product → ERP → Application assessment; validate demo, fit, customer acceptance, gaps and technical readiness","Create or save Solution Fit","Standard App does not mean Full Fit and Solution Fit does not change ROI or stage","Joint Project Plan"],
     ["jpp","Joint Project Plan","Track customer and joint commitments, owners and dates","Save plan","A plan alone does not prove criteria","Deal Coach"],
     ["outputs","Executive Outputs","Create governed customer-facing deliverables","Review readiness and export","Does not advance BuyCycle","Proposal"],
     ["coach","Deal Coach / Christie","Coach the next buyer commitment from saved evidence","Coach Me","Christie recommends but never writes governed data","Execute the recommended customer action"],

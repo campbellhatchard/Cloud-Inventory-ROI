@@ -30,7 +30,7 @@ async function loadStageReadinessContexts(scenarios,{includeHistory=false}={}){
   query('SELECT * FROM scenario_stage_governance WHERE scenario_id=ANY($1::uuid[])',[ids]),
   companies.length&&ownerIds.length?query('SELECT * FROM stakeholders WHERE LOWER(company)=ANY($1::text[]) AND owner_id=ANY($2::uuid[])',[companies,ownerIds]):Promise.resolve({rows:[]}),
   query('SELECT * FROM mutual_action_plans WHERE scenario_id=ANY($1::uuid[]) OR (LOWER(company)=ANY($2::text[]) AND owner_id=ANY($3::uuid[])) ORDER BY updated_at DESC',[ids,companies,ownerIds]),
-  customerIds.length?query('SELECT * FROM handoffs WHERE customer_id=ANY($1::uuid[])',[customerIds]):Promise.resolve({rows:[]}),
+  customerIds.length?query('SELECT * FROM handoffs WHERE customer_id=ANY($1::uuid[]) AND deleted_at IS NULL',[customerIds]):Promise.resolve({rows:[]}),
   query(`SELECT d.scenario_id,COUNT(*)::int n FROM discovery_answers a JOIN discovery_sessions d ON d.id=a.session_id WHERE d.scenario_id=ANY($1::uuid[]) AND a.entered_by='prospect' GROUP BY d.scenario_id`,[ids]),
   includeHistory&&baseIds.length?query('SELECT h.*,s.base_id FROM scenario_stage_history h JOIN scenarios s ON s.id=h.scenario_id WHERE s.base_id=ANY($1::uuid[]) ORDER BY h.created_at DESC',[baseIds]):Promise.resolve({rows:[]}),
   includeHistory&&baseIds.length?query('SELECT o.*,u.username manager_name,s.base_id FROM stage_manager_overrides o JOIN users u ON u.id=o.manager_id JOIN scenarios s ON s.id=o.scenario_id WHERE s.base_id=ANY($1::uuid[]) ORDER BY o.created_at DESC',[baseIds]):Promise.resolve({rows:[]})

@@ -15,7 +15,7 @@ const { query, transaction } = require('../db');
 const { log, ACTIONS } = require('../audit');
 const { requireAuth } = require('../middleware/auth');
 const { readiness } = require('../shared/handoff-readiness');
-const { solutionFitAccess, hasPermission } = require('../authorization');
+const { solutionFitAccess, hasPermission, rolesOf } = require('../authorization');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -45,17 +45,21 @@ router.get('/:customerId', async (req, res) => {
   try {
     const access = await loadAccessibleCustomer(req.params.customerId, req.user, 'read');
     if (!access.ok) return res.status(access.code).json({ error: access.error });
+    const editAccess = await loadAccessibleCustomer(req.params.customerId, req.user, 'write');
+    const canCreate = editAccess.ok && hasPermission(req.user,'create_solution_fit') || editAccess.ok && hasPermission(req.user,'edit_all_solution_fits');
 
     const { rows } = await query(
       `SELECT h.id,h.customer_id,h.owner_id,h.data,h.readiness,h.status,h.created_by,h.primary_se_id,h.additional_se_ids,
               h.last_edited_by,u.username last_edited_by_name,h.created_at,h.updated_at
-         FROM handoffs h LEFT JOIN users u ON u.id=h.last_edited_by WHERE h.customer_id = $1`, [req.params.customerId]
+         FROM handoffs h LEFT JOIN users u ON u.id=h.last_edited_by WHERE h.customer_id = $1 AND h.deleted_at IS NULL`, [req.params.customerId]
     );
     if (!rows.length) {
+      const removed=await query(`SELECT id FROM handoffs WHERE customer_id=$1 AND deleted_at IS NOT NULL LIMIT 1`,[req.params.customerId]);
       return res.json({
         exists: false, customerId: req.params.customerId,
         customerName: access.customer.name,
-        data: {}, readiness: 0, status: 'not_ready'
+        data: {}, readiness: 0, status: 'not_ready', removedRecoverable:removed.rows.length>0,
+        capabilities:{canView:true,canEdit:editAccess.ok,canCreate:!!canCreate,canRestore:removed.rows.length>0&&hasPermission(req.user,'edit_all_solution_fits')}
       });
     }
     const h = rows[0];
@@ -64,12 +68,43 @@ router.get('/:customerId', async (req, res) => {
       customerName: access.customer.name,
       data: h.data || {}, readiness: h.readiness, status: h.status,
       createdBy:h.created_by,primarySeId:h.primary_se_id,additionalSeIds:h.additional_se_ids||[],
-      lastEditedBy: h.last_edited_by,lastEditedByName:h.last_edited_by_name,accessReasons:access.reasons,createdAt: h.created_at, updatedAt: h.updated_at
+      lastEditedBy: h.last_edited_by,lastEditedByName:h.last_edited_by_name,accessReasons:access.reasons,createdAt: h.created_at, updatedAt: h.updated_at,
+      capabilities:{canView:true,canEdit:editAccess.ok,canCreate:false,canRestore:false}
     });
   } catch (err) {
     console.error('Get handoff error:', err.message);
     res.status(500).json({ error: 'Failed to load handoff.' });
   }
+});
+
+/* POST is the governed creation path used by v6.9.0 clients. */
+router.post('/:customerId',async(req,res)=>{
+  try{
+    const access=await loadAccessibleCustomer(req.params.customerId,req.user,'write');
+    if(!access.ok)return res.status(access.code).json({error:access.error});
+    if(!hasPermission(req.user,'create_solution_fit')&&!hasPermission(req.user,'edit_all_solution_fits'))return res.status(403).json({error:'You do not have permission to create a Solution Fit.'});
+    const data=req.body&&typeof req.body.data==='object'&&req.body.data?req.body.data:{};
+    const result=await transaction(async client=>{
+      const locked=await client.query(`SELECT id,deleted_at FROM handoffs WHERE customer_id=$1 FOR UPDATE`,[req.params.customerId]);
+      if(locked.rows.some(x=>!x.deleted_at))return {conflict:'active'};
+      if(locked.rows.some(x=>x.deleted_at))return {conflict:'removed'};
+      const isSe=rolesOf(req.user).includes('se');
+      const saved=await client.query(`INSERT INTO handoffs(customer_id,owner_id,data,readiness,status,last_edited_by,created_by,primary_se_id) VALUES($1,$2,$3,0,'not_ready',$4,$4,$5) RETURNING id,customer_id,readiness,status,updated_at,primary_se_id`,[req.params.customerId,access.customer.ownerId,JSON.stringify(data),req.user.id,isSe?req.user.id:null]);
+      return {row:saved.rows[0]};
+    });
+    if(result.conflict==='active')return res.status(409).json({error:'An active Solution Fit already exists.',code:'SOLUTION_FIT_EXISTS'});
+    if(result.conflict==='removed')return res.status(409).json({error:'A previously removed Solution Fit exists. An Admin can restore it.',code:'SOLUTION_FIT_REMOVED'});
+    await log({userId:req.user.id,action:'handoff.created',entityType:'handoff',entityId:result.row.id,detail:{customerId:req.params.customerId,catalogVersion:data.catalogVersion||null},ipAddress:req.ip});
+    res.status(201).json({ok:true,...result.row});
+  }catch(err){
+    if(err.code==='23505')return res.status(409).json({error:'A Solution Fit already exists.',code:'SOLUTION_FIT_EXISTS'});
+    console.error('Create handoff error:',err.message);res.status(500).json({error:'Solution Fit could not be created.'});
+  }
+});
+
+router.post('/:customerId/restore',async(req,res)=>{
+  if(!hasPermission(req.user,'edit_all_solution_fits'))return res.status(403).json({error:'Only an Admin may restore a removed Solution Fit.'});
+  try{const access=await loadAccessibleCustomer(req.params.customerId,req.user,'write');if(!access.ok)return res.status(access.code).json({error:access.error});const {rows}=await query(`UPDATE handoffs SET deleted_at=NULL,cleanup_removed_by=NULL,cleanup_reason=NULL,cleanup_note=NULL,last_edited_by=$2,updated_at=NOW() WHERE customer_id=$1 AND deleted_at IS NOT NULL RETURNING id,readiness,status`,[req.params.customerId,req.user.id]);if(!rows.length)return res.status(404).json({error:'No removed Solution Fit was found.'});await log({userId:req.user.id,action:'handoff.restored',entityType:'handoff',entityId:rows[0].id,detail:{customerId:req.params.customerId},ipAddress:req.ip});res.json({ok:true,...rows[0]});}catch(err){console.error('Restore handoff error:',err.message);res.status(500).json({error:'Solution Fit could not be restored.'});}
 });
 
 /* PUT /api/handoffs/:customerId — create or update the handoff (upsert).
@@ -82,7 +117,8 @@ router.put('/:customerId', async (req, res) => {
     const data = (req.body && typeof req.body.data === 'object' && req.body.data) ? req.body.data : {};
     const { readiness: score, status } = scoreOf(data);
 
-    const prior=await query('SELECT id,data FROM handoffs WHERE customer_id=$1',[req.params.customerId]);
+    const prior=await query('SELECT id,data,deleted_at FROM handoffs WHERE customer_id=$1',[req.params.customerId]);
+    if(prior.rows[0]?.deleted_at)return res.status(409).json({error:'This Solution Fit was removed and must be restored before editing.',code:'SOLUTION_FIT_REMOVED'});
     const rows = await transaction(async client=>{
       const saved=await client.query(
       `INSERT INTO handoffs (customer_id, owner_id, data, readiness, status, last_edited_by,created_by)
@@ -126,6 +162,6 @@ router.put('/:customerId', async (req, res) => {
 
 router.get('/:customerId/history',async(req,res)=>{try{const access=await loadAccessibleCustomer(req.params.customerId,req.user,'read');if(!access.ok)return res.status(access.code).json({error:access.error});const {rows}=await query(`SELECT hh.id,hh.field_path,hh.previous_value,hh.new_value,hh.changed_at,u.username changed_by FROM handoff_change_history hh LEFT JOIN users u ON u.id=hh.changed_by WHERE hh.customer_id=$1 ORDER BY hh.changed_at DESC LIMIT 500`,[req.params.customerId]);res.json(rows);}catch(e){res.status(500).json({error:'Failed to load Solution Fit history.'});}});
 
-router.put('/:customerId/assignment',async(req,res)=>{if(!hasPermission(req.user,'assign_solution_fit')&&!hasPermission(req.user,'edit_team_solution_fits'))return res.status(403).json({error:'Solution Fit assignment permission required.'});try{const access=await loadAccessibleCustomer(req.params.customerId,req.user,'write');if(!access.ok)return res.status(access.code).json({error:access.error});const b=req.body||{},additional=Array.isArray(b.additionalSeIds)?b.additionalSeIds:[];if(!hasPermission(req.user,'assign_solution_fit')&&(String(b.primarySeId||'')!==String(req.user.id)||additional.length))return res.status(403).json({error:'Sales Engineers may self-assign as Primary SE; only an Admin may assign other or additional SEs.'});const {rows}=await query(`UPDATE handoffs SET primary_se_id=$1,additional_se_ids=$2,updated_at=NOW(),last_edited_by=$3 WHERE customer_id=$4 RETURNING id,primary_se_id,additional_se_ids`,[b.primarySeId||null,additional,req.user.id,req.params.customerId]);if(!rows.length)return res.status(404).json({error:'Save the Solution Fit before assigning SEs.'});await log({userId:req.user.id,action:'handoff.assignment_changed',entityType:'handoff',entityId:rows[0].id,detail:b,ipAddress:req.ip});res.json(rows[0]);}catch(e){res.status(500).json({error:'Failed to assign Solution Fit.'});}});
+router.put('/:customerId/assignment',async(req,res)=>{if(!hasPermission(req.user,'assign_solution_fit')&&!hasPermission(req.user,'edit_team_solution_fits'))return res.status(403).json({error:'Solution Fit assignment permission required.'});try{const access=await loadAccessibleCustomer(req.params.customerId,req.user,'write');if(!access.ok)return res.status(access.code).json({error:access.error});const b=req.body||{},additional=Array.isArray(b.additionalSeIds)?b.additionalSeIds:[];if(!hasPermission(req.user,'assign_solution_fit')&&(String(b.primarySeId||'')!==String(req.user.id)||additional.length))return res.status(403).json({error:'Sales Engineers may self-assign as Primary SE; only an Admin may assign other or additional SEs.'});const {rows}=await query(`UPDATE handoffs SET primary_se_id=$1,additional_se_ids=$2,updated_at=NOW(),last_edited_by=$3 WHERE customer_id=$4 AND deleted_at IS NULL RETURNING id,primary_se_id,additional_se_ids`,[b.primarySeId||null,additional,req.user.id,req.params.customerId]);if(!rows.length)return res.status(404).json({error:'Save the active Solution Fit before assigning SEs.'});await log({userId:req.user.id,action:'handoff.assignment_changed',entityType:'handoff',entityId:rows[0].id,detail:b,ipAddress:req.ip});res.json(rows[0]);}catch(e){res.status(500).json({error:'Failed to assign Solution Fit.'});}});
 
 module.exports = router;

@@ -374,11 +374,13 @@ function showShortcutSheet() {
    scenarios yet. Uses a simple in-page coach panel (not intrusive modals).
    Dismissal is remembered in sessionStorage for the session only. */
 function maybeShowOnboarding() {
-  try {
-    if (sessionStorage.getItem('ci_onboarding_done') === '1') return;
-  } catch (e) {}
+  const user=window.ciAuth?.getUser?.();
+  if(!user||!window._scenarioLoadResolved)return;
+  const preferenceKey=`ci_onboarding_done:${user.id||user.username||'user'}`;
+  try { if (localStorage.getItem(preferenceKey) === '1') return; } catch (e) {}
+  if(document.querySelector('.pane.active')?.id!=='tab-calc')return;
   /* Only for genuinely new users: no saved scenarios. */
-  const noScenarios = (typeof savedScenarios === 'undefined') || !savedScenarios || savedScenarios.length === 0;
+  const noScenarios = Array.isArray(savedScenarios) && savedScenarios.length === 0;
   if (!noScenarios) return;
   if (document.getElementById('onboardCoach')) return;
   const coach = document.createElement('div');
@@ -398,7 +400,8 @@ function maybeShowOnboarding() {
       <button class="btn btn-ghost btn-sm" id="onboardSkip">Skip for now</button>
     </div>`;
   document.body.appendChild(coach);
-  const done = () => { try { sessionStorage.setItem('ci_onboarding_done','1'); } catch(e){} coach.remove(); };
+  const onEscape=e=>{if(e.key==='Escape')done();};
+  const done = () => { try { localStorage.setItem(preferenceKey,'1'); } catch(e){} document.removeEventListener('keydown',onEscape);coach.remove(); };
   coach.querySelector('.onboard-close').addEventListener('click', done);
   coach.querySelector('#onboardSkip').addEventListener('click', done);
   coach.querySelector('#onboardStart').addEventListener('click', () => {
@@ -406,6 +409,7 @@ function maybeShowOnboarding() {
     if (typeof switchTab === 'function') switchTab('calc');
     if (typeof showCustomerGate === 'function') showCustomerGate();
   });
+  document.addEventListener('keydown',onEscape);
 }
 
 /* ── Presentation mode (tablet demo) for Executive View ─────────────

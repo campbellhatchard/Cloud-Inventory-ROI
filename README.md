@@ -9,7 +9,7 @@ A multi-user SaaS application for Cloud Inventory sales reps and Solution Engine
 - **ROI Calculator** — Live-updating model with 10 value drivers (labor, shrinkage, carrying cost, inventory turns, OTIF, downtime, expediting, field inventory, IT displacement, WMS levers)
 - **Discovery guide** — Industry-specific question sets with a shareable prospect link so prospects can contribute their own data
 - **Executive view** — CFO-ready narrative, Three Whys framework, authenticated server-generated PDF, PowerPoint and Word exports
-- **Solution Fit** — Pre-sales handoff document for Services / Solution Engineering
+- **Solution Fit** — Governed pre-sales assessment with explicit creation, Product → ERP → Applications scope, demo/fit/customer-validation status, gaps, and technical readiness
 - **Action plans** — Mutual action plan builder with milestone tracking and a shareable prospect link
 - **Stakeholder map** — Influence/support matrix with AI gap analysis
 - **Scenario templates** — Pre-populated starting points for 6 verticals
@@ -183,4 +183,4 @@ Edit `public/scenario-templates.js`, add an entry to `SCENARIO_TEMPLATES`:
 
 ## Version
 
-Current: **v6.8.5** — Customer Output Reliability & Brand Certification. Active customer and internal outputs are registered by audience, use governed branding and confidentiality labels, and expose deterministic generation and retry behavior. Executive PDF, PowerPoint, proposal, Joint Project Plan, Solution Fit, competitive, methodology, stakeholder, Champion Pack, Role One-Pager, and Impact Map outputs are covered by the certification inventory. ROI Model remains v2.8, Brand System remains v1.0, Knowledge remains v1.0, and Christie Persona remains v1.0.
+Current: **v6.9.0** — Solution Fit Creation & MEP Standard App Configuration. Authorized Sales Engineers and Admins explicitly create recoverable assessments; the customer switcher distinguishes Create, Open, and Not started; and MEP scope follows Product → ERP → governed August 2026 Standard Applications. ROI Model remains v2.8, Brand System remains v1.0, Knowledge remains v1.0, and Christie Persona remains v1.0.

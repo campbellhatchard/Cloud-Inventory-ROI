@@ -19,6 +19,7 @@
    ────────────────────────────────────────────────────────────────── */
 let savedScenarios = [];
 let _scenariosLoading = false;
+window._scenarioLoadResolved = false;
 window._currentBuyCycleStage=2;
 window._currentBuyCycleStageLabel='Stage 2 — Define Economic Consequences';
 window._currentOpportunityOutcome=null;
@@ -44,10 +45,12 @@ async function fetchScenarios() {
     const rows = await resp.json();
     /* Normalise DB row shape to match the legacy shape used by features.js */
     savedScenarios = rows.map(normaliseRow);
+    window._scenarioLoadResolved = true;
     updateSavedBadge();
     if (typeof renderListVersioned === 'function') renderListVersioned();
     else renderList();
     if (typeof refreshCalcScenarioPicker === 'function') refreshCalcScenarioPicker();
+    window.maybeShowOnboarding?.();
   } catch(e) {
     console.error('fetchScenarios error:', e.message);
   } finally {

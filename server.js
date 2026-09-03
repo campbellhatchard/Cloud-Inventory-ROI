@@ -213,6 +213,7 @@ const stakeholdersRouter = require('./src/routes/stakeholders');
 app.use('/api/stakeholders', stakeholdersRouter);
 const handoffsRouter = require('./src/routes/handoffs');
 app.use('/api/handoffs', handoffsRouter);
+app.use('/api/solution-fit/catalog', require('./src/routes/solution-fit-catalog'));
 app.use('/api/sales-teams', require('./src/routes/sales-teams'));
 app.use('/api/customer-switcher', require('./src/routes/customer-switcher'));
 app.use('/api/sales-manager', require('./src/routes/sales-manager'));

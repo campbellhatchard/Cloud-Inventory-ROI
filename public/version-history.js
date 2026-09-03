@@ -7,6 +7,11 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.0', date: '2026-09-03', tag: 'solution-fit',
+    title: 'Solution Fit Creation & MEP Standard App Configuration',
+    changes: ['Redesigned Solution Fit creation and recovery so authorized Sales Engineers and Admins can explicitly create assessments without dead-end states', 'Added state-aware Create/Open/Not started customer actions plus safer retry, return, overlay and onboarding behavior', 'Introduced governed MEP Product → ERP → Standard Apps scope from the August 2026 catalog with ERP-specific assessment rows, non-standard apps, quick gap capture, change history and catalog lineage']
+  },
+  {
     version: '6.8.5', date: '2026-09-02', tag: 'stabilization',
     title: 'Executive Output & Production Stabilization',
     changes: ['Centralized customer ROI report data across PDF, PowerPoint and Word', 'Replaced browser-print PDF handoff with authenticated server-side PDF download', 'Restored contract-value charts in Executive View and customer outputs', 'Improved output status, retry behavior, deployment guidance and release regression coverage']

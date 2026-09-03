@@ -8,7 +8,7 @@ const read=f=>fs.readFileSync(path.join(root,f),'utf8');
 const brand=require('../src/shared/brand-system');
 
 test('v6.7.1+ extends Brand System v1.0 without changing ROI Model v2.8',()=>{
-  assert.match(require('../package.json').version,/^6\.(?:7\.[1-9]\d*|8\.\d+)$/);
+  assert.match(require('../package.json').version,/^6\.(?:7\.[1-9]\d*|8\.\d+|9\.\d+)$/);
   assert.equal(brand.brandVersion,'1.0');
   assert.equal(brand.document.logoRole,'logoOfficeHighResolution');
   assert.equal(brand.logos.logoOfficeHighResolution.intrinsicWidth,1000);

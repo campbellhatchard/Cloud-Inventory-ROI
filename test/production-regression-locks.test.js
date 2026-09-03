@@ -44,7 +44,7 @@ test('Medical Devices / Life Sciences remains customer-input-only', () => {
   const provenance = read('public/benchmark-provenance.js');
   assert.match(prospect, /retail:\s*\{\s*revenue:0,\s*users:0,\s*labor:0,\s*inventory:0/);
   assert.match(provenance, /Customer inputs required\./);
-  assert.match(provenance, /no bundled benchmark values in v6\.8\.5/);
+  assert.match(provenance, /no bundled benchmark values in v6\.9\.0/);
   assert.doesNotMatch(prospect, /retail:\s*\{\s*revenue:60e6/);
 });
 
@@ -137,7 +137,7 @@ test('CI executes both legacy production locks and the complete v6 suite', () =>
   assert.match(pkg.scripts.test, /production-regression-locks\.test\.js/);
 });
 
-test('v6.8.5 keeps ROI Model v2.8 and brand/application-knowledge/persona locks', () => {
+test('v6.9.0 keeps ROI Model v2.8 and brand/application-knowledge/persona locks', () => {
   const release = read('RELEASE_VALIDATION_V6.8.2.md');
   const v680 = read('RELEASE_VALIDATION_V6.8.0.md');
   assert.match(v680, /ROI Model: \*\*v2\.8 \/ modelVersion 28\*\*, unchanged/);

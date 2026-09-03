@@ -40,7 +40,8 @@
     /* Architecture */
     req(!!a.relationship, 'Deployment relationship');
     req(!!a.erp, 'System of record / ERP');
-    req(!!a.version, 'ERP / system version');
+    const mepScope=state.solutionScope&&state.solutionScope.primaryProduct==='MEP';
+    if(!mepScope)req(!!a.version, 'ERP / system version');
     const standalone = a.relationship === 'Standalone';
     if (!standalone) {
       req(!!a.integrationMethod, 'Primary integration method');
@@ -62,6 +63,8 @@
     req(notDemo.length === 0, 'Demo status', notDemo.length ? `is not captured for ${notDemo.map(x => x.name).join(', ')}.` : '');
     const noFit = selected.filter(x => x.fit === 'Not reviewed');
     req(noFit.length === 0, 'Fit status', noFit.length ? `is not captured for ${noFit.map(x => x.name).join(', ')}.` : '');
+    const noValidation=selected.filter(x=>!x.customerValidation||x.customerValidation==='Not validated'||x.customerValidation==='Validation pending');
+    req(noValidation.length===0,'Customer validation',noValidation.length?`is not complete for ${noValidation.map(x=>x.name).join(', ')}.`:'');
 
     /* Material gaps need enough detail to be estimable */
     const must = gaps.filter(materialGap);

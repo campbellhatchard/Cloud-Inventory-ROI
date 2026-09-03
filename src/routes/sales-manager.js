@@ -94,7 +94,7 @@ router.get('/dashboard', async (req, res) => {
              LEFT JOIN scenario_stage_governance g ON g.scenario_id=s.id
              LEFT JOIN customers c ON c.id=s.customer_id
              WHERE s.is_current=TRUE AND s.deleted_at IS NULL AND ($2 OR (c.id IS NOT NULL AND ${customerScopeSql('c','$1')})) ORDER BY s.updated_at DESC`,[req.user.id,global]),
-      query(`SELECT h.customer_id,h.data,h.readiness,h.status,h.updated_at FROM handoffs h JOIN customers c ON c.id=h.customer_id WHERE ($2 OR ${customerScopeSql('c','$1')})`,[req.user.id,global]),
+      query(`SELECT h.customer_id,h.data,h.readiness,h.status,h.updated_at FROM handoffs h JOIN customers c ON c.id=h.customer_id WHERE h.deleted_at IS NULL AND ($2 OR ${customerScopeSql('c','$1')})`,[req.user.id,global]),
       query(`SELECT p.id,p.scenario_id,p.company,p.title,p.target_close_date,p.milestones,p.groups,p.token,p.is_active,p.updated_at FROM mutual_action_plans p WHERE ($2 OR p.owner_id=$1 OR EXISTS(SELECT 1 FROM sales_team_memberships me JOIN sales_team_memberships om ON om.team_id=me.team_id AND om.user_id=p.owner_id AND om.is_active=TRUE WHERE me.user_id=$1 AND me.is_active=TRUE))`,[req.user.id,global]),
       query(`SELECT s.id,s.company,s.owner_id,s.name,s.title,s.role,s.influence,s.support,s.engaged,s.notes,s.updated_at FROM stakeholders s WHERE ($2 OR s.owner_id=$1 OR EXISTS(SELECT 1 FROM sales_team_memberships me JOIN sales_team_memberships om ON om.team_id=me.team_id AND om.user_id=s.owner_id AND om.is_active=TRUE WHERE me.user_id=$1 AND me.is_active=TRUE))`,[req.user.id,global]),
       query(`SELECT * FROM sales_manager_actions ORDER BY due_date NULLS LAST,created_at DESC`),

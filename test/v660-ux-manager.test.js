@@ -99,7 +99,7 @@ test('Help and AI Help explain manager semantics and prospect submission integri
 
 test('v6.6+ releases remain consistent and ROI Model remains 2.8',()=>{
   const release=require(path.join(root,'package.json')).version;
-  assert.match(release,/^6\.(?:6|7|8)\./);
+  assert.match(release,/^6\.(?:6|7|8|9)\./);
   assert.match(html,new RegExp(`APP_VERSION="${release.replace(/\./g,'\\.')}`));
   assert.match(read('public/version-history.js'),new RegExp(`version: '${release.replace(/\./g,'\\.')}'`));
   assert.match(read('ROI_METHODOLOGY.md'),/Model v2\.8/);

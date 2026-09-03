@@ -7,7 +7,7 @@ const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 
 test('v6.6+ releases remain consistent and ROI Model v2.8 remains authoritative',()=>{
   const release=require(path.join(root,'package.json')).version;
-  assert.match(release,/^6\.(?:6|7|8)\./);
+  assert.match(release,/^6\.(?:6|7|8|9)\./);
   assert.match(read('public/index.html'),new RegExp(`APP_VERSION="${release.replace(/\./g,'\\.')}`));
   assert.match(read('public/version-history.js'),new RegExp(`version: '${release.replace(/\./g,'\\.')}'`));
   assert.match(read('ROI_METHODOLOGY.md'),/ROI Model v2\.8 formulas are unchanged/);
