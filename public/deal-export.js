@@ -638,66 +638,20 @@ async function roiMethodologyPPT() {
    scenario to be saved first, since the link points at a stored scenario.
    The rep sees view engagement back on the Saved tab.
    ═══════════════════════════════════════════════════════════════════ */
-async function shareBusinessCase() {
-  const v = (typeof getVals === 'function') ? getVals() : {};
-  const company = (v.company || '').trim();
-  const name    = (v.name || '').trim();
-  if (!company || company === 'Prospect') {
-    if (typeof showToast==='function') showToast('Select a customer and save the scenario first, then Share & track.');
-    return;
+async function shareBusinessCase(savedScenarioId) {
+  if(!savedScenarioId&&!window._calcScenarioId)return showToast('Save and select the exact scenario version before publishing.');
+  if(!savedScenarioId&&typeof persistThreeWhys==='function'){
+    saveThreeWhys({persist:false});
+    if(!await persistThreeWhys())return showToast('Wait for the narrative save to finish, then retry publishing.');
   }
-
-  /* Ensure scenarios are loaded before resolving (the rep may be on Exec View
-     without the Saved tab ever loading the list). */
-  if ((typeof savedScenarios === 'undefined' || !savedScenarios.length) && typeof fetchScenarios === 'function') {
-    try { await fetchScenarios(); } catch(e) {}
-  }
-
-  const resolve = () => (typeof savedScenarios !== 'undefined')
-    ? savedScenarios.find(s => s.isCurrent && (s.company||'').trim().toLowerCase() === company.toLowerCase()
-        && (s.name||'').trim().toLowerCase() === name.toLowerCase())
-    : null;
-
-  let scenario = resolve();
-
-  if (!scenario) {
-    if (!confirm('This business case needs to be saved before it can be shared. Save it now?')) {
-      if (typeof showToast==='function') showToast('Not shared — save the scenario first.');
-      return;
-    }
-    if (typeof saveScenario === 'function') {
-      await saveScenario();
-      await new Promise(r => setTimeout(r, 150));   // let the version dialog / fetch settle
-      if (typeof fetchScenarios === 'function') { try { await fetchScenarios(); } catch(e){} }
-      scenario = resolve();
-    }
-    if (!scenario) {
-      if (typeof showToast==='function') showToast('Save the scenario (check the Saved tab), then click Share & track again.');
-      return;
-    }
-  }
-
-  try {
-    if (typeof showToast==='function') showToast('Creating share link…');
-    const resp = await apiFetch('/api/business-case-shares', {
-      method: 'POST',
-      body: JSON.stringify({ scenarioId: scenario.id, company, title: name || 'ROI Business Case' })
-    });
-    if (!resp || !resp.ok) {
-      const err = resp ? await resp.json().catch(()=>({})) : {};
-      if (typeof showToast==='function') showToast('Could not create share link: ' + (err.error || ('HTTP ' + (resp ? resp.status : 'no response'))));
-      return;
-    }
-    const data = await resp.json();
-    if (!data || !data.shareUrl) {
-      if (typeof showToast==='function') showToast('Share link created but no URL was returned — check APP_URL configuration.');
-      return;
-    }
-    showBusinessCaseShareModal(data.shareUrl, company);
-    if (typeof trackEvent === 'function') trackEvent('business_case_shared', { company });
-  } catch (e) {
-    console.error('shareBusinessCase error:', e && e.message);
-    if (typeof showToast==='function') showToast('Could not create share link — ' + (e && e.message ? e.message : 'check your connection.'));
+  const scenarioId=savedScenarioId||window._calcScenarioId;
+  let reviewAcknowledged=false;
+  for(let attempt=0;attempt<2;attempt++){
+    const response=await apiFetch('/api/business-case-shares',{method:'POST',body:JSON.stringify({scenarioId,reviewAcknowledged})});
+    const data=await response.json();
+    if(response.ok){showBusinessCaseShareModal(new URL(data.shareUrl,location.origin).href,window.executiveValueStory?.meta?.customer||'Customer');return;}
+    if(data.readiness?.status==='review'&&!reviewAcknowledged){reviewAcknowledged=confirm('Review Before Sharing: '+data.readiness.warnings.map(x=>x.title).join('; ')+'. I have reviewed these limitations and acknowledge them before publishing.');if(reviewAcknowledged)continue;}
+    showToast(data.error||'Publication failed.');return;
   }
 }
 
@@ -724,139 +678,7 @@ function showBusinessCaseShareModal(url, company) {
    including practical answers to financial, operational, and IT questions.
    ═══════════════════════════════════════════════════════════════════ */
 
-async function buildChampionPack() {
-  if (!(await deChk('library'))) return;
-  const btn = document.getElementById('championPackBtn');
-  const orig = btn ? btn.innerHTML : '';
-  if (btn) { btn.disabled = true; btn.textContent = 'Building pack…'; }
-
-  try {
-    const v = (typeof getVals === 'function') ? getVals() : {};
-    const r = (typeof calcROI === 'function') ? calcROI(v) : {};
-    const company = (v.company && v.company !== 'Prospect') ? v.company : 'Your Prospect';
-    const ind = (typeof IND !== 'undefined' && IND[v.industry]) ? IND[v.industry].label : 'your industry';
-
-    const pptx = new pptxgen();
-    pptx.defineLayout({ name:'CI', width:PPT.W, height:PPT.H }); pptx.layout='CI';
-    pptx.title = 'Internal Business Case — ' + company;
-
-    /* ── Slide 1: The problem statement (in their words) ── */
-    const s1 = pptx.addSlide(); s1.background = { color: PPT.NAVY };
-    pptConfidentialFooter(s1);
-    s1.addImage({path:PPT.LOGO, x:0.4, y:0.25, w:1.0, h:1.0*349/1000, transparency:0});
-    s1.addText('The case for Cloud Inventory', {
-      x:0.5, y:1.0, w:9.0, h:0.5, fontSize:28, bold:true, color:PPT.WHITE, fontFace:PPT.FONT
-    });
-    s1.addText(company + ' — internal business case', {
-      x:0.5, y:1.55, w:9.0, h:0.3, fontSize:13, color:'B5BDC1', fontFace:PPT.FONT
-    });
-    /* Problem statement */
-    const problems = [
-      v.annualWriteOff > 0 ? `${fmtMoney(v.annualWriteOff)}/yr in inventory write-offs` : null,
-      v.otifBaseline > 0 ? `${v.otifBaseline}% OTIF — ${v.otifTarget ? 'target ' + v.otifTarget + '%' : 'below target'}` : null,
-      v.expediteSpendYr > 0 ? `${fmtMoney(v.expediteSpendYr)}/yr in expedite spend` : null,
-      v.downtimeEventsYr > 0 ? `${v.downtimeEventsYr} downtime events/year` : null,
-    ].filter(Boolean).slice(0,3);
-    if (problems.length) {
-      s1.addText('Current situation:', {x:0.5, y:2.3, w:9, h:0.3, fontSize:12, bold:true, color:PPT.WHITE, fontFace:PPT.FONT});
-      problems.forEach((p,i) => {
-        s1.addText('• ' + p, {x:0.7, y:2.7 + i*0.35, w:8.6, h:0.3, fontSize:11.5, color:'DDE2E5', fontFace:PPT.FONT});
-      });
-    }
-    s1.addText('Prepared by your Cloud Inventory rep for internal use', {
-      x:0.5, y:PPT.H - 0.35, w:9, h:0.25, fontSize:8, color:'69747A', fontFace:PPT.FONT
-    });
-
-    /* ── Slide 2: The financial case ── */
-    const s2 = pptx.addSlide(); s2.background = { color: PPT.GRAY_BG };
-    pptChrome(s2, 2);
-    pptTitle(s2, 'The financial case');
-    const consR = calcROI({...v, mLabor:v.mLabor*0.7, mShrinkage:v.mShrinkage*0.7, mCarrying:v.mCarrying*0.7, mOtif:v.mOtif*0.7, mIt:v.mIt*0.7});
-    const metrics = [
-      ['Conservative contract benefit', fmtMoney(consR.totalContractBenefit)],
-      ['Base contract benefit', fmtMoney(r.totalContractBenefit)],
-      [`Total ${r.contractMonths}-month ROI`, fmtPct(r.totalContractRoi)],
-      ['Payback from signing', r.contractPayback ? r.contractPayback.toFixed(1) + ' months' : 'Not in term'],
-      ['Contract NPV', fmtMoney(r.totalContractNpv)],
-      ['Total contract investment', fmtMoney(r.totalContractInvestment)],
-    ];
-    s2.addTable(
-      [
-        [{text:'Metric',options:{bold:true,color:PPT.WHITE,fill:{color:PPT.NAVY},fontSize:10}},
-         {text:'Value',options:{bold:true,color:PPT.WHITE,fill:{color:PPT.NAVY},fontSize:10}}],
-        ...metrics.map(([k,v2]) => [{text:k,options:{fontSize:10,color:PPT.DARK_TXT}},{text:v2,options:{fontSize:10,bold:true,color:PPT.CYAN}}])
-      ],
-      {x:0.5, y:0.9, w:9, colW:[4.5,4.5], border:{pt:0.5,color:PPT.GRAY_LT}, autoPage:false}
-    );
-    s2.addText('Conservative case scales all recovery assumptions to 70%. Investment cost is fixed.',
-      {x:0.5, y:PPT.H-0.45, w:9, h:0.2, fontSize:8, color:PPT.GRAY_TXT, italic:true, fontFace:PPT.FONT});
-
-    const discoveryCount = typeof discoveryAnswers !== 'undefined'
-      ? Object.keys(discoveryAnswers).filter(k => !k.endsWith('_by') && discoveryAnswers[k]).length
-      : 0;
-    const conservativeOutcome = consR.totalContractRoi > 0
-      ? `The conservative case remains positive at ${fmtPct(consR.totalContractRoi)} total-contract ROI.`
-      : 'The conservative case identifies the assumptions that must be validated before approval.';
-    const paybackText = r.contractPayback
-      ? `${r.contractPayback.toFixed(1)} months from signing`
-      : 'not achieved within the modeled contract term';
-
-    function addChampionFaqSlide(title, number, faqs) {
-      const slide = pptx.addSlide(); slide.background = { color: PPT.GRAY_BG };
-      pptChrome(slide, number);
-      pptTitle(slide, title);
-      let yPos = 0.82;
-      faqs.forEach(([q, a]) => {
-        slide.addText(q, {x:0.5, y:yPos, w:9, h:0.22, fontSize:9.5, bold:true, color:PPT.NAVY, fontFace:PPT.FONT, margin:0});
-        slide.addText(a, {x:0.7, y:yPos+0.23, w:8.6, h:0.34, fontSize:8.6, color:PPT.GRAY_TXT, fontFace:PPT.FONT, margin:0, breakLine:false, fit:'shrink'});
-        yPos += 0.69;
-      });
-    }
-
-    /* ── Slides 3–4: champion objection handling ── */
-    const financialFaqs = [
-      ['Are these numbers credible?',
-       discoveryCount > 0 ? `${discoveryCount} discovery responses inform the case. Inputs should still be confirmed by the accountable operational and finance owners before approval.` : 'The model separates company inputs, calculations, and assumptions. The accountable operational and finance owners should validate the material inputs before approval.'],
-      ['How conservative is the business case?',
-       `The downside case uses 70% of the base recovery assumptions while holding investment fixed. ${conservativeOutcome}`],
-      ['Are benefits being counted twice?',
-       'The model reports benefits by driver and removes overlap where inventory carrying-cost and inventory-turn improvements represent the same underlying value.'],
-      ['What does delaying the decision cost?',
-       r.annualBenefit > 0 ? `The current model indicates approximately ${fmtMoney(r.annualBenefit/12)} of recoverable value per month. Delay should be weighed against that continuing cost, not treated as a zero-cost option.` : 'Current operating losses and avoidable work continue during delay. Confirm the monthly cost of inaction before deciding that waiting is the lower-risk option.'],
-      ['When should we expect payback?',
-       `Modeled payback is ${paybackText}, including an estimated ${v.implMonths || 3}-month implementation period and phased value ramp.`],
-      ['What if the expected value is not realized?',
-       'Use agreed baseline measures, owners, and checkpoints in the Joint Project Plan. If early indicators lag, address adoption, process, data, or scope issues before the gap compounds.']
-    ];
-    addChampionFaqSlide('Questions your finance and executive colleagues will ask', 3, financialFaqs);
-
-    const deliveryFaqs = [
-      ['Why not use our ERP or current tools?',
-       'The ERP remains the system of record. Cloud Inventory provides the frontline execution, mobile workflows, and transaction accuracy needed to keep that record current across warehouses and field locations.'],
-      ['How disruptive will implementation be?',
-       'Implementation should be phased around priority workflows, integrations, and user groups. The Joint Project Plan makes dependencies, owners, validation steps, and readiness decisions visible before rollout.'],
-      ['What will IT need to support?',
-       'IT should validate architecture, identity, integration, security, data ownership, and support responsibilities. The Solution Fit handoff captures known requirements and unresolved items for technical review.'],
-      ['How do we address security and governance?',
-       'Complete the normal security, privacy, access-control, data-retention, and vendor-risk reviews. Record evidence and approvals in the Joint Project Plan rather than treating security as an informal assumption.'],
-      ['Will frontline teams adopt it?',
-       'Adoption depends on workflow fit, usability, leadership sponsorship, training, and measurable accountability. Pilot the highest-value workflows and use real user feedback before scaling.'],
-      ['How will we prove value after go-live?',
-       'Agree on baselines and targets for the selected drivers, assign a business owner to each measure, and review actual results at defined checkpoints against the approved business case.']
-    ];
-    addChampionFaqSlide('Questions your operations and IT colleagues will ask', 4, deliveryFaqs);
-
-    const safe = company.replace(/[^a-zA-Z0-9 \-_]/g,'').trim().replace(/\s+/g,'-') || 'Champion';
-    await pptx.writeFile({ fileName: `Champion-Pack-${safe}-${new Date().toISOString().split('T')[0]}.pptx` });
-    if (typeof showToast === 'function') showToast('Champion pack downloaded!');
-    if (typeof trackEvent === 'function') trackEvent('champion_pack_exported', { company });
-  } catch(err) {
-    console.error('Champion pack error:', err);
-    if (typeof showToast === 'function') showToast('Export failed: ' + (err.message || 'unknown error'));
-  } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = orig || 'Champion pack'; }
-  }
-}
+function buildChampionPack(){showToast('Champion Pack is unavailable pending governed output conversion. CONFIDENTIAL — INTERNAL USE ONLY.');}
 window.buildChampionPack = buildChampionPack;
 
 function fmtMoney(n) {
@@ -1079,66 +901,20 @@ function _getCompData() {
 }
 
 /* ── PDF Export ── */
-function exportCompPDF() {
-  const d = _getCompData();
-  if (!d) { showToast('Select a competitor first.'); return; }
-  const { c, company, repName, talk } = d;
-  const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const date = new Date().toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
-
-  const html = `
-    <div class="doc-head">
-      <img src="${window.location.origin}/${window.CIBrand.logo('logoColor')}" onerror="this.style.display='none'"/>
-      <div class="ht">INTERNAL COMPETITIVE INTELLIGENCE · CONFIDENTIAL</div>
-    </div>
-    <h1>Competitive displacement: ${esc(c.name)}</h1>
-    <div class="sub">${esc(d.statusLabel||'Legacy curated content — provenance requires review')} · ${esc(company)}${repName ? ' · Prepared by ' + esc(repName) : ''} · ${date}</div>
-
-    <h2>Current solution overview</h2>
-    <table class="kv"><tbody>
-      <tr><td><strong>Typical cost</strong></td><td>${esc(c.cost)}</td></tr>
-      <tr><td><strong>Time to value</strong></td><td>${esc(c.time)}</td></tr>
-      <tr><td><strong>Ongoing maintenance</strong></td><td>${esc(c.maint)}</td></tr>
-    </tbody></table>
-
-    <div class="two-col-grid">
-      <div class="col-card pain-col">
-        <div class="col-head pain-head">Pain points with ${esc(c.name)}</div>
-        ${c.pain.map(p => `<div class="comp-row"><span class="x-dot">✕</span><span>${esc(p)}</span></div>`).join('')}
-      </div>
-      <div class="col-card adv-col">
-        <div class="col-head adv-head">Cloud Inventory advantages</div>
-        ${c.adv.map(a => `<div class="comp-row"><span class="chk-dot">✓</span><span>${esc(a)}</span></div>`).join('')}
-      </div>
-    </div>
-
-    ${talk ? `<h2>Talk track</h2>
-    <div class="talk-box">${esc(talk)}</div>` : ''}`;
-
-  const extraCss = `
-    .kv td { padding: 7px 10px; font-size: 13px; border-bottom: 1px solid var(--doc-canvas); vertical-align: top; }
-    .kv td:first-child { font-weight: 600; color: var(--doc-heading); width: 38%; }
-    .two-col-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0 20px; }
-    .col-card { border-radius: 8px; overflow: hidden; border: 1px solid var(--doc-border); }
-    .col-head { font-size: 12px; font-weight: 700; padding: 9px 14px; text-transform: uppercase; letter-spacing: .05em; }
-    .pain-head { background: #FEF2F2; color: #991B1B; border-bottom: 1px solid #FECACA; }
-    .adv-head  { background: #F0FDF4; color: #166534; border-bottom: 1px solid #BBF7D0; }
-    .comp-row  { display: flex; align-items: flex-start; gap: 10px; padding: 8px 14px; border-bottom: 1px solid #F8FAFC; font-size: 12.5px; color: var(--doc-heading); }
-    .comp-row:last-child { border-bottom: none; }
-    .x-dot   { flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; background: #FEE2E2; color: #DC2626; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
-    .chk-dot { flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; background: #DCFCE7; color: #16A34A; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
-    .talk-box { font-size: 13px; color: var(--doc-heading); line-height: 1.7; background: var(--doc-info); border-left: 3px solid var(--doc-accent); border-radius: 0 8px 8px 0; padding: 14px 16px; margin-top: 8px; font-style: italic; }
-    @media print { .two-col-grid { break-inside: avoid; } }
-  `;
-
-  dePrintWindow(`Competitive Battlecard – ${c.name}`, html, extraCss, 'internal');
-  if (typeof trackEvent === 'function') trackEvent('comp_pdf_exported', { competitor: d.key, company: d.company });
+async function exportCompPDF() {
+  const id=window._ciCurrentIntelligence?.battlecard?.current_revision_id;
+  if(!id)return showToast('Formal export requires an approved Battlecard revision. Research remains available internally.');
+  const response=await apiFetch('/api/export/battlecard/'+encodeURIComponent(id));
+  if(!response.ok)return showToast('An approved active Battlecard revision is required.');
+  const data=await response.json();
+  dePrintWindow('Competitive Battlecard', '<p>INTERNAL COMPETITIVE INTELLIGENCE · CONFIDENTIAL</p><h1>'+deEsc(data.product)+'</h1><p>Approved revision '+deEsc(data.version)+'</p>'+data.findings.map(x=>'<section><h2>'+deEsc(x.category)+'</h2><p>'+deEsc(x.claim)+'</p></section>').join(''),'','internal');
 }
 
 /* ── Word Export (.docx): server-side via /api/export/battlecard-docx ──
    Sends battlecard data to the server; server uses the docx npm package
    (real .docx format) and streams the file back. No CDN, no popup.    */
 async function exportCompDocx() {
+  if(!window._ciCurrentIntelligence?.battlecard?.current_revision_id)return showToast('Formal export requires an approved Battlecard revision. Research remains available internally.');
   const d = _getCompData();
   if (!d) { showToast('Select a competitor first.'); return; }
   const btn  = document.getElementById('compDocxBtn');

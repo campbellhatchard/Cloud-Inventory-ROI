@@ -788,7 +788,7 @@
         <div id="execMoreMenu" style="display:none;position:absolute;top:calc(100% + 4px);right:0;background:var(--white);border:1px solid var(--gray-200);border-radius:10px;box-shadow:var(--shadow-md);z-index:50;min-width:210px;padding:6px 0;">
           <button class="exec-menu-item" id="executiveWordBtn" onclick="toggleExecMore();exportExecutiveWord()">📝 Executive business case <span class="exec-menu-hint">Word document</span></button>
           <div style="height:1px;background:var(--gray-100);margin:4px 0;"></div>
-          <button class="exec-menu-item" id="championPackBtn" onclick="toggleExecMore();buildChampionPack()">🏆 Champion pack <span class="exec-menu-hint">4-slide internal deck</span></button>
+          <button class="exec-menu-item" id="championPackBtn" disabled title="Unavailable pending governed output conversion">Champion Pack — unavailable in v6.9.1</button>
           <button class="exec-menu-item" onclick="toggleExecMore();exportOnePager()" id="onePagerBtn">📄 Role one-pager <span class="exec-menu-hint">Internal only · based on audience</span></button>
           <button class="exec-menu-item" onclick="toggleExecMore();roiMethodologyPDF()" id="roiMethodPdfBtn">📋 ROI methodology PDF</button>
           <button class="exec-menu-item" onclick="toggleExecMore();roiMethodologyPPT()" id="roiMethodPptBtn">📊 ROI methodology PPT</button>
@@ -805,16 +805,7 @@
     </div>
   </div>
 
-  <!-- Scenario toggle bar -->
-  <div class="scenario-mode-bar" id="scenarioModeBar">
-    <div class="smb-label">Scenario range:</div>
-    <div class="smb-toggle">
-      <button class="smb-btn" data-mode="conservative" onclick="setScenarioMode('conservative')">Conservative <span class="smb-scale">70%</span></button>
-      <button class="smb-btn smb-active" data-mode="base" onclick="setScenarioMode('base')">Base case <span class="smb-scale">100%</span></button>
-      <button class="smb-btn" data-mode="aggressive" onclick="setScenarioMode('aggressive')">Aggressive <span class="smb-scale">130%</span></button>
-    </div>
-    <div class="smb-hint" id="smbHint">Showing base case assumptions</div>
-  </div>
+  <!-- Executive View presents only the saved governed Value Story. -->
 
   <!-- Three Whys editor (v5.5.1) -->
   <div class="exec-whys-layout">
@@ -1558,7 +1549,7 @@
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="6.9.0";</script>
+<script>const APP_VERSION="6.9.1";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
 <script src="ai-session.js"></script>
@@ -1609,84 +1600,7 @@ window._authReady = (async function() {
 function showCRMModal() { document.getElementById('crmModal')?.classList.add('open'); }
 function scrollToSection(id) { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior:'smooth', block:'start' }); }
 
-function downloadPDF() {
-  if (!checkConfidenceBeforeSharing()) return;
-  if (typeof saveThreeWhys === 'function') saveThreeWhys();
-  const v = getVals();
-  v.threeWhysAct = document.getElementById('why_act')?.value || '';
-  v.threeWhysCi  = document.getElementById('why_ci')?.value  || '';
-  v.threeWhysNow = document.getElementById('why_now')?.value || '';
-  const vForPDF = { ...v };
-  vForPDF._customerProof = (window.selectedCustomerProofRecords || []).slice(0, 3);
-  vForPDF._customerProofMeta = { proofIds:vForPDF._customerProof.map(p=>p.id), revisions:vForPDF._customerProof.map(p=>({id:p.id,revision:p.revision})), generatedAt:new Date().toISOString() };
-  /* The prospect logo is a large base64 data URL that bloats the handoff URL
-     and is the main cause of truncation/parse failures. It's decorative, so
-     always drop it from the PDF payload — the print page falls back to the
-     Cloud Inventory logo. */
-  delete vForPDF.prospectLogoDataUrl;
-  /* Pass discovery answer provenance so print.html can show the trust banner.
-     Only include the _by keys (not the answer text itself) to keep payload small. */
-  if (typeof discoveryAnswers !== 'undefined') {
-    const provenance = {};
-    Object.entries(discoveryAnswers).forEach(([k, v]) => {
-      if (k.endsWith('_by')) provenance[k] = v;
-      else if (v && String(v).trim()) provenance[k] = v;
-    });
-    vForPDF._discoveryAnswers = provenance;
-  }
-  /* Pass open MAP milestones for this company so print.html can show them as next steps */
-  if (typeof _maps !== 'undefined' && Array.isArray(_maps) && v.company) {
-    const plan = _maps.find(function(m) {
-      return (m.company || '').toLowerCase() === (v.company || '').toLowerCase() && m.is_active !== false;
-    });
-    if (plan) {
-      vForPDF._mapSteps = (plan.milestones || [])
-        .filter(function(ms) { return ms.status !== 'done'; })
-        .map(function(ms) { return { title: ms.title, dueDate: ms.dueDate, owner: ms.owner, notes: ms.notes, status: ms.status }; });
-      vForPDF._mapTitle = plan.title || '';
-    }
-  }
-  try {
-    const json = JSON.stringify(vForPDF);
-    const encoded = btoa(unescape(encodeURIComponent(json)));
-    /* Guard against exceeding practical URL limits (corrupts on truncation).
-       ~60k chars is comfortably under browser limits with margin. */
-    if (encoded.length > 60000) {
-      showToast('This scenario is too large to open as a PDF via the browser. Please remove very long free-text notes and try again.');
-      return;
-    }
-    const printUrl = window.location.origin + '/print.html#data=' + encoded;
-    const w = window.open(printUrl, '_blank');
-    if (!w || w.closed || typeof w.closed === 'undefined') {
-      /* Popup was blocked — fall back to a visible link the user can click */
-      const msg = document.createElement('div');
-      msg.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:var(--navy,#1E2931);color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,.25);max-width:90vw;';
-      msg.innerHTML = '<span>Pop-up blocked. <a href="' + printUrl + '" target="_blank" style="color:#00A9CC;font-weight:600;text-decoration:underline;">Open PDF in new tab ↗</a></span>'
-        + '<button onclick="this.parentElement.remove()" style="background:none;border:none;color:rgba(255,255,255,.6);cursor:pointer;font-size:18px;padding:0 4px;line-height:1;">×</button>';
-      document.body.appendChild(msg);
-      setTimeout(function(){ if (msg.parentElement) msg.remove(); }, 10000);
-    }
-    trackEvent('pdf_download', { company: v.company });
-  } catch(e) {
-    console.error('PDF encode error:', e && e.message);
-    showToast('Could not generate the PDF page. Try again or use Export to PowerPoint.');
-  }
-}
-
-let currentScenarioMode = 'base';
-const SCENARIO_SCALES = { conservative:0.70, base:1.00, aggressive:1.30 };
-const SCENARIO_LABELS = {
-  conservative:'Conservative case — 70% of base improvement assumptions',
-  base:'Base case — using your entered assumptions',
-  aggressive:'Aggressive case — 130% of base improvement assumptions'
-};
-function setScenarioMode(mode) {
-  currentScenarioMode = mode;
-  document.querySelectorAll('.smb-btn').forEach(b => b.classList.toggle('smb-active', b.dataset.mode === mode));
-  const hint = document.getElementById('smbHint');
-  if (hint) hint.textContent = SCENARIO_LABELS[mode];
-  renderExec();
-}
+function downloadPDF(){showToast('Governed PDF is still loading. Please retry in Executive View.');}
 
 function checkConfidenceBeforeSharing() {
   if (typeof fieldStates === 'undefined') return true;

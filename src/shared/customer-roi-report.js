@@ -3,7 +3,6 @@
 /* One normalized, customer-safe report model for every Executive output.
    Financial values come only from calcROI; adapters may format but never
    recalculate them. */
-const { calcROI } = require('./roi-engine');
 const { buildExecutiveValueStory } = require('./executive-value-story');
 const brand = require('./brand-system');
 
@@ -13,8 +12,7 @@ const number = value => Number.isFinite(Number(value)) ? Number(value) : 0;
 function buildCustomerROIReportData(source = {}) {
   if (!source.scenario || !source.scenario.data) throw new Error('A saved scenario is required to build customer outputs.');
   const story = buildExecutiveValueStory(source);
-  const data = source.scenario.data;
-  const roi = calcROI(data);
+  const roi = story.reportEconomics;
   const currency = story.meta.currency || 'USD';
   const years = roi.contractYears.map(row => ({
     year: row.year,
@@ -37,11 +35,11 @@ function buildCustomerROIReportData(source = {}) {
     customerSupported: Boolean(driver.customerSupported)
   }));
   const investment = [
-    { key: 'subscription', label: 'Annual software subscription', value: number(data.invest), recurring: true },
-    { key: 'implementation', label: 'One-time implementation and services', value: number(data.otc), recurring: false }
+    { key: 'subscription', label: 'Annual software subscription', value: number(roi.annualSubscription), recurring: true },
+    { key: 'implementation', label: 'One-time implementation and services', value: number(roi.implementationCost), recurring: false }
   ].filter(item => item.value > 0);
   const stakeholders = (source.stakeholders || []).map(person => ({
-    name: text(person.name), title: text(person.title), role: text(person.role), engaged: Boolean(person.engaged)
+    name: text(person.name), title: text(person.title)
   })).filter(person => person.name);
 
   return Object.freeze({
@@ -63,7 +61,7 @@ function buildCustomerROIReportData(source = {}) {
       paybackMonths: roi.contractPayback
     },
     assumptions: {
-      discountRate: number(data.discRate),
+      discountRate: number(roi.discountRate),
       ramp: [roi.ramp1, roi.ramp2, roi.ramp3],
       modelVersion: story.meta.modelVersion,
       maturity: story.economics.maturity,
@@ -75,12 +73,12 @@ function buildCustomerROIReportData(source = {}) {
     chartData: {
       contractTimeline: years.map(row => ({ label: `Year ${row.year}`, benefit: row.cumulativeBenefit, investment: row.cumulativeInvestment, netValue: row.cumulativeNetValue, roi: row.cumulativeRoi })),
       benefitMix: benefits.map(item => ({ label: item.label, value: item.annualValue })),
-      investmentMix: investment.map(item => ({ label: item.label, value: item.recurring ? item.value * roi.contractMonths / 12 : item.value }))
+      investmentMix: investment.map(item => ({ label: item.label, value: item.recurring ? roi.contractSubscription : item.value }))
     },
     executiveSummary: { threeWhys: story.threeWhys, currentState: story.currentState },
     solutionFit: story.solutionAlignment,
     jointProjectPlan: story.nextSteps,
-    actionPlan: source.actionPlan || null,
+    actionPlan: null,
     stakeholders,
     customerProof: story.customerProof || [],
     branding: { productName: brand.productName, colors: brand.colors, footer: brand.audience('customer'), logoRole: brand.document.logoRole },

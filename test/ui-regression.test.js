@@ -180,18 +180,7 @@ test('executive Three Whys autosave to the active scenario and AI output saves i
   assert.ok(saveFn.indexOf('window._calcScenarioId = saved.id') < saveFn.indexOf('await fetchScenarios()'));
 });
 
-test('champion pack equips the champion for finance, executive, operations, and IT objections', () => {
-  for (const question of [
-    'Are these numbers credible?', 'How conservative is the business case?',
-    'Are benefits being counted twice?', 'What does delaying the decision cost?',
-    'Why not use our ERP or current tools?', 'How disruptive will implementation be?',
-    'How do we address security and governance?', 'Will frontline teams adopt it?',
-    'How will we prove value after go-live?'
-  ]) assert.match(dealExport, new RegExp(question.replace(/[?]/g, '\\?')));
-  assert.match(dealExport, /addChampionFaqSlide\('Questions your finance and executive colleagues will ask'/);
-  assert.match(dealExport, /addChampionFaqSlide\('Questions your operations and IT colleagues will ask'/);
-  assert.doesNotMatch(dealExport, /Exit is a subscription cancellation/);
-});
+test('Champion Pack is safely deactivated until governed conversion',()=>{assert.match(index,/id="championPackBtn" disabled/);const active=dealExport.slice(dealExport.indexOf('function buildChampionPack'),dealExport.indexOf('window.buildChampionPack'));assert.doesNotMatch(active,/calcROI|annualBenefit|addSlide/);assert.match(active,/INTERNAL USE ONLY/);});
 
 test('Solution Fit provides rapid-entry defaults and exception controls', () => {
   assert.match(solutionFit, /SOLUTION_TEMPLATES/);
@@ -294,8 +283,8 @@ test('contract term drives simultaneous annual, cumulative, and total-contract p
   assert.match(app, /Annual economics/);
   assert.match(app, /Cumulative economics/);
   assert.match(app, /totalContractNetBenefit/);
-  assert.match(printView, /Total .*month ROI/);
-  assert.match(printView, /Annual, cumulative, and total-contract economics/);
+  assert.match(fs.readFileSync(path.join(root,'src/shared/customer-roi-report.js'),'utf8'), /contractRoi: roi.totalContractRoi/);
+  assert.match(fs.readFileSync(path.join(root,'src/shared/customer-roi-report.js'),'utf8'), /cumulativeRoi: row.cumulativeRoi/);
   assert.match(pptxExport, /totalContractRoi/);
   assert.match(dealExport, /Total contract ROI/);
 });

@@ -1,6 +1,6 @@
 {
   "knowledgeVersion":"1.0",
-  "applicationVersion":"6.9.0",
+"applicationVersion":"6.9.1",
   "roiModel":{"version":"2.8","modelVersion":28,"contractHorizon":"configured contract term"},
   "brandVersion":"1.0",
   "productTerminology":["Cloud Inventory Platform","Mobile Enterprise Platform (MEP)","Enterprise Printing Platform (EPP)"],

@@ -21,31 +21,7 @@
    can paste a link; receiver auto-loads it.
    ───────────────────────────────────────── */
 async function generateShareURL() {
-  /* Trackable share links point at a saved scenario, so the server can count
-     views and honour revocation. A link built from unsaved calculator state
-     would have to carry the data in the URL, which is untrackable and
-     un-revokable — so we ask the rep to save first. */
-  const id = window._calcScenarioId;
-  if (!id) {
-    showToast('Save this scenario first — share links are tracked against a saved scenario.');
-    return;
-  }
-  try {
-    const v = getVals();
-    const resp = await apiFetch('/api/scenario-shares', {
-      method: 'POST',
-      body: JSON.stringify({ scenarioId: id, company: v.company || '', title: v.name || '' })
-    });
-    if (!resp || !resp.ok) { showToast('Could not create share link.'); return; }
-    const { shareUrl } = await resp.json();
-    navigator.clipboard.writeText(shareUrl)
-      .then(() => showToast('🔗 Trackable share link copied — you\'ll see when it\'s opened.'))
-      .catch(() => showShareModal(shareUrl));
-    trackEvent('share_url_generated', { company: v.company, industry: v.industry });
-  } catch (e) {
-    console.error('share link error:', e.message);
-    showToast('Could not create share link — check your connection.');
-  }
+  return shareBusinessCase();
 }
 function showShareModal(url) {
   const modal = document.getElementById('shareModal');
@@ -54,44 +30,9 @@ function showShareModal(url) {
 }
 
 async function checkShareURL() {
-  /* New: tokenized, trackable link — /?share=<token>. The scenario is fetched
-     from the server, which counts the view and honours revocation. */
-  const params = new URLSearchParams(window.location.search || '');
-  const token = params.get('share');
-  if (token) {
-    try {
-      const resp = await apiFetch('/api/scenario-shares/' + encodeURIComponent(token));
-      if (resp && resp.ok) {
-        const { data } = await resp.json();
-        if (data) {
-          loadFromObject(data);
-          history.replaceState(null, '', window.location.pathname);
-          showToast('📋 Shared scenario loaded!');
-          return;
-        }
-      } else if (resp && resp.status === 410) {
-        showToast('This share link is no longer active.');
-        history.replaceState(null, '', window.location.pathname);
-        return;
-      } else {
-        showToast('Could not open that share link.');
-        return;
-      }
-    } catch (e) { console.warn('share token load failed', e); showToast('Could not open that share link.'); return; }
-  }
-
-  /* Legacy: links already sent as #share=<base64 payload>. Still honoured so
-     previously distributed links keep working, but these are not trackable. */
-  const hash = window.location.hash;
-  if (!hash.startsWith('#share=')) return;
-  try {
-    const encoded = hash.replace('#share=', '');
-    const decoded = JSON.parse(decodeURIComponent(escape(atob(encoded))));
-    loadFromObject(decoded);
-    history.replaceState(null, '', window.location.pathname);
-    showToast('📋 Shared scenario loaded!');
-  } catch (e) {
-    console.warn('Invalid share URL', e);
+  if(new URLSearchParams(window.location.search||"").has("share")||window.location.hash.startsWith("#share=")){
+    showToast("This business case was created with an earlier output format. Please contact your Cloud Inventory representative for an updated link.");
+    history.replaceState(null,"",window.location.pathname);
   }
 }
 

@@ -18,23 +18,22 @@ test('protected server routes initialize requireAuth once and before use', () =>
   }
 });
 
-test('ROI output surfaces preserve explicit zero ramps and field inventory property names', () => {
+test('retired print cannot recalculate ROI; active output helpers preserve zero ramps and field inventory property names', () => {
   const print = read('public/print.html');
   const deal = read('public/deal-export.js');
   const info = read('public/exec-infographics.js');
-  assert.match(print, /normalizeRamp/);
-  assert.doesNotMatch(print, /healRamp/);
+  assert.match(print, /output format has been retired/i);
+  assert.doesNotMatch(print, /calcROI|roi-engine|#data|normalizeRamp|healRamp/);
   assert.match(deal, /v\.ramp1 \?\? 0\.4/);
   assert.doesNotMatch(deal, /v\.ramp1\|\|0\.4/);
   assert.match(info, /fieldInvSav/);
   assert.doesNotMatch(info, /fieldLeverSav/);
 });
 
-test('turns savings are not mislabeled as balance-sheet working capital', () => {
+test('turns savings are not mislabeled as balance-sheet working capital on active or retired output paths', () => {
   const print = read('public/print.html');
   const deal = read('public/deal-export.js');
-  assert.match(print, /Turns carrying savings|Turns: annual carrying savings/);
-  assert.doesNotMatch(print, /Turns \(capital\)/);
+  assert.doesNotMatch(print, /Turns \(capital\)|Working capital \(inventory turns\)/i);
   assert.doesNotMatch(deal, /Working capital \(inventory turns\)/i);
   assert.doesNotMatch(deal, /Turns \(capital\)/i);
 });
@@ -44,7 +43,7 @@ test('Medical Devices / Life Sciences remains customer-input-only', () => {
   const provenance = read('public/benchmark-provenance.js');
   assert.match(prospect, /retail:\s*\{\s*revenue:0,\s*users:0,\s*labor:0,\s*inventory:0/);
   assert.match(provenance, /Customer inputs required\./);
-  assert.match(provenance, /no bundled benchmark values in v6\.9\.0/);
+  assert.match(provenance, /no bundled benchmark values in v6\.9\.1/);
   assert.doesNotMatch(prospect, /retail:\s*\{\s*revenue:60e6/);
 });
 
@@ -69,11 +68,16 @@ test('server remains authoritative for contract-term scenario metrics', () => {
   ]) assert.ok(routes.includes(key), `missing authoritative metric ${key}`);
 });
 
-test('historical shared business cases receive current contract metrics without history mutation', () => {
+test('published business cases are frozen, customer-safe, and never follow a later scenario version', () => {
   const server = read('server.js');
-  assert.match(server, /const \{ calcROI: calcROIShared \} = require\('\.\/src\/shared\/roi-engine'\);/);
-  assert.match(server, /const r = calcROIShared\(shareData\)/);
-  assert.match(server, /totalContractRoi: r\.totalContractRoi/);
+  const route = read('src/routes/business-case-shares.js');
+  const migration = read('migrations/035_published_business_cases.sql');
+  assert.match(server, /app\.use\('\/api\/business-case-shares', require\('\.\/src\/routes\/business-case-shares'\)\)/);
+  assert.match(route, /published_payload/);
+  assert.match(route, /status\(410\)/);
+  assert.doesNotMatch(route, /JOIN scenarios|is_current|\bs\.data\b/);
+  assert.match(migration, /Published business case content is immutable/);
+  assert.match(migration, /CREATE TRIGGER immutable_business_case_publication/);
 });
 
 test('Prospect AI message history is role-normalized and bounded', () => {
@@ -103,17 +107,17 @@ test('v5.7 product and scenario integrity controls survive the v6 major release'
 
 test('bootstrap documentation matches startup behavior and migration count', () => {
   const readme = read('README.md');
-  assert.match(readme, /001–034/);
+  assert.match(readme, /001–035/);
   assert.doesNotMatch(readme, /Migration 003 re-seeds/);
   assert.match(readme, /preserves the user-managed password/);
 });
 
-test('migrations 025-034 are transaction-protected and do not destructively delete business data', () => {
+test('migrations 025-035 are transaction-protected and do not destructively delete business data', () => {
   const migrate = read('src/migrate.js');
   assert.match(migrate, /await client\.query\('BEGIN'\)/);
   assert.match(migrate, /await client\.query\('ROLLBACK'\)/);
   assert.match(migrate, /await client\.query\('COMMIT'\)/);
-  for (let n = 25; n <= 34; n++) {
+  for (let n = 25; n <= 35; n++) {
     const prefix = String(n).padStart(3, '0') + '_';
     const name = fs.readdirSync(path.join(ROOT, 'migrations')).find(x => x.startsWith(prefix));
     assert.ok(name, `missing migration ${prefix}`);
@@ -124,6 +128,10 @@ test('migrations 025-034 are transaction-protected and do not destructively dele
   const m26 = read('migrations/026_buycycle_stages_2_7.sql');
   const deletes = [...m26.matchAll(/^\s*DELETE\s+FROM\s+([a-zA-Z0-9_]+)/gim)].map(m => m[1]);
   assert.deepEqual(deletes, ['buycycle_stage_config']);
+  const m35 = read('migrations/035_published_business_cases.sql');
+  assert.match(m35, /ALTER TABLE business_case_shares ADD COLUMN IF NOT EXISTS published_payload JSONB/);
+  assert.match(m35, /CREATE TRIGGER immutable_business_case_publication/);
+  assert.doesNotMatch(m35, /^\s*(DROP\s+TABLE|TRUNCATE|ALTER\s+TABLE[^;\n]*DROP\s+COLUMN|DELETE\s+FROM)\b/im);
 });
 
 test('CI executes both legacy production locks and the complete v6 suite', () => {
@@ -135,9 +143,11 @@ test('CI executes both legacy production locks and the complete v6 suite', () =>
   assert.match(pkg.scripts.test, /v681-ai-context-help-email\.test\.js/);
   assert.match(pkg.scripts.test, /v682-runtime-completion\.test\.js/);
   assert.match(pkg.scripts.test, /production-regression-locks\.test\.js/);
+  assert.match(pkg.scripts.test, /release-integrity\.test\.js/);
+  assert.match(pkg.scripts['test:production-locks'], /production-regression-locks\.test\.js/);
 });
 
-test('v6.9.0 keeps ROI Model v2.8 and brand/application-knowledge/persona locks', () => {
+test('v6.9.1 keeps ROI Model v2.8 and brand/application-knowledge/persona locks', () => {
   const release = read('RELEASE_VALIDATION_V6.8.2.md');
   const v680 = read('RELEASE_VALIDATION_V6.8.0.md');
   assert.match(v680, /ROI Model: \*\*v2\.8 \/ modelVersion 28\*\*, unchanged/);

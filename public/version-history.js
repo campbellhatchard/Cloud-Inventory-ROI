@@ -7,6 +7,11 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.1', date: '2026-09-04', tag: 'release-integrity',
+    title: 'Governed Publishing and Release Integrity',
+    changes: ['Frozen, customer-safe Business Case publishing with explicit readiness acknowledgement', 'Retired legacy share and print economics and disabled unconverted Champion Pack', 'Approved-revision Battlecard exports, readable executive narratives and permanent release controls']
+  },
+  {
     version: '6.9.0', date: '2026-09-03', tag: 'solution-fit',
     title: 'Solution Fit Creation & MEP Standard App Configuration',
     changes: ['Redesigned Solution Fit creation and recovery so authorized Sales Engineers and Admins can explicitly create assessments without dead-end states', 'Added state-aware Create/Open/Not started customer actions plus safer retry, return, overlay and onboarding behavior', 'Introduced governed MEP Product → ERP → Standard Apps scope from the August 2026 catalog with ERP-specific assessment rows, non-standard apps, quick gap capture, change history and catalog lineage']

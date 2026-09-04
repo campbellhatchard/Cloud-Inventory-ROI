@@ -1218,12 +1218,18 @@ app.post('/api/errors/client', clientErrLimiter, async (req, res) => {
    All generation happens server-side; browser receives a file download.
    ══════════════════════════════════════════════════════════════════ */
 
+app.get('/api/export/battlecard/:id', requireAuth, async(req,res)=>{try{
+ const {rows}=await db().query(`SELECT r.version,r.content_json,p.product_name FROM competitive_battlecard_revisions r JOIN competitive_battlecards b ON b.id=r.battlecard_id JOIN competitive_products p ON p.id=b.product_id WHERE r.id=$1 AND b.current_revision_id=r.id AND b.status IN ('current','refresh_recommended') AND p.status='active' AND r.published_at IS NOT NULL`,[req.params.id]);
+ if(!rows.length)return res.status(409).json({error:'An approved active Battlecard revision is required.'});
+ const x=rows[0];res.json({product:x.product_name,version:x.version,findings:(x.content_json?.findings||[]).map(f=>({category:String(f.category||''),claim:String(f.claim||'')}))});
+ }catch(_){res.status(500).json({error:'Battlecard could not be loaded.'});}});
 app.post('/api/export/battlecard-docx', requireAuth, async (req, res) => {
   try {
     let { competitorName, cost, time, maint, pain, adv, talk, company, repName,researchStatus,battlecardRevisionId } = req.body;
+    if(!battlecardRevisionId)return res.status(409).json({error:'Formal export requires an approved Battlecard revision.'});
     let authorityLabel=String(researchStatus||'Research — not yet approved');
     if(battlecardRevisionId){
-      const governed=await db().query(`SELECT r.version,r.published_at,r.content_json,p.product_name FROM competitive_battlecard_revisions r JOIN competitive_battlecards b ON b.id=r.battlecard_id JOIN competitive_products p ON p.id=b.product_id WHERE r.id=$1 AND b.current_revision_id=r.id`,[battlecardRevisionId]);
+      const governed=await db().query(`SELECT r.version,r.published_at,r.content_json,p.product_name FROM competitive_battlecard_revisions r JOIN competitive_battlecards b ON b.id=r.battlecard_id JOIN competitive_products p ON p.id=b.product_id WHERE r.id=$1 AND b.current_revision_id=r.id AND b.status IN ('current','refresh_recommended') AND p.status='active' AND r.published_at IS NOT NULL`,[battlecardRevisionId]);
       if(!governed.rows.length)return res.status(404).json({error:'Authoritative Battlecard revision not found.'});
       const g=governed.rows[0],findings=Array.isArray(g.content_json?.findings)?g.content_json.findings:[];
       competitorName=g.product_name;pain=findings.map(x=>x.claim);adv=[];talk='';cost=time=maint='See governed source details';authorityLabel=`Approved Battlecard v${g.version} · ${new Date(g.published_at).toLocaleDateString('en-US')}`;
@@ -1806,106 +1812,8 @@ app.post('/api/prospect-sessions', (req, res) => res.status(410).json({ error: '
    hosted business-case link is counted. Rep sees view engagement.
    ═══════════════════════════════════════════════════════════════════ */
 
-app.post('/api/business-case-shares', requireAuth, async (req, res) => {
-  try {
-    const { scenarioId, company, title } = req.body || {};
-    if (!scenarioId) return res.status(400).json({ error: 'scenarioId required.' });
-    const { query } = db();
-    const token = crypto.randomBytes(32).toString('hex');
-    /* Look up base_id so the business case link always shows the latest version. */
-    const { rows: sRows } = await query(
-      `SELECT base_id FROM scenarios WHERE id = $1`, [scenarioId]
-    );
-    if (!sRows.length) return res.status(404).json({ error: 'Scenario not found.' });
-    const baseId = sRows[0].base_id;
-    const { rows } = await query(
-      `INSERT INTO business_case_shares (token, scenario_id, scenario_base_id, owner_id, company, title)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, token, created_at`,
-      [token, scenarioId, baseId, req.user.id, company || '', title || '']
-    );
-    res.json({ ok: true, token: rows[0].token, shareUrl: `${APP_URL}/business-case.html?token=${rows[0].token}` });
-  } catch (err) { res.status(500).json({ error: 'Failed to create business-case share.' }); }
-});
+app.use('/api/business-case-shares', require('./src/routes/business-case-shares'));
 
-app.get('/api/business-case-shares/:token', async (req, res) => {
-  try {
-    const token = String(req.params.token || '').trim();
-    if (!/^[a-f0-9]{64}$/.test(token)) return res.status(400).json({ error: 'Invalid token.' });
-    const { query } = db();
-    const { rows } = await query(
-      `SELECT b.id, b.is_active, b.company, b.title, s.data
-       FROM business_case_shares b
-       JOIN scenarios s ON s.base_id = b.scenario_base_id AND s.is_current = TRUE
-       WHERE b.token = $1`, [token]
-    );
-    if (!rows.length) return res.status(404).json({ error: 'Business case not found.' });
-    if (!rows[0].is_active) return res.status(410).json({ error: 'This business case link is no longer active.' });
-    query(`UPDATE business_case_shares
-           SET view_count = COALESCE(view_count,0) + 1,
-               first_viewed = COALESCE(first_viewed, NOW()),
-               last_viewed = NOW()
-           WHERE id = $1`, [rows[0].id]).catch(() => {});
-    res.set('Cache-Control', 'no-store');
-    /* Preserve compatibility for historical scenarios and keep customer-facing
-       contract economics authoritative without mutating the stored version. */
-    let shareData = rows[0].data || {};
-    try {
-      const r = calcROIShared(shareData);
-      shareData = {
-        ...shareData,
-        contractMonths: r.contractMonths,
-        contractYears: r.contractYears,
-        totalContractBenefit: r.totalContractBenefit,
-        totalContractInvestment: r.totalContractInvestment,
-        totalContractNetBenefit: r.totalContractNetBenefit,
-        totalContractRoi: r.totalContractRoi,
-        totalContractNpv: r.totalContractNpv,
-        contractPayback: r.contractPayback
-      };
-    } catch (err) {
-      console.warn('Business-case contract recompute failed:', err.message);
-    }
-    res.json({ company: rows[0].company, title: rows[0].title, data: shareData });
-  } catch (err) { res.status(500).json({ error: 'Failed to load business case.' }); }
-});
-
-/* Prospect-adjustable assumptions — record what the CFO changed */
-app.post('/api/business-case-shares/:token/assumptions', async (req, res) => {
-  try {
-    const token = String(req.params.token || '').trim();
-    if (!/^[a-f0-9]{64}$/.test(token)) return res.status(400).json({ error: 'Invalid token.' });
-    const { adjustments } = req.body || {};
-    if (!adjustments || typeof adjustments !== 'object') return res.status(400).json({ error: 'adjustments required.' });
-    const { query } = db();
-    const { rows } = await query(
-      `SELECT b.id, b.owner_id, b.company, u.email, u.username
-       FROM business_case_shares b JOIN users u ON u.id = b.owner_id
-       WHERE b.token = $1 AND b.is_active = TRUE`, [token]
-    );
-    if (!rows.length) return res.status(404).json({ error: 'Share not found.' });
-    /* Store adjustments on the share row */
-    await query(
-      `UPDATE business_case_shares
-       SET prospect_adjustments = $1, prospect_adjusted_at = NOW()
-       WHERE token = $2`,
-      [JSON.stringify(adjustments), token]
-    );
-    /* Email the rep — with an AI-generated one-sentence interpretation
-       when the API key is configured. Falls back to raw numbers only
-       if the AI call fails or isn't configured; never blocks the email. */
-    try {
-      const { sendProspectAssumptionChange } = require('./src/email');
-      const { interpretAssumptionChange } = require('./src/ai');
-      const insight = await interpretAssumptionChange({
-        company: rows[0].company,
-        adjustments,
-        baseValues: null
-      });
-      await sendProspectAssumptionChange(rows[0].email, rows[0].username, rows[0].company, adjustments, insight);
-    } catch(e) { /* non-blocking */ }
-    res.json({ ok: true });
-  } catch (err) { console.error('assumptions post error:', err.message); res.status(500).json({ error: 'Failed.' }); }
-});
 
 app.get('/api/business-case-shares', requireAuth, async (req, res) => {
   try {
@@ -1929,49 +1837,8 @@ app.get('/api/business-case-shares', requireAuth, async (req, res) => {
    Views are counted server-side on fetch — no tracking pixels.
    ═══════════════════════════════════════════════════════════════════ */
 
-app.post('/api/scenario-shares', requireAuth, async (req, res) => {
-  try {
-    const { scenarioId, company, title } = req.body || {};
-    if (!scenarioId) return res.status(400).json({ error: 'scenarioId required.' });
-    const { query } = db();
-    const token = crypto.randomBytes(32).toString('hex');
-    /* Look up the base_id so the link always resolves to the latest version. */
-    const { rows: sRows } = await query(
-      `SELECT base_id FROM scenarios WHERE id = $1`, [scenarioId]
-    );
-    if (!sRows.length) return res.status(404).json({ error: 'Scenario not found.' });
-    const baseId = sRows[0].base_id;
-    const { rows } = await query(
-      `INSERT INTO scenario_shares (token, scenario_id, scenario_base_id, owner_id, company, title)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING token`,
-      [token, scenarioId, baseId, req.user.id, company || '', title || '']
-    );
-    res.json({ ok: true, token: rows[0].token, shareUrl: `${APP_URL}/?share=${rows[0].token}` });
-  } catch (err) { res.status(500).json({ error: 'Failed to create share link.' }); }
-});
-
-app.get('/api/scenario-shares/:token', async (req, res) => {
-  try {
-    const token = String(req.params.token || '').trim();
-    if (!/^[a-f0-9]{64}$/.test(token)) return res.status(400).json({ error: 'Invalid token.' });
-    const { query } = db();
-    const { rows } = await query(
-      `SELECT sh.id, sh.is_active, sh.company, sh.title, s.data
-       FROM scenario_shares sh
-       JOIN scenarios s ON s.base_id = sh.scenario_base_id AND s.is_current = TRUE
-       WHERE sh.token = $1`, [token]
-    );
-    if (!rows.length) return res.status(404).json({ error: 'Shared scenario not found.' });
-    if (!rows[0].is_active) return res.status(410).json({ error: 'This share link is no longer active.' });
-    query(`UPDATE scenario_shares
-           SET view_count = COALESCE(view_count,0) + 1,
-               first_viewed = COALESCE(first_viewed, NOW()),
-               last_viewed = NOW()
-           WHERE id = $1`, [rows[0].id]).catch(() => {});
-    res.set('Cache-Control', 'no-store');
-    res.json({ company: rows[0].company, title: rows[0].title, data: rows[0].data });
-  } catch (err) { res.status(500).json({ error: 'Failed to load shared scenario.' }); }
-});
+app.post('/api/scenario-shares', requireAuth, (_req,res)=>res.status(410).json({error:'Legacy scenario sharing is retired. Publish a governed Customer Business Case instead.'}));
+app.get('/api/scenario-shares/:token', (_req,res)=>res.status(410).json({error:'This legacy link has expired. Contact your Cloud Inventory representative for an updated Business Case link.'}));
 
 app.get('/api/scenario-shares', requireAuth, async (req, res) => {
   try {

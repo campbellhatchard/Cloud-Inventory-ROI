@@ -1443,21 +1443,7 @@ function renderList() {
 }
 
 async function generateShareURLFromScenario(id) {
-  const s = savedScenarios.find(x => x.id === id);
-  try {
-    const resp = await apiFetch('/api/scenario-shares', {
-      method: 'POST',
-      body: JSON.stringify({ scenarioId: id, company: s?.company || '', title: s?.name || '' })
-    });
-    if (!resp || !resp.ok) { showToast('Could not create share link.'); return; }
-    const { shareUrl } = await resp.json();
-    navigator.clipboard.writeText(shareUrl)
-      .then(() => showToast('🔗 Trackable share link copied — you\'ll see when it\'s opened.'))
-      .catch(() => showToast('Share link: ' + shareUrl));
-  } catch (e) {
-    console.error('share link error:', e.message);
-    showToast('Could not create share link — check your connection.');
-  }
+  return shareBusinessCase(id);
 }
 
 /* ════════════════════════════════════════
