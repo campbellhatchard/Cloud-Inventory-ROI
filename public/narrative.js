@@ -67,6 +67,9 @@ const THREE_WHYS_LIBRARY = {
    ───────────────────────────────────────────────────────────── */
 let threeWhys = { act: '', ci: '', now: '' };
 let aiGenerating = false;
+let threeWhysSaveTimer = null;
+let threeWhysSaveInFlight = false;
+let threeWhysSaveQueued = false;
 
 /* ─────────────────────────────────────────────────────────────
    Load defaults for selected industry
@@ -89,11 +92,69 @@ function loadThreeWhysDefaults() {
   });
 }
 
-function saveThreeWhys() {
+function saveThreeWhys(options = {}) {
   ['act','ci','now'].forEach(key => {
     const el = document.getElementById('why_'+key);
     if (el) threeWhys[key] = el.value;
   });
+  if (options.persist === false) return;
+  clearTimeout(threeWhysSaveTimer);
+  if (!window._calcScenarioId) return;
+  if (options.immediate) persistThreeWhys();
+  else threeWhysSaveTimer = setTimeout(persistThreeWhys, 700);
+}
+
+async function persistThreeWhys() {
+  clearTimeout(threeWhysSaveTimer);
+  if (!window._calcScenarioId) return false;
+  if (threeWhysSaveInFlight) { threeWhysSaveQueued = true; return false; }
+  threeWhysSaveInFlight = true;
+  let saved = false;
+  const scenarioId = window._calcScenarioId;
+  const status = document.getElementById('aiEnhanceStatus');
+  try {
+    const resp = await apiFetch('/api/scenarios/' + scenarioId + '/narrative', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        threeWhysAct: threeWhys.act,
+        threeWhysCi: threeWhys.ci,
+        threeWhysNow: threeWhys.now
+      })
+    });
+    if (!resp || !resp.ok) throw new Error('Narrative autosave failed');
+    const result = await resp.json();
+    if (result && result.id) window._calcScenarioId = result.id;
+    saved = true;
+    if (status && !aiGenerating) status.textContent = '✓ Narrative saved';
+  } catch (e) {
+    console.warn('Three Whys autosave failed:', e.message);
+    if (status && !aiGenerating) status.textContent = '⚠ Narrative not saved — retrying after your next edit';
+  } finally {
+    threeWhysSaveInFlight = false;
+    if (threeWhysSaveQueued) {
+      threeWhysSaveQueued = false;
+      persistThreeWhys();
+    }
+  }
+  return saved;
+}
+
+async function saveExecutiveView() {
+  saveThreeWhys({ persist: false });
+  if (!window._calcScenarioId) {
+    showToast('Save the scenario first to retain this executive view.');
+    return saveScenario();
+  }
+  const status = document.getElementById('aiEnhanceStatus');
+  if (status) status.textContent = 'Saving executive narrative…';
+  const saved = await persistThreeWhys();
+  if (saved) {
+    if (status) status.textContent = '✓ Executive view saved';
+    showToast('Executive view saved.');
+  } else {
+    if (status) status.textContent = '⚠ Save is already in progress or could not be completed';
+    showToast('Executive view save is pending — please try again.');
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -125,13 +186,15 @@ PROSPECT CONTEXT:
 - Industry: ${indLabel}
 - Annual revenue: ${fmtFull(v.revenue)}
 - Inventory users: ${Math.round(v.users)}
-- Annual inventory value: ${fmtFull(v.inventory)}
+- Warehouse inventory value on hand: ${fmtFull(v.inventory)}
 - Current solution being displaced: ${compName}
-- Deal stage: ${v.dealStage || 'Discovery'}
-- Annual benefit identified: ${fmtFull(r.annualBenefit)}
-- Year 1 ROI: ${fmtPct(r.roi)}
-- 3-year NPV: ${fmtFull(r.npv3)}
-- Payback period: ${r.payback ? r.payback.toFixed(1)+' months' : 'under 12 months'}
+- Current BuyCycle Stage: ${window.getCurrentBuyCycleStageLabel?.() || 'Stage 2 — Define Economic Consequences'}
+- Contract term: ${r.contractMonths} months
+- Total contract benefit: ${fmtFull(r.totalContractBenefit)}
+- Total contract investment: ${fmtFull(r.totalContractInvestment)}
+- Total contract ROI: ${fmtPct(r.totalContractRoi)}
+- Contract NPV: ${fmtFull(r.totalContractNpv)}
+- Payback period: ${r.contractPayback ? r.contractPayback.toFixed(1)+' months' : 'not achieved during contract term'}
 
 PRIMARY AUDIENCE: ${audienceCfg.label} — ${audienceCfg.description}
 TONE INSTRUCTION: ${audienceCfg.aiInstruction}
@@ -158,9 +221,8 @@ Return ONLY valid JSON in this exact format with no other text:
     // Proxy through server.js — API key stays on the server, never in the browser.
     // Model is not sent — server.js selects it via the ANTHROPIC_MODEL env var
     // (defaults to claude-sonnet-4-6), so this client code never goes stale.
-    const resp = await fetch('/api/enhance', {
+    const resp = await apiFetch('/api/enhance', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         max_tokens: 1000,
         messages: [{ role: 'user', content: prompt }]
@@ -177,6 +239,7 @@ Return ONLY valid JSON in this exact format with no other text:
         threeWhys[key] = parsed[key];
       }
     });
+    await persistThreeWhys();
     if (status) status.textContent = '✅ AI personalization complete — review and edit as needed.';
     if (status) setTimeout(()=>{ status.textContent=''; }, 4000);
     showToast('✨ Three Whys enhanced by AI!');
@@ -214,7 +277,7 @@ const AUDIENCE_CONFIG = {
     aiInstruction: 'Write for a CFO audience. Lead with hard financial metrics: NPV, ROI, payback period, total cost of ownership, and working capital impact. Every sentence should be defensible with the numbers in the model. Avoid operational detail unless it directly ties to a dollar figure.',
   },
   coo: {
-    key: 'coo', label: 'COO / VP Operations', icon: '⚙️', color: '#0F6E56',
+    key: 'coo', label: 'COO / VP Operations', icon: '⚙️', color: '#12786F',
     description: 'Operational focus — efficiency, accuracy, headcount',
     aiInstruction: 'Write for a COO or VP of Operations audience. Focus on process improvement, accuracy rates, headcount efficiency, cycle time reduction, and operational risk elimination. Translate financial figures into operational outcomes (e.g. hours saved, error rates reduced, stockouts prevented).',
   },
@@ -224,12 +287,12 @@ const AUDIENCE_CONFIG = {
     aiInstruction: 'Write for a CEO or executive sponsor audience. Focus on strategic positioning, competitive differentiation, growth enablement, and enterprise risk reduction. Connect inventory accuracy to the broader business strategy. Minimize granular financial or operational detail — executives want the "so what", not the mechanics.',
   },
   cio: {
-    key: 'cio', label: 'CIO / CTO', icon: '💻', color: '#5B2D8E',
+    key: 'cio', label: 'CIO / CTO', icon: '💻', color: '#6A4C93',
     description: 'Technology focus — integration, architecture, IT displacement, scalability',
     aiInstruction: 'Write for a CIO or CTO audience. Focus on technology integration, system architecture, IT cost displacement, implementation risk, time-to-value, and scalability. Address how Cloud Inventory integrates with the existing ERP and technology stack, the effort required from the IT team, and the elimination of legacy technical debt. Quantify IT cost savings and reduced maintenance burden. Emphasise the no-code configuration model that reduces dependence on IT for ongoing changes. Avoid financial jargon — frame value in technology and architecture terms.',
   },
   mixed: {
-    key: 'mixed', label: 'Mixed audience', icon: '👥', color: '#3C3489',
+    key: 'mixed', label: 'Mixed audience', icon: '👥', color: '#6A4C93',
     description: 'All personas — CFO, COO, CEO, and CIO/CTO',
     aiInstruction: 'Write for a mixed executive audience that includes a CFO (cost/ROI), COO (operational efficiency), CEO (strategic risk/growth), and CIO/CTO (technology integration and IT displacement). Each Why should contain at least one hook for each persona — open with the strategic framing, support with operational and technology proof, and close with financial justification.',
   }
@@ -257,14 +320,14 @@ function buildExecHeadlines(v, r) {
       audience: 'CFO',
       icon: '💰',
       color: '#0089A6',
-      headline: `${fmtFull(r.npv5)} in net present value over 5 years`,
-      detail: `A total year-1 investment of ${fmtFull(r.totalInvestY1)} generates ${fmtFull(r.annualBenefit)} in annual recurring benefit — a ${fmtPct(r.roi)} first-year return with payback ${payStr}. The 5-year NPV of ${fmtFull(r.npv5)} at a ${fmtPct(v.discRate*100)} discount rate delivers strong risk-adjusted returns that meet or exceed most capital allocation hurdle rates.`
+      headline: `${fmtFull(r.totalContractNetBenefit)} in net economic benefit over ${r.contractMonths} months`,
+      detail: `The modeled ${r.contractMonths}-month contract generates ${fmtFull(r.totalContractBenefit)} in economic benefit against ${fmtFull(r.totalContractInvestment)} in investment — a ${fmtPct(r.totalContractRoi)} total contract return with payback ${r.contractPayback?r.contractPayback.toFixed(1)+' months':'not achieved during the term'}. Contract NPV is ${fmtFull(r.totalContractNpv)} at a ${fmtPct(v.discRate*100)} discount rate.`
     },
     {
       key: 'coo',
       audience: 'COO / VP Operations',
       icon: '⚙️',
-      color: '#0F6E56',
+      color: '#12786F',
       headline: `${fmtFull(r.laborSav + r.shrinkSav)} in annual labor and inventory loss reduction`,
       detail: `${Math.round(v.users)} inventory users reclaim an estimated ${fmtPct(v.mLabor*100)} of productive time through scan-verified, directed workflows — eliminating manual counts, paper-based processes, and reconciliation rework. Accuracy improvements reduce write-offs by ${fmtFull(r.shrinkSav)} and free ${fmtFull(r.carrySav)} in carrying costs annually.`
     },
@@ -280,7 +343,7 @@ function buildExecHeadlines(v, r) {
       key: 'cio',
       audience: 'CIO / CTO',
       icon: '💻',
-      color: '#5B2D8E',
+      color: '#6A4C93',
       headline: `${fmtFull(r.itSav)}/yr in IT & legacy system cost displacement`,
       detail: `Cloud Inventory is a cloud-native, API-first SaaS platform that integrates with ${v.competitor && COMP[v.competitor] ? 'your existing systems replacing ' + COMP[v.competitor].name : 'any ERP or system of record'} via standard REST APIs — no custom middleware, no on-premise infrastructure, no IT-managed upgrade cycles. No-code configuration means operational teams own changes without raising IT tickets. The ${fmtFull(v.otc)} one-time implementation cost covers full ERP integration, data migration, and go-live, with typical project delivery in ${v.implMonths || 3} months.`
     }
@@ -325,9 +388,9 @@ function buildTimeline() {
   return [
     { phase: 'Phase 1', name: 'Kickoff & configure', weeks: 'Weeks 1–3', color: '#0089A6',
       steps: ['Project kickoff and stakeholder alignment','ERP integration mapping and setup','System configuration — workflows, locations, users','Data migration — items, locations, on-hand counts'] },
-    { phase: 'Phase 2', name: 'Pilot & train', weeks: 'Weeks 4–5', color: '#0F6E56',
+    { phase: 'Phase 2', name: 'Pilot & train', weeks: 'Weeks 4–5', color: '#12786F',
       steps: ['Pilot go-live with core warehouse team','Mobile device provisioning and scanning setup','End-user training — typically 2–4 hours per user','Parallel run with existing system for validation'] },
-    { phase: 'Phase 3', name: 'Full go-live', weeks: 'Week 6+', color: '#3C3489',
+    { phase: 'Phase 3', name: 'Full go-live', weeks: 'Week 6+', color: '#6A4C93',
       steps: ['Full production go-live across all locations','Hypercare support period — daily check-ins','Field inventory module activation if applicable','First cycle count and accuracy benchmark established'] },
   ];
 }
@@ -354,15 +417,115 @@ function buildDecisionCriteria(v) {
    NEXT STEPS SECTION
    ───────────────────────────────────────────────────────────── */
 function buildNextSteps() {
-  const today = new Date();
-  const in2weeks = new Date(today.getTime() + 14*24*60*60*1000);
-  const in30days = new Date(today.getTime() + 30*24*60*60*1000);
-  const in45days = new Date(today.getTime() + 45*24*60*60*1000);
-  const fmt = d => d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  const today  = new Date();
+  const fmtD   = d => d.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
+  const addDays = n => new Date(today.getTime() + n * 86400000);
+  const v      = (typeof getVals === 'function') ? getVals() : {};
+  const stage  = Number(window.getCurrentBuyCycleStage?.() || 2);
+  const outcome = window._currentOpportunityOutcome || null;
+  const company = v.company || 'the prospect';
+
+  /* ── 1. Check if a Joint Project Plan exists for this company ── */
+  if (typeof _maps !== 'undefined' && Array.isArray(_maps) && _maps.length) {
+    const plan = _maps.find(function(m) {
+      return (m.company || '').toLowerCase() === company.toLowerCase() && m.is_active !== false;
+    });
+    if (plan) {
+      const open = (plan.milestones || [])
+        .filter(function(ms) { return ms.status !== 'done'; })
+        .sort(function(a,b) {
+          /* Sort: overdue first, then by dueDate ascending, undated last */
+          const da = a.dueDate ? new Date(a.dueDate) : null;
+          const db = b.dueDate ? new Date(b.dueDate) : null;
+          if (!da && !db) return 0;
+          if (!da) return 1;
+          if (!db) return -1;
+          return da - db;
+        })
+        .slice(0, 5); /* cap at 5 steps */
+
+      if (open.length) {
+        return open.map(function(ms) {
+          const due = ms.dueDate ? new Date(ms.dueDate) : null;
+          const isOverdue = due && due < today && ms.status !== 'done';
+          const byLabel = due
+            ? (isOverdue ? '⚠️ Overdue — ' : '') + fmtD(due)
+            : 'To be scheduled';
+          return {
+            by:     byLabel,
+            action: ms.title || 'Open milestone',
+            detail: (ms.owner ? 'Owner: ' + ms.owner + '. ' : '')
+                  + (ms.notes || ('From the Joint Project Plan for ' + company + '.'))
+                  + (isOverdue ? ' This step is past its due date.' : '')
+          };
+        });
+      }
+      /* Plan exists but all milestones done — show a completion note + closing steps */
+      return [
+        { by: fmtD(addDays(7)),  action: 'All Joint Project Plan milestones complete', detail: 'Your Joint Project Plan for ' + company + ' shows all milestones completed. Confirm internal approvals and procurement process are on track.' },
+        { by: fmtD(addDays(14)), action: 'Finalise contract and sign', detail: 'Work with your champion to expedite procurement. Provide order form and any requested security / legal documents.' },
+        { by: fmtD(addDays(21)), action: 'Kick off implementation', detail: 'Schedule technical kick-off call. Confirm ERP integration scope, site list, and go-live target.' }
+      ];
+    }
+  }
+
+  /* ── 2. No MAP — fall back to deal-stage-aware default steps ── */
+  if (stage === 2) {
+    return [
+      { by: fmtD(addDays(7)),  action: 'Validate ROI assumptions', detail: 'Share this business case with your champion. Confirm the three key inputs: inventory value, labour hours, and current write-off rate.' },
+      { by: fmtD(addDays(14)), action: 'Technical discovery call', detail: 'Review ERP integration requirements, user roles, and site configuration. Refine ROI assumptions based on confirmed data.' },
+      { by: fmtD(addDays(30)), action: 'Live product demonstration', detail: 'Tailored demo focused on your specific workflows — warehouse receiving, cycle counts, field inventory, and ERP sync.' },
+    ];
+  }
+
+  if (stage === 3) {
+    return [
+      { by: fmtD(addDays(5)), action:'Confirm the funding path', detail:'Identify the funding authority, budget source, and customer process for committing funds.' },
+      { by: fmtD(addDays(14)), action:'Validate the financial case', detail:'Review customer-supported inputs with the funding authority.' },
+      { by: fmtD(addDays(21)), action:'Document a customer-owned next step', detail:'Record the owner, commitment, and date in the Joint Project Plan.' },
+    ];
+  }
+
+  if (stage === 4) {
+    return [
+      { by: fmtD(addDays(7)),  action: 'Complete technical evaluation', detail: 'Finalise integration architecture review, security questionnaire, and IT sign-off. Provide reference architecture documentation.' },
+      { by: fmtD(addDays(14)), action: 'Stakeholder alignment meeting', detail: 'Present ROI findings to economic buyer and any remaining approvers. Address objections with the sensitivity analysis.' },
+      { by: fmtD(addDays(21)), action: 'Pilot proposal and SOW', detail: 'Deliver a written pilot proposal with scope, success metrics, investment, and proposed go-live date.' },
+    ];
+  }
+
+  if (stage === 5) {
+    return [
+      { by: fmtD(addDays(5)),  action: 'Proposal review and Q&A', detail: 'Address any outstanding commercial, legal, or technical questions. Provide redlines or revised order form if needed.' },
+      { by: fmtD(addDays(10)), action: 'Procurement and legal review', detail: 'Connect your legal team with the prospect\'s procurement contact. Expedite any security or vendor approval processes.' },
+      { by: fmtD(addDays(14)), action: 'Contract signature', detail: 'Confirm signature authority and obtain executed agreement. Initiate internal booking and implementation scheduling.' },
+    ];
+  }
+
+  if (stage === 6) return [
+    { by:fmtD(addDays(5)),action:'Confirm vendor selection',detail:'Document the customer decision, selection authority, and remaining conditions.' },
+    { by:fmtD(addDays(10)),action:'Complete the commercial path',detail:'Confirm procurement, legal, funding, signature timing, and customer owners.' },
+    { by:fmtD(addDays(14)),action:'Confirm implementation readiness',detail:'Align launch resources, integration ownership, and target kickoff.' }
+  ];
+
+  if (stage === 7 && outcome === 'won') {
+    return [
+      { by: fmtD(addDays(3)),  action: 'Implementation kick-off call', detail: 'Confirm implementation team, ERP integration scope, site list, and target go-live date. Distribute project plan.' },
+      { by: fmtD(addDays(14)), action: 'Data integration setup', detail: 'Complete ERP connector configuration, field mapping, and initial data validation in the staging environment.' },
+      { by: fmtD(addDays(30)), action: 'User training and go-live', detail: 'Complete end-user training sessions. Sign off on UAT. Execute go-live and begin capturing live ROI data.' },
+    ];
+  }
+
+  if (stage === 7 && outcome === 'lost') return [
+    { by:fmtD(addDays(7)),action:'Document the customer outcome',detail:'Capture the customer-stated loss reason and supporting evidence.' },
+    { by:fmtD(addDays(14)),action:'Preserve lessons learned',detail:'Record what changed and what should improve in a future opportunity.' }
+  ];
+
+  /* Default: generic high-quality steps matching the original */
   return [
-    { by: fmt(in2weeks), action: 'Technical discovery call', detail: 'Review ERP integration requirements, user roles, and site configuration. Refine ROI assumptions based on confirmed data.' },
-    { by: fmt(in30days), action: 'Live product demonstration', detail: 'Tailored demo focused on your specific workflows — warehouse receiving, cycle counts, field inventory, and ERP sync.' },
-    { by: fmt(in45days), action: 'Pilot program proposal', detail: 'Agree on pilot scope (1–2 sites, 4–6 weeks), success metrics, and go-live timeline. Begin procurement process.' },
+    { by: fmtD(addDays(14)), action: 'Technical discovery call', detail: 'Review ERP integration requirements, user roles, and site configuration. Refine ROI assumptions based on confirmed data.' },
+    { by: fmtD(addDays(30)), action: 'Live product demonstration', detail: 'Tailored demo focused on your specific workflows — warehouse receiving, cycle counts, field inventory, and ERP sync.' },
+    { by: fmtD(addDays(45)), action: 'Pilot program proposal', detail: 'Agree on pilot scope (1–2 sites, 4–6 weeks), success metrics, and go-live timeline. Begin procurement process.' },
   ];
 }
 
@@ -468,7 +631,7 @@ function buildNarrativeSections(v, r) {
             </tr>`).join('')}
         </tbody>
       </table>
-      <div style="margin-top:.5rem;font-size:10px;color:#94A3B8;">✓ = Full capability &nbsp;~ = Partial / requires configuration &nbsp;✗ = Not available or requires separate solution</div>
+      <div style="margin-top:.5rem;font-size:10px;color:#6B7A8D;">✓ = Full capability &nbsp;~ = Partial / requires configuration &nbsp;✗ = Not available or requires separate solution</div>
     </div>`;
 
   /* ── Next steps ── */
@@ -486,9 +649,16 @@ function buildNarrativeSections(v, r) {
         </div>`).join('')}
       <div class="e-next-cta">
         <div class="e-next-cta-text">Ready to move forward?</div>
-        <div style="font-size:11px;color:#7DB8DC;margin-top:4px;">Contact your Cloud Inventory representative to schedule the next step &nbsp;·&nbsp; cloudinventory.com</div>
+        <div style="font-size:11px;color:#45688A;margin-top:4px;">Contact your Cloud Inventory representative to schedule the next step &nbsp;·&nbsp; cloudinventory.com</div>
       </div>
     </div>`;
 
   return { headlineSection, whysSection, roiSection, timelineSection, criteriaSection, nextSection };
+}
+
+/* Expose data objects on window for cross-<script> access (print.html). */
+if (typeof window !== 'undefined') {
+  window.persistThreeWhys = persistThreeWhys;
+  if (typeof THREE_WHYS_LIBRARY !== 'undefined') window.THREE_WHYS_LIBRARY = THREE_WHYS_LIBRARY;
+  if (typeof AUDIENCE_CONFIG !== 'undefined') window.AUDIENCE_CONFIG = AUDIENCE_CONFIG;
 }

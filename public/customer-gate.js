@@ -12,34 +12,93 @@
 let _calcDirty = false;           // unsaved-changes flag
 let _gateInitialized = false;
 
-function markCalcDirty() { _calcDirty = true; updateCompletenessMeter(); }
-function clearCalcDirty() { _calcDirty = false; }
+function markCalcDirty() { _calcDirty = true; updateCompletenessMeter(); _updateDirtyIndicator(); }
+function clearCalcDirty() { _calcDirty = false; _updateDirtyIndicator(); }
+
+function _updateDirtyIndicator() {
+  const el = document.getElementById('saveStatus');
+  if (!el) return;
+  if (_calcDirty) {
+    el.style.display = 'inline-flex';
+    el.innerHTML = '<span style="width:7px;height:7px;border-radius:50%;background:#F59E0B;flex-shrink:0;margin-right:5px;"></span><span style="color:rgba(255,255,255,.6);font-size:12px;">Unsaved changes</span>';
+  } else {
+    el.style.display = 'none';
+    el.innerHTML = '';
+  }
+}
+/* Exposed on window so other files (api.js logout, index.html) share one check. */
+if (typeof window !== 'undefined') {
+  window.markCalcDirty = markCalcDirty;
+  window.clearCalcDirty = clearCalcDirty;
+}
 
 /* ── Entry point: called when the calc tab initializes ── */
 async function initCalcTab() {
-  if (!_gateInitialized) {
-    _gateInitialized = true;
-    if (typeof loadCompanies === 'function') await loadCompanies();
-    bindCalcDirtyTracking();
-  }
   const company = document.getElementById('companyName');
   const hasActive = company && company.value && company.value.trim();
-  if (!hasActive) showCustomerGate(); else showCalcBody();
+
+  if (!_gateInitialized) {
+    _gateInitialized = true;
+    bindCalcDirtyTracking();
+
+    if (!hasActive) {
+      /* Show gate immediately with current (possibly empty) list so there's no blank
+         "Loading..." hang. Then refresh once companies arrive from the server. */
+      showCustomerGate();
+      if (typeof loadCompanies === 'function') {
+        await loadCompanies();
+        /* Re-render the list now that data has arrived */
+        const search = document.getElementById('cgSearch');
+        cgRenderList(search ? search.value : '');
+      }
+      return;
+    }
+    /* Company already set (loaded scenario) — fetch companies in background */
+    if (typeof loadCompanies === 'function') loadCompanies();
+  } else if (!hasActive) {
+    showCustomerGate();
+    return;
+  }
+
+  showCalcBody();
 }
 
 /* ── Gate visibility ── */
-function showCustomerGate() {
+async function showCustomerGate() {
   if (_calcDirty && !confirmDiscardChanges()) return;
+  /* The gate lives inside the calculator pane. If Switch is clicked from
+     another tab (e.g. Discovery), move to the calculator first so the gate
+     is actually visible. */
+  if (typeof switchTab === 'function') {
+    const activePane = document.querySelector('.pane.active');
+    if (!activePane || activePane.id !== 'tab-calc') switchTab('calc');
+  }
   const gate = document.getElementById('customerGate');
   const body = document.getElementById('calcBody');
   const switchBtn = document.getElementById('calcSwitchCustomerBtn');
   if (gate) gate.style.display = 'block';
   if (body) body.style.display = 'none';
   if (switchBtn) switchBtn.style.display = 'none';
+  /* Customer switching is a refresh boundary: do not offer a stale cached
+     customer list or scenario counts after another rep has updated a deal. */
+  if (typeof loadCompanies === 'function') { try { await loadCompanies(); } catch(e) {} }
+  if (typeof fetchScenarios === 'function') { try { await fetchScenarios(); } catch(e) {} }
   cgRenderList('');
   cgRenderRecent();
-  const s = document.getElementById('cgNewCompany');
-  if (s) { s.value = ''; s.focus(); }  // clear any browser autofill, then focus
+  /* Chrome ignores autocomplete=off on lone text inputs and will autofill the
+     login username into these. Explicitly clear them on open (and once more on
+     the next frame, since Chrome sometimes autofills AFTER render). */
+  const clearGateFields = () => {
+    ['cgNewCompany', 'cgSearch', 'customerSearchInput'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+  };
+  clearGateFields();
+  requestAnimationFrame(clearGateFields);
+  setTimeout(clearGateFields, 120);
+  const focusEl = document.getElementById('cgNewCompany');
+  if (focusEl) focusEl.focus();
 }
 function showCalcBody() {
   const gate = document.getElementById('customerGate');
@@ -76,27 +135,12 @@ function cgCreateNew() {
 }
 
 /* ── Existing customer list ── */
-function cgRenderList(term) {
+async function cgRenderList(term) {
   const host = document.getElementById('cgList');
   if (!host) return;
-  const q = (term || '').trim().toLowerCase();
-  const list = (typeof getCompanies === 'function' ? getCompanies() : [])
-    .filter(c => !q || c.name.toLowerCase().includes(q))
-    .sort((a, b) => a.name.localeCompare(b.name));
-  if (!list.length) {
-    host.innerHTML = `<div class="cg-empty">${q ? 'No matches.' : 'No customers yet — create one to start.'}</div>`;
-    return;
-  }
-  host.innerHTML = list.map(c => {
-    const meta = [];
-    if (c.scenarios)    meta.push(c.scenarios + ' scenario' + (c.scenarios !== 1 ? 's' : ''));
-    if (c.plans)        meta.push(c.plans + ' plan' + (c.plans !== 1 ? 's' : ''));
-    if (c.stakeholders) meta.push(c.stakeholders + ' stakeholder' + (c.stakeholders !== 1 ? 's' : ''));
-    return `<button class="cg-list-item" onclick="cgSelectExisting('${escapeHtml(c.name).replace(/'/g,"\\'")}')">
-      <span class="cg-li-name">${escapeHtml(c.name)}</span>
-      <span class="cg-li-meta">${escapeHtml(meta.join(' · ') || 'No records yet')}</span>
-    </button>`;
-  }).join('');
+  host.innerHTML='<div class="cg-empty">Loading authorized customers…</div>';
+  if(typeof renderLandingAuthorizedCustomers==='function')return renderLandingAuthorizedCustomers(host,term||'');
+  host.innerHTML='<div class="cg-empty">Customer workspace is still loading…</div>';
 }
 function cgSelectExisting(name) {
   const cn = document.getElementById('companyName');
@@ -122,11 +166,9 @@ function rememberRecentCustomer(name) {
 function cgRenderRecent() {
   const host = document.getElementById('cgRecent');
   if (!host) return;
-  if (!_recentCustomers.length) { host.innerHTML = ''; return; }
-  host.innerHTML = `<div class="cg-recent-label">Recent</div>
-    <div class="cg-recent-chips">${_recentCustomers.map(n =>
-      `<button class="cg-recent-chip" onclick="cgSelectExisting('${escapeHtml(n).replace(/'/g,"\\'")}')">${escapeHtml(n)}</button>`
-    ).join('')}</div>`;
+  /* Recents are rendered in the authorized in-context switcher. Never show
+     stale name-only entries here after a user's team access changes. */
+  host.innerHTML = '<button class="cg-skip" onclick="openCustomerSwitcher({targetTab:\'calc\'})">Open recent and team customers →</button>';
 }
 
 /* ── Breadcrumb: Company › Scenario ── */
@@ -136,7 +178,7 @@ function updateBreadcrumb() {
   const company = (document.getElementById('companyName')?.value || '').trim();
   const scenario = (document.getElementById('scenarioName')?.value || '').trim();
   if (!company) { bc.innerHTML = ''; return; }
-  bc.innerHTML = `<span class="bc-home" onclick="showCustomerGate()" title="Switch customer">⌂</span>` +
+  bc.innerHTML = `<span class="bc-home" onclick="openCustomerSwitcher()" title="Switch customer">⇄</span>` +
     `<span class="bc-sep">›</span><span class="bc-company">${escapeHtml(company)}</span>` +
     (scenario ? `<span class="bc-sep">›</span><span class="bc-scenario">${escapeHtml(scenario)}</span>` : '');
 }
@@ -175,24 +217,45 @@ function updateCompletenessMeter() {
 }
 
 /* ── Unsaved-changes guard ── */
+/* ── Unsaved-changes: single source of truth ──────────────────────────
+   Every exit path — in-app tab switch, customer switch, logout, and
+   browser close/refresh/back — routes through this one predicate. */
+function hasUnsavedChanges() { return _calcDirty === true; }
+window.hasUnsavedChanges = hasUnsavedChanges;
+
+/* In-app guard: returns true if it's safe to proceed (either nothing to
+   lose, or the user accepted losing it). Used by tab switch, customer
+   switch, and logout. */
 function confirmDiscardChanges() {
-  return confirm('You have unsaved changes to this business case. Switch anyway? Your unsaved edits will be lost.');
+  if (!hasUnsavedChanges()) return true;
+  return confirm('You have unsaved changes to this business case. Leave anyway? Your unsaved edits will be lost.');
 }
+if (typeof window !== 'undefined') window.confirmDiscardChanges = confirmDiscardChanges;
+
+/* Browser-level guard: close tab, refresh, Back, or external navigation.
+   Browsers show their own generic prompt when we set returnValue. */
+if (typeof window !== 'undefined' && !window._beforeUnloadBound) {
+  window._beforeUnloadBound = true;
+  window.addEventListener('beforeunload', (e) => {
+    if (hasUnsavedChanges()) { e.preventDefault(); e.returnValue = ''; return ''; }
+  });
+}
+
 function bindCalcDirtyTracking() {
   const body = document.getElementById('calcBody');
   if (!body) return;
   body.addEventListener('input', (e) => {
-    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT')) markCalcDirty();
+    const t = e.target && e.target.tagName;
+    if (t === 'INPUT' || t === 'SELECT' || t === 'TEXTAREA') markCalcDirty();
   });
-  if (typeof window !== 'undefined') {
-    const origSave = window.saveScenario;
-    if (typeof origSave === 'function' && !origSave._dirtyWrapped) {
-      window.saveScenario = function (...args) {
-        const r = origSave.apply(this, args);
-        clearCalcDirty();
-        return r;
-      };
-      window.saveScenario._dirtyWrapped = true;
-    }
-  }
+  /* Three Whys live in the Exec tab (outside #calcBody) but are part of the
+     saved scenario, so track their edits toward the same dirty state. */
+  ['why_act','why_ci','why_now'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el._dirtyBound) { el._dirtyBound = true; el.addEventListener('input', () => markCalcDirty()); }
+  });
+  /* Note: the dirty flag is cleared inside _doSave() on confirmed save success
+     and in loadFromObject() on load — NOT via a saveScenario wrapper — because
+     saveScenario() may only open the version dialog and return without saving
+     (or the user may cancel). */
 }

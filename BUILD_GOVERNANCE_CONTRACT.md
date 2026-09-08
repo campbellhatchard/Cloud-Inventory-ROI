@@ -1,0 +1,312 @@
+# PART 0 — PERMANENT BUILD GOVERNANCE CONTRACT
+
+These rules apply to this build and MUST be carried forward unchanged into every future Cloud Inventory ROI application build prompt unless the Product Owner explicitly replaces them.
+
+## 0.1 AUTHORITATIVE BASELINE — ABSOLUTE RULE
+
+The ONLY authoritative baseline for a production release is the exact Git commit/tree currently deployed from production `main`, independently verified against the production hosting service before development or release integration begins.
+
+For v6.9.1 that baseline is:
+
+- commit `19c9d9b537f8eedf593110360c876817eb107297`
+- tree `b050db4e2fdf89fb4d47361e0218a9d739da4b79`
+- version v6.9.0
+
+A validated production artifact may be used to reconstruct that exact tree, but an earlier/raw developer ZIP is provenance only and must never supersede the deployed Git tree.
+
+Do not:
+
+- start from an older version or development branch
+- substitute a previous raw ZIP because it has the requested version number
+- merge from an older archive
+- reconstruct production files from memory
+- replace unrelated production files with stale copies
+- weaken or delete cumulative regression protection to make a new build pass
+
+All work must be applied FORWARD from the exact production baseline. If the production commit/tree cannot be verified or reconstructed exactly, **STOP THE BUILD** rather than substitute another source.
+
+---
+
+# 0.2 VERSION INHERITANCE CONTRACT
+
+A higher application version MUST contain all approved functionality and all unresolved corrective requirements from the authoritative prior version.
+
+A version number increase does NOT prove that prior corrective work was incorporated.
+
+Before changing code, create an internal inheritance checklist containing:
+
+1. Current authoritative application version.
+2. Current ROI Model version.
+3. Current Brand System version.
+4. Current Application Knowledge version.
+5. Current Christie Persona version.
+6. Features that must be preserved.
+7. Previously identified release blockers.
+8. Previously corrected defects that must not regress.
+9. Outstanding production smoke-test requirements.
+10. Explicitly retired functionality that must not reappear.
+
+Every item must be traced into the new build.
+
+---
+
+# 0.3 PRODUCT OWNER FINDINGS ARE CUMULATIVE
+
+Unresolved Product Owner audit findings remain binding until a later Product Owner audit explicitly marks them resolved.
+
+Codex may not consider a finding resolved merely because:
+
+- a newer version exists
+- a related test passes
+- similar code was changed
+- the issue is not mentioned in the new feature request
+- the issue came from an earlier version
+- the current build has a different development focus
+
+If a previous audit classified something as a release blocker, the new build must either:
+
+A. Correct it and prove the correction, or  
+B. Explicitly report it as still unresolved.
+
+Never silently drop an unresolved finding.
+
+---
+
+# 0.4 NO SILENT REGRESSION / NO SILENT REINTRODUCTION
+
+Before release packaging, search the full active codebase for:
+
+- retired logic
+- superseded customer-output calculations
+- retired UI controls
+- obsolete API paths
+- deprecated output builders
+- old financial formulas
+- old branding implementations
+- old authorization bypasses
+- legacy customer-safe/public endpoints
+
+A corrected defect is considered regressed if an older implementation remains reachable through any active route, control, export, URL, compatibility path or public API.
+
+Dead historical documentation may remain.
+
+Reachable legacy behavior may not.
+
+---
+
+# 0.5 ACTIVE PATH OVER FILE PRESENCE
+
+Do not certify a feature because a correct implementation exists somewhere in the repository.
+
+Certification must identify what the production application ACTUALLY executes.
+
+For every critical workflow determine:
+
+UI control  
+→ browser function  
+→ API endpoint  
+→ service  
+→ authoritative data source  
+→ output generator  
+→ delivered artifact
+
+If an older implementation is still the active path, the feature fails regardless of whether a newer implementation also exists.
+
+---
+
+# 0.6 ONE AUTHORITATIVE ECONOMIC MODEL
+
+ROI Model authority remains:
+
+**ROI Model v2.8 / modelVersion 28**
+
+No customer-facing output may independently recreate, scale, approximate, stress-test or reinterpret ROI economics.
+
+Customer outputs may FORMAT governed economics.
+
+They may not CALCULATE new economics.
+
+Prohibited examples include:
+
+- multiplying ROI by 70%, 100% or 130%
+- multiplying annual benefit by arbitrary scenario factors
+- approximate driver weighting
+- browser-side benefit recalculation
+- annual benefit ÷ 12 presented as Cost of Delay
+- annual benefit ÷ 2 presented as delayed action
+- independent customer-output payback
+- independent output ROI
+- creating investment assumptions to manufacture ROI
+- reinterpreting inventory accuracy percentage as inventory dollars
+
+If sensitivity economics are ever required, they must be generated by an explicitly governed ROI service and approved as part of the ROI methodology.
+
+Do not create that feature in this release.
+
+---
+
+# 0.7 EXECUTIVE VALUE STORY AUTHORITY
+
+The governing rule is:
+
+**The Executive Value Story owns the facts. The output owns the presentation.**
+
+All customer-facing executive outputs must consume an authoritative server-generated Executive Value Story or an explicitly frozen published derivative of it.
+
+A browser, Word generator, PDF generator, PowerPoint generator or share page must not rebuild the value story from raw scenario data.
+
+---
+
+# 0.8 CUSTOMER-SAFE DATA BOUNDARY
+
+Public/customer endpoints must use explicit allow-listed customer-safe projections.
+
+Never expose a full internal object and rely on the browser to hide fields.
+
+Prohibited public payloads include raw:
+
+- `scenario.data`
+- internal notes
+- seller coaching
+- BuyCycle evidence
+- manager plans
+- Competitive Intelligence research
+- non-approved Customer Proof
+- internal Solution Fit findings
+- internal assumptions
+- audit metadata not intended for customers
+- internal Proposal state
+
+Server controls what customers are allowed to receive.
+
+---
+
+# 0.9 OUTPUT REGISTRY MUST MATCH PRODUCTION
+
+The Output Registry is a release control, not documentation.
+
+For every registered output verify:
+
+- owner file/module exists
+- UI control exists if output is active
+- production route matches the registry
+- audience classification matches reality
+- authoritative source matches reality
+- readiness requirement matches reality
+- output is customer/internal as declared
+- export is not a no-op
+- generator is reachable
+- deprecated outputs are marked inactive
+
+A registry entry pointing at a nonexistent or inactive implementation is a RELEASE FAILURE.
+
+---
+
+# 0.10 CUSTOMER VS INTERNAL CLASSIFICATION
+
+Every output must explicitly be one of:
+
+**CUSTOMER SAFE**
+
+or
+
+**CONFIDENTIAL — INTERNAL USE ONLY**
+
+No ambiguous output classification.
+
+Internal-only information may never appear in customer-safe outputs because a template accidentally reused the wrong source.
+
+---
+
+# 0.11 IMMUTABLE EVIDENCE / VERSION PROVENANCE
+
+Historical customer evidence must remain immutable.
+
+Published customer outputs must not silently change because a later scenario was created.
+
+A link or published revision must identify the exact content that was published.
+
+New evidence may inform a future revision.
+
+It may not rewrite history.
+
+---
+
+# 0.12 RELEASE VERSION NUMBER IS NOT APPROVAL
+
+Codex must never label a package release-ready merely because:
+
+- build completes
+- tests pass
+- version increments
+- ZIP is generated
+
+Only the Product Owner assigns:
+
+**GREEN — Ready for controlled production pilot**
+
+**YELLOW — Pilot-ready with known non-blocking issues**
+
+**RED — Release blockers remain**
+
+Codex may provide test evidence but may not self-assign final Product Owner approval.
+
+---
+
+# 0.13 REQUIRED PRE-BUILD BASELINE AUDIT
+
+Before modifying source, run and document:
+
+1. exact production Git commit and tree (plus any reference artifact filename/hash)
+2. application version
+3. git/package version indicators
+4. ROI model version
+5. migration level
+6. output registry
+7. existing tests
+8. active Customer Business Case route
+9. active Executive output routes
+10. active Champion Pack implementation
+11. active Battlecard export
+12. active Solution Fit workflow
+
+Produce:
+
+`BASELINE_INHERITANCE_AUDIT.md`
+
+The report must prove this build started from v6.9.0.
+
+---
+
+# 0.14 REQUIRED POST-BUILD DIFFERENTIAL AUDIT
+
+Before packaging, compare the new build against the authoritative baseline.
+
+Produce:
+
+`BUILD_DIFFERENTIAL_AUDIT.md`
+
+Separate changes into:
+
+- intentionally changed
+- intentionally preserved
+- removed as obsolete
+- migrations added
+- tests added
+- unresolved issues
+
+Unexpected large-scale file replacement is a failure condition requiring investigation.
+
+---
+
+# 0.15 REGRESSION FIREWALL
+
+Every release must preserve permanent tests for previously corrected critical defects.
+
+Once a release-blocking defect receives a regression test, that test becomes part of the permanent suite.
+
+Do not delete, skip, weaken or rewrite the test merely to make a new build pass.
+
+If architecture legitimately changes, replace the test only with equivalent or stronger protection.
+
+---

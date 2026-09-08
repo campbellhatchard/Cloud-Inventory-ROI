@@ -1,0 +1,31 @@
+const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');
+const root=path.join(__dirname,'..');const auth=require('../src/authorization');
+const src=n=>fs.readFileSync(path.join(root,n),'utf8');
+test('effective permissions are the union of every assigned role',()=>{
+ const repLeader={role:'rep',roleKeys:['rep','sales_manager']},seLeader={role:'se',roleKeys:['se','sales_manager']},repAdmin={role:'rep',roleKeys:['rep','admin']};
+ assert.ok(auth.hasPermission(repLeader,'edit_own_customers'));assert.ok(auth.hasPermission(repLeader,'view_team_dashboard'));
+ assert.ok(auth.hasPermission(seLeader,'edit_team_solution_fits'));assert.ok(auth.hasPermission(seLeader,'view_team_customers'));
+ assert.ok(auth.hasPermission(repAdmin,'view_all_customers'));assert.ok(auth.hasPermission(repAdmin,'edit_own_customers'));
+});
+test('security matrix keeps team scope separate from capability',()=>{
+ const rep={id:'rep-a',role:'rep',roleKeys:['rep']},se={id:'se-a',role:'se',roleKeys:['se']},leader={id:'lead-a',role:'sales_manager',roleKeys:['sales_manager']},admin={id:'admin',role:'admin',roleKeys:['admin']};
+ assert.equal(auth.resolveCustomerDecision(rep,{owned:true},'view'),true);
+ assert.equal(auth.resolveCustomerDecision(rep,{teamScoped:true},'view'),false,'rep membership alone must not expose teammate customers');
+ assert.equal(auth.resolveCustomerDecision(se,{teamScoped:true},'view'),true);
+ assert.equal(auth.resolveCustomerDecision(se,{teamScoped:true},'edit'),false,'SE does not edit the full customer record by default');
+ assert.equal(auth.resolveCustomerDecision(leader,{teamScoped:true},'view'),true);
+ assert.equal(auth.resolveCustomerDecision(leader,{teamScoped:false},'view'),false);
+ assert.equal(auth.resolveCustomerDecision(admin,{teamScoped:false},'view'),true);
+ assert.equal(auth.resolveSolutionFitDecision(se,{teamScoped:true},'edit'),true);
+ assert.equal(auth.resolveSolutionFitDecision(leader,{teamScoped:true},'edit'),false);
+ assert.equal(auth.resolveSolutionFitDecision(admin,{},'edit'),true);
+});
+test('roles determine capability and teams determine SQL record scope',()=>{const a=src('src/authorization.js');assert.match(a,/ROLE_PERMISSIONS/);assert.match(a,/sales_team_memberships viewer/);assert.match(a,/customer_ownership/);assert.match(a,/explicit_sharing/);assert.match(a,/global_permission/);});
+test('team and multi-role migration is additive and preserves attribution',()=>{const m=src('migrations/027_sales_teams_permissions.sql');for(const s of ['sales_teams','sales_team_memberships','created_by','primary_se_id','additional_se_ids','handoff_change_history','opportunity_team_snapshot'])assert.match(m,new RegExp(s));assert.match(m,/UPDATE handoffs SET created_by=COALESCE/);});
+test('Solution Fit authorization is server-side and not creator-exclusive',()=>{const h=src('src/routes/handoffs.js');assert.match(h,/solutionFitAccess/);assert.doesNotMatch(h,/created_by\s*!==/);assert.match(h,/handoff_change_history/);assert.match(h,/assignment_changed/);});
+test('Solution Fit assignment permits SE self-assignment but reserves other assignments for Admin',()=>{const h=src('src/routes/handoffs.js');assert.match(h,/Sales Engineers may self-assign as Primary SE/);assert.match(h,/assign_solution_fit/);assert.match(h,/additional\.length/);});
+test('customer, scenario, stage, and manager routes use team-scoped authorization',()=>{assert.match(src('server.js'),/listAuthorizedCustomers/);assert.match(src('src/routes/scenarios.js'),/scenarioAccess/);assert.match(src('src/routes/stage-readiness.js'),/scenarioAccess/);assert.match(src('src/routes/sales-manager.js'),/customerScopeSql/);});
+test('team leaders cannot silently edit rep stage or out-of-scope manager actions',()=>{const stage=src('src/routes/stage-readiness.js'),manager=src('src/routes/sales-manager.js');assert.match(stage,/Use the manager override workflow to challenge a stage/);assert.match(manager,/scenarioAccess\(req\.user,b\.scenarioId,'view'\)/);assert.match(manager,/outside your Sales Team scope/);});
+test('team creation validates the active primary leader role',()=>{const teams=src('src/routes/sales-teams.js');assert.match(teams,/validatePrimaryLeader/);assert.match(teams,/Primary Sales Leader must be an active user with the Sales Leader role/);});
+test('closed opportunities preserve the historical team and SE snapshot',()=>{const stage=src('src/routes/stage-readiness.js');assert.match(stage,/INSERT INTO opportunity_team_snapshot/);assert.match(stage,/team_ids_at_close/);assert.match(stage,/primary_se_id_at_close/);});
+test('admin team workflow supports searchable multi-role membership',()=>{const ui=src('public/teams-admin.js'),html=src('public/index.html');assert.match(ui,/Search users/);assert.match(ui,/membership/);assert.match(html,/adminPanel-teams/);assert.match(html,/newRepRole/);assert.match(html,/newSeRole/);assert.match(html,/newSalesManagerRole/);assert.match(html,/newAdminRole/);});

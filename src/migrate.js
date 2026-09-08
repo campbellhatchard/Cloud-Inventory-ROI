@@ -17,9 +17,16 @@ const bcrypt = require('bcrypt');
 const { Pool } = require('pg');
 
 async function ensureBootstrapAdmin(client) {
-  const username = String(process.env.BOOTSTRAP_ADMIN_USERNAME || 'admin').trim();
-  const password = String(process.env.BOOTSTRAP_ADMIN_PASSWORD || 'CloudInventory2026!');
-  const email = String(process.env.BOOTSTRAP_ADMIN_EMAIL || 'admin@cloudinventory.com')
+  const isProduction = process.env.NODE_ENV === 'production';
+  const username = String(
+    process.env.BOOTSTRAP_ADMIN_USERNAME || (isProduction ? '' : 'admin')
+  ).trim();
+  const password = String(
+    process.env.BOOTSTRAP_ADMIN_PASSWORD || (isProduction ? '' : 'CloudInventory2026!')
+  );
+  const email = String(
+    process.env.BOOTSTRAP_ADMIN_EMAIL || (isProduction ? '' : 'admin@cloudinventory.com')
+  )
     .trim()
     .toLowerCase();
   const roundsRaw = Number.parseInt(process.env.BCRYPT_ROUNDS || '12', 10);
@@ -29,7 +36,7 @@ async function ensureBootstrapAdmin(client) {
 
   if (!username || !email || !password) {
     throw new Error(
-      'BOOTSTRAP_ADMIN_USERNAME, BOOTSTRAP_ADMIN_EMAIL, and BOOTSTRAP_ADMIN_PASSWORD must be non-empty.'
+      'BOOTSTRAP_ADMIN_USERNAME, BOOTSTRAP_ADMIN_EMAIL, and BOOTSTRAP_ADMIN_PASSWORD must be configured and non-empty.'
     );
   }
 
@@ -47,8 +54,8 @@ async function ensureBootstrapAdmin(client) {
   if (!rows.length) {
     const passwordHash = await bcrypt.hash(password, rounds);
     await client.query(
-      `INSERT INTO users (email, username, password_hash, role, first_login, is_active)
-       VALUES ($1, $2, $3, 'admin', TRUE, TRUE)`,
+      `INSERT INTO users (email, username, password_hash, role, roles, first_login, is_active)
+       VALUES ($1, $2, $3, 'admin', ARRAY['admin'], TRUE, TRUE)`,
       [email, username, passwordHash]
     );
     console.log(
@@ -74,6 +81,7 @@ async function ensureBootstrapAdmin(client) {
       `UPDATE users
        SET password_hash = $1,
            role = 'admin',
+           roles = CASE WHEN 'admin' = ANY(roles) THEN roles ELSE array_prepend('admin', roles) END,
            first_login = TRUE,
            is_active = TRUE,
            failed_login_count = 0,

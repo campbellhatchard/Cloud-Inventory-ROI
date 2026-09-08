@@ -5,14 +5,15 @@
 
 let _stakeholders = [];
 let _stakeCompany = '';
+let _stakeRepFilter = '';
 
 const STAKE_ROLES = {
   champion:        { label: 'Champion',        color: '#2E7D32' },
-  economic_buyer:  { label: 'Economic Buyer',  color: '#0C447C' },
-  technical_buyer: { label: 'Technical Buyer', color: '#00A7CF' },
-  influencer:      { label: 'Influencer',      color: '#854F0B' },
+  economic_buyer:  { label: 'Economic Buyer',  color: '#45688A' },
+  technical_buyer: { label: 'Technical Buyer', color: '#00A9CC' },
+  influencer:      { label: 'Influencer',      color: '#A6791E' },
   blocker:         { label: 'Blocker',         color: '#C81E10' },
-  end_user:        { label: 'End User',        color: '#5A6570' }
+  end_user:        { label: 'End User',        color: '#64748B' }
 };
 
 async function initStakeTab() {
@@ -23,16 +24,61 @@ async function initStakeTab() {
 }
 
 function populateStakeCompanySelect() {
-  const sel = document.getElementById('stakeCompanySel');
-  if (!sel) return;
-  const list = getCompanies();
-  const opts = ['<option value="">— Select a company —</option>'];
-  list.forEach(c => {
-    opts.push(`<option value="${escapeHtml(c.name)}" ${c.name === _stakeCompany ? 'selected' : ''}>${escapeHtml(c.name)}${c.stakeholders ? '  (' + c.stakeholders + ')' : ''}</option>`);
-  });
-  opts.push('<option value="__new__">+ New company…</option>');
-  sel.innerHTML = opts.join('');
+  /* Legacy <select> no longer exists — now using typeahead input.
+     Update the input value if a company is already selected. */
+  const input = document.getElementById('stakeCompanyInput');
+  if (input && _stakeCompany) input.value = _stakeCompany;
   updateStakeGate();
+  /* Show rep filter for admins */
+  const user = window.ciAuth ? window.ciAuth.getUser() : {};
+  const isAdmin = (typeof clientHasRole==='function'&&clientHasRole(user,'admin','Admin')) || (user.roleKeys||[]).includes('sales_manager') || (user.roles||[]).some(r=>r==='Sales Leader'||r==='Sales Manager');
+  const repFilter = document.getElementById('stakeRepFilter');
+  if (repFilter) repFilter.style.display = isAdmin ? '' : 'none';
+}
+
+function stakeCompanySearch(q) {
+  const results = document.getElementById('stakeCompanyResults');
+  if (!results) return;
+  const list = getCompanies();
+  const term = (q || '').toLowerCase().trim();
+  const matches = term
+    ? list.filter(c => c.name.toLowerCase().includes(term))
+    : list.slice(0, 10);
+
+  if (!matches.length && !term) { results.style.display = 'none'; return; }
+
+  const items = matches.slice(0, 12).map(c =>
+    `<div class="cs-result" onmousedown="setStakeCompanyFromSearch('${escapeHtml(c.name).replace(/'/g,"\\'")}')">
+      ${escapeHtml(c.name)}
+      ${c.stakeholders ? `<span style="font-size:11px;color:var(--gray-400);"> (${c.stakeholders} stakeholder${c.stakeholders!==1?'s':''})</span>` : ''}
+    </div>`
+  );
+  if (term) {
+    items.push(`<div class="cs-result cs-result-new" onmousedown="setStakeCompanyFromSearch('${escapeHtml(q).replace(/'/g,"\\'")}',true)">+ Use "${escapeHtml(q)}" as new company</div>`);
+  }
+  results.innerHTML = items.join('');
+  results.style.display = 'block';
+}
+
+function setStakeCompanyFromSearch(name, isNew) {
+  const input = document.getElementById('stakeCompanyInput');
+  const results = document.getElementById('stakeCompanyResults');
+  if (input) input.value = name;
+  if (results) results.style.display = 'none';
+  if (isNew) {
+    checkCompanyOnEntry(name, finalName => {
+      if (!finalName) return;
+      _stakeCompany = finalName;
+      if (input) input.value = finalName;
+      if (!getCompanies().some(c => c.name.toLowerCase() === finalName.toLowerCase())) {
+        getCompanies().push({ name: finalName, scenarios:0, plans:0, stakeholders:0 });
+      }
+      updateStakeGate();
+      loadStakeholders();
+    });
+  } else {
+    setStakeCompany(name);
+  }
 }
 
 function updateStakeGate() {
@@ -50,7 +96,19 @@ async function loadStakeCompanies() {
 
 async function loadStakeholders() {
   try {
-    const url = '/api/stakeholders' + (_stakeCompany ? '?company=' + encodeURIComponent(_stakeCompany) : '');
+    /* No company selected → show nothing. Previously an admin with no company
+       selected fell through to /api/stakeholders?all=true and saw every
+       stakeholder across all companies, which looked like another customer's
+       data leaking into an unselected view. */
+    if (!_stakeCompany || !_stakeCompany.trim()) {
+      _stakeholders = [];
+      renderStakeTab();
+      return;
+    }
+    const user = window.ciAuth ? window.ciAuth.getUser() : {};
+    const isAdmin = (typeof clientHasRole==='function'&&clientHasRole(user,'admin','Admin')) || (user.roleKeys||[]).includes('sales_manager') || (user.roles||[]).some(r=>r==='Sales Leader'||r==='Sales Manager');
+    let url = isAdmin ? '/api/stakeholders?all=true' : '/api/stakeholders';
+    if (_stakeCompany) url += (url.includes('?') ? '&' : '?') + 'company=' + encodeURIComponent(_stakeCompany);
     const resp = await apiFetch(url);
     if (!resp || !resp.ok) return;
     _stakeholders = await resp.json();
@@ -136,15 +194,20 @@ function renderStakeCoverage() {
 function renderStakeList() {
   const el = document.getElementById('stakeList');
   if (!el) return;
+  const user = window.ciAuth ? window.ciAuth.getUser() : {};
+  const isAdmin = (typeof clientHasRole==='function'&&clientHasRole(user,'admin','Admin')) || (user.roleKeys||[]).includes('sales_manager') || (user.roles||[]).some(r=>r==='Sales Leader'||r==='Sales Manager');
+
   if (!_stakeholders.length) {
     el.innerHTML = '<div class="empty-state"><p>No stakeholders mapped yet. Add the people who will decide this deal.</p></div>';
     return;
   }
+  const ownerHeader = isAdmin ? '<th>Rep</th>' : '';
   el.innerHTML = `<div class="user-table-wrap"><table class="user-table">
-    <thead><tr><th>Name</th><th>Title</th><th>Role</th><th>Influence</th><th>Support</th><th>Engaged</th><th></th></tr></thead>
+    <thead><tr><th>Name</th><th>Title</th><th>Role</th><th>Influence</th><th>Support</th><th>Engaged</th>${ownerHeader}<th></th></tr></thead>
     <tbody>${_stakeholders.map(s => {
       const r = STAKE_ROLES[s.role] || STAKE_ROLES.influencer;
       const bar = (n, color) => `<div class="stake-bar"><div style="width:${n * 20}%;background:${color};"></div></div>`;
+      const ownerCell = isAdmin ? `<td style="font-size:11.5px;color:var(--gray-500);">${escapeHtml(s.owner_username || '')}</td>` : '';
       return `<tr>
         <td><strong>${escapeHtml(s.name)}</strong>${s.notes ? `<div style="font-size:11px;color:var(--gray-400);max-width:220px;">${escapeHtml(s.notes.slice(0, 80))}</div>` : ''}</td>
         <td style="font-size:12px;color:var(--gray-500);">${escapeHtml(s.title || '—')}</td>
@@ -152,6 +215,7 @@ function renderStakeList() {
         <td>${bar(s.influence, 'var(--navy)')}</td>
         <td>${bar(s.support, s.support >= 4 ? 'var(--green)' : s.support <= 2 ? 'var(--red)' : 'var(--amber)')}</td>
         <td>${s.engaged ? '<span class="status-badge active">Yes</span>' : '<span class="status-badge inactive">No</span>'}</td>
+        ${ownerCell}
         <td><div style="display:flex;gap:4px;">
           <button class="btn btn-ghost btn-sm" onclick="editStakeholder('${s.id}')">Edit</button>
           <button class="btn btn-danger btn-sm" onclick="deleteStakeholder('${s.id}')">✕</button>
@@ -185,7 +249,7 @@ function stakeholderModal(s) {
     <div class="field"><label>Notes / win strategy</label><textarea id="skNotes" rows="3" style="width:100%;font-family:var(--font);font-size:13px;padding:8px;border:1.5px solid var(--gray-200);border-radius:7px;">${escapeHtml(s.notes || '')}</textarea></div>
     <div id="skErr" class="field-hint" style="color:var(--red);display:none;"></div>
     <div class="btn-row" style="margin-top:1rem;">
-      <button class="btn btn-cta" onclick="saveStakeholder('${s.id || ''}')">${isEdit ? 'Save changes' : 'Add stakeholder'}</button>
+      <button class="btn btn-primary" onclick="saveStakeholder('${s.id || ''}')">${isEdit ? 'Save changes' : 'Add stakeholder'}</button>
       <button class="btn btn-ghost" onclick="document.getElementById('stakeModal').remove()">Cancel</button>
     </div>
   </div>`;
@@ -234,7 +298,7 @@ function suggestStakeholdersFromDiscovery() {
     ${rows}
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="document.getElementById('sugModal').remove()">Cancel</button>
-      <button class="btn btn-cta" onclick="importSuggestedStakeholders(${suggestions.length})">Import selected</button>
+      <button class="btn btn-primary" onclick="importSuggestedStakeholders(${suggestions.length})">Import selected</button>
     </div>
   </div>`;
   document.body.appendChild(modal);
@@ -318,7 +382,7 @@ async function aiAnalyzeStakeholders() {
       `${s.name} (${s.title || 'title unknown'}) — role: ${s.role}, influence ${s.influence}/5, support ${s.support}/5, ${s.engaged ? 'engaged' : 'NOT engaged'}${s.notes ? ', notes: ' + s.notes.slice(0, 100) : ''}`
     ).join('\n');
 
-    const prompt = `You are an enterprise sales coach analyzing a stakeholder map for a Cloud Inventory (inventory SaaS) deal${_stakeCompany ? ' at ' + _stakeCompany : ''}${v.dealStage ? ' at ' + v.dealStage + ' stage' : ''}.
+    const prompt = `You are an enterprise sales coach analyzing a stakeholder map for a Cloud Inventory (inventory SaaS) deal${_stakeCompany ? ' at ' + _stakeCompany : ''} at ${window.getCurrentBuyCycleStageLabel?.()||'Stage 2 — Define Economic Consequences'}.
 
 Stakeholders:
 ${summary}

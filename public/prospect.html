@@ -5,20 +5,22 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Cloud Inventory — Discovery Questionnaire</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="brand-tokens.css"/>
+<script src="brand-system.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --navy:#1E2931;--cyan:#00A9CC;--cyan-dark:#0089A6;--cyan-pale:#E4F6FA;
-  --green:#2E7D32;--green-pale:#E8F5E9;--red:#C81E10;
-  --gray-50:#F8FAFC;--gray-100:#F1F5F9;--gray-200:#E2E8F0;
-  --gray-400:#94A3B8;--gray-500:#64748B;--gray-600:#475569;
-  --gray-700:#334155;--gray-800:#1E293B;--white:#FFFFFF;
-  --font:'Inter',system-ui,sans-serif;
+  --navy:var(--ci-dark);--cyan:var(--ci-blue);--cyan-dark:var(--ci-blue-dark);--cyan-pale:var(--ci-blue-pale);
+  --green:var(--ci-green);--green-pale:var(--ci-success-surface);--red:var(--ci-deep-red);
+  --gray-50:var(--ci-neutral50);--gray-100:var(--ci-neutral100);--gray-200:var(--ci-neutral200);
+  --gray-400:var(--ci-neutral400);--gray-500:var(--ci-neutral500);--gray-600:var(--ci-neutral600);
+  --gray-700:var(--ci-neutral700);--gray-800:var(--ci-neutral800);--white:var(--ci-white);
+  --font:var(--ci-font);
   --radius:10px;--radius-sm:6px;
   --shadow:0 4px 16px rgba(0,0,0,.08);
 }
 html{font-size:15px;scroll-behavior:smooth;}
-body{font-family:var(--font);background:#F0F4F8;color:var(--gray-800);min-height:100vh;}
+body{font-family:var(--font);background:var(--ci-canvas);color:var(--gray-800);min-height:100vh;}
 
 /* Header */
 .header{background:var(--navy);padding:0;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.25);}
@@ -36,7 +38,10 @@ body{font-family:var(--font);background:#F0F4F8;color:var(--gray-800);min-height
 .progress-fill{height:100%;background:var(--cyan);border-radius:2px;transition:width .4s;}
 
 /* Main */
-.main{max-width:760px;margin:0 auto;padding:2rem 1.5rem 4rem;}
+.main{max-width:1060px;margin:0 auto;padding:2rem 1.5rem 4rem;}
+.main-grid{display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start;}
+.main-questions{min-width:0;}
+@media(max-width:820px){.main-grid{grid-template-columns:1fr;} .roi-sidebar{order:-1;}}
 
 /* Welcome card */
 .welcome-card{background:var(--white);border-radius:var(--radius);padding:2rem;margin-bottom:2rem;box-shadow:var(--shadow);}
@@ -58,6 +63,11 @@ body{font-family:var(--font);background:#F0F4F8;color:var(--gray-800);min-height
 .question:last-child{border-bottom:none;}
 .question.answered{background:#FAFFFE;}
 .q-text{font-size:14px;font-weight:500;color:var(--gray-800);margin-bottom:5px;line-height:1.45;}
+/* ── Collapsible "Why are we asking?" ── */
+.q-why{margin:5px 0 8px;}
+.q-why-toggle{font-size:11.5px;color:var(--ci-blue);cursor:pointer;list-style:none;font-weight:600;}
+.q-why-toggle::-webkit-details-marker{display:none;}
+.q-context{font-size:12.5px;color:var(--gray-500);line-height:1.5;margin:6px 0 0;padding-left:10px;border-left:2px solid var(--ci-blue-pale);}
 .q-placeholder-hint{font-size:12px;color:var(--gray-400);margin-bottom:10px;}
 .q-input{width:100%;padding:10px 14px;font-size:14px;font-family:var(--font);border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);background:var(--white);color:var(--gray-800);transition:border-color .15s,box-shadow .15s;outline:none;}
 .q-input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,174,239,.12);}
@@ -107,14 +117,165 @@ body{font-family:var(--font);background:#F0F4F8;color:var(--gray-800);min-height
 .autosave.error{color:#FFB4A8;}
 .autosave .as-dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:as-pulse 1s infinite;}
 @keyframes as-pulse{0%,100%{opacity:.4}50%{opacity:1}}
-.resume-cue{background:#E4F6FA;border:1px solid var(--cyan);border-radius:var(--radius-sm);padding:.85rem 1rem;font-size:14px;color:var(--navy);margin-bottom:1.25rem;}
+.resume-cue{background:var(--ci-blue-pale);border:1px solid var(--cyan);border-radius:var(--radius-sm);padding:.85rem 1rem;font-size:14px;color:var(--navy);margin-bottom:1.25rem;}
+
+/* ── v4.0.0 polish: shared control metrics, focus ring, type ── */
+html{font-size:16px;}
+body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+input,select,textarea,button{font-family:inherit;}
+input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(0,169,204,.18);}
+:focus-visible{outline:2px solid var(--ci-blue);outline-offset:2px;border-radius:4px;}
+h1,h2,h3{letter-spacing:-.02em;text-wrap:pretty;}
+button{cursor:pointer;}
+/* ── Progress header top row ── */
+.ph-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+.ph-meta{font-size:11px;color:rgba(255,255,255,.62);}
+
+/* ── Section navigator pills ── */
+.sec-nav{display:flex;gap:5px;flex-wrap:wrap;padding:10px 0 4px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.sec-nav::-webkit-scrollbar{display:none;}
+.sn-pill{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border:1.5px solid rgba(255,255,255,.18);border-radius:20px;background:rgba(255,255,255,.07);color:rgba(255,255,255,.7);font-family:inherit;font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s;}
+.sn-pill:hover{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.35);color:#fff;}
+.sn-pill.sn-active{background:var(--ci-blue);border-color:var(--ci-blue);color:#fff;}
+.sn-pill.sn-done{background:rgba(74,222,128,.18);border-color:rgba(74,222,128,.4);color:rgba(255,255,255,.9);}
+.sn-pill.sn-part{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.3);color:#fff;}
+.sn-mark{font-size:11px;min-width:14px;text-align:center;}
+.sn-label{max-width:120px;overflow:hidden;text-overflow:ellipsis;}
+@media(max-width:600px){.sn-label{max-width:80px;}}
+
+/* ── Section card (the active section) ── */
+.sec-card{background:var(--ci-white);border-radius:var(--radius,12px);box-shadow:0 1px 4px rgba(0,0,0,.08);overflow:hidden;margin-bottom:16px;}
+.sec-card-head{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--gray-100);background:var(--gray-50);}
+.sec-card-icon{font-size:20px;flex-shrink:0;}
+.sec-card-meta{flex:1;min-width:0;}
+.sec-card-title{font-size:15px;font-weight:700;color:var(--ci-dark);}
+.sec-card-count{font-size:12px;color:var(--gray-500);margin-top:2px;}
+.sec-body{padding:20px;}
+
+/* ── Back / Next navigation buttons ── */
+.sec-nav-btns{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px;}
+.snb-back{background:none;border:1.5px solid var(--gray-200);color:var(--gray-600);font-family:inherit;font-size:13.5px;font-weight:600;padding:10px 20px;border-radius:8px;cursor:pointer;transition:all .15s;}
+.snb-back:hover{border-color:var(--ci-blue);color:var(--ci-blue);}
+.snb-next{background:var(--ci-blue);color:#fff;border:none;font-family:inherit;font-size:13.5px;font-weight:700;padding:10px 24px;border-radius:8px;cursor:pointer;box-shadow:0 2px 8px rgba(0,169,204,.28);transition:all .15s;}
+.snb-next:hover{background:var(--ci-blue-dark);transform:translateY(-1px);}
+.snb-submit{font-size:13.5px;padding:10px 24px !important;}
+
+/* ── "What your answers help assess" panel ── */
+.value-panel:empty{display:none;}
+.value-panel{background:var(--ci-white);border-radius:var(--radius,12px);box-shadow:var(--shadow,0 1px 3px rgba(0,0,0,.08));padding:1.25rem 1.4rem;margin-bottom:1rem;}
+.vp-title{font-size:14px;font-weight:700;color:var(--ci-dark);}
+.vp-sub{font-size:12px;color:var(--gray-500);margin-top:3px;line-height:1.5;}
+.vd-list{list-style:none;margin:1rem 0 0;padding:0;display:flex;flex-direction:column;gap:8px;}
+.vd-row{display:flex;align-items:flex-start;gap:10px;padding:9px 10px;border-radius:9px;background:#F7F9FB;border:1px solid transparent;}
+.vd-row.vd-done{background:#F2FBF6;border-color:#CDEBD9;}
+.vd-row.vd-part{background:#F5FAFD;border-color:#D3E7F2;}
+.vd-mark{flex-shrink:0;width:17px;text-align:center;font-size:12px;line-height:1.5;color:var(--gray-500);}
+.vd-done .vd-mark{color:var(--ci-green);font-weight:700;}
+.vd-part .vd-mark{color:var(--ci-blue-dark);}
+.vd-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+.vd-label{font-size:12.5px;font-weight:600;color:var(--ci-dark);}
+.vd-blurb{font-size:11.5px;color:var(--gray-500);line-height:1.45;}
+.vd-status{flex-shrink:0;font-size:10.5px;font-weight:600;color:var(--gray-500);white-space:nowrap;padding-top:2px;}
+.vd-done .vd-status{color:var(--ci-green);}
+.vd-part .vd-status{color:var(--ci-blue-dark);}
+@media(max-width:560px){
+  .vd-row{flex-wrap:wrap;}
+  .vd-status{width:100%;padding-left:27px;padding-top:1px;}
+}
+
+/* ── Per-question value context + "not sure" ── */
+.q-helps{font-size:11px;color:var(--gray-500);margin-top:7px;}
+.q-helps strong{color:var(--ci-dark);font-weight:600;}
+.q-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;flex-wrap:wrap;}
+.q-unsure{background:none;border:1px solid var(--gray-200);color:var(--gray-500);font-family:inherit;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;cursor:pointer;transition:all .15s;}
+.q-unsure:hover{border-color:var(--ci-blue);color:var(--ci-blue);}
+.q-unsure.is-on{background:#FFF7E8;border-color:#E6C378;color:#8A6410;}
+.question.unsure{background:#FFFCF5;}
+/* ── Percent questions: slider + precise box ── */
+.q-pct{display:flex;align-items:center;gap:14px;margin-top:2px;}
+.q-range{flex:1;min-width:0;-webkit-appearance:none;appearance:none;height:5px;border-radius:3px;background:var(--gray-200);outline:none;cursor:pointer;}
+.q-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:19px;height:19px;border-radius:50%;background:var(--ci-blue);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.28);cursor:pointer;}
+.q-range::-moz-range-thumb{width:17px;height:17px;border-radius:50%;background:var(--ci-blue);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.28);cursor:pointer;}
+.q-range:focus-visible{box-shadow:0 0 0 3px rgba(0,169,204,.25);}
+.q-pct-box{position:relative;flex-shrink:0;width:88px;}
+.q-input-sm{width:100%;padding-right:26px !important;text-align:right;}
+.q-affix{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--gray-500);pointer-events:none;}
+@media(max-width:560px){
+  .q-pct{gap:10px;}
+  .q-pct-box{width:74px;}
+}
+/* ── Review & confirm screen ── */
+.rv-head{background:var(--ci-white);border-radius:var(--radius,12px);box-shadow:var(--shadow,0 1px 3px rgba(0,0,0,.08));padding:1.5rem 1.6rem;margin-bottom:1rem;}
+.rv-title{font-size:19px;font-weight:700;color:var(--ci-dark);}
+.rv-sub{font-size:13px;color:var(--gray-500);line-height:1.6;margin-top:6px;}
+.rv-actions,.rv-foot{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:1rem;}
+.rv-foot{background:var(--ci-white);border-radius:var(--radius,12px);box-shadow:var(--shadow,0 1px 3px rgba(0,0,0,.08));padding:1.25rem 1.6rem;margin-top:1rem;}
+.rv-back{background:none;border:1px solid var(--gray-200);color:var(--ci-dark);font-family:inherit;font-size:13px;font-weight:600;padding:9px 16px;border-radius:8px;cursor:pointer;}
+.rv-back:hover{border-color:var(--ci-blue);color:var(--ci-blue);}
+.rv-sec{background:var(--ci-white);border-radius:var(--radius,12px);box-shadow:var(--shadow,0 1px 3px rgba(0,0,0,.08));padding:1.1rem 1.4rem;margin-bottom:.75rem;}
+.rv-sec-title{font-size:13px;font-weight:700;color:var(--ci-dark);margin-bottom:.6rem;}
+.rv-list{list-style:none;margin:0;padding:0;}
+.rv-row{display:flex;align-items:baseline;gap:12px;padding:9px 0;border-top:1px solid var(--gray-100);}
+.rv-row:first-child{border-top:none;}
+.rv-q{flex:1;min-width:0;font-size:12.5px;color:var(--gray-600);line-height:1.5;}
+.rv-a{flex-shrink:0;max-width:38%;font-size:13px;font-weight:700;color:var(--ci-dark);text-align:right;overflow-wrap:anywhere;}
+.rv-unsure{color:#8A6410;font-weight:600;}
+.rv-blank{color:var(--gray-400);font-weight:500;font-style:italic;}
+.rv-edit{flex-shrink:0;background:none;border:none;color:var(--ci-blue);font-family:inherit;font-size:11.5px;font-weight:600;cursor:pointer;padding:2px 4px;text-decoration:underline;}
+.question.rv-flash{box-shadow:0 0 0 3px rgba(0,169,204,.35);border-radius:8px;transition:box-shadow .3s;}
+/* ── Time-basis badge + annualize helper ── */
+.q-basis-badge{display:inline-block;font-size:11px;font-weight:600;color:var(--ci-blue-dark);background:var(--ci-info-surface);border:1px solid var(--ci-blue);border-radius:99px;padding:1px 9px;margin-left:6px;vertical-align:middle;white-space:nowrap;}
+.q-annualize-toggle{background:none;border:none;color:var(--ci-blue-dark);font-size:12px;cursor:pointer;padding:4px 0;margin-top:4px;text-decoration:underline;font-family:inherit;}
+.q-annualizer{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;padding:10px 12px;background:var(--ci-neutral-50);border:1px solid #E2E8F0;border-radius:8px;font-size:12.5px;color:var(--ci-neutral-600);}
+.q-annualizer input{width:120px;padding:6px 8px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;}
+.q-annualizer select{padding:6px 8px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;background:#fff;}
+.annz-result{font-weight:700;color:var(--ci-blue-dark);}
+
+/* ── Live ROI sidebar ── */
+.roi-sidebar{display:flex;flex-direction:column;gap:10px;}
+.roi-card{background:#fff;border:1px solid var(--gray-200);border-radius:12px;padding:14px 16px;}
+.roi-eyebrow{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400);display:flex;align-items:center;gap:6px;margin-bottom:8px;}
+.roi-live-dot{width:6px;height:6px;border-radius:50%;background:#22C55E;flex-shrink:0;}
+.roi-range-wrap{display:flex;align-items:baseline;gap:6px;margin-bottom:3px;}
+.roi-lo{font-size:20px;font-weight:700;color:var(--gray-700);}
+.roi-sep{font-size:13px;color:var(--gray-400);}
+.roi-hi{font-size:28px;font-weight:700;color:var(--cyan-dark);}
+.roi-range-label{font-size:11px;color:var(--gray-400);margin-bottom:10px;}
+.roi-disclaimer{font-size:11px;color:var(--gray-400);line-height:1.55;border-left:2px solid var(--gray-200);padding-left:8px;margin-top:8px;}
+.roi-driver-head{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400);margin-bottom:8px;}
+.roi-driver-row{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--gray-100);}
+.roi-driver-row:last-child{border-bottom:none;}
+.roi-driver-name{font-size:12px;color:var(--gray-600);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.roi-driver-name.locked{color:var(--gray-300);font-style:italic;}
+.roi-driver-bar{flex:0 0 54px;height:4px;background:var(--gray-100);border-radius:2px;overflow:hidden;}
+.roi-driver-fill{height:100%;border-radius:2px;background:var(--cyan);}
+.roi-driver-amt{font-size:12px;font-weight:700;color:var(--gray-700);min-width:40px;text-align:right;}
+.roi-driver-amt.locked{color:var(--gray-300);font-weight:400;font-style:italic;}
+.roi-conf-head{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400);margin-bottom:6px;}
+.roi-conf-bar{height:5px;background:var(--gray-100);border-radius:3px;overflow:hidden;margin-bottom:5px;}
+.roi-conf-fill{height:100%;border-radius:3px;background:var(--cyan);transition:width .4s;}
+.roi-conf-label{font-size:11px;color:var(--gray-500);line-height:1.4;}
+.roi-conf-label strong{color:var(--cyan-dark);}
+.roi-nudge{background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:10px 12px;font-size:12px;color:#92400E;line-height:1.55;}
+.roi-nudge strong{font-weight:700;}
+.roi-empty{text-align:center;padding:20px 12px;font-size:12px;color:var(--gray-400);line-height:1.6;}
+.roi-empty-icon{font-size:24px;margin-bottom:8px;}
+.roi-inaction{border-left:3px solid var(--cyan);padding:8px 12px;background:var(--cyan-pale);border-radius:0 8px 8px 0;margin-top:2px;}
+.roi-inaction-label{font-size:10.5px;color:var(--cyan-dark);text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin-bottom:2px;}
+.roi-inaction-cost{font-size:18px;font-weight:700;color:var(--navy);}
+.roi-inaction-sub{font-size:11px;color:var(--gray-500);}
+
+.p-to-top{position:fixed;bottom:22px;right:22px;width:46px;height:46px;border-radius:50%;border:1px solid var(--gray-200);background:#fff;color:var(--ci-dark);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:95;box-shadow:0 4px 16px rgba(0,0,0,.16);transition:opacity .2s,transform .2s,visibility .2s;}
+.p-to-top:hover{transform:translateY(-2px);background:var(--ci-blue);color:#fff;border-color:var(--ci-blue);}
+.p-to-top-hidden{opacity:0;visibility:hidden;pointer-events:none;transform:translateY(8px);}
 </style>
+<link rel="stylesheet" href="brand-tokens.css"/>
 </head>
 <body>
 
 <div class="header">
   <div class="header-inner">
-    <img class="header-logo" src="ci-logo-negative.png" alt="Cloud Inventory" onerror="this.style.display='none'"/>
+    <img class="header-logo" data-ci-logo="logoNegative" alt="Cloud Inventory"/>
     <div class="header-divider"></div>
     <span class="header-title" id="headerTitle">Discovery Questionnaire</span>
   </div>
@@ -123,17 +284,34 @@ body{font-family:var(--font);background:#F0F4F8;color:var(--gray-800);min-height
 
 <div class="progress-wrap">
   <div class="progress-inner">
-    <div class="progress-label" id="progressLabel">Loading…</div>
+    <div class="ph-top">
+      <div class="progress-label" id="progressLabel">Loading…</div>
+      <div class="ph-meta" id="progressMeta"></div>
+    </div>
     <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <div class="sec-nav" id="secNav"></div>
     <div class="autosave" id="autosaveIndicator" style="display:none;"></div>
   </div>
 </div>
 
-<div class="main" id="mainContent">
-  <div class="error-card">
-    <div class="error-icon">⏳</div>
-    <div class="error-title">Loading your questionnaire…</div>
-    <div class="error-sub">Please wait a moment.</div>
+<div class="main">
+  <div class="main-grid">
+    <div class="main-questions">
+      <div id="mainContent">
+        <div class="error-card">
+          <div class="error-icon">⏳</div>
+          <div class="error-title">Loading your questionnaire…</div>
+          <div class="error-sub">Please wait a moment.</div>
+        </div>
+      </div>
+    </div>
+    <div class="roi-sidebar" id="roiSidebar" aria-live="polite" aria-label="Live ROI estimate, updates as you answer questions">
+      <div class="roi-card" id="roiLiveCard">
+        <div class="roi-empty-icon">📊</div>
+        <div class="roi-empty">Answer a few questions to see a live estimate of what Cloud Inventory could be worth for your operation.</div>
+      </div>
+      <div id="roiNudgeCard" style="display:none;" class="roi-nudge"></div>
+    </div>
   </div>
 </div>
 
@@ -146,6 +324,8 @@ body{font-family:var(--font);background:#F0F4F8;color:var(--gray-800);min-height
 
 <div class="toast" id="toast"></div>
 
+<script src="/roi-engine.js"></script>
+<script src="/questionnaire-roi-registry.js"></script>
 <script src="discovery.js"></script>
 <script>
 /* ════════════════════════════════════════
@@ -157,6 +337,7 @@ body{font-family:var(--font);background:#F0F4F8;color:var(--gray-800);min-height
 // (it's designed to work standalone for the prospect view)
 
 let sessionData = null;
+function prospectQuestionnaire(){return sessionData&&Array.isArray(sessionData.questionnaire)&&sessionData.questionnaire.length?sessionData.questionnaire:getProspectQuestions(sessionData&&sessionData.industry||'default',{hasFieldInventory:sessionData&&!!sessionData.has_field_inventory});}
 let prospectAnswers = {};
 let totalQuestions = 0;
 let answeredCount = 0;
@@ -202,22 +383,22 @@ async function init() {
       console.warn('Discovery link failed', { status: res.status, error: err.error || null, code: err.code || null });
 
       if (res.status === 400) {
-        showError('Invalid link', 'The questionnaire link appears incomplete or changed. Please request a new link.');
+        showError('Invalid link', 'The questionnaire link appears incomplete or changed. Please request a new link from your Cloud Inventory contact.');
       } else if (res.status === 401 || res.status === 403) {
-        showError('Access configuration error', 'This questionnaire is currently being blocked by access controls. Please contact Cloud Inventory for a corrected link.');
+        showError('Link not recognised', 'This questionnaire link could not be verified. It may have been rotated or updated — please use the most recent link sent to you, or request a new one.');
       } else if (res.status === 404) {
-        showError('Link not found', 'This questionnaire could not be found. Please request a new link.');
+        showError('Link not found', 'This questionnaire could not be found. Please request a new link from your Cloud Inventory contact.');
       } else if (res.status === 410) {
-        showError('Link no longer active', err.error || 'This link has expired or been revoked. Please request a new link.');
+        showError('Link no longer active', err.error || 'This link has been revoked. Please contact your Cloud Inventory representative for a new one.');
       } else if (res.status === 429) {
         showError('Temporarily unavailable', 'Too many requests were received from your network. Please wait a minute and try again.');
       } else {
-        showError('Service temporarily unavailable', 'The questionnaire could not be loaded. Please refresh or try again shortly.');
+        showError('Service temporarily unavailable', 'The questionnaire could not be loaded right now. Please refresh or try again shortly.');
       }
       return;
     }
     const data = await res.json();
-    sessionData = { token, industry: data.industry || 'default', company: data.company || '' };
+    sessionData = { ...data, token, industry: data.industry || 'default', company: data.company || '' };
 
     /* Restore any answers the prospect (or rep) already entered */
     prospectAnswers = {};
@@ -253,65 +434,104 @@ function showError(title, msg) {
   document.getElementById('progressLabel').textContent = 'Link error';
 }
 
-function renderQuestionnaire() {
-  const industry = sessionData.industry || 'default';
-  const company  = sessionData.company || 'your organisation';
+/* ── Section-at-a-time layout (replaces single-scroll) ──────────────
+   One section visible at a time. The section navigator shows all
+   sections with completion status; the prospect can jump freely.     */
+var _currentSectionIdx = 0;
 
-  // Get questions for this industry
-  const sections = getProspectQuestions(industry);
-
-  // Count total
-  totalQuestions = sections.reduce((s, sec) => s + sec.questions.length, 0);
-  answeredCount  = Object.keys(prospectAnswers).filter(k => !k.endsWith('_by') && prospectAnswers[k]).length;
-
-  // Update header
-  document.getElementById('headerTitle').textContent = `Discovery Questionnaire${company ? ' — ' + company : ''}`;
+function renderQuestionnaire(targetSection) {
+  var industry = sessionData.industry || 'default';
+  var company  = sessionData.company  || 'your organisation';
+  var sections = prospectQuestionnaire();
+  totalQuestions = sections.reduce(function(s, sec){ return s + sec.questions.length; }, 0);
+  answeredCount  = Object.keys(prospectAnswers)
+    .filter(function(k){ return !k.endsWith('_by') && isRealAnswer(prospectAnswers[k]); }).length;
+  document.getElementById('headerTitle').textContent =
+    'Discovery Questionnaire' + (company ? ' \u2014 ' + company : '');
   updateProgress();
+  renderSecNav(sections);
+  showSection(sections, targetSection != null ? targetSection : _currentSectionIdx);
+}
 
-  const industryLabel = getIndustryLabel(industry);
-  const priorAnswers = Object.keys(prospectAnswers).filter(k => !k.endsWith('_by') && prospectAnswers[k]?.trim()).length;
-  const resumeCue = priorAnswers > 0
-    ? `<div class="resume-cue">👋 <strong>Welcome back!</strong> We've kept your ${priorAnswers} previous answer${priorAnswers!==1?'s':''} — pick up right where you left off.</div>`
+function renderSecNav(sections) {
+  var nav = document.getElementById('secNav');
+  if (!nav) return;
+  nav.innerHTML = sections.map(function(sec, i) {
+    var answered = sec.questions.filter(function(q){ return isRealAnswer(prospectAnswers[q.id]); }).length;
+    var total    = sec.questions.length;
+    var done     = answered === total && total > 0;
+    var started  = answered > 0 && !done;
+    var cls      = done ? 'sn-done' : started ? 'sn-part' : '';
+    var mark     = done ? '\u2713' : started ? '\u25cf' : String(i + 1);
+    return '<button class="sn-pill ' + cls + (i === _currentSectionIdx ? ' sn-active' : '') + '"'
+      + ' onclick="jumpToSection(' + i + ')" title="' + escapeHtml(sec.section) + '">'
+      + '<span class="sn-mark">' + mark + '</span>'
+      + '<span class="sn-label">' + escapeHtml(sec.section) + '</span>'
+      + '</button>';
+  }).join('');
+}
+
+function jumpToSection(idx) {
+  var sections = prospectQuestionnaire();
+  _currentSectionIdx = Math.max(0, Math.min(idx, sections.length - 1));
+  showSection(sections, _currentSectionIdx);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function showSection(sections, idx) {
+  _currentSectionIdx = idx;
+  var sec     = sections[idx];
+  var isLast  = idx === sections.length - 1;
+  var isFirst = idx === 0;
+  var answered = sec.questions.filter(function(q){ return isRealAnswer(prospectAnswers[q.id]); }).length;
+  var resumeCue = (answeredCount > 0 && isFirst)
+    ? '<div class="resume-cue"><strong>Welcome back!</strong> We\u2019ve kept your ' + answeredCount
+      + ' previous answer' + (answeredCount !== 1 ? 's' : '') + ' \u2014 pick up where you left off.</div>'
     : '';
-
-  document.getElementById('mainContent').innerHTML = `
-    ${resumeCue}
-    <div class="welcome-card">
-      <div class="welcome-co">Welcome${company ? ', ' + company : ''}</div>
-      <div class="welcome-sub">
-        Thank you for taking the time to complete this questionnaire. Your answers will help Cloud Inventory build an accurate and relevant business case tailored to your ${industryLabel} operations.
-        <br/><br/>
-        Please answer as many questions as you can. You can save your progress at any time using the button below and return later. Your answers are automatically saved as you type.
-      </div>
-      <div class="welcome-privacy">
-        <span class="welcome-privacy-icon">🔒</span>
-        <span><strong>Your data stays with you.</strong> This form collects operational data only to help size a potential solution. No financial analysis or ROI calculations are shared with you at this stage. Your responses are shared only with your Cloud Inventory contact.</span>
-      </div>
-    </div>
-
-    ${sections.map((section, si) => {
-      const answeredInSection = section.questions.filter(q => prospectAnswers[q.id]).length;
-      return `
-      <div class="section-card" id="section-${si}">
-        <div class="section-header">
-          <span class="section-icon">${getSectionIcon(section.section)}</span>
-          <span class="section-title-text">${section.section}</span>
-          <span class="section-count">${answeredInSection}/${section.questions.length}</span>
-        </div>
-        <div class="section-body">
-          ${section.questions.map(q => renderProspectQuestion(q)).join('')}
-        </div>
-      </div>`;
-    }).join('')}
-
-    <div style="height:80px;"></div>`;
-
+  var questions = sec.questions.map(function(q){ return renderProspectQuestion(q); }).join('');
+  document.getElementById('mainContent').innerHTML =
+    (isFirst ? resumeCue + renderWelcomeCard() : '')
+    + '<div class="sec-card" id="sec-card-' + idx + '">'
+    + '<div class="sec-card-head">'
+    + '<span class="sec-card-icon">' + getSectionIcon(sec.section) + '</span>'
+    + '<div class="sec-card-meta">'
+    + '<div class="sec-card-title">' + escapeHtml(sec.section) + '</div>'
+    + '<div class="sec-card-count" id="sectionCount">' + answered + ' of ' + sec.questions.length + ' answered</div>'
+    + '</div></div>'
+    + '<div class="sec-body">' + questions + '</div>'
+    + '</div>'
+    + '<div class="sec-nav-btns">'
+    + (!isFirst
+        ? '<button class="snb-back" onclick="jumpToSection(' + (idx - 1) + ')">&#8592; Back</button>'
+        : '<span></span>')
+    + (isLast
+        ? '<button class="save-btn snb-submit" onclick="submitAnswers()">Review &amp; submit</button>'
+        : '<button class="snb-next" onclick="jumpToSection(' + (idx + 1) + ')">Next &#8594;</button>')
+    + '</div>'
+    + '<div style="height:60px;"></div>';
+  renderSecNav(sections);
   updateSaveButton();
+  /* Re-observe question wraps for the prospect assistant's field-sensitive
+     context — must run after innerHTML is set since elements are new. */
+  if (typeof window._passtReObserve === 'function') window._passtReObserve();
+}
+
+function renderWelcomeCard() {
+  var company = sessionData.company || 'your organisation';
+  var label   = getIndustryLabel(sessionData.industry || 'default');
+  return '<div class="welcome-card">'
+    + '<div class="welcome-co">Welcome' + (company ? ', ' + escapeHtml(company) : '') + '</div>'
+    + '<div class="welcome-sub">Thank you for completing this questionnaire. Your answers help Cloud Inventory build a relevant business case for your '
+    + escapeHtml(label) + ' operations.<br/><br/>'
+    + 'Use the section tabs above to navigate. You can jump to any section at any time \u2014 answers save automatically as you type.</div>'
+    + '<div class="welcome-privacy"><span class="welcome-privacy-icon">&#128274;</span>'
+    + '<span><strong>Your data stays private.</strong> Responses are shared only with your Cloud Inventory contact.</span></div>'
+    + '</div>';
 }
 
 function renderProspectQuestion(q) {
   const answer = prospectAnswers[q.id] || '';
-  const isAnswered = answer.trim().length > 0;
+  const isAnswered = isRealAnswer(answer);
   if (q.type === 'context') {
     return `
       <div class="question ${isAnswered?'answered':''}" id="wrap-${q.id}">
@@ -328,42 +548,249 @@ function renderProspectQuestion(q) {
         ${isAnswered ? `<div class="q-answered-badge">✓ Answered</div>` : ''}
       </div>`;
   }
-  return `
-    <div class="question ${isAnswered?'answered':''}" id="wrap-${q.id}">
-      <div class="q-text">${q.text}</div>
-      <div class="q-placeholder-hint">e.g. ${q.placeholder}</div>
-      <input
-        type="text"
-        class="q-input ${isAnswered?'has-answer':''}"
-        id="pq-${q.id}"
-        value="${escapeHtml(answer)}"
-        placeholder="Your answer…"
+  var drv = driverForQuestion(q);
+  var ctxText = contextForQuestion(q);
+  var context = ctxText
+    ? '<details class="q-why"><summary class="q-why-toggle">Why are we asking?</summary><div class="q-context">' + escapeHtml(ctxText) + '</div></details>'
+    : '';
+  var helps = drv
+    ? '<div class="q-helps">Helps assess: <strong>' + escapeHtml(VALUE_DRIVERS[drv].label) + '</strong></div>'
+    : '';
+
+  /* Time-basis badge + optional annualize helper. Makes explicit whether a
+     figure is wanted per year, per month, per person, etc., and for annual
+     dollar questions offers a small converter so a prospect who only knows a
+     monthly/weekly number can still give a good annual figure. */
+  var basis = questionBasis(q);
+  var basisBadge = basis
+    ? '<span class="q-basis-badge" title="' + escapeHtml(basis.tip) + '">' + escapeHtml(basis.label) + '</span>'
+    : '';
+  var annualizer = (basis && basis.annualize && q.type === 'number')
+    ? '<button type="button" class="q-annualize-toggle" onclick="toggleAnnualizer(\'' + q.id + '\')">Know it per month or week? Convert →</button>'
+      + '<div class="q-annualizer" id="annualizer-' + q.id + '" style="display:none;">'
+      + '<span>Enter what you know:</span>'
+      + '<input type="text" inputmode="decimal" id="annz-val-' + q.id + '" placeholder="amount" oninput="runAnnualizer(\'' + q.id + '\')" />'
+      + '<select id="annz-per-' + q.id + '" onchange="runAnnualizer(\'' + q.id + '\')">'
+      + '<option value="12">per month</option>'
+      + '<option value="52">per week</option>'
+      + '<option value="365">per day</option>'
+      + '<option value="1">per year (already annual)</option>'
+      + '</select>'
+      + '<span class="annz-result" id="annz-out-' + q.id + '"></span>'
+      + '</div>'
+    : '';
+
+  const unsure = (answer || '').trim().toLowerCase() === NOT_SURE_TOKEN;
+  const shown = unsure ? '' : answer;
+
+  /* Percent questions get a slider paired with a numeric box: the slider makes
+     the value tangible, the box keeps it precise. Number questions get live
+     thousands separators for legibility. Values are always STORED raw. */
+  let control;
+  if (q.type === 'percent') {
+    const nv = parseFloat(String(shown).replace(/[^0-9.]/g, ''));
+    const val = isFinite(nv) ? Math.max(0, Math.min(100, nv)) : '';
+    control = `
+      <div class="q-pct">
+        <input type="range" class="q-range" id="rg-${q.id}" min="0" max="100" step="1"
+          value="${val === '' ? 0 : val}" aria-label="${escapeHtml(q.text)}"
+          oninput="handlePctSlider('${q.id}', this.value)" />
+        <div class="q-pct-box">
+          <input type="text" inputmode="decimal" class="q-input q-input-sm ${isAnswered?'has-answer':''}"
+            id="pq-${q.id}" value="${escapeHtml(String(val))}" placeholder="—"
+            oninput="handlePctBox('${q.id}', this.value)" />
+          <span class="q-affix">%</span>
+        </div>
+      </div>`;
+  } else if (q.type === 'number') {
+    control = `
+      <input type="text" inputmode="decimal" class="q-input ${isAnswered?'has-answer':''}"
+        id="pq-${q.id}" value="${escapeHtml(formatNumDisplay(shown))}" placeholder="Your answer…"
+        oninput="handleNumAnswer('${q.id}', this.value)"
+        onfocus="this.parentElement.style.background='#FAFFFE'"
+        onblur="this.parentElement.style.background=''; this.value=formatNumDisplay(this.value);" />`;
+  } else {
+    control = `
+      <input type="text" class="q-input ${isAnswered?'has-answer':''}" id="pq-${q.id}"
+        value="${escapeHtml(shown)}" placeholder="Your answer…"
         oninput="handleAnswer('${q.id}', this.value)"
         onfocus="this.parentElement.style.background='#FAFFFE'"
-        onblur="this.parentElement.style.background=''"
-      />
-      ${isAnswered ? `<div class="q-answered-badge">✓ Answered</div>` : ''}
+        onblur="this.parentElement.style.background=''" />`;
+  }
+
+  return `
+    <div class="question ${isAnswered?'answered':''} ${unsure?'unsure':''}" id="wrap-${q.id}">
+      <div class="q-text">${q.text} ${basisBadge}</div>
+      ${context}
+      <div class="q-placeholder-hint">e.g. ${q.placeholder}</div>
+      ${control}
+      ${annualizer}
+      ${helps}
+      <div class="q-foot">
+        <button type="button" class="q-unsure ${unsure?'is-on':''}" onclick="toggleNotSure('${q.id}')">
+          ${unsure ? '&#10003; Marked \u201cnot sure\u201d' : 'I\u2019m not sure'}
+        </button>
+        <span class="q-badge-slot">${isAnswered && !unsure ? '<span class="q-answered-badge">&#10003; Answered</span>' : ''}</span>
+      </div>
     </div>`;
+}
+
+/* Determine the time/unit basis for a question, driving the badge and the
+   annualize helper. Keyed by sync field where possible so it stays correct
+   across industry variants. Returns null for questions where a basis badge
+   would just be noise (percentages, ratios). */
+function questionBasis(q) {
+  var sync = q.sync || '';
+  var pctType = q.type === 'percent';
+  /* Annual dollar figures — these benefit from the per-month/week converter. */
+  var annualDollar = {
+    annualWriteOff:  { label:'per year', tip:'Total across a full year', annualize:true },
+    expediteSpendYr: { label:'per year', tip:'Total across a full year', annualize:true },
+    itCost:          { label:'per year', tip:'Total annual licenses, maintenance, and support', annualize:true },
+    revenue:         { label:'per year', tip:'Annual company revenue', annualize:true }
+  };
+  if (annualDollar[sync]) return annualDollar[sync];
+
+  /* Per-unit and count bases — badge only, no annualizer. */
+  var other = {
+    downtimeCostPerHr:   { label:'per hour',  tip:'Cost of a single hour of lost/slowed work' },
+    downtimeHrsPerEvent: { label:'per event', tip:'Hours lost in one typical event' },
+    downtimeEventsYr:    { label:'per year',  tip:'Number of events across a full year', annualize:true },
+    countDaysYr:         { label:'per year',  tip:'Total person-days spent counting across a year', annualize:true },
+    countPeople:         { label:'per count', tip:'People involved in one count' },
+    invTurnsCurrent:     { label:'per year',  tip:'Inventory turns in a full year' },
+    inventoryValue:      { label:'point-in-time', tip:'Value on hand at any single moment — not a yearly total' },
+    ordersPerYr:         { label:'per year',  tip:'Total orders/lines shipped across a year', annualize:true },
+    costPerOrder:        { label:'per order', tip:'Fully-loaded cost to process one order/line' },
+    costPerError:        { label:'per error', tip:'Fully-loaded cost of one order error' },
+    laborWastePct:       null,
+    discRate:            null
+  };
+  if (sync in other) return other[sync];
+
+  /* Fallbacks by text cue for questions without a mapped sync. */
+  if (pctType) return null;
+  if (/per year|annual/i.test(q.text)) return { label:'per year', tip:'Total across a full year', annualize:true };
+  if (/hours per week/i.test(q.text)) return { label:'per week', tip:'Hours in a typical week' };
+  return null;
+}
+
+function toggleAnnualizer(qid) {
+  var box = document.getElementById('annualizer-' + qid);
+  if (box) box.style.display = box.style.display === 'none' ? 'flex' : 'none';
+}
+
+/* Convert a per-month/week/day figure to an annual total and write it into
+   the actual answer field, so the stored value is always the annual number. */
+function runAnnualizer(qid) {
+  var valEl = document.getElementById('annz-val-' + qid);
+  var perEl = document.getElementById('annz-per-' + qid);
+  var outEl = document.getElementById('annz-out-' + qid);
+  if (!valEl || !perEl || !outEl) return;
+  var raw = parseFloat(String(valEl.value).replace(/[^0-9.]/g, ''));
+  var mult = parseFloat(perEl.value) || 1;
+  if (!isFinite(raw) || raw <= 0) { outEl.textContent = ''; return; }
+  var annual = Math.round(raw * mult);
+  outEl.textContent = '= ' + annual.toLocaleString() + ' per year';
+  /* Push into the real field + store. */
+  var field = document.getElementById('pq-' + qid);
+  if (field) { field.value = formatNumDisplay(String(annual)); }
+  handleNumAnswer(qid, String(annual));
+}
+
+/* Display-only thousands separators. Stored values stay raw so the rep-side   sync and ROI model never see formatting characters. */
+function formatNumDisplay(v) {
+  const raw = String(v == null ? '' : v).replace(/,/g, '').trim();
+  if (raw === '' || raw.toLowerCase() === NOT_SURE_TOKEN) return '';
+  const n = Number(raw);
+  if (!isFinite(n)) return raw;
+  const dec = raw.includes('.') ? raw.split('.')[1].length : 0;
+  if (Math.abs(n) < 1000) return raw;              // leave small values (e.g. 3.50) alone
+  return n.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: Math.max(dec, 0) });
+}
+function stripNum(v) { return String(v == null ? '' : v).replace(/,/g, '').trim(); }
+
+/* Number field: store raw, keep the caret usable while typing. */
+function handleNumAnswer(id, value) {
+  handleAnswer(id, stripNum(value));
+}
+
+/* Percent slider ↔ box, kept in sync; both store the raw number. */
+function handlePctSlider(id, value) {
+  const box = document.getElementById('pq-' + id);
+  if (box) box.value = value;
+  handleAnswer(id, String(value));
+}
+function handlePctBox(id, value) {
+  const raw = stripNum(value);
+  const n = parseFloat(raw.replace(/[^0-9.]/g, ''));
+  const rg = document.getElementById('rg-' + id);
+  if (rg && isFinite(n)) rg.value = Math.max(0, Math.min(100, n));
+  handleAnswer(id, raw);
+}
+
+/* "I'm not sure" records the gap for the rep instead of leaving a blank the
+   prospect feels stuck on. It is stored but not counted as data. */
+function toggleNotSure(id) {
+  const cur = (prospectAnswers[id] || '').trim().toLowerCase();
+  const turningOn = cur !== NOT_SURE_TOKEN;
+  const val = turningOn ? NOT_SURE_TOKEN : '';
+  prospectAnswers[id] = val;
+  prospectAnswers[id + '_by'] = val ? 'prospect' : '';
+  const input = document.getElementById('pq-' + id);
+  if (input) { input.value = ''; input.classList.remove('has-answer'); }
+  const rg = document.getElementById('rg-' + id);
+  if (rg && turningOn) rg.value = 0;
+  const wrap = document.getElementById('wrap-' + id);
+  if (wrap) {
+    wrap.classList.toggle('unsure', turningOn);
+    wrap.classList.remove('answered');
+    const btn = wrap.querySelector('.q-unsure');
+    if (btn) {
+      btn.classList.toggle('is-on', turningOn);
+      btn.innerHTML = turningOn ? '&#10003; Marked \u201cnot sure\u201d' : 'I\u2019m not sure';
+    }
+    const slot = wrap.querySelector('.q-badge-slot');
+    if (slot) slot.innerHTML = '';
+  }
+  updateSectionCounts();
+  updateProgress();
+  updateSaveButton();
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => pushAnswer(id, val, 'prospect'), 400);
 }
 
 function handleAnswer(id, value) {
   prospectAnswers[id] = value;
   prospectAnswers[id + '_by'] = value ? 'prospect' : '';
 
+  const real  = isRealAnswer(value);
   const input = document.getElementById('pq-' + id);
   const wrap  = document.getElementById('wrap-' + id);
-  if (input) input.classList.toggle('has-answer', value.trim().length > 0);
+  if (input) input.classList.toggle('has-answer', real);
   if (wrap) {
-    wrap.classList.toggle('answered', value.trim().length > 0);
-    // Update answered badge
-    const badge = wrap.querySelector('.q-answered-badge');
-    if (value.trim() && !badge) {
-      const b = document.createElement('div');
-      b.className = 'q-answered-badge';
-      b.textContent = '✓ Answered';
-      wrap.appendChild(b);
-    } else if (!value.trim() && badge) {
-      badge.remove();
+    wrap.classList.toggle('answered', real);
+    /* Typing a real answer supersedes a previous "not sure". */
+    if (real && wrap.classList.contains('unsure')) {
+      wrap.classList.remove('unsure');
+      const btn = wrap.querySelector('.q-unsure');
+      if (btn) { btn.classList.remove('is-on'); btn.innerHTML = 'I\u2019m not sure'; }
+    }
+    /* Badge lives in .q-badge-slot on standard questions; context questions
+       (textarea) have no footer, so fall back to appending to the wrapper. */
+    const slot = wrap.querySelector('.q-badge-slot');
+    if (slot) {
+      slot.innerHTML = real ? '<span class="q-answered-badge">&#10003; Answered</span>' : '';
+    } else {
+      const badge = wrap.querySelector('.q-answered-badge');
+      if (real && !badge) {
+        const b = document.createElement('div');
+        b.className = 'q-answered-badge';
+        b.innerHTML = '&#10003; Answered';
+        wrap.appendChild(b);
+      } else if (!real && badge) {
+        badge.remove();
+      }
     }
   }
 
@@ -378,25 +805,474 @@ function handleAnswer(id, value) {
 }
 
 function updateSectionCounts() {
-  const sections = getProspectQuestions(sessionData?.industry || 'default');
-  sections.forEach((section, si) => {
-    const el = document.querySelector(`#section-${si} .section-count`);
-    if (el) {
-      const answered = section.questions.filter(q => prospectAnswers[q.id]?.trim()).length;
-      el.textContent = `${answered}/${section.questions.length}`;
-    }
+  /* In the tabbed layout only one section is shown at a time.
+     Update just the count badge for the currently visible section. */
+  var el = document.getElementById('sectionCount');
+  if (!el) return;
+  var sections = prospectQuestionnaire();
+  var sec = sections[_currentSectionIdx];
+  if (!sec) return;
+  var answered = sec.questions.filter(function(q){ return isRealAnswer(prospectAnswers[q.id]); }).length;
+  el.textContent = answered + ' of ' + sec.questions.length + ' answered';
+  /* Also refresh the navigator pills to show updated completion dots */
+  renderSecNav(sections);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   VALUE DRIVERS — what the prospect's answers make it possible to assess.
+
+   Note on language: each question carries an internal `why` field written
+   for Cloud Inventory reps ("Count-labor lever", "Direct input for write-off
+   savings calculation"). That is deliberately NOT shown here — it is internal
+   modelling language. The copy below is written for the customer, describing
+   what the answers help THEM understand about their own operation.
+
+   Keys are the question `sync` targets, so this mapping stays in step with
+   the questions themselves.
+   ═══════════════════════════════════════════════════════════════════ */
+const VALUE_DRIVERS = {
+  labour: {
+    label: 'Team time & productivity',
+    blurb: 'How much of your team\u2019s day goes to manual counting, data entry, and chasing discrepancies.',
+    fields: ['userCount','laborWastePct','countDaysYr','countPeople',
+             'pickRateGainPct','repeatVisitsYr','costPerTruckRoll','costPerOrder','fieldReconcilePersonHours']
+  },
+  accuracy: {
+    label: 'Inventory accuracy & losses',
+    blurb: 'The gap between recorded and actual stock, and what it costs in write-offs and shrinkage.',
+    fields: ['currentAccuracy','annualWriteOff','fieldLeakageRate']
+  },
+  workingCapital: {
+    label: 'Working capital tied up',
+    blurb: 'How much cash sits in inventory, and how quickly it turns.',
+    fields: ['inventoryValue','invTurnsCurrent','fieldInvValue','fieldLocations','fieldReconcilePerYr']
+  },
+  service: {
+    label: 'Delivery & customer commitments',
+    blurb: 'Order accuracy and on-time-in-full performance, and the revenue exposed when they slip.',
+    fields: ['otifBaseline','otifTarget','orderErrorPct','costPerError','ordersPerYr','revenue','lostSalesYr','contributionMarginPct','servicePenaltyCostYr']
+  },
+  uptime: {
+    label: 'Downtime & expediting',
+    blurb: 'Production or service interruptions caused by parts not being where the record says.',
+    fields: ['downtimeEventsYr','downtimeHrsPerEvent','downtimeCostPerHr','expediteSpendYr']
+  },
+  systems: {
+    label: 'Systems & support cost',
+    blurb: 'What you spend maintaining the current tools and workarounds.',
+    fields: ['itCost']
+  },
+  finance: {
+    label: 'Your financial yardstick',
+    blurb: 'The hurdle rate your finance team uses, so any case is judged on your own terms.',
+    fields: ['discRate']
+  }
+};
+
+/* sync field → driver key (built once) */
+const FIELD_TO_DRIVER = (() => {
+  const m = {};
+  Object.keys(VALUE_DRIVERS).forEach(k => VALUE_DRIVERS[k].fields.forEach(f => { m[f] = k; }));
+  return m;
+})();
+
+function driverForQuestion(q) {
+  return (q && q.sync && FIELD_TO_DRIVER[q.sync]) ? FIELD_TO_DRIVER[q.sync] : null;
+}
+
+/* Plain-language "why we ask" context, keyed by the value each question feeds
+   (its sync target). Written for the customer — what the number tells us about
+   their operation — not internal modelling language. Keyed by sync so it
+   applies across industries without editing every question. */
+const QUESTION_CONTEXT = {
+  userCount:        'This sizes how many people\u2019s time is affected \u2014 the bigger the team touching inventory, the more that small daily inefficiencies add up.',
+  laborWastePct:    'Time spent counting, re-keying, and reconciling is time not spent on higher-value work. This helps estimate how much of it could be given back.',
+  currentAccuracy:  'The gap between what your records say and what\u2019s actually on the shelf drives almost everything else \u2014 safety stock, write-offs, and missed orders.',
+  annualWriteOff:   'Stock lost to damage, expiry, or shrinkage is money already spent that produced nothing. This is often the most tangible number to a CFO.',
+  inventoryValue:   'How much cash is tied up in inventory sets the ceiling on how much working capital better accuracy could free.',
+  invTurnsCurrent:  'How quickly inventory turns shows whether you\u2019re holding more than you need \u2014 slower turns usually mean trapped cash.',
+  otifBaseline:     'On-time-in-full performance is what your customers feel. Even a few points of slippage can put real revenue at risk.',
+  otifTarget:       'The gap between where you are and where you want to be defines the size of the service-level opportunity.',
+  orderErrorPct:    'Every mis-picked or short order carries a cost \u2014 rework, returns, expedited reshipments, and eroded trust.',
+  costPerError:     'Putting a dollar figure on a single order error lets us translate error rates into real money.',
+  ordersPerYr:      'Order volume scales everything \u2014 a small per-order improvement multiplied across the year is often substantial.',
+  downtimeEventsYr: 'Production or service interruptions caused by parts not being where the record said are among the most expensive and preventable losses.',
+  expediteSpendYr:  'Rush freight and expediting fees are a direct symptom of not trusting inventory data \u2014 and a cost that usually shrinks with accuracy.',
+  costPerTruckRoll: 'A repeat visit for a missing part carries labor, vehicle, and opportunity cost \u2014 this quantifies what each one really costs.',
+  repeatVisitsYr:   'How often technicians return for a wrong or missing part shows how much first-visit success could improve.',
+  fieldInvValue:    'Field inventory is reported separately from warehouse and central inventory so the same stock is not counted twice.',
+  fieldLeakageRate: 'This is the annual field-only loss rate; exclude losses already reported in central write-offs.',
+  fieldLocations:   'The location count combines with reconciliation frequency and person-hours; it creates no value by itself.',
+  fieldReconcilePerYr:'How often each field location is reconciled determines the annual effort.',
+  fieldReconcilePersonHours:'Enter total person-hours for one reconciliation at one field location.',
+  lostSalesYr:      'Use a supported annual lost-sales estimate caused by service or fulfillment failures; the model applies contribution margin, not full revenue.',
+  contributionMarginPct:'Contribution margin converts recovered sales into economic contribution. Without it, service revenue remains unquantified.',
+  servicePenaltyCostYr:'Report penalties, credits, chargebacks, or deductions separately from expedite and normal order-error handling.',
+  itCost:           'What you spend maintaining current tools and workarounds is part of the true cost of the status quo.',
+  discRate:         'Your finance team\u2019s hurdle rate lets any business case be judged on your own terms, not ours.'
+};
+function contextForQuestion(q) {
+  if (!q || !q.sync) return '';
+  return QUESTION_CONTEXT[q.sync] || '';
+}
+
+/* "Not sure" is recorded for the rep, but does not count as data. */
+var NOT_SURE_TOKEN = 'not sure';
+function isRealAnswer(val) {
+  const v = (val || '').trim();
+  return v.length > 0 && v.toLowerCase() !== NOT_SURE_TOKEN;
+}
+
+/* Per-driver progress: how many of its questions this questionnaire asks,
+   and how many the prospect has genuinely answered. */
+function computeDriverProgress() {
+  const sections = prospectQuestionnaire();
+  const out = {};
+  Object.keys(VALUE_DRIVERS).forEach(k => { out[k] = { total: 0, answered: 0 }; });
+  sections.forEach(sec => sec.questions.forEach(q => {
+    const d = driverForQuestion(q);
+    if (!d) return;
+    out[d].total++;
+    if (isRealAnswer(prospectAnswers[q.id])) out[d].answered++;
+  }));
+  return out;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   LIVE ROI PANEL
+   Builds engine inputs from prospectAnswers via the sync field map,
+   runs calcROI(), and renders a conservative range in the sidebar.
+   Conservative = 70% of base recovery assumptions.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Map: sync field name → roi-engine input key (most are identical) */
+const SYNC_TO_ROI = {
+  userCount:         'users',
+  laborWastePct:     'laborWastePct',
+  annualWriteOff:    'annualWriteOff',
+  countDaysYr:       'countDaysYr',
+  countPeople:       'countPeople',
+  inventoryValue:    'inventory',
+  invTurnsCurrent:   'invTurnsCurrent',
+  otifBaseline:      'otifBaseline',
+  otifTarget:        'otifTarget',
+  downtimeEventsYr:  'downtimeEventsYr',
+  downtimeHrsPerEvent:'downtimeHrsPerEvent',
+  downtimeCostPerHr: 'downtimeCostPerHr',
+  expediteSpendYr:   'expediteSpendYr',
+  servicePenaltyCostYr:'servicePenaltyCostYr',
+  lostSalesYr:'lostSalesYr',
+  contributionMarginPct:'contributionMarginPct',
+  repeatVisitsYr:'repeatVisitsYr',
+  costPerTruckRoll:'costPerTruckRoll',
+  fieldLocations:'fieldLocations',
+  fieldInvValue:'fieldInvValue',
+  fieldLeakageRate:'fieldLeakageRate',
+  fieldReconcilePerYr:'fieldReconcilePerYr',
+  fieldReconcilePersonHours:'fieldReconcilePersonHours',
+  itCost:            'itCost',
+  revenue:           'revenue',
+  discRate:          'discRate',
+  ordersPerYr:       'ordersPerYr',
+  currentAccuracy:   'currentAccuracy',
+  orderErrorPct:     'orderErrorPct',
+  costPerError:      'costPerError',
+  costPerOrder:      'costPerOrder',
+  labor:             'labor',
+};
+
+/* Industry-specific benchmark defaults — applied when prospect hasn't answered */
+const IND_DEFAULTS = {
+  distribution: { revenue:80e6, users:40, labor:52000, inventory:10e6, mLabor:0.20, mShrinkage:0.30, mCarrying:0.20, carryRate:0.25, mOtif:0.10, otifRisk:0.02, mIt:0.50, invTurnsBenchmark:10, discRate:0.10 },
+  construction:  { revenue:120e6, users:55, labor:65000, inventory:8e6, mLabor:0.22, mShrinkage:0.35, mCarrying:0.20, carryRate:0.25, mOtif:0.10, otifRisk:0.025, mIt:0.50, invTurnsBenchmark:8, discRate:0.10 },
+  mfg:           { revenue:150e6, users:60, labor:58000, inventory:18e6, mLabor:0.20, mShrinkage:0.30, mCarrying:0.20, carryRate:0.25, mOtif:0.10, otifRisk:0.02, mIt:0.50, invTurnsBenchmark:12, discRate:0.10 },
+  telecom:       { revenue:200e6, users:100, labor:72000, inventory:25e6, mLabor:0.20, mShrinkage:0.30, mCarrying:0.20, carryRate:0.25, mOtif:0.10, otifRisk:0.02, mIt:0.50, invTurnsBenchmark:8, discRate:0.10 },
+  oil:           { revenue:300e6, users:80, labor:85000, inventory:35e6, mLabor:0.20, mShrinkage:0.28, mCarrying:0.22, carryRate:0.28, mOtif:0.10, otifRisk:0.02, mIt:0.50, invTurnsBenchmark:6, discRate:0.12 },
+  food:          { revenue:90e6, users:50, labor:48000, inventory:6e6, mLabor:0.20, mShrinkage:0.35, mCarrying:0.18, carryRate:0.25, mOtif:0.10, otifRisk:0.025, mIt:0.50, invTurnsBenchmark:15, discRate:0.10 },
+  retail:        { revenue:0, users:0, labor:0, inventory:0, mLabor:0, mShrinkage:0, mCarrying:0, carryRate:0, mOtif:0, otifRisk:0, mIt:0, invTurnsBenchmark:0, discRate:0.10 },
+  default:       { revenue:80e6, users:40, labor:52000, inventory:10e6, mLabor:0.20, mShrinkage:0.30, mCarrying:0.20, carryRate:0.25, mOtif:0.10, otifRisk:0.02, mIt:0.50, invTurnsBenchmark:10, discRate:0.10 },
+};
+
+/* Driver definitions for the breakdown. Every component that can contribute
+   to annualBenefit is represented so the visible rows reconcile to the
+   headline. `needs` are prospect inputs, not benchmark assumptions. */
+const ROI_DRIVERS = [
+  { key:'labor',    label:'Labor productivity',     sav:'laborSav',    needs:['users'] },
+  { key:'shrink',   label:'Shrinkage reduction',    sav:'shrinkSav',   anyNeeds:['annualWriteOff','inventoryValue'] },
+  { key:'otif',     label:'OTIF / order accuracy',  sav:'otifSav',     needs:['revenue','otifBaseline','otifTarget'] },
+  { key:'turns',    label:'Inventory carrying / turns', sav:'inventoryCarrySav', needs:['inventoryValue'] },
+  { key:'expedite', label:'Expedite spend',         sav:'expediteSav', needs:['expediteSpendYr'] },
+  { key:'downtime', label:'Downtime reduction',     sav:'downtimeSav', needs:['downtimeEventsYr','downtimeHrsPerEvent','downtimeCostPerHr'] },
+  { key:'it',       label:'IT cost displacement',   sav:'itSav',       needs:['itCost'] },
+  { key:'count',    label:'Count and reconciliation labor', sav:'countSav', needs:['countDaysYr','countPeople'] },
+  { key:'throughput', label:'Warehouse throughput', sav:'throughputSav', needs:['ordersPerYr','costPerOrder','pickRateGainPct'] },
+  { key:'accuracy', label:'Order-error reduction', sav:'accuracySav', needs:['ordersPerYr','orderErrorPct','costPerError'] },
+  { key:'field', label:'Field inventory control', sav:'fieldInvSav', anyNeeds:['fieldInvValue','fieldLocations'] },
+];
+
+function prospectDriverUnlocked(driver, answered) {
+  const mapped = { users:'userCount', inventoryValue:'inventoryValue' };
+  const has = n => Number(answered[mapped[n] || n]) > 0;
+  if (driver.anyNeeds) return driver.anyNeeds.some(has);
+  return (driver.needs || []).every(has);
+}
+
+function buildROIInputs() {
+  const ind = (sessionData && sessionData.industry) || 'default';
+  const def = IND_DEFAULTS[ind] || IND_DEFAULTS.default;
+  const sections = prospectQuestionnaire();
+
+  /* Build a lookup: sync field → answered value */
+  const answered = {};
+  sections.forEach(sec => {
+    sec.questions.forEach(q => {
+      if (!q.sync) return;
+      const raw = prospectAnswers[q.id];
+      if (!isRealAnswer(raw)) return;
+      let n = parseFloat(raw);
+      if (isNaN(n)) return;
+      /* Keep answers in their display units. Convert hours/week questions to
+         percent of a 40-hour week exactly as the rep workflow does. */
+      if (q.syncConv === 'hoursPerWeek') n = Math.min(100, Math.round((n / 40) * 100));
+      answered[q.sync] = n;
+    });
   });
+
+  /* Merge answered fields over defaults */
+  const inp = {
+    modelVersion: 28,
+    /* Labor */
+    users:         answered.userCount       || 0,
+    labor:         answered.labor           || def.labor,
+    mLabor:        def.mLabor,
+    laborWastePct: (answered.laborWastePct || 0) / 100,
+    currentAccuracy: answered.currentAccuracy || 0,
+    /* Shrinkage */
+    mShrinkage:    def.mShrinkage,
+    shrinkRate:    0.03,
+    annualWriteOff: answered.annualWriteOff || 0,
+    effectiveShrinkBase: answered.annualWriteOff > 0
+      ? answered.annualWriteOff
+      : (answered.inventoryValue || 0) * 0.03,
+    /* Carrying */
+    inventory:     answered.inventoryValue  || 0,
+    mCarrying:     def.mCarrying,
+    carryRate:     def.carryRate,
+    /* Turns */
+    invTurnsCurrent:   answered.invTurnsCurrent  || 0,
+    invTurnsBenchmark: def.invTurnsBenchmark,
+    /* OTIF */
+    revenue:       answered.revenue         || 0,
+    otifBaseline:  answered.otifBaseline    || 0,
+    otifTarget:    answered.otifTarget      || 0,
+    mOtif:         def.mOtif,
+    lostSalesYr:answered.lostSalesYr||0,
+    contributionMarginPct:(answered.contributionMarginPct||0)/100,
+    /* Do not silently create prospect-facing value from a revenue-risk
+       benchmark when the prospect has not entered baseline and target. */
+    otifRisk:      0,
+    /* IT */
+    itCost:        answered.itCost          || 0,
+    mIt:           def.mIt,
+    /* Downtime */
+    downtimeEventsYr:   answered.downtimeEventsYr   || 0,
+    downtimeHrsPerEvent:answered.downtimeHrsPerEvent || 0,
+    downtimeCostPerHr:  answered.downtimeCostPerHr   || 0,
+    mDowntime:     0.30,
+    /* Expedite */
+    expediteSpendYr: answered.expediteSpendYr || 0,
+    mExpedite:     0.25,
+    servicePenaltyCostYr:answered.servicePenaltyCostYr||0,
+    mServicePenalty:0.25,
+    repeatVisitsYr:answered.repeatVisitsYr||0,
+    costPerTruckRoll:answered.costPerTruckRoll||0,
+    mFirstFix:0.30,
+    /* Counts */
+    countDaysYr:   answered.countDaysYr || 0,
+    countPeople:   answered.countPeople || 0,
+    mCount:        0.50,
+    /* Orders */
+    ordersPerYr:   answered.ordersPerYr     || 0,
+    costPerOrder:  answered.costPerOrder    || 0,
+    pickRateGainPct: (answered.pickRateGainPct || 0) / 100,
+    mThroughput:   0.30,
+    orderErrorPct: (answered.orderErrorPct || 0) / 100,
+    costPerError:  answered.costPerError    || 0,
+    mAccuracy:     0.35,
+    /* Field inventory */
+    hasFieldInventory: sessionData && !!sessionData.has_field_inventory,
+    fieldInvValue: answered.fieldInvValue || 0,
+    fieldLeakageRate: answered.fieldLeakageRate || 0,
+    fieldLocations: answered.fieldLocations || 0,
+    fieldReconcileCost:0,fieldReconcilePerYr:answered.fieldReconcilePerYr||0,
+    fieldReconcilePersonHours:answered.fieldReconcilePersonHours||0,
+    mFieldLeakage: 0.30, mFieldCount: 0.50,
+    /* No fabricated commercial investment. ROI/payback remain unavailable
+       until an authoritative modeled investment is deliberately supplied. */
+    invest:Number(sessionData&&sessionData.modeled_investment)||0,otc:Number(sessionData&&sessionData.modeled_one_time_investment)||0,
+    discRate:      answered.discRate ? answered.discRate / 100 : def.discRate,
+    implMonths:    3, ramp1: 0.40, ramp2: 0.75, ramp3: 1.00,
+  };
+
+  return { inp, answered };
+}
+
+function computeLiveROI() {
+  if (typeof calcROI !== 'function') return null;
+  try {
+    const { inp, answered } = buildROIInputs();
+    /* Base case */
+    const base = calcROI(inp);
+    /* Conservative: scale all recovery assumptions to 70% */
+    const consInp = { ...inp,
+      mLabor: inp.mLabor * 0.7, mShrinkage: inp.mShrinkage * 0.7,
+      mCarrying: inp.mCarrying * 0.7, mOtif: inp.mOtif * 0.7,
+      mIt: inp.mIt * 0.7, mDowntime: inp.mDowntime * 0.7, mExpedite: inp.mExpedite * 0.7,
+      mCount: inp.mCount * 0.7, mThroughput: inp.mThroughput * 0.7,
+      mAccuracy: inp.mAccuracy * 0.7, mFieldLeakage: inp.mFieldLeakage * 0.7,
+      mFieldCount: inp.mFieldCount * 0.7, mServicePenalty: inp.mServicePenalty * 0.7,
+      mFirstFix: inp.mFirstFix * 0.7,
+    };
+    const cons = calcROI(consInp);
+
+    const prospectFieldCount = ROI_DRIVERS.filter(d => prospectDriverUnlocked(d, answered)).length;
+    const hasEnough = prospectFieldCount >= 1 && base.annualBenefit > 0;
+
+    return { base, cons, answered, prospectFieldCount, hasEnough, inp };
+  } catch(e) {
+    console.error('computeLiveROI:', e.message);
+    return null;
+  }
+}
+
+function renderValuePanel() {
+  const host = document.getElementById('roiLiveCard');
+  if (!host) return;
+
+  const result = computeLiveROI();
+
+  /* Not enough data yet */
+  if (!result || !result.hasEnough) {
+    host.innerHTML = '<div class="roi-empty-icon">📊</div>'
+      + '<div class="roi-empty">Answer a few questions to see a live estimate of what Cloud Inventory could be worth for your operation.</div>';
+    return;
+  }
+
+  const { base, cons, answered, prospectFieldCount, inp } = result;
+  const fmt = n => {
+    if (!n || n < 0) return '$0';
+    if (n >= 1e6) return '$' + (n/1e6).toFixed(1) + 'M';
+    if (n >= 1000) return '$' + Math.round(n/1000) + 'k';
+    return '$' + Math.round(n).toLocaleString();
+  };
+
+  /* Driver rows */
+  const totalBase = base.annualBenefit || 1;
+  const driverRows = ROI_DRIVERS.map(d => {
+    const amount = base[d.sav] || 0;
+    const hasInputs = prospectDriverUnlocked(d, answered);
+    const locked = !hasInputs;
+    const pct = Math.round((amount / totalBase) * 100);
+
+    return `<div class="roi-driver-row">
+      <div class="roi-driver-name ${locked?'locked':''}">${locked?'<span style="font-size:10px;margin-right:2px;">🔒</span>':''} ${d.label}</div>
+      <div class="roi-driver-bar"><div class="roi-driver-fill" style="width:${locked?0:Math.min(pct,100)}%"></div></div>
+      <div class="roi-driver-amt ${locked?'locked':''}">${locked ? 'enter data' : fmt(amount)}</div>
+    </div>`;
+  }).join('');
+
+  const lockedDrivers = ROI_DRIVERS.filter(d => !prospectDriverUnlocked(d, answered));
+  const nudgeHtml = lockedDrivers.length
+    ? `<div class="roi-nudge"><strong>${lockedDrivers.length} area${lockedDrivers.length!==1?'s':''} need data</strong> — additional answers can add supported value drivers to this estimate.</div>`
+    : '';
+
+  /* Confidence bar */
+  const totalQ = Object.keys(prospectAnswers).filter(k => !k.endsWith('_by')).length;
+  const answeredQ = Object.keys(prospectAnswers).filter(k => !k.endsWith('_by') && isRealAnswer(prospectAnswers[k])).length;
+  const sections = prospectQuestionnaire();
+  const allQ = sections.reduce((s,sec)=>s+sec.questions.length,0);
+  const confPct = allQ > 0 ? Math.round((answeredQ / allQ) * 100) : 0;
+
+  /* Cost of inaction */
+  const monthly = Math.round((cons.annualBenefit || 0) / 12);
+  const inactionHtml = cons.annualBenefit > 10000
+    ? `<div class="roi-inaction">
+        <div class="roi-inaction-label">Per month without Cloud Inventory</div>
+        <div class="roi-inaction-cost">${fmt(monthly)}</div>
+        <div class="roi-inaction-sub">in recoverable value foregone</div>
+      </div>`
+    : '';
+  const investmentNotice = (base.totalInvestY1||0) <= 0
+    ? '<div class="roi-disclaimer" style="margin-top:8px;"><strong>ROI and payback are not yet calculated.</strong> The investment has not been defined by your Cloud Inventory team.</div>'
+    : '';
+
+  /* Populate nudge card separately */
+  const nudgeCard = document.getElementById('roiNudgeCard');
+  if (nudgeCard) {
+    if (nudgeHtml && lockedDrivers.length) {
+      nudgeCard.style.display = 'block';
+      nudgeCard.innerHTML = '<strong>' + lockedDrivers.length + ' area'
+        + (lockedDrivers.length !== 1 ? 's' : '')
+        + ' need data</strong> — additional answers can add supported value drivers to this estimate.';
+    } else {
+      nudgeCard.style.display = 'none';
+    }
+  }
+
+  host.innerHTML = `
+    <div class="roi-eyebrow"><div class="roi-live-dot"></div> Live estimate — updates as you answer</div>
+    <div class="roi-range-wrap">
+      <div class="roi-lo">${fmt(cons.annualBenefit)}</div>
+      <div class="roi-sep">–</div>
+      <div class="roi-hi">${fmt(base.annualBenefit)}</div>
+    </div>
+    <div class="roi-range-label">estimated annual benefit</div>
+    ${inactionHtml}
+    ${investmentNotice}
+    <div class="roi-disclaimer">Based only on value drivers supported by answers entered so far. The range applies 70%–100% of the starting recovery assumptions.</div>
+
+    <div style="border-top:1px solid var(--gray-100);margin:12px -16px;padding:12px 16px 0;">
+      <div class="roi-driver-head">Where the value comes from</div>
+      ${driverRows}
+    </div>
+
+    <div style="border-top:1px solid var(--gray-100);margin:12px -16px 0;padding:12px 16px 0;">
+      <div class="roi-conf-head">Data coverage</div>
+      <div class="roi-conf-bar"><div class="roi-conf-fill" style="width:${confPct}%"></div></div>
+      <div class="roi-conf-label"><strong>${answeredQ} of ${allQ}</strong> questions answered · ${prospectFieldCount} supported value driver${prospectFieldCount===1?'':'s'}. More answers can add drivers; they do not automatically guarantee value.</div>
+    </div>
+  `;
+}
+
+
+/* Rough reading/answering time left, to set expectations and cut abandonment. */
+function estimateMinutesLeft(remaining) {
+  const mins = Math.ceil((remaining * 20) / 60); // ~20s per question
+  if (remaining <= 0) return '';
+  return mins <= 1 ? 'about a minute left' : `about ${mins} minutes left`;
 }
 
 function updateProgress() {
-  const sections = getProspectQuestions(sessionData?.industry || 'default');
+  const sections = prospectQuestionnaire();
   const total = sections.reduce((s, sec) => s + sec.questions.length, 0);
-  const answered = Object.keys(prospectAnswers).filter(k => !k.endsWith('_by') && prospectAnswers[k]?.trim()).length;
+  const answered = Object.keys(prospectAnswers)
+    .filter(k => !k.endsWith('_by') && isRealAnswer(prospectAnswers[k])).length;
   const pct = total > 0 ? Math.round((answered / total) * 100) : 0;
   const fill = document.getElementById('progressFill');
   const label = document.getElementById('progressLabel');
+  const meta = document.getElementById('progressMeta');
   if (fill) fill.style.width = pct + '%';
-  if (label) label.textContent = `${answered} of ${total} questions answered (${pct}%)`;
+  if (label) label.textContent = `${answered} of ${total} answered`;
+  if (meta) {
+    const left = estimateMinutesLeft(total - answered);
+    const milestone =
+      pct >= 100 ? 'All questions answered \u2014 thank you.' :
+      pct >= 75  ? 'Nearly there \u2014 this is already a strong picture.' :
+      pct >= 40  ? 'Good progress \u2014 enough to see the main patterns.' :
+      pct >= 15  ? 'Off to a good start.' : '';
+    meta.textContent = [pct + '%', left, milestone].filter(Boolean).join(' \u00b7 ');
+  }
+  renderValuePanel();
 }
 
 function updateSaveButton() {
@@ -422,15 +1298,40 @@ async function pushAnswer(questionId, answer, enteredBy) {
       {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questionId, answer, enteredBy: enteredBy || 'prospect' })
+        body: JSON.stringify({ questionId, answer })
       }
     );
-    setAutosaveState(r && r.ok ? 'saved' : 'error');
+    if (r && (r.status === 401 || r.status === 403 || r.status === 410)) {
+      /* Link revoked or expired mid-session — surface a clear message */
+      setAutosaveState('revoked');
+    } else {
+      setAutosaveState(r && r.ok ? 'saved' : 'error');
+    }
   } catch(e) {
     console.error('pushAnswer error:', e.message);
     setAutosaveState('error');
   }
 }
+
+/* Retry all answers currently in memory after a connection error */
+async function retryPendingAnswers() {
+  setAutosaveState('saving');
+  let anyFail = false;
+  const entries = Object.entries(prospectAnswers).filter(([k]) => !k.endsWith('_by'));
+  for (const [questionId, answer] of entries) {
+    if (!answer || !answer.trim()) continue;
+    try {
+      const r = await fetch(
+        '/api/discovery/sessions/' + encodeURIComponent(sessionData.token) + '/answers',
+        { method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ questionId, answer }) }
+      );
+      if (!r || !r.ok) anyFail = true;
+    } catch(e) { anyFail = true; }
+  }
+  setAutosaveState(anyFail ? 'error' : 'saved');
+}
+window.retryPendingAnswers = retryPendingAnswers;
 
 /* Visible autosave reassurance — a persistent indicator so the prospect
    always knows their answers are being saved as they go. */
@@ -438,9 +1339,21 @@ function setAutosaveState(state) {
   const el = document.getElementById('autosaveIndicator');
   if (!el) return;
   el.style.display = 'inline-flex';
-  if (state === 'saving') { el.className = 'autosave saving'; el.innerHTML = '<span class="as-dot"></span> Saving…'; }
-  else if (state === 'saved') { el.className = 'autosave saved'; el.innerHTML = '✓ All answers saved automatically'; }
-  else { el.className = 'autosave error'; el.innerHTML = '⚠ Couldn\'t save — check your connection'; }
+  if (state === 'saving') {
+    el.className = 'autosave saving';
+    el.innerHTML = '<span class="as-dot"></span> Saving\u2026';
+  } else if (state === 'saved') {
+    el.className = 'autosave saved';
+    el.innerHTML = '\u2713 All answers saved automatically';
+  } else if (state === 'revoked') {
+    el.className = 'autosave error';
+    el.style.cursor = 'default';
+    el.innerHTML = '\u26A0 This link has been deactivated. Your answers up to this point have been saved. Contact your Cloud Inventory representative for a new link if needed.';
+  } else {
+    /* Connection error — show with retry */
+    el.className = 'autosave error';
+    el.innerHTML = '\u26A0 Couldn\u2019t save \u2014 check your connection. <button onclick="retryPendingAnswers()" style="margin-left:8px;font-size:11px;padding:2px 8px;border-radius:6px;border:1px solid currentColor;background:transparent;color:inherit;cursor:pointer;">Retry</button>';
+  }
 }
 
 async function autoSave() {
@@ -454,15 +1367,121 @@ async function autoSave() {
   }
 }
 
-async function submitAnswers() {
-  /* All answers are already in the DB via per-keystroke pushAnswer() calls.
-     This just shows the success state.                                      */
-  const answered = Object.keys(prospectAnswers).filter(k => !k.endsWith('_by') && prospectAnswers[k]?.trim()).length;
+/* Submit now goes through a review step first, so the prospect sees exactly
+   what they are sending and can correct it. Confirming completes the submit. */
+function submitAnswers() { renderReview(); }
+
+function renderReview() {
+  const sections = prospectQuestionnaire();
+  const total = sections.reduce((s, sec) => s + sec.questions.length, 0);
+  const answered = Object.keys(prospectAnswers)
+    .filter(k => !k.endsWith('_by') && isRealAnswer(prospectAnswers[k])).length;
+  const unsureCount = Object.keys(prospectAnswers)
+    .filter(k => !k.endsWith('_by') && (prospectAnswers[k] || '').trim().toLowerCase() === NOT_SURE_TOKEN).length;
+  const blank = Math.max(0, total - answered - unsureCount);
+
+  const blocks = sections.map(sec => {
+    const rows = sec.questions.map(q => {
+      const raw = (prospectAnswers[q.id] || '').trim();
+      const unsure = raw.toLowerCase() === NOT_SURE_TOKEN;
+      const real = isRealAnswer(raw);
+      let val;
+      if (unsure)      val = '<span class="rv-unsure">Not sure</span>';
+      else if (!real)  val = '<span class="rv-blank">Not answered</span>';
+      else             val = escapeHtml(q.type === 'percent' ? raw + '%' : (q.type === 'number' ? formatNumDisplay(raw) : raw));
+      return `<li class="rv-row">
+          <span class="rv-q">${escapeHtml(q.text)}</span>
+          <span class="rv-a">${val}</span>
+          <button type="button" class="rv-edit" onclick="editAnswer('${q.id}')">Edit</button>
+        </li>`;
+    }).join('');
+    return `<div class="rv-sec">
+        <div class="rv-sec-title">${getSectionIcon(sec.section)} ${escapeHtml(sec.section)}</div>
+        <ul class="rv-list">${rows}</ul>
+      </div>`;
+  }).join('');
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="rv-head">
+      <div class="rv-title">Review your answers</div>
+      <div class="rv-sub">
+        Please check these over before sending. ${answered} answered${unsureCount ? `, ${unsureCount} marked \u201cnot sure\u201d` : ''}${blank ? `, ${blank} left blank` : ''}.
+        Blank and \u201cnot sure\u201d answers are fine \u2014 they tell your Cloud Inventory contact where to help.
+      </div>
+      <div class="rv-actions">
+        <button class="save-btn" onclick="confirmSubmit()">Confirm and send</button>
+        <button class="rv-back" onclick="backToForm()">Back to questions</button>
+      </div>
+    </div>
+    ${blocks}
+    <div class="rv-foot">
+      <button class="save-btn" onclick="confirmSubmit()">Confirm and send</button>
+      <button class="rv-back" onclick="backToForm()">Back to questions</button>
+    </div>
+    <div style="height:60px;"></div>`;
+  window.scrollTo({ top: 0, behavior: 'auto' });
+}
+
+function backToForm() {
+  renderQuestionnaire(_currentSectionIdx);
+  window.scrollTo({ top: 0, behavior: 'auto' });
+}
+
+function editAnswer(id) {
+  /* Find which section the question is in, then jump there */
+  var sections = prospectQuestionnaire();
+  var targetSection = _currentSectionIdx;
+  sections.forEach(function(sec, i) {
+    if (sec.questions.some(function(q){ return q.id === id; })) targetSection = i;
+  });
+  renderQuestionnaire(targetSection);
+  setTimeout(function() {
+    var wrap  = document.getElementById('wrap-' + id);
+    var field = document.getElementById('pq-'  + id);
+    if (wrap) {
+      wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      wrap.classList.add('rv-flash');
+      setTimeout(function(){ wrap.classList.remove('rv-flash'); }, 1600);
+    }
+    if (field) field.focus({ preventScroll: true });
+  }, 60);
+}
+
+var _submitting = false;
+var _submissionNonce = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('submission_' + Date.now() + '_' + Math.random().toString(36).slice(2));
+async function confirmSubmit() {
+  if (_submitting) return;
+  _submitting = true;
+
+  /* Disable all submit buttons immediately to prevent double-tap/double-click */
+  document.querySelectorAll('button[onclick="confirmSubmit()"]').forEach(function(btn) {
+    btn.disabled = true;
+    btn.textContent = 'Submitting\u2026';
+  });
+
+  const answered = Object.keys(prospectAnswers)
+    .filter(k => !k.endsWith('_by') && isRealAnswer(prospectAnswers[k])).length;
+
+  /* Snapshot the current answer buffer as immutable evidence. Question
+     wording and classification are sent as context; the server reads the
+     authoritative answer rows and validates financial canonical inputs. */
+  try {
+    const response=await fetch('/api/discovery/sessions/' + encodeURIComponent(sessionData.token) + '/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:JSON.stringify({clientSubmissionId:_submissionNonce})
+    });
+    if(!response.ok)throw new Error((await response.json().catch(function(){return{};})).error||'Submission could not be saved.');
+  } catch (e) {
+    console.warn('submit endpoint error:', e.message);_submitting=false;
+    document.querySelectorAll('button[onclick="confirmSubmit()"]').forEach(function(btn){btn.disabled=false;btn.textContent='Confirm and send';});
+    alert('Your answers are still here, but the submission could not be confirmed. Please try again.');return;
+  }
 
   document.getElementById('mainContent').innerHTML = `
     <div class="complete-card">
-      <div class="complete-icon">🎉</div>
-      <div class="complete-title">Thank you — answers submitted!</div>
+      <div class="complete-icon">&#127881;</div>
+      <div class="complete-title">Thank you &#8212; answers submitted!</div>
       <div class="complete-sub">
         Your ${answered} responses have been saved and are ready for your Cloud Inventory contact to review.
         <br/><br/>
@@ -472,10 +1491,12 @@ async function submitAnswers() {
       </div>
     </div>`;
 
-  document.getElementById('progressLabel').textContent = `${answered} answers submitted ✓`;
+  document.getElementById('progressLabel').textContent = answered + ' answers submitted \u2713';
   document.getElementById('progressFill').style.width = '100%';
+  const meta = document.getElementById('progressMeta');
+  if (meta) meta.textContent = 'Submitted \u2014 thank you.';
   document.getElementById('saveBtn').disabled = true;
-  document.getElementById('saveBtn').textContent = 'Submitted ✓';
+  document.getElementById('saveBtn').textContent = 'Submitted \u2713';
 }
 
 function getSectionIcon(title) {
@@ -508,5 +1529,103 @@ function escapeHtml(str) {
 
 document.addEventListener('DOMContentLoaded', init);
 </script>
+<button class="p-to-top p-to-top-hidden" id="pToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to top" aria-label="Back to top">
+  <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 13V4M4 7l4-4 4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</button>
+<script>
+(function(){
+  var btn=document.getElementById('pToTop');if(!btn)return;
+  var ticking=false;
+  function update(){ticking=false;var y=window.scrollY||document.documentElement.scrollTop||0;btn.classList.toggle('p-to-top-hidden',y<400);}
+  window.addEventListener('scroll',function(){if(!ticking){ticking=true;requestAnimationFrame(update);}},{passive:true});
+  update();
+})();
+</script>
+<style>
+/* ── Full assistant CSS inlined — prospect.html has no access to style.css ── */
+/* ══ In-app assistant ("Ask") ══════════════════════════════════════
+   Floating button bottom-right (back-to-top is bottom-left, so no clash).
+   Opens a slide-up chat panel available on every screen. */
+.asst-fab{position:fixed;bottom:24px;right:24px;z-index:200;display:inline-flex;align-items:center;gap:8px;
+  padding:11px 18px 11px 15px;border-radius:26px;border:none;cursor:pointer;
+  background:var(--cyan);color:#fff;font-family:inherit;font-size:14px;font-weight:600;
+  box-shadow:0 4px 16px rgba(0,169,204,.38);transition:transform .15s,box-shadow .15s;}
+.asst-fab:hover{transform:translateY(-2px);box-shadow:0 8px 26px rgba(0,169,204,.5);}
+.asst-fab svg{flex-shrink:0;}
+@media(max-width:600px){.asst-fab span{display:none;}.asst-fab{padding:13px;border-radius:50%;}}
+
+.asst-panel{position:fixed;bottom:24px;right:24px;z-index:201;width:380px;max-width:calc(100vw - 32px);
+  height:560px;max-height:calc(100vh - 100px);background:var(--white);border-radius:16px;
+  box-shadow:0 16px 48px rgba(30,41,49,.28);display:flex;flex-direction:column;overflow:hidden;
+  opacity:0;visibility:hidden;transform:translateY(16px) scale(.98);transform-origin:bottom right;
+  transition:opacity .18s,transform .18s,visibility .18s;}
+.asst-panel.open{opacity:1;visibility:visible;transform:translateY(0) scale(1);}
+@media(max-width:600px){.asst-panel{width:100vw;height:100vh;max-height:100vh;bottom:0;right:0;border-radius:0;}}
+
+.asst-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;
+  background:linear-gradient(180deg,var(--navy-mid),var(--navy));color:#fff;flex-shrink:0;}
+.asst-title{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px;}
+.asst-dot{width:8px;height:8px;border-radius:50%;background:#4ADE80;box-shadow:0 0 0 3px rgba(74,222,128,.25);}
+.asst-close{background:none;border:none;color:rgba(255,255,255,.8);font-size:26px;line-height:1;cursor:pointer;padding:8px 10px;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:6px;}
+.asst-close:hover{color:#fff;background:rgba(255,255,255,.1);}
+.asst-close-x{font-size:26px;line-height:1;}
+.asst-close-label{display:none;font-size:13px;font-weight:600;}
+@media(max-width:600px){
+  .asst-close{font-size:22px;padding:10px 14px;}
+  .asst-close-label{display:inline;}
+}
+
+.asst-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;background:var(--gray-50);}
+.asst-msg{display:flex;}
+.asst-msg.asst-user{justify-content:flex-end;}
+.asst-bubble{max-width:85%;padding:10px 13px;border-radius:14px;font-size:13.5px;line-height:1.55;}
+.asst-bot .asst-bubble{background:var(--white);color:var(--gray-800);border:1px solid var(--gray-100);border-bottom-left-radius:4px;}
+.asst-user .asst-bubble{background:var(--cyan);color:#fff;border-bottom-right-radius:4px;}
+.asst-bubble p{margin:0 0 8px;}.asst-bubble p:last-child{margin-bottom:0;}
+.asst-bubble ul{margin:6px 0;padding-left:18px;}.asst-bubble li{margin:3px 0;}
+.asst-bubble strong{font-weight:600;}
+.asst-err{color:#B91C1C;}
+
+.asst-chips{display:flex;flex-direction:column;gap:7px;align-items:flex-start;}
+.asst-chip{background:var(--white);border:1px solid var(--gray-200);color:var(--cyan);border-radius:16px;
+  padding:7px 13px;font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer;text-align:left;transition:all .12s;}
+.asst-chip:hover{border-color:var(--cyan);background:var(--cyan-pale);}
+
+.asst-input{display:flex;gap:8px;padding:12px;border-top:1px solid var(--gray-100);background:var(--white);flex-shrink:0;align-items:flex-end;}
+.asst-input textarea{flex:1;resize:none;border:1px solid var(--gray-200);border-radius:10px;padding:9px 12px;
+  font-family:inherit;font-size:13.5px;line-height:1.4;max-height:120px;outline:none;}
+.asst-input textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,169,204,.14);}
+.asst-input button{background:var(--cyan);color:#fff;border:none;border-radius:10px;padding:9px 16px;
+  font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;flex-shrink:0;}
+.asst-input button:disabled{opacity:.5;cursor:default;}
+
+.asst-foot{padding:8px 12px;font-size:10.5px;color:var(--gray-400);text-align:center;background:var(--white);border-top:1px solid var(--gray-50);flex-shrink:0;line-height:1.4;}
+
+.asst-typing{display:inline-flex;gap:4px;padding:2px 0;}
+.asst-typing i{width:6px;height:6px;border-radius:50%;background:var(--gray-400);animation:asst-blink 1.2s infinite both;}
+.asst-typing i:nth-child(2){animation-delay:.2s;}.asst-typing i:nth-child(3){animation-delay:.4s;}
+@keyframes asst-blink{0%,80%,100%{opacity:.3;}40%{opacity:1;}}
+
+/* ── Persistent assistant chips ──────────────────────────────────────
+   Always-visible shortcut row pinned above the input. Smaller and
+   quieter than the welcome chips so they don't compete with the
+   conversation, but always one click away. */
+.asst-persist{display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px 4px;
+  border-top:1px solid var(--gray-100);background:var(--white);}
+.asst-persist:empty{display:none;}
+.asst-chip-sm{font-size:11.5px;padding:5px 10px;border-radius:14px;
+  background:var(--gray-50);border:1px solid var(--gray-200);
+  color:var(--gray-600);font-family:inherit;font-weight:500;cursor:pointer;
+  white-space:nowrap;transition:all .12s;}
+.asst-chip-sm:hover{border-color:var(--cyan);color:var(--cyan);background:var(--white);}
+
+/* Prospect assistant: bottom-left (back-to-top is bottom-right) */
+.asst-context{display:flex;flex-direction:column;gap:3px;padding:9px 12px;border-bottom:1px solid #E7EDF2;background:#fff;font-size:11px;color:#6B7A8D}.asst-context strong{color:var(--ci-dark)}.ai-stale{margin:8px 10px;padding:9px 10px;border:1px solid #F5C66A;border-radius:8px;background:#FFF8E6;color:#8A4B08;font-size:12px;line-height:1.4}
+.passt-fab{bottom:22px;left:22px;}
+.passt-panel{bottom:22px;left:22px;right:auto;transform-origin:bottom left;}
+@media(max-width:600px){.passt-panel{left:0;right:0;border-radius:0;transform-origin:bottom center;}}
+</style>
+<script src="ai-session.js"></script>
+<script src="prospect-assistant.js"></script>
 </body>
 </html>

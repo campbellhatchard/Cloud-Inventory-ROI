@@ -102,4 +102,16 @@ router.put('/benchmarks', requireAuth, requireRole('admin'), async (req, res) =>
   }
 });
 
+/* ── Custom benchmarks: reset one industry to factory defaults (admin only) ── */
+router.delete('/benchmarks/:industry', requireAuth, requireRole('admin'), async (req, res) => {
+  try {
+    const industry = req.params.industry.slice(0, 30);
+    await query(`DELETE FROM custom_benchmarks WHERE industry = $1`, [industry]);
+    res.json({ ok: true, industry });
+  } catch (err) {
+    console.error('reset benchmarks error:', err.message);
+    res.status(500).json({ error: 'Failed to reset benchmarks.' });
+  }
+});
+
 module.exports = router;

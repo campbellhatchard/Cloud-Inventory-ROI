@@ -4,7 +4,7 @@ function normalizeUrl(value) {
 
 function getAppUrl() {
   const explicit = normalizeUrl(process.env.APP_URL);
-  if (explicit) return explicit;
+  if (explicit && !(process.env.NODE_ENV === 'production' && /^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/i.test(explicit))) return explicit;
 
   const externalUrl = normalizeUrl(process.env.RENDER_EXTERNAL_URL);
   if (externalUrl) return externalUrl;

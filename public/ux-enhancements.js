@@ -51,7 +51,7 @@ const RANGE_RULES = {
   laborWastePct:   { min: 0,  max: 80,  label: 'Productivity loss', unit: '%', hint: 'Usually 5–40%.' },
   pickRateGainPct: { min: 0,  max: 80,  label: 'Pick-rate gain', unit: '%', hint: 'Usually 5–40%.' },
   orderErrorPct:   { min: 0,  max: 30,  label: 'Order error rate', unit: '%', hint: 'Usually 0.5–8%.' },
-  fieldLeakagePct: { min: 0,  max: 40,  label: 'Field parts leakage', unit: '%', hint: 'Usually 1–15%.' }
+  fieldLeakageRate: { min: 0,  max: 40,  label: 'Field parts leakage', unit: '%', hint: 'Enter the field-only annual loss rate.' }
 };
 function checkFieldRange(id) {
   const el = document.getElementById(id);
@@ -111,6 +111,19 @@ function renderSaveStatus() {
    Shows "Acme Corp · FY26 Scenario" on every tab so the rep never loses
    track of which customer they're working in. Updates on tab switch and
    when the identity fields change. */
+let _contextStageReadiness = null;
+let _contextStageScenarioId = null;
+let _contextStageLoading = false;
+async function loadContextStageReadiness(scenarioId) {
+  if (!scenarioId || _contextStageLoading || (_contextStageScenarioId === scenarioId && _contextStageReadiness)) return;
+  _contextStageLoading = true;
+  try {
+    const response = await apiFetch('/api/stage-readiness/' + encodeURIComponent(scenarioId));
+    _contextStageReadiness = response && response.ok ? await response.json() : null;
+    _contextStageScenarioId = scenarioId;
+  } catch (_) { _contextStageReadiness = null; }
+  finally { _contextStageLoading = false; updateContextHeader(); }
+}
 function updateContextHeader() {
   const bar = document.getElementById('contextHeader');
   if (!bar) return;
@@ -118,10 +131,26 @@ function updateContextHeader() {
   const scenario = (document.getElementById('scenarioName')?.value || '').trim();
   if (!company) { bar.style.display = 'none'; return; }
   bar.style.display = 'flex';
-  bar.innerHTML = `<span class="ctx-icon">🏢</span>
-    <span class="ctx-company">${escapeHtmlUX(company)}</span>` +
-    (scenario ? `<span class="ctx-sep">·</span><span class="ctx-scenario">${escapeHtmlUX(scenario)}</span>` : '') +
-    `<button class="ctx-switch" onclick="showCustomerGate()" title="Switch customer">Switch</button>`;
+  const customerId=window.currentScenarioCustomerId||window._currentCustomerId||null;
+  const scenarios = (typeof savedScenarios !== 'undefined' && Array.isArray(savedScenarios))
+    ? savedScenarios.filter(s => s && s.isCurrent !== false && (customerId?s.customerId===customerId:s.company===company)) : [];
+  const activeId = window._calcScenarioId || '';
+  if (activeId && _contextStageScenarioId !== activeId) loadContextStageReadiness(activeId);
+  const scenarioControl = scenarios.length ? `<label class="ctx-scenario-picker"><span>Scenario</span><select onchange="onCalcScenarioPick(this.value)" title="Switch scenario for this customer">${scenarios.map(s => `<option value="${escapeHtmlUX(s.id)}"${s.id===activeId?' selected':''}>${escapeHtmlUX(s.name || 'Untitled')}${s.version?' (v'+s.version+')':''}</option>`).join('')}</select></label>${activeId?`<button class="ctx-versions" onclick="openCurrentVersionHistory()" title="View previous versions of this scenario">🕘 Versions</button>`:''}` : (scenario ? `<span class="ctx-scenario"><span>Scenario</span>${escapeHtmlUX(scenario)}</span>` : '');
+  const g = _contextStageScenarioId === activeId ? _contextStageReadiness : null;
+  const stageControl = activeId ? `<span class="ctx-sep">/</span><div class="ctx-stage-picker"><span>Current BuyCycle stage</span><strong>${g?`Stage ${g.currentStageNumber} — ${escapeHtmlUX(g.currentStage?.name||'')}`:'Loading…'}</strong><small id="contextStageStatus" class="${g&&g.stageGap>0?'has-gap':''}">${g ? (g.stageGap>0?`Evidence supports Stage ${g.evidenceStage}`:`${g.readiness}% ready`) : 'Loading evidence'}</small><button onclick="switchTab('readiness')">Review</button></div>` : '';
+  const meta=window._activeCustomerMeta||null;
+  const attribution=meta&&meta.access!=='owner'?`<span class="ctx-attribution"><span>Viewing ${escapeHtmlUX(meta.owner||'another rep')}'s opportunity</span>${meta.solutionFit?.primarySe?`<b>Primary SE: ${escapeHtmlUX(meta.solutionFit.primarySe)}</b>`:''}${meta.teams?.length?`<b>${escapeHtmlUX(meta.teams.join(', '))}</b>`:''}</span>`:'';
+  bar.innerHTML = `<span class="ctx-icon" aria-hidden="true">${ctxInitialsUX(company)}</span>
+    <span class="ctx-details"><span class="ctx-label">Customer workspace</span><span class="ctx-company">${escapeHtmlUX(company)}</span></span>` +
+    attribution+(scenarioControl ? `<span class="ctx-sep">/</span>${scenarioControl}` : '') + stageControl +
+    `<button class="ctx-switch" onclick="openCustomerSwitcher()" title="Search and switch customer"><span aria-hidden="true">⇄</span> Switch customer</button>`;
+}
+window.resetContextStageReadiness=()=>{_contextStageReadiness=null;_contextStageScenarioId=null;_contextStageLoading=false;};
+
+function ctxInitialsUX(name) {
+  return String(name || '').trim().split(/\s+/).slice(0, 2)
+    .map(w => w.charAt(0).toUpperCase()).join('') || '—';
 }
 function escapeHtmlUX(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -239,7 +268,7 @@ function renderEmptyState(el, opts) {
   const title = escapeHtmlUX(opts.title || 'Nothing here yet');
   const sub = escapeHtmlUX(opts.sub || '');
   const action = opts.actionLabel && opts.onAction
-    ? `<button class="btn btn-cta btn-sm ux-empty-action">${escapeHtmlUX(opts.actionLabel)}</button>` : '';
+    ? `<button class="btn btn-primary btn-sm ux-empty-action">${escapeHtmlUX(opts.actionLabel)}</button>` : '';
   el.innerHTML = `<div class="ux-empty">
       <div class="ux-empty-icon">${icon}</div>
       <div class="ux-empty-title">${title}</div>
@@ -278,6 +307,24 @@ function initKeyboardShortcuts() {
       if (typeof saveScenario === 'function') saveScenario();
       return;
     }
+    /* Cmd/Ctrl+N → new scenario */
+    if ((e.metaKey || e.ctrlKey) && (e.key === 'n' || e.key === 'N')) {
+      e.preventDefault();
+      if (typeof clearForm === 'function') { switchTab('calc'); clearForm(); }
+      return;
+    }
+    /* Cmd/Ctrl+T → template picker */
+    if ((e.metaKey || e.ctrlKey) && (e.key === 't' || e.key === 'T')) {
+      e.preventDefault();
+      if (typeof showTemplatePicker === 'function') showTemplatePicker();
+      return;
+    }
+    /* Cmd/Ctrl+P → download PDF (override browser print) */
+    if ((e.metaKey || e.ctrlKey) && (e.key === 'p' || e.key === 'P')) {
+      e.preventDefault();
+      if (typeof downloadPDF === 'function') downloadPDF();
+      return;
+    }
     if (typing) return;
     /* "?" → show shortcuts */
     if (e.key === '?') { e.preventDefault(); showShortcutSheet(); return; }
@@ -300,10 +347,15 @@ function initKeyboardShortcuts() {
 function showShortcutSheet() {
   if (document.getElementById('kbSheet')) return;
   const rows = [
-    ['g then c', 'Go to Calculator'], ['g then d', 'Go to Discovery'],
-    ['g then e', 'Go to Executive View'], ['g then s', 'Go to Saved'],
-    ['g then m', 'Go to Stakeholder Map'], ['g then a', 'Go to Analytics'],
-    ['⌘/Ctrl + S', 'Save scenario'], ['?', 'Show this help'], ['Esc', 'Close dialogs']
+    ['g → c', 'Calculator'], ['g → d', 'Discovery guide'],
+    ['g → e', 'Executive view'], ['g → s', 'Saved scenarios'],
+    ['g → m', 'Stakeholder map'], ['g → a', 'Analytics'],
+    ['⌘/Ctrl+S', 'Save scenario'],
+    ['⌘/Ctrl+N', 'New scenario'],
+    ['⌘/Ctrl+T', 'Start from template'],
+    ['⌘/Ctrl+P', 'Download PDF'],
+    ['?', 'Show this help'],
+    ['Esc', 'Close any modal']
   ];
   const modal = document.createElement('div');
   modal.className = 'modal-overlay'; modal.id = 'kbSheet';
@@ -322,11 +374,13 @@ function showShortcutSheet() {
    scenarios yet. Uses a simple in-page coach panel (not intrusive modals).
    Dismissal is remembered in sessionStorage for the session only. */
 function maybeShowOnboarding() {
-  try {
-    if (sessionStorage.getItem('ci_onboarding_done') === '1') return;
-  } catch (e) {}
+  const user=window.ciAuth?.getUser?.();
+  if(!user||!window._scenarioLoadResolved)return;
+  const preferenceKey=`ci_onboarding_done:${user.id||user.username||'user'}`;
+  try { if (localStorage.getItem(preferenceKey) === '1') return; } catch (e) {}
+  if(document.querySelector('.pane.active')?.id!=='tab-calc')return;
   /* Only for genuinely new users: no saved scenarios. */
-  const noScenarios = (typeof savedScenarios === 'undefined') || !savedScenarios || savedScenarios.length === 0;
+  const noScenarios = Array.isArray(savedScenarios) && savedScenarios.length === 0;
   if (!noScenarios) return;
   if (document.getElementById('onboardCoach')) return;
   const coach = document.createElement('div');
@@ -342,11 +396,12 @@ function maybeShowOnboarding() {
       <li><strong>Share &amp; track</strong> — send a trackable business-case link and see when they open it.</li>
     </ol>
     <div class="onboard-actions">
-      <button class="btn btn-cta btn-sm" id="onboardStart">Start with a customer</button>
+      <button class="btn btn-primary btn-sm" id="onboardStart">Start with a customer</button>
       <button class="btn btn-ghost btn-sm" id="onboardSkip">Skip for now</button>
     </div>`;
   document.body.appendChild(coach);
-  const done = () => { try { sessionStorage.setItem('ci_onboarding_done','1'); } catch(e){} coach.remove(); };
+  const onEscape=e=>{if(e.key==='Escape')done();};
+  const done = () => { try { localStorage.setItem(preferenceKey,'1'); } catch(e){} document.removeEventListener('keydown',onEscape);coach.remove(); };
   coach.querySelector('.onboard-close').addEventListener('click', done);
   coach.querySelector('#onboardSkip').addEventListener('click', done);
   coach.querySelector('#onboardStart').addEventListener('click', () => {
@@ -354,6 +409,7 @@ function maybeShowOnboarding() {
     if (typeof switchTab === 'function') switchTab('calc');
     if (typeof showCustomerGate === 'function') showCustomerGate();
   });
+  document.addEventListener('keydown',onEscape);
 }
 
 /* ── Presentation mode (tablet demo) for Executive View ─────────────

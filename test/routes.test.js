@@ -141,12 +141,13 @@ describe('HTTP API integration', { skip: HAS_DB ? false : 'DATABASE_URL not set 
       assert.ok(Number(data.annualBenefit) > 0, 'server should compute a positive annual benefit');
     }
 
-    // Record an outcome on the group.
+    // The legacy group outcome writer is permanently retired. Closure must use
+    // Buyer Readiness, even when the caller supplies a formerly valid payload.
     if (baseId) {
       const oc = await api(`/api/scenarios/group/${baseId}/outcome`, {
         method: 'PUT', token: adminToken, body: { outcome: 'won', realizedValue: 1500000 }
       });
-      assert.ok([200].includes(oc.status), `outcome status ${oc.status}`);
+      assert.strictEqual(oc.status, 410, 'legacy outcome writer must remain retired');
     }
 
     // Clean up.
@@ -181,8 +182,61 @@ describe('HTTP API integration', { skip: HAS_DB ? false : 'DATABASE_URL not set 
     if (saved.id) await api('/api/scenarios/' + saved.id, { method: 'DELETE', token: adminToken });
   });
 
-  test('outcome endpoint rejects an invalid outcome value', async () => {
-    // Create a throwaway scenario, then send a bad outcome.
+  test('handoff endpoints: auth-gated, upsert, server-computed readiness', async () => {
+    // Need a customer to attach to — create a scenario to get one.
+    const company = 'Handoff Test ' + Date.now();
+    const created = await api('/api/scenarios', {
+      method: 'POST', token: adminToken,
+      body: { name: 'HO', company, data: { company, modelVersion: 27 } }
+    });
+    const saved = created.json && (created.json.scenario || created.json);
+    const customerId = saved && (saved.customer_id || saved.customerId);
+    if (!customerId) { assert.ok(true, 'no customer_id returned — skipping handoff body'); return; }
+
+    // Anonymous is rejected.
+    const anon = await api('/api/handoffs/' + customerId);
+    assert.strictEqual(anon.status, 401, 'handoff read must require auth');
+
+    // Empty shell before any save.
+    const shell = await api('/api/handoffs/' + customerId, { token: adminToken });
+    assert.strictEqual(shell.status, 200);
+    assert.strictEqual(shell.json.exists, false, 'expected an empty shell');
+    assert.strictEqual(shell.json.readiness, 0);
+
+    // Upsert with partial data → server computes readiness > 0.
+    const put = await api('/api/handoffs/' + customerId, {
+      method: 'PUT', token: adminToken,
+      body: { data: { opportunity: { customer: company, solutionEngineer: 'Jo', products: 'CIP' } } }
+    });
+    assert.strictEqual(put.status, 200);
+    assert.ok(typeof put.json.readiness === 'number' && put.json.readiness > 0, 'server should compute a readiness score');
+
+    // Re-fetch persists.
+    const refetch = await api('/api/handoffs/' + customerId, { token: adminToken });
+    assert.strictEqual(refetch.json.exists, true);
+    assert.strictEqual(refetch.json.data.opportunity.solutionEngineer, 'Jo');
+
+    // Cleanup the scenario (customer + handoff cascade as configured).
+    if (saved.id) await api('/api/scenarios/' + saved.id, { method: 'DELETE', token: adminToken });
+  });
+
+  test('role validation accepts se (Solution Engineer)', async () => {
+    // Admin creating a user with role 'se' should succeed (or 409 if exists),
+    // and must NOT be rejected as an invalid role.
+    const uname = 'se_test_' + Date.now();
+    const r = await api('/api/users', {
+      method: 'POST', token: adminToken,
+      body: { username: uname, email: uname + '@example.com', role: 'se' }
+    });
+    // 200/201 = created; 400 would mean the role was rejected (the bug we're guarding).
+    assert.notStrictEqual(r.status, 400, 'role "se" must be accepted, not rejected as invalid');
+    // best-effort cleanup if an id came back
+    const id = r.json && (r.json.id || (r.json.user && r.json.user.id));
+    if (id) await api('/api/users/' + id, { method: 'DELETE', token: adminToken });
+  });
+
+  test('retired outcome endpoint cannot mutate with any payload', async () => {
+    // The retired endpoint returns 410 before payload validation or DB writes.
     const created = await api('/api/scenarios', { method: 'POST', token: adminToken, body: { data: { name: 'Bad Outcome Co', company: 'Bad Outcome Co', modelVersion: 27 }, name: 'Bad Outcome Co' } });
     const saved = created.json && (created.json.scenario || created.json);
     const baseId = saved && (saved.base_id || saved.baseId);
@@ -191,7 +245,7 @@ describe('HTTP API integration', { skip: HAS_DB ? false : 'DATABASE_URL not set 
       const bad = await api(`/api/scenarios/group/${baseId}/outcome`, {
         method: 'PUT', token: adminToken, body: { outcome: 'maybe' }
       });
-      assert.strictEqual(bad.status, 400, 'invalid outcome should be rejected with 400');
+      assert.strictEqual(bad.status, 410, 'retired outcome endpoint must always return 410');
     }
     if (id) await api(`/api/scenarios/${id}`, { method: 'DELETE', token: adminToken });
   });

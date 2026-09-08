@@ -1,148 +1,186 @@
-# Cloud Inventory ROI Builder v3.7.0
+# Cloud Inventory ROI Business Case Builder
 
-Render-ready release. Promoted from the validated v2.9.3 package (public prospect-link auth fix) with the dependency-free ROI engine test suite restored (`npm run test:engine`).
+A multi-user SaaS application for Cloud Inventory sales reps and Solution Engineers to build data-driven executive business cases for prospects evaluating Cloud Inventory's WMS and field inventory solutions.
 
-## Deployment target
+---
 
-- GitHub repository root must contain `render.yaml`, `package.json`, `package-lock.json`, `server.js`, `src/`, `public/`, and `migrations/`.
-- Render deploys through Blueprint from `render.yaml`.
-- The service is configured as a Node web service with a managed Render PostgreSQL database.
+## What it does
 
-## Render settings
+- **ROI Calculator** — Live-updating model with 10 value drivers (labor, shrinkage, carrying cost, inventory turns, OTIF, downtime, expediting, field inventory, IT displacement, WMS levers)
+- **Discovery guide** — Industry-specific question sets with a shareable prospect link so prospects can contribute their own data
+- **Executive view** — CFO-ready narrative, Three Whys framework, authenticated server-generated PDF, PowerPoint and Word exports
+- **Solution Fit** — Governed pre-sales assessment with explicit creation, Product → ERP → Applications scope, demo/fit/customer-validation status, gaps, and technical readiness
+- **Action plans** — Mutual action plan builder with milestone tracking and a shareable prospect link
+- **Stakeholder map** — Influence/support matrix with AI gap analysis
+- **Scenario templates** — Pre-populated starting points for 6 verticals
+- **Version history & diffing** — Every save creates a version; compare any two side by side
+- **Admin tools** — User management, benchmarks, audit log, data export, test data cleanup with undo, resonance analytics
 
-- Build command: `npm ci --omit=dev --no-audit --no-fund`
-- Start command: `node server.js`
-- Health check path: `/health`
-- Node version: `22.22.0`
-- Shutdown delay: `15` seconds
-- Web plan: `starter`
-- PostgreSQL plan: `basic-256mb`
+---
 
-## Initial administrator
+## Tech stack
 
-- Username: `admin`
-- Password: `CloudInventory2026!`
-- Email: `admin@cloudinventory.com`
+| Layer | Technology |
+|---|---|
+| Runtime | Node.js 22 |
+| Framework | Express 4 |
+| Database | PostgreSQL 16 (via `pg` pool) |
+| Auth | JWT (8-hour sessions) + bcrypt |
+| AI | Anthropic Claude API |
+| Email | SendGrid |
+| Frontend | Vanilla JS + CSS — no build step |
+| Deployment | Render (web service + managed Postgres) |
 
-Keep the GitHub repository private because the bootstrap credential is present in `render.yaml`.
+---
 
-## Optional integrations
+## Local development
 
-Add these manually in Render Environment settings only when needed:
+### Prerequisites
+- Node.js 22
+- PostgreSQL 16
 
+### Setup
+
+```bash
+git clone <repo-url>
+cd cloud-inventory-roi-builder
+npm install
+cp .env.example .env   # edit with your values
+npm run migrate
+npm run dev             # → http://localhost:3000
+```
+
+### Required environment variables
+
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `JWT_SECRET` | Long random string for signing JWTs |
+| `BCRYPT_ROUNDS` | bcrypt work factor 10–15 (use 12) |
+| `BOOTSTRAP_ADMIN_USERNAME` | Admin account username |
+| `BOOTSTRAP_ADMIN_PASSWORD` | Admin account password (min 12 chars) |
+| `BOOTSTRAP_ADMIN_EMAIL` | Admin account email |
+| `NODE_ENV` | Set to `production` on Render |
+
+### Optional environment variables
+
+| Variable | Description |
+|---|---|
+| `ANTHROPIC_API_KEY` | Enables AI features |
+| `ANTHROPIC_MODEL` | Claude model — default `claude-sonnet-4-6` |
+| `SENDGRID_API_KEY` | Enables discovery + password reset emails |
+| `FROM_EMAIL` | From address for SendGrid emails |
+| `APP_URL` | Base URL used in email links |
+
+Without both `SENDGRID_API_KEY` and a verified `FROM_EMAIL`, the app runs but reports email as not configured. Valid business transactions still complete; message content and secrets are never logged.
+
+---
+
+## Database migrations
+
+Migrations live in `migrations/*.sql` (001–035). They run automatically on every server startup. The runner tracks applied migrations in `schema_migrations` and only runs new ones.
+
+```bash
+npm run migrate   # run manually
+```
+
+**Security note:** The migration runner ensures the configured bootstrap Admin exists. Before the mandatory first-login password change it may synchronize the bootstrap credential; after the administrator completes that change, startup preserves the user-managed password rather than overwriting it.
+
+---
+
+## Deployment (Render)
+
+`render.yaml` defines the web service and Postgres database. Set these **secrets in the Render dashboard** (not in `render.yaml`):
+
+- `BOOTSTRAP_ADMIN_USERNAME`
+- `BOOTSTRAP_ADMIN_PASSWORD`
+- `BOOTSTRAP_ADMIN_EMAIL`
 - `ANTHROPIC_API_KEY`
 - `SENDGRID_API_KEY`
 - `FROM_EMAIL`
-- `APP_URL`
 
-The application derives its default public URL from Render when possible. `APP_URL` is only needed for a custom domain override.
+Push to the connected GitHub branch. Render installs with `npm ci` and starts `node server.js`. Migrations run automatically before the server accepts traffic.
 
-## Public discovery links
+---
 
-This release preserves the developer update to generate prospect links with `?token=` and supports legacy `#token=` links in `public/prospect.html`.
+## Project structure
 
-## v2.9.3 Discovery Link Authentication Fix
-
-This release fixes public prospect questionnaire links returning `401 NO_TOKEN`.
-
-The cause was `src/routes/analytics.js` applying authentication globally while being mounted at `/api`, which intercepted `/api/discovery/sessions/:token` before the public discovery route could run.
-
-After deployment, public prospect links should call:
-
-```text
-GET /api/discovery/sessions/:token
+```
+├── server.js                  # Express app and all routes
+├── src/
+│   ├── auth.js                # JWT signing and session helpers
+│   ├── audit.js               # Audit log helpers
+│   ├── db.js                  # PostgreSQL connection pool
+│   ├── email.js               # SendGrid helpers
+│   ├── migrate.js             # Migration runner
+│   ├── middleware/auth.js     # requireAuth middleware
+│   ├── routes/
+│   │   ├── auth.js            # Login, logout, forgot/reset password
+│   │   ├── maps.js            # Mutual action plans
+│   │   ├── scenarios.js       # Scenarios CRUD, versions, outcome, resonance
+│   │   ├── stakeholders.js    # Stakeholder maps
+│   │   └── users.js           # User management (admin)
+│   └── shared/roi-engine.js   # ROI calculation engine
+├── migrations/                # SQL migration files (001–035)
+├── public/                    # Frontend (no build step)
+│   ├── index.html             # Main app shell
+│   ├── prospect.html          # Standalone prospect questionnaire
+│   ├── print.html             # PDF print page
+│   ├── app.js                 # Scenario CRUD, tab routing
+│   ├── features.js            # Analytics, sensitivity, CRM push
+│   ├── discovery.js           # Discovery guide
+│   ├── solution-fit.js        # Solution Fit tab
+│   ├── versioning.js          # Version history and diff
+│   ├── scenario-templates.js  # Vertical templates
+│   ├── calc-wizard.js         # Guided mode
+│   ├── ux-enhancements.js     # Keyboard shortcuts, onboarding
+│   ├── industry-data.js       # Industry benchmarks
+│   ├── pptx-export.js         # PowerPoint export
+│   └── style.css              # All styles
+└── test/
+    ├── roi-engine.test.js     # ROI engine unit tests (17 tests)
+    └── routes.test.js         # Integration tests (requires DB)
 ```
 
-without requiring a user login session.
+---
 
-## v3.0.1 fixes
+## Tests
 
-- Discovery guide now shows only industry-relevant value-driver sections. Field-service questions appear for Telecom, Engineering & Construction, Oil & Gas, and Minerals & Mining; warehouse throughput/accuracy questions appear for Manufacturing, Distribution, Retail, and Food & Beverage. (Previously all sections appeared on every industry.)
-- Prospect discovery links are now hard-gated to an active customer: a link cannot be generated or shown without a customer selected, and the active link displays which customer it belongs to. Switching customers clears any prior session token. This prevents sending one customer's link to another prospect.
+```bash
+npm run test:engine   # ROI engine unit tests (no DB required)
+npm run test:routes   # Integration tests (requires DATABASE_URL)
+npm test              # Both
+```
 
-## v3.0.2
+---
 
-- Added a dedicated per-user rate limiter on the AI endpoint (/api/enhance), defaulting to 15 calls/minute per authenticated user, to protect Anthropic API spend. Tune via the max value in server.js. The general 100/min per-IP API limit remains in place.
+## Adding a vertical template
 
+Edit `public/scenario-templates.js`, add an entry to `SCENARIO_TEMPLATES`:
 
-## v3.1.0
+```js
+{
+  id: 'retail',
+  label: 'Retail',
+  icon: '🛍️',
+  industry: 'retail',
+  description: 'High-SKU retail inventory...',
+  keyDrivers: ['Shrinkage', 'OTIF', 'Inventory turns'],
+  data: { name: 'Retail — ROI', industry: 'retail', revenue: 60000000, ... }
+}
+```
 
-Three bundles of improvements:
+---
 
-- Session-expiry handling: expired sessions show a clear message, remember where the rep was, and return them there after signing in again.
-- Scenario clone: "Duplicate" a saved scenario as a new business case.
-- Version diffing: "Compare versions" shows exactly what changed between two versions of a scenario.
-- Industry reframe: "Distribution & 3PL" renamed to "Wholesale Distribution"; "Retail" replaced with "Medical Devices / Life Sciences" (conservative placeholder benchmarks — tune to validated figures; discovery context rewritten for UDI, consignment, recall, FDA/ISO 13485).
-- Delivery tracking: discovery links now show open engagement to the rep; business cases can be shared as a trackable view link (no tracking pixels). New migration 008 adds engagement counters and a business_case_shares table.
+## Security notes
 
-## v3.1.1 — accessibility pass 1
+- Keep the repo **private** — bootstrap/admin and migration history are operationally sensitive
+- `JWT_SECRET` is auto-generated by Render — never share it
+- All `/api/*` routes except `/api/auth/*` and `/api/discovery/*` require a valid JWT
+- The AI endpoint is rate-limited to 20 req/15 min per IP, plus the global 100 req/min limit
 
-- Fixed low-contrast status text (rep-confirmed confidence chip now meets WCAG AA).
-- Darkened the muted-text token so hint/sub-label text meets contrast guidance across the app.
-- Added a clear keyboard focus indicator (:focus-visible) on all interactive elements, including sidebar nav and confidence chips.
-- Added an accessible label to the icon-only dismiss button; marked decorative glyphs aria-hidden.
+---
 
-Still open (accessibility pass 2, larger — recommended as its own build): programmatic <label>s for the ~93 calculator inputs, and dialog semantics + focus trapping for modals.
+## Version
 
-## v3.2.0 — UX enhancements (batches 1 & 2)
-
-Batch 1 — responsive, trustworthy calculator:
-- Live count-up animation on the ROI live-bar as inputs change (respects reduced-motion).
-- Out-of-range input warnings: benchmark-aware, non-blocking notes that catch fat-finger errors before they reach a CFO.
-- Optimistic save status in the header ("Saved ✓ · Ns ago").
-- Persistent customer/scenario context header across every tab.
-
-Batch 2 — feedback & safety:
-- Undo toasts replace jarring confirm() dialogs for scenario and stakeholder deletes; the destructive action is deferred during the undo window.
-- Reusable loading and empty-state helpers for async lists.
-
-Remaining UX (batch 3, planned): discovery-side progress + save reassurance, resumable-discovery welcome-back, guided first-business-case flow, keyboard shortcuts, and a tablet presentation mode for the Executive View.
-
-## v3.2.1 — UX enhancements (batch 3)
-
-- Discovery (prospect side): a persistent "Saving… / All answers saved automatically" indicator, plus a "Welcome back" cue that shows returning prospects their prior answers were kept. (Progress bar and resumable answers were already present.)
-- Keyboard shortcuts: "g" then a letter jumps between tabs (g-c Calculator, g-d Discovery, g-e Executive, g-s Saved, g-m Map, g-a Analytics); Cmd/Ctrl+S saves; "?" shows the shortcut sheet.
-- Guided onboarding: a dismissible first-business-case coach shown only to reps with no saved scenarios yet.
-- Presentation mode: a "Present" button on the Executive View for a full-screen, large-type layout suited to live tablet demos.
-
-## v3.2.2
-
-- Admin → Version history: a new admin-only panel showing a timeline of releases with a summary of each change. Maintained in public/version-history.js (prepend an entry per release).
-
-## v3.3.0
-
-- Rebrand: applied the new colour palette (Dark #1E2931, Blue #00A9CC, Orange #F9642E/#C24A1E, Red #FF341F/#C81E10, Light surfaces) across all CSS, inline styles, generated markup, and PDF/PPT exports. Semantic green and the grey text scale (WCAG-tuned) preserved.
-- Win/loss outcome tracking (migration 009): capture deal results + realized value for later benchmark calibration.
-- Calculator UX: live progress-tracking stepper, per-section completion, next-best-action nudge, Advanced disclosure, and an optional step-by-step Guided mode.
-- ROI dollar-field input guidance: persistent format hints, magnitude sanity warnings, and forgiving paste normalization.
-
-## v3.3.1
-
-- Executive View data infographics: a benefit waterfall (drivers → ramp adjustment → defensible year-1 figure) and a payback timeline (signing → implementation → ramp → break-even). Lightweight SVG in public/exec-infographics.js, brand-themed and print-safe.
-
-## v3.4.0 — benchmark credibility (gap-closing batch A)
-
-- Benchmark sourcing: documented basis for each default-benchmark family (public/benchmark-provenance.js), surfaced in the ROI methodology PDF.
-- Provisional-benchmark banner: industries with unvalidated benchmarks (currently Medical Devices / Life Sciences) show a rep-facing warning to confirm figures before external use.
-
-## v3.5.0 — multi-currency display
-
-- Currency selector (USD, GBP, EUR, AUD, NZD) on the calculator, saved per scenario, restored on load.
-- All money displays route through a central currency-aware formatter (public/currency.js): symbol + code, US-style grouping (e.g. £1,250,000 GBP). Covers calculator, exec view, ROI methodology + PPT exports, and the public business-case viewer.
-- Display only — no exchange-rate conversion. Figures are entered and shown in the selected currency; the ROI math is currency-agnostic (ratios and the customer’s own numbers).
-
-## v3.6.0 — reliability (gap-closing batch B)
-
-- Production error monitoring: server-side errors persist to an error_log table (migration 010) via a resilient logger that never throws. Global Express handler + uncaughtException/unhandledRejection hooks feed it. Admin → Error log shows recent errors with a prune control. Endpoints GET/DELETE /api/logs/errors are admin-gated.
-- Automated route/integration tests (test/routes.test.js, node:test): auth boundary (protected routes 401 for anon; public prospect route stays reachable), health, admin-gating of the error log, and a scenario create → server-authoritative ROI → outcome → delete round-trip. Skips cleanly when DATABASE_URL is unset.
-  - Run: `npm test` (engine + routes) or `npm run test:routes`. Needs DATABASE_URL, JWT_SECRET, ADMIN_PASSWORD.
-- CI: .github/workflows/ci.yml spins up Postgres, runs migrations, and executes both test suites on every push/PR.
-- server.js now exports { app, start } and only auto-starts when run directly, so the test suite can boot it on an ephemeral port.
-
-## v3.7.0 — first-class customer entity (Solution Fit phase 1a)
-
-Foundation for the SE Solution Fit & Handoff feature. No user-facing change yet.
-- New `customers` table (migration 011): stable id, owned by an AE, case-insensitive unique per owner.
-- scenarios.customer_id FK added (nullable, ON DELETE SET NULL). New saves link via ensureCustomer(); existing scenarios are backfilled and linked from their company name. Idempotent; take a DB snapshot before applying.
-- /api/customers (list) and /api/customers/:id (owner-scoped; SE cross-customer read arrives in phase 1b/2).
-- Integration tests cover customer listing and scenario→customer linking.
+Current: **v6.9.1** — Release Integrity Correction. Preserves v6.9.0 Solution Fit creation, recovery, and governed MEP application configuration. Adds frozen customer-safe Business Case publication, approved-revision Battlecard exports, governed Executive output corrections, and permanent release-integrity controls. Legacy public scenario sharing and raw print economics are retired; Champion Pack remains disabled pending governed conversion. ROI Model remains v2.8, Brand System remains v1.0, Knowledge remains v1.0, and Christie Persona remains v1.0.

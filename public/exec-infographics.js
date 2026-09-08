@@ -33,7 +33,7 @@ function buildBenefitWaterfall(r) {
     { label: 'IT',         val: r.itSav },
     { label: 'Ops levers', val: r.newLeverSav },
     { label: 'Warehouse',  val: r.wmsLeverSav },
-    { label: 'Field',      val: r.fieldLeverSav }
+    { label: 'Field',      val: r.fieldInvSav }
   ].filter(d => d.val > 0);
   if (!drivers.length) return '';
 

@@ -31,10 +31,11 @@
     const resp = await fetch(url, { ...options, headers });
 
     if (resp.status === 401) {
-      /* Session expired or invalid — explain, remember where they were, redirect.
+      /* Session expired or invalid — show a clear modal, then redirect.
          Guard against re-entrancy so multiple in-flight 401s don't stack. */
       if (!window.__ciSessionExpiring) {
         window.__ciSessionExpiring = true;
+        if (window.CIAIState) window.CIAIState.clearAll();
         sessionStorage.removeItem('ci_token');
         sessionStorage.removeItem('ci_user');
         /* Remember the current view so login can return the rep to it. */
@@ -44,14 +45,7 @@
             sessionStorage.setItem('ci_return_to', returnTo);
           }
         } catch (e) {}
-        /* Brief, clear message before redirecting so it never looks broken. */
-        const notify = (window.showToast || null);
-        if (typeof notify === 'function') {
-          notify('Your session has expired — taking you back to sign in.');
-          setTimeout(() => { window.location.href = '/login.html?expired=1'; }, 1200);
-        } else {
-          window.location.href = '/login.html?expired=1';
-        }
+        showSessionExpiryModal();
       }
       return null;
     }
@@ -59,11 +53,73 @@
     return resp;
   }
 
-  /* ── logout ── */
+  /* ── Session expiry modal ────────────────────────────────────────
+     Shown instead of a fleeting toast when the server returns 401.
+     Gives the rep a clear explanation and a deliberate sign-in button.
+     Auto-redirects after 12 seconds if they don't click. */
+  function showSessionExpiryModal() {
+    /* Remove any existing instance */
+    var old = document.getElementById('sessionExpiryModal');
+    if (old) old.remove();
+
+    var modal = document.createElement('div');
+    modal.id = 'sessionExpiryModal';
+    modal.className = 'ci-session-expiry';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'sessionExpiryTitle');
+
+    modal.innerHTML = [
+      '<div class="ci-session-expiry__dialog">',
+        '<div class="ci-session-expiry__icon" aria-hidden="true">&#128274;</div>',
+        '<div id="sessionExpiryTitle" class="ci-session-expiry__title">',
+          'Your session has expired',
+        '</div>',
+        '<div class="ci-session-expiry__copy">',
+          'For security, sessions time out after a period of inactivity. ',
+          'Your work is saved &mdash; sign in again to pick up right where you left off.',
+        '</div>',
+        '<button id="sessionExpiryBtn" onclick="window.location.href=\'/login.html?expired=1\'" ',
+          'class="ci-session-expiry__action">',
+          'Sign in again',
+        '</button>',
+        '<div id="sessionExpiryCountdown" class="ci-session-expiry__countdown" aria-live="polite">',
+          'Redirecting automatically in <span id="sessionExpirySecs">12</span> seconds\u2026',
+        '</div>',
+      '</div>'
+    ].join('');
+
+    document.body.appendChild(modal);
+
+    /* Move keyboard focus to the deliberate Primary action. */
+    var btn = document.getElementById('sessionExpiryBtn');
+    if (btn) btn.focus();
+
+    /* Countdown and auto-redirect */
+    var secs = 12;
+    var secsEl = document.getElementById('sessionExpirySecs');
+    var interval = setInterval(function() {
+      secs--;
+      if (secsEl) secsEl.textContent = secs;
+      if (secs <= 0) {
+        clearInterval(interval);
+        window.location.href = '/login.html?expired=1';
+      }
+    }, 1000);
+  }
   async function logout() {
+    /* Route through the same unsaved-changes gate as tab switching. */
+    if (typeof window.confirmDiscardChanges === 'function' && !window.confirmDiscardChanges()) return;
+    /* Narrative edits autosave independently from full scenario versioning.
+       Wait for the final write while the authenticated session is still valid. */
+    if (typeof window.persistThreeWhys === 'function') {
+      try { await window.persistThreeWhys(); } catch(e) {}
+    }
+    if (typeof window.clearCalcDirty === 'function') window.clearCalcDirty();
     try {
       await apiFetch('/api/auth/logout', { method: 'POST' });
     } catch(e) {}
+    if (window.CIAIState) window.CIAIState.clearAll();
     sessionStorage.removeItem('ci_token');
     sessionStorage.removeItem('ci_user');
     window.location.href = '/login.html';
@@ -119,8 +175,8 @@
       .trim().split(/\s+/)
       .map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
-    const roleColors = { admin: '#5B2D8E', rep: '#1E2931' };
     const roleLabels = { admin: 'Admin', rep: 'Rep/SE' };
+    const roleClass = user.role === 'admin' ? 'ud-role--admin' : 'ud-role--rep';
 
     right.innerHTML = `
       <span class="topbar-date" id="todayDate"></span>
@@ -131,7 +187,7 @@
         <div class="user-dropdown" id="userDropdown" style="display:none;">
           <div class="ud-header">
             <div class="ud-name">${user.username}</div>
-            <div class="ud-role" style="background:${(roleColors[user.role]||'#1E2931')}20;color:${roleColors[user.role]||'#1E2931'}">${roleLabels[user.role]||user.role}</div>
+            <div class="ud-role ${roleClass}">${roleLabels[user.role]||user.role}</div>
             <div class="ud-email">${user.email || ''}</div>
           </div>
           <div class="ud-items">

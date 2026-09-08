@@ -9,14 +9,86 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="style.css"/>
 <link rel="stylesheet" href="exec.css"/>
+<link rel="stylesheet" href="customer-switcher.css"/>
+<link rel="stylesheet" href="brand-tokens.css"/>
 <!-- Auth helper must load before app scripts -->
 <script src="src/client/api.js"></script>
+<script>
+/* ── Client-side error reporting ──────────────────────────────────
+   Captures JS errors and unhandled promise rejections and sends them
+   to /api/errors/client → error_log table → Admin Error log tab.
+   Queues errors before the page is fully loaded, then flushes.
+   ─────────────────────────────────────────────────────────────── */
+(function() {
+  var _errQueue = [];
+  var _sending  = false;
+  var _maxQueue = 20;
+
+  function _sendErr(payload) {
+    if (_sending || _errQueue.length >= _maxQueue) return;
+    _errQueue.push(payload);
+    _flush();
+  }
+
+  function _flush() {
+    if (_sending || !_errQueue.length) return;
+    _sending = true;
+    var item = _errQueue.shift();
+    var xhr  = new XMLHttpRequest();
+    xhr.open('POST', '/api/errors/client', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.onloadend = function() { _sending = false; if (_errQueue.length) _flush(); };
+    xhr.onerror   = function() { _sending = false; };
+    try { xhr.send(JSON.stringify(item)); } catch(e) { _sending = false; }
+  }
+
+  /* Global JS error handler */
+  window.onerror = function(msg, src, line, col, err) {
+    /* Ignore cross-origin script errors (no useful info anyway) */
+    if (msg === 'Script error.' || msg === 'Script error') return false;
+    _sendErr({
+      message: String(msg).slice(0, 2000),
+      source:  'window.onerror',
+      stack:   err && err.stack ? String(err.stack).slice(0, 4000) : null,
+      url:     String(src || window.location.href).slice(0, 500),
+      line:    line, col: col,
+      level:   'error'
+    });
+    return false; /* don't suppress default browser error handling */
+  };
+
+  /* Unhandled promise rejections */
+  window.addEventListener('unhandledrejection', function(ev) {
+    var reason = ev.reason;
+    var msg = reason ? (reason.message || String(reason)) : 'Unhandled promise rejection';
+    var stack = reason && reason.stack ? String(reason.stack).slice(0, 4000) : null;
+    _sendErr({
+      message: String(msg).slice(0, 2000),
+      source:  'unhandledrejection',
+      stack:   stack,
+      url:     window.location.href.slice(0, 500),
+      level:   'error'
+    });
+  });
+
+  /* Manual helper — call logClientError('message', 'source', 'warn'|'error') anywhere */
+  window.logClientError = function(msg, source, level) {
+    _sendErr({
+      message: String(msg || '').slice(0, 2000),
+      source:  source || 'app',
+      stack:   null,
+      url:     window.location.href.slice(0, 500),
+      level:   level || 'error'
+    });
+  };
+}());
+</script>
 </head>
 <body>
 
 <header class="topbar">
   <button class="hamburger" onclick="toggleSidebar()" aria-label="Toggle menu"><span></span><span></span><span></span></button>
-  <img class="topbar-logo" src="ci-logo-negative.png" alt="Cloud Inventory" onerror="this.style.display='none'"/>
+  <img class="topbar-logo" data-ci-logo="logoNegative" alt="Cloud Inventory"/>
   <div class="topbar-divider"></div>
   <span class="topbar-title">ROI Business Case Builder</span>
   <div class="topbar-right" id="topbarRight"><span class="save-status" id="saveStatus" style="display:none;"></span><span class="topbar-date" id="todayDate"></span></div>
@@ -24,9 +96,9 @@
 
 <div class="livebar">
   <div class="lb-cell"><div class="lb-label">Annual benefit</div><div class="lb-value pos" id="lb-benefit">—</div></div>
-  <div class="lb-cell"><div class="lb-label">Year 1 ROI</div><div class="lb-value" id="lb-roi">—</div></div>
-  <div class="lb-cell"><div class="lb-label">3-yr NPV</div><div class="lb-value pos" id="lb-npv3">—</div></div>
-  <div class="lb-cell"><div class="lb-label">5-yr NPV</div><div class="lb-value pos" id="lb-npv5">—</div></div>
+  <div class="lb-cell"><div class="lb-label" id="lb-roi-label">Total contract ROI</div><div class="lb-value" id="lb-roi">—</div></div>
+  <div class="lb-cell lb-cell-secondary"><div class="lb-label">Contract net benefit</div><div class="lb-value pos" id="lb-npv3">—</div></div>
+  <div class="lb-cell lb-cell-secondary"><div class="lb-label">Contract NPV</div><div class="lb-value pos" id="lb-npv5">—</div></div>
 </div>
 
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
@@ -34,62 +106,31 @@
 <div class="app-shell">
 <nav class="sidebar" id="sidebar">
   <div class="sidebar-spacer"></div>
-  <div class="sidebar-section-label">Build</div>
-  <button class="nav-item active" onclick="switchTab('calc')" id="nav-calc">
-    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor"/></svg>
-    Calculator
-  </button>
-  <button class="nav-item" onclick="switchTab('disc')" id="nav-disc">
-    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M8 1C4.13 1 1 3.91 1 7.5c0 1.66.62 3.18 1.64 4.34L2 15l3.29-1.03A7.07 7.07 0 008 14c3.87 0 7-2.91 7-6.5S11.87 1 8 1z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="5.5" cy="7.5" r=".75" fill="currentColor"/><circle cx="8" cy="7.5" r=".75" fill="currentColor"/><circle cx="10.5" cy="7.5" r=".75" fill="currentColor"/></svg>
-    Discovery guide
-  </button>
-  <button class="nav-item" onclick="switchTab('comp')" id="nav-comp">
-    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M8 1l2 4 4.5.65-3.25 3.17.77 4.48L8 11.1l-4.02 2.2.77-4.48L1.5 5.65 6 5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
-    Competitive
-  </button>
-  <button class="nav-item" onclick="switchTab('sensitivity')" id="nav-sensitivity">
-    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M1 12l4-4 3 3 4-6 3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    Sensitivity
-  </button>
-  <div class="sidebar-section-label">Present</div>
-  <button class="nav-item" onclick="switchTab('exec')" id="nav-exec">
-    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="12" height="14" rx="1.5" stroke="currentColor" stroke-width="1.4"/><line x1="5" y1="5" x2="11" y2="5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="5" y1="8" x2="11" y2="8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="5" y1="11" x2="8" y2="11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-    Executive view
-  </button>
-  <div class="sidebar-section-label">Manage</div>
-  <button class="nav-item" onclick="switchTab('saved')" id="nav-saved">
-    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="12" height="14" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 1v5l3-2 3 2V1" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
-    Saved scenarios
-    <span class="nav-badge" id="savedCount">0</span>
-  </button>
-  <button class="nav-item" onclick="switchTab('compare')" id="nav-compare">
-    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="6" height="10" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="9" y="3" width="6" height="10" rx="1" stroke="currentColor" stroke-width="1.4"/></svg>
-    Compare
-  </button>
-  <button class="nav-item" onclick="switchTab('analytics')" id="nav-analytics">
-    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="9" width="3" height="6" rx="1" fill="currentColor"/><rect x="6" y="5" width="3" height="10" rx="1" fill="currentColor"/><rect x="11" y="1" width="3" height="14" rx="1" fill="currentColor"/></svg>
-    Analytics
-  </button>
-  <button class="nav-item" onclick="switchTab('admin')" id="nav-admin">
-    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.22 3.22l1.41 1.41M11.37 11.37l1.41 1.41M3.22 12.78l1.41-1.41M11.37 4.63l1.41-1.41" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-    Admin
-  </button>
-  <button class="nav-item" onclick="switchTab('map')" id="nav-map">
-    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M2 8h12M2 13h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="4.5" cy="3" r="1.6" fill="currentColor"/><circle cx="9" cy="8" r="1.6" fill="currentColor"/><circle cx="12" cy="13" r="1.6" fill="currentColor"/></svg>
-    Action Plan
-  </button>
-  <button class="nav-item" onclick="switchTab('stake')" id="nav-stake">
-    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="5" cy="5" r="2.2" stroke="currentColor" stroke-width="1.4"/><circle cx="11.5" cy="7" r="1.8" stroke="currentColor" stroke-width="1.4"/><path d="M1.5 13.5c0-2.2 1.6-3.7 3.5-3.7s3.5 1.5 3.5 3.7M9.5 13.5c.2-1.7 1.1-2.8 2-2.8 1.5 0 2.8 1.2 2.8 2.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-    Stakeholders
-  </button>
-  <button class="nav-item" onclick="switchTab('help')" id="nav-help">
-    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.4"/><path d="M6 6.5C6 5.4 6.9 4.5 8 4.5s2 .9 2 2c0 .83-.5 1.55-1.22 1.88C8.3 8.65 8 9.1 8 9.5v.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="11.5" r=".75" fill="currentColor"/></svg>
-    How to Use
-  </button>
-  <button class="nav-item" onclick="switchTab('impact')" id="nav-impact">
-    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M2 8h12M2 13h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="13" cy="13" r="2" stroke="currentColor" stroke-width="1.4"/></svg>
-    Impact Map
-  </button>
+  <div class="sidebar-section-label">Value Case</div>
+  <button class="nav-item active" onclick="switchTab('calc')" id="nav-calc"><span class="nav-icon">◆</span>ROI Calculator</button>
+  <button class="nav-item" onclick="switchTab('disc')" id="nav-disc"><span class="nav-icon">◇</span>Discovery<span class="nav-notif" id="discNotifBadge" style="display:none;"></span></button>
+  <button class="nav-item" onclick="switchTab('readiness')" id="nav-readiness"><span class="nav-icon">✓</span>Buyer Evidence</button>
+  <button class="nav-item" onclick="switchTab('stake')" id="nav-stake"><span class="nav-icon">○</span>Stakeholders</button>
+  <button class="nav-item" onclick="switchTab('solfit')" id="nav-solfit"><span class="nav-icon">◇</span>Solution Fit</button>
+  <button class="nav-item" onclick="switchTab('map')" id="nav-map"><span class="nav-icon">☰</span>Joint Project Plan</button>
+  <button class="nav-item" onclick="switchTab('exec')" id="nav-exec"><span class="nav-icon">▤</span>Executive Outputs</button>
+
+  <div class="sidebar-section-label">Analyze &amp; Coach</div>
+  <button class="nav-item" onclick="openChristieForPerspective('rep')" id="nav-coach"><span class="nav-icon">✦</span>Deal Coach</button>
+  <button class="nav-item" onclick="switchTab('sensitivity')" id="nav-sensitivity"><span class="nav-icon">⌁</span>Sensitivity</button>
+  <button class="nav-item" onclick="switchTab('comp')" id="nav-comp"><span class="nav-icon">☆</span>Competitive</button>
+  <button class="nav-item" onclick="switchTab('impact')" id="nav-impact"><span class="nav-icon">◎</span>Impact Map</button>
+  <button class="nav-item" onclick="switchTab('compare')" id="nav-compare"><span class="nav-icon">▥</span>Compare</button>
+
+  <div class="sidebar-section-label">Portfolio</div>
+  <button class="nav-item" onclick="switchTab('saved')" id="nav-saved"><span class="nav-icon">▣</span>Saved Scenarios<span class="nav-badge" id="savedCount">0</span></button>
+  <button class="nav-item" onclick="switchTab('manager')" id="nav-manager" style="display:none;"><span class="nav-icon">▥</span>Sales Manager</button>
+  <button class="nav-item" onclick="switchTab('analytics')" id="nav-analytics"><span class="nav-icon">▥</span>Analytics</button>
+
+  <div class="sidebar-section-label">Administration / Support</div>
+  <button class="nav-item" onclick="switchTab('admincustomers')" id="nav-admincustomers" style="display:none;"><span class="nav-icon">○</span>Customers</button>
+  <button class="nav-item" onclick="switchTab('help')" id="nav-help"><span class="nav-icon">?</span>How to Use</button>
+  <button class="nav-item" onclick="switchTab('admin')" id="nav-admin" style="display:none;"><span class="nav-icon">⚙</span>Admin</button>
   <div class="sidebar-footer">
     <button class="sidebar-signout" onclick="window.ciAuth.logout()">
       <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3M11 11l3-3-3-3M14 8H6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -108,7 +149,21 @@
   <div class="page-header">
     <div><div class="page-title">ROI Calculator</div><div class="page-subtitle">Enter prospect details — industry defaults apply automatically.</div></div>
     <div class="btn-row" style="margin-top:0;">
-      <button class="btn btn-ghost btn-sm" id="calcSwitchCustomerBtn" onclick="showCustomerGate()" title="Switch customer" style="display:none;">⌂ Switch customer</button>
+      <div class="calc-scen-pick" id="calcScenarioPick" style="display:none;">
+        <label class="csp-label" for="calcScenarioSelect">Scenario</label>
+        <select id="calcScenarioSelect" onchange="onCalcScenarioPick(this.value)" title="Switch to another scenario for this customer"></select>
+        <button class="btn btn-ghost btn-sm" id="calcVersionsBtn" onclick="openCurrentVersionHistory()" style="display:none;" title="View saved versions of this scenario"></button>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="calcSwitchCustomerBtn" onclick="openCustomerSwitcher()" title="Switch customer" style="display:none;">⇄ Switch customer</button>
+      <button class="btn btn-ghost btn-sm" id="roiModelUpgradeBtn" onclick="previewRoiModelUpgrade()" style="display:none;" title="Preview Model v2.8 without changing this saved version">Preview v2.8 upgrade</button>
+      <button class="btn btn-primary btn-sm" id="calcSaveBtn" onclick="saveScenario()" title="Save this scenario">
+        <svg viewBox="0 0 16 16" fill="none" width="13" height="13"><path d="M13 15H3a1 1 0 01-1-1V2a1 1 0 011-1h7.5L14 4.5V14a1 1 0 01-1 1z" stroke="currentColor" stroke-width="1.5"/><path d="M10 1v4H5V1M5 9h6M5 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Save Scenario
+      </button>
+      <button class="btn btn-secondary btn-sm" onclick="switchTab('exec')" title="Review customer-facing executive outputs">
+        <svg viewBox="0 0 16 16" fill="none" width="13" height="13"><rect x="2" y="1" width="12" height="14" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Review Executive Output
+      </button>
       <button class="btn btn-ghost btn-sm" onclick="generateShareURL()" title="Copy shareable link">🔗 Share</button>
       <button class="btn btn-ghost btn-sm" onclick="generateEmail()">✉️ Email</button>
     </div>
@@ -127,16 +182,15 @@
           <div class="cg-card-desc">Begin a fresh business case for a company you haven't modeled yet.</div>
           <div class="cg-new-row">
             <input type="text" id="cgNewCompany" placeholder="Company name…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="cg-new-company-field" onkeydown="if(event.key==='Enter')cgCreateNew()"/>
-            <button class="btn btn-cta btn-sm" onclick="cgCreateNew()">Create</button>
+            <button class="btn btn-primary btn-sm" onclick="cgCreateNew()">Create</button>
           </div>
         </div>
-
         <div class="cg-card">
-          <div class="cg-card-icon" style="background:#0F6E56;">☰</div>
+          <div class="cg-card-icon" style="background:#12786F;">☰</div>
           <div class="cg-card-title">Existing customer</div>
           <div class="cg-card-desc">Continue a business case you've already started.</div>
           <div class="cg-search-wrap">
-            <input type="text" id="cgSearch" placeholder="Search customers…" oninput="cgRenderList(this.value)" autocomplete="off"/>
+            <input type="text" id="cgSearch" placeholder="Search customers…" oninput="cgRenderList(this.value)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="cg-customer-search-x7" role="searchbox" aria-label="Search customers" readonly onfocus="this.removeAttribute('readonly')"/>
           </div>
           <div id="cgList" class="cg-list"><div class="cg-empty">Loading…</div></div>
         </div>
@@ -150,6 +204,14 @@
 
   <!-- CALCULATOR BODY (hidden until a customer is chosen or gate skipped) -->
   <div id="calcBody" style="display:none;">
+  <div class="customer-search" id="customerSearchBar">
+    <label for="customerSearchInput">Find an existing customer</label>
+    <div class="cs-input-wrap">
+      <input type="text" id="customerSearchInput" placeholder="Search customers by name…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="cust-search-field-x7" role="searchbox" aria-label="Find an existing customer" readonly onfocus="this.removeAttribute('readonly');onCustomerSearch(this.value)" oninput="onCustomerSearch(this.value)">
+      <div id="customerSearchResults" class="cs-results" style="display:none;"></div>
+    </div>
+    <span class="cs-hint">or start a new one below</span>
+  </div>
   <div id="calcBreadcrumb" class="calc-breadcrumb"></div>
   <div id="caseCompleteness" class="case-completeness"></div>
   <div id="nextBestAction" class="next-best-action" style="display:none;"></div>
@@ -191,17 +253,17 @@
         </button>
         <div class="acc-body">
           <div style="margin-top:12px;" class="two-col">
-            <div class="field"><label>Scenario name</label><input type="text" id="scenarioName" placeholder="e.g. ACME Corp – Q3"/></div>
-            <div class="field"><label>Company name</label><input type="text" id="companyName" placeholder="Prospect company" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="prospect-company-field" onblur="calcCompanyCheck(this)"/></div>
+            <div class="field"><label>Scenario name</label><input type="text" id="scenarioName" placeholder="e.g. ACME Corp – Q3" maxlength="120"/></div>
+            <div class="field"><label>Company name</label><input type="text" id="companyName" placeholder="Prospect company" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="prospect-company-field" onblur="calcCompanyCheck(this)" maxlength="120"/></div>
           </div>
           <div class="two-col">
-            <div class="field"><label>Rep / SE name</label><input type="text" id="repName" placeholder="Your name"/></div>
-            <div class="field"><label>Deal stage</label>
-              <select id="dealStage">
-                <option value="">— Select stage —</option>
-                <option>Discovery</option><option>Demo</option><option>Proposal</option>
-                <option>Negotiation</option><option>Closed Won</option><option>Closed Lost</option>
-              </select>
+            <div class="field"><label>AE / SE name</label><input type="text" id="repName" placeholder="Your name" maxlength="80"/></div>
+            <div class="field"><label>Current BuyCycle Stage</label>
+              <div class="buycycle-stage-display" style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:var(--surface-2,#f8fafc)">
+                <strong id="currentBuyCycleStageDisplay">Stage 2 — Define Economic Consequences</strong>
+                <div id="currentBuyCycleStageHelp" class="field-hint" style="margin-top:4px">New opportunities begin at Stage 2. Save the scenario to activate Buyer Evidence.</div>
+                <button type="button" class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="switchTab('readiness')">Review Stage Readiness</button>
+              </div>
             </div>
           </div>
           <div class="two-col">
@@ -220,10 +282,8 @@
             </div>
             <div class="field"><label>Cloud Inventory solution</label>
               <select id="solution" onchange="applySolutionEmphasis()">
-                <option value="all">All / Platform</option>
-                <option value="wms">Warehouse Operations (WMS)</option>
-                <option value="mep">Field Inventory (MEP)</option>
-                <option value="mfgmat">Manufacturing Materials</option>
+                <option value="cip">Cloud Inventory Platform (CIP)</option>
+                <option value="mep">Mobile Enterprise Platform (MEP)</option>
               </select>
             </div>
             <div class="field"><label>Currency</label>
@@ -247,15 +307,70 @@
               </select>
             </div>
           </div>
-          <div class="two-col">
-            <div class="field"><label title="Used for OTIF value-at-risk">Annual revenue ($)</label><input type="number" id="revenue" placeholder="e.g. 50,000,000" oninput="recalc()"/></div>
-            <div class="field"><label title="Warehouse, field, and office users">Inventory users</label><input type="number" id="userCount" placeholder="e.g. 50" oninput="recalc()"/></div>
+          <div class="field field-primary opportunity-value-field">
+            <label>Estimated Opportunity Value</label>
+            <div class="input-prefix"><span id="opportunityValueSymbol">$</span><input type="text" inputmode="decimal" id="opportunityValue" placeholder="e.g. 325,000" min="0"/></div>
+            <div class="field-hint"><span id="opportunityValueCurrency">USD · Total expected contract value</span></div>
+            <div class="field-hint">Expected total Cloud Inventory contract value for this opportunity. This sales estimate is separate from customer ROI, benefit, and modeled investment.</div>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="useModeledInvestmentForOpportunityValue()">Use Modeled Investment</button>
+            <div class="field-hint">Copies the current modeled investment as a starting estimate. Future ROI changes will not update Opportunity Value.</div>
           </div>
-          <div class="two-col">
-            <div class="field"><label title="Salary + benefits + overhead">Avg. labor cost / user / yr ($)</label><input type="number" id="laborCost" value="55000" oninput="recalc()"/></div>
-            <div class="field"><label title="Total inventory on hand at any time">Annual inventory value ($)</label><input type="number" id="inventoryValue" placeholder="e.g. 10,000,000" oninput="recalc()"/></div>
+          <!-- Field inventory toggle -->
+          <div class="fi-toggle-row" id="fiToggleRow">
+            <label class="fi-toggle-label" for="hasFieldInventory">
+              <span class="fi-toggle-icon">📦</span>
+              <span class="fi-toggle-text">
+                <strong>Field inventory</strong>
+                <span class="fi-toggle-sub">Prospect holds inventory outside the warehouse — trucks, vans, contractor sites, or job locations</span>
+              </span>
+            </label>
+            <button type="button" class="fi-toggle-btn" id="hasFieldInventory" role="switch"
+              aria-checked="false" onclick="toggleFieldInventory()" title="Toggle field inventory value drivers">
+              <span class="fi-toggle-thumb"></span>
+            </button>
           </div>
-          <div class="field"><label title="Annual licenses, maintenance, support">Current IT / legacy cost / yr ($)</label><input type="number" id="itCost" placeholder="e.g. 150,000" oninput="recalc()"/></div>
+          <div class="two-col two-col-primary">
+            <div class="field field-primary"><label title="Used for OTIF value-at-risk">Annual revenue ($)</label><input type="text" inputmode="numeric" id="revenue" placeholder="e.g. 50,000,000" oninput="recalc()" min="0"/></div>
+            <div class="field field-primary"><label title="Warehouse, field, and office users">Inventory users</label><input type="number" id="userCount" placeholder="e.g. 50" oninput="recalc()"/></div>
+          </div>
+          <div class="two-col two-col-primary">
+            <div class="field field-primary"><label title="Salary + benefits + overhead">Avg. labor cost / user / yr ($)</label><input type="text" inputmode="numeric" id="laborCost" value="55000" oninput="recalc()" min="0"/></div>
+            <div class="field field-primary"><label title="Point-in-time warehouse inventory on hand. Exclude field inventory entered separately below.">Warehouse inventory value on hand ($)</label><input type="text" inputmode="numeric" id="inventoryValue" placeholder="e.g. 10,000,000" oninput="recalc()" min="0"/></div>
+          </div>
+          <div class="field field-primary"><label title="Annual licenses, maintenance, support">Current IT / legacy cost / yr ($)</label><input type="text" inputmode="numeric" id="itCost" placeholder="e.g. 150,000" oninput="recalc()" min="0"/></div>
+
+          <!-- Field inventory value drivers (shown only when toggle is on) -->
+          <div class="driver-group" id="fieldInventorySection" style="display:none;">
+            <div class="driver-group-summary" style="cursor:default;">
+              <span class="mep-tag" style="background:var(--cyan);color:#fff;">Field inventory</span>
+              <span class="driver-group-hint">These drivers apply to stock held outside the main warehouse. Leave blank to exclude from ROI.</span>
+            </div>
+            <div class="field-hint" style="margin:0 0 12px;color:var(--gray-600);"><strong>Keep the pools mutually exclusive:</strong> warehouse inventory and central write-offs above must exclude trucks, vans, job sites, contractor stores, and the field inventory and losses entered here.</div>
+            <div class="field-row-2">
+              <div class="field"><label title="Total value of inventory held at field locations (trucks, vans, job sites, contractor stores)">Field inventory value ($)</label>
+                <input type="text" inputmode="numeric" id="fieldInvValue" placeholder="e.g. 2,000,000" oninput="recalc()" min="0" step="10000"/></div>
+              <div class="field"><label title="Estimated % of field inventory lost, unaccounted for, or written off per year">Field leakage / shrinkage rate (%)</label>
+                <input type="number" id="fieldLeakageRate" placeholder="e.g. 4" oninput="recalc()" min="0" max="100" step="0.5"/></div>
+            </div>
+            <div class="field-row-2">
+              <div class="field"><label title="Number of distinct field locations (job sites, contractor depots, vehicle routes)">Field locations (#)</label>
+                <input type="number" id="fieldLocations" placeholder="e.g. 12" oninput="recalc()" min="0" step="1"/></div>
+              <div class="field"><label title="How many times per year each location is reconciled">Reconciliations / location / yr (#)</label>
+                <input type="number" id="fieldReconcilePerYr" placeholder="e.g. 4" oninput="recalc()" min="0" step="1"/></div>
+            </div>
+            <div class="field-row-2">
+              <div class="field"><label title="Total employee time for one reconciliation at one location">Person-hours / reconciliation (#)</label>
+                <input type="number" id="fieldReconcilePersonHours" placeholder="e.g. 8" oninput="recalc()" min="0" step="0.5"/>
+                <input type="hidden" id="fieldReconcileCost" value="0"/></div>
+              <div class="field"><label title="Share of reconciliation effort that will actually be eliminated or redeployed">Reconciliation effort reduction (%)</label>
+                <input type="number" id="mFieldCount" placeholder="e.g. 50" oninput="recalc()" min="0" max="100" step="1"/></div>
+            </div>
+            <div class="field-row-2">
+              <div class="field"><label title="Share of annual field leakage expected to be prevented">Field leakage recovery (%)</label>
+                <input type="number" id="mFieldLeakage" placeholder="e.g. 30" oninput="recalc()" min="0" max="100" step="1"/></div>
+              <div class="field"></div>
+            </div>
+          </div>
 
           <!-- Prospect logo upload -->
           <div style="margin-top:12px;">
@@ -280,17 +395,18 @@
           One-time investment costs
         </div>
         <div class="two-col">
-          <div class="field"><label title="Project management, config, integration">Professional services ($)</label><input type="number" id="psvcCost" placeholder="e.g. 50,000" oninput="recalc()"/></div>
-          <div class="field"><label title="Scanners, mobile devices, printers">Hardware — scanners &amp; devices ($)</label><input type="number" id="hwCost" placeholder="e.g. 30,000" oninput="recalc()"/></div>
+          <div class="field"><label title="Project management, config, integration">Professional services ($)</label><input type="text" inputmode="numeric" id="psvcCost" placeholder="e.g. 50,000" oninput="recalc()" min="0"/></div>
+          <div class="field"><label title="Scanners, mobile devices, printers">Hardware — scanners &amp; devices ($)</label><input type="text" inputmode="numeric" id="hwCost" placeholder="e.g. 30,000" oninput="recalc()" min="0"/></div>
         </div>
-        <div class="field"><label title="End-user training and change management">Training &amp; change management ($)</label><input type="number" id="trainCost" placeholder="e.g. 10,000" oninput="recalc()"/></div>
+        <div class="field"><label title="End-user training and change management">Training &amp; change management ($)</label><input type="text" inputmode="numeric" id="trainCost" placeholder="e.g. 10,000" oninput="recalc()" min="0"/></div>
         <div class="otc-total"><span class="label">Total one-time cost</span><span class="value" id="totalOTC">$0</span></div>
       </div>
 
       <div class="card">
-        <div class="card-title">Recurring investment &amp; NPV rate</div>
-        <div class="two-col">
-          <div class="field"><label title="Annual SaaS subscription">Annual subscription ($)</label><input type="number" id="invest" value="80000" oninput="recalc()"/></div>
+        <div class="card-title">Contract, recurring investment &amp; NPV rate</div>
+        <div class="field-row-3">
+          <div class="field"><label title="Proposed software contract term in months">Contract term (months)</label><input type="number" id="contractMonths" value="36" oninput="recalc()" step="1" min="1" max="60"/></div>
+          <div class="field"><label title="Annual SaaS subscription">Annual subscription ($)</label><input type="text" inputmode="numeric" id="invest" value="80000" oninput="recalc()" min="0"/></div>
           <div class="field"><label title="Cost of capital / hurdle rate. Typically 8–15%.">Discount rate for NPV (%)</label><input type="number" id="discRate" value="10" oninput="recalc()" step="0.5" min="0" max="50"/></div>
         </div>
       </div>
@@ -347,7 +463,7 @@
                   Annual write-off / shrinkage ($)
                   <span class="field-badge field-badge-primary">Preferred</span>
                 </label>
-                <input type="number" id="annualWriteOff" placeholder="e.g. 200,000" oninput="recalc();autoFlagConfidence()"/>
+                <input type="text" inputmode="numeric" id="annualWriteOff" placeholder="e.g. 200,000" oninput="recalc();autoFlagConfidence()" min="0"/>
                 <div class="field-hint" id="writeOffHint"></div>
               </div>
               <div class="field">
@@ -367,7 +483,7 @@
                 Write-off reduction CI delivers
               </label>
               <div style="display:flex;align-items:center;gap:8px;">
-                <input type="number" id="m_shrinkage" placeholder="Avg until confirmed" oninput="recalc()" min="0" max="100" style="width:72px;text-align:right;font-size:13px;font-weight:500;padding:5px 7px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);"/>
+                <input type="number" id="m_shrinkage" placeholder="Derived from accuracy until confirmed" oninput="markExplicitRecovery('mShrinkage');recalc()" min="0" max="100" style="width:72px;text-align:right;font-size:13px;font-weight:500;padding:5px 7px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);"/>
                 <span style="font-size:12px;color:var(--gray-400);">%</span>
                 <span class="metric-bench" id="b_shrinkage">Avg: 40%</span>
                 <span id="shrinkSavPreview" style="margin-left:auto;font-size:12px;font-weight:600;color:var(--green);"></span>
@@ -436,11 +552,11 @@
 
       <!-- OPERATIONAL COST DRIVERS (v2.5 new levers) -->
       <div class="accordion" id="driversSection">
-        <button class="acc-head open" onclick="toggleAcc(this)">
+        <button class="acc-head" onclick="toggleAcc(this)">
           <div class="acc-left"><span class="acc-dot" style="background:var(--orange)"></span><div><div class="acc-title">Operational cost drivers</div><div class="acc-sub">Downtime, expediting &amp; counting — leave blank to skip a driver</div></div></div>
           <svg class="acc-chevron" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <div class="acc-body">
+        <div class="acc-body closed">
           <div class="acc-inner">
 
             <div class="field-group-label">Productivity &amp; accuracy (from discovery)</div>
@@ -452,60 +568,28 @@
             </div>
             <div id="accuracySuggestion" class="accuracy-suggestion" style="display:none;"></div>
 
-            <div class="field-group-label">Field service value drivers <span class="mep-tag">MEP</span></div>
-            <div class="field-row-3">
-              <div class="field"><label title="Repeat/return visits per year caused by wrong or missing parts">Repeat visits / yr (#)</label>
-                <input type="number" id="repeatVisitsYr" placeholder="e.g. 1,200" oninput="recalc()" min="0" step="10"/></div>
-              <div class="field"><label title="Fully-loaded cost of one truck roll: labor + vehicle + fuel">Cost per truck roll ($)</label>
-                <input type="number" id="costPerTruckRoll" placeholder="e.g. 300" oninput="recalc()" min="0" step="10"/></div>
-              <div class="field"><label title="% of repeat visits eliminated by right-part-on-truck (blank = industry avg)">First-fix recovery % <span class="metric-bench" id="b_firstfix"></span></label>
-                <input type="number" id="m_firstfix" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
-            </div>
-            <div class="field-note-inline">Revenue growth (shown separately from cost savings):</div>
-            <div class="field-row-4">
-              <div class="field"><label title="Number of field technicians">Field techs (#)</label>
-                <input type="number" id="fieldTechs" placeholder="e.g. 40" oninput="recalc()" min="0" step="1"/></div>
-              <div class="field"><label title="Additional billable jobs per tech per day from time saved">Added jobs / day (#)</label>
-                <input type="number" id="addedJobsPerDay" placeholder="e.g. 0.5" oninput="recalc()" min="0" step="0.1"/></div>
-              <div class="field"><label title="Average revenue per billable job">Revenue / job ($)</label>
-                <input type="number" id="revenuePerJob" placeholder="e.g. 250" oninput="recalc()" min="0" step="10"/></div>
-              <div class="field"><label title="Working days per year">Working days / yr (#)</label>
-                <input type="number" id="workingDaysYr" placeholder="e.g. 240" oninput="recalc()" min="0" max="365" step="1"/></div>
-            </div>
-            <div class="field-row-2">
-              <div class="field"><label title="% of the theoretical utilization gain actually realized (blank = industry avg)">Utilization realization % <span class="metric-bench" id="b_utilization"></span></label>
-                <input type="number" id="m_utilization" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
-              <div class="field"></div>
-            </div>
-            <div class="field-row-3">
-              <div class="field"><label title="Value of inventory held in the field / on trucks">Field inventory value ($)</label>
-                <input type="number" id="fieldInventoryValue" placeholder="e.g. 2,000,000" oninput="recalc()" min="0" step="10000"/></div>
-              <div class="field"><label title="Current field/van-stock leakage rate %">Field leakage rate (%)</label>
-                <input type="number" id="fieldLeakagePct" placeholder="e.g. 4" oninput="recalc()" min="0" max="100" step="0.1"/></div>
-              <div class="field"><label title="% of leakage recovered by field tracking (blank = industry avg)">Leakage recovery % <span class="metric-bench" id="b_leakage"></span></label>
-                <input type="number" id="m_leakage" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
-            </div>
-
             <div class="field-group-label">Warehouse throughput &amp; order accuracy <span class="wms-tag">WMS</span></div>
-            <div class="field-row-3">
+            <div class="field-row-2">
               <div class="field"><label title="Total orders or order-lines shipped per year">Orders / lines per yr (#)</label>
                 <input type="number" id="ordersPerYr" placeholder="e.g. 250,000" oninput="recalc()" min="0" step="1000"/></div>
               <div class="field"><label title="Fully-loaded labor cost to process one order/line today">Cost per order ($)</label>
                 <input type="number" id="costPerOrder" placeholder="e.g. 3.50" oninput="recalc()" min="0" step="0.10"/></div>
+            </div>
+            <div class="field-row-2">
               <div class="field"><label title="Expected pick-rate / throughput improvement %">Pick-rate gain (%)</label>
                 <input type="number" id="pickRateGainPct" placeholder="e.g. 20" oninput="recalc()" min="0" max="100" step="1"/></div>
+              <div class="field"><label title="Percentage of throughput gain realized as savings (blank = industry avg)">Throughput recovery % <span class="metric-bench" id="b_throughput"></span></label>
+                <input type="number" id="m_throughput" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
             </div>
-            <div class="field-row-3">
+            <div class="field-row-2">
               <div class="field"><label title="Current order error / mis-ship rate %">Order error rate (%)</label>
                 <input type="number" id="orderErrorPct" placeholder="e.g. 2" oninput="recalc()" min="0" max="100" step="0.1"/></div>
               <div class="field"><label title="Fully-loaded cost of one error: return processing + re-ship freight + chargeback">Cost per error ($)</label>
-                <input type="number" id="costPerError" placeholder="e.g. 120" oninput="recalc()" min="0" step="5"/></div>
-              <div class="field"><label title="% of error cost recovered by better accuracy (blank = industry avg)">Recovery % <span class="metric-bench" id="b_accuracy"></span></label>
-                <input type="number" id="m_accuracy" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
+                <input type="text" inputmode="numeric" id="costPerError" placeholder="e.g. 120" oninput="recalc()" min="0" step="5"/></div>
             </div>
             <div class="field-row-2">
-              <div class="field"><label title="% of throughput gain realized as savings (blank = industry avg)">Throughput recovery % <span class="metric-bench" id="b_throughput"></span></label>
-                <input type="number" id="m_throughput" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
+              <div class="field"><label title="% of error cost recovered by better accuracy (blank = industry avg)">Error recovery % <span class="metric-bench" id="b_accuracy"></span></label>
+                <input type="number" id="m_accuracy" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
               <div class="field"></div>
             </div>
 
@@ -515,16 +599,36 @@
                 <input type="number" id="downtimeEventsYr" placeholder="e.g. 120" oninput="recalc()" min="0" step="1"/></div>
               <div class="field"><label title="Average hours of lost/slowed production per event">Avg hours / event (#)</label>
                 <input type="number" id="downtimeHrsPerEvent" placeholder="e.g. 0.75" oninput="recalc()" min="0" step="0.25"/></div>
+              <div class="field"><label title="Percentage of downtime cost recovered by accuracy improvement (blank = industry avg)">Downtime recovery % <span class="metric-bench" id="b_downtime"></span></label>
+                <input type="number" id="m_downtime" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
+            </div>
+            <div class="field-row-2">
               <div class="field"><label title="Fully-loaded cost of one hour of lost production (labor + margin + overhead)">Cost / downtime hour ($)</label>
-                <input type="number" id="downtimeCostPerHr" placeholder="e.g. 5,000" oninput="recalc()" min="0" step="100"/></div>
+                <input type="text" inputmode="numeric" id="downtimeCostPerHr" placeholder="e.g. 5,000" oninput="recalc()" min="0" step="100"/></div>
+              <div class="field"></div>
             </div>
 
             <div class="field-group-label">Expedite / emergency procurement</div>
             <div class="field-row-2">
               <div class="field"><label title="Total annual spend on expedited/emergency inbound orders caused by stockouts">Annual expedite spend ($)</label>
-                <input type="number" id="expediteSpendYr" placeholder="e.g. 400,000" oninput="recalc()" min="0" step="1000"/></div>
+                <input type="text" inputmode="numeric" id="expediteSpendYr" placeholder="e.g. 400,000" oninput="recalc()" min="0" step="1000"/></div>
               <div class="field"><label title="Percentage of that spend recoverable through better accuracy (blank = industry avg)">Recovery % <span class="metric-bench" id="b_expedite"></span></label>
                 <input type="number" id="m_expedite" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
+            </div>
+
+            <div class="field-group-label">Service economics (kept separate from OTIF)</div>
+            <div class="field-row-2">
+              <div class="field"><label>Annual service penalties / credits ($)</label><input type="text" inputmode="numeric" id="servicePenaltyCostYr" placeholder="e.g. 150,000" oninput="recalc()"/></div>
+              <div class="field"><label>Penalty reduction (%)</label><input type="number" id="m_servicePenalty" placeholder="e.g. 25" min="0" max="100" oninput="recalc()"/></div>
+            </div>
+            <div class="field-row-2">
+              <div class="field"><label>Annual lost sales from service failures ($)</label><input type="text" inputmode="numeric" id="lostSalesYr" placeholder="Optional direct estimate" oninput="recalc()"/></div>
+              <div class="field"><label>Contribution margin (%)</label><input type="number" id="contributionMarginPct" placeholder="Required for revenue benefit" min="0" max="100" oninput="recalc()"/></div>
+            </div>
+            <div class="field-row-3">
+              <div class="field"><label>Repeat truck rolls / yr (#)</label><input type="number" id="repeatVisitsYr" placeholder="e.g. 500" min="0" oninput="recalc()"/></div>
+              <div class="field"><label>Cost per truck roll ($)</label><input type="text" inputmode="numeric" id="costPerTruckRoll" placeholder="e.g. 325" oninput="recalc()"/></div>
+              <div class="field"><label>Repeat-visit reduction (%)</label><input type="number" id="m_firstFix" placeholder="e.g. 30" min="0" max="100" oninput="recalc()"/></div>
             </div>
 
             <div class="field-group-label">Physical / cycle counting labor</div>
@@ -537,36 +641,37 @@
                 <input type="number" id="m_count" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
             </div>
 
-            <div class="field-row-2">
-              <div class="field"><label title="Percentage of downtime cost recovered by accuracy improvement (blank = industry avg)">Downtime recovery % <span class="metric-bench" id="b_downtime"></span></label>
-                <input type="number" id="m_downtime" placeholder="Industry avg" oninput="recalc()" min="0" max="100" step="1"/></div>
-              <div class="field"></div>
-            </div>
-
           </div>
         </div>
       </div>
 
       <!-- IMPROVEMENT ASSUMPTIONS -->
       <div class="accordion" id="assumptionsSection">
-        <button class="acc-head open" onclick="toggleAcc(this)">
+        <button class="acc-head" onclick="toggleAcc(this)">
           <div class="acc-left"><span class="acc-dot" style="background:var(--green)"></span><div><div class="acc-title">Improvement assumptions <span class="badge badge-cyan" id="benchBadge" style="display:none;margin-left:8px;font-size:10px;">Industry defaults</span></div><div class="acc-sub">Adjust benchmarks or use industry averages</div></div></div>
           <svg class="acc-chevron" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <div class="acc-body">
+        <div class="acc-body closed">
           <div class="assumptions-header">Your estimate &nbsp;|&nbsp; Industry avg</div>
           <div class="metric-row"><span class="metric-label" title="Reduction in time spent on manual processes">Labor productivity gain</span><input class="metric-input" type="number" id="m_labor" placeholder="Use industry avg until confirmed" oninput="recalc();autoFlagConfidence()" min="0" max="100"/><span class="metric-unit">%</span><span class="metric-bench" id="b_labor">Avg: 25%</span></div>
-          <div class="metric-row"><span class="metric-label" title="Reduction in carrying costs via better accuracy and reduced buffer stock">Carrying cost reduction</span><input class="metric-input" type="number" id="m_carrying" placeholder="Use industry avg until confirmed" oninput="recalc()" min="0" max="100"/><span class="metric-unit">%</span><span class="metric-bench" id="b_carrying">Avg: 15%</span></div>
-          <div class="metric-row"><span class="metric-label" title="OTIF improvement delivered by CI — applied to the gap between baseline and target">OTIF improvement CI delivers</span><input class="metric-input" type="number" id="m_otif" placeholder="Use industry avg until confirmed" oninput="recalc()" min="0" max="100"/><span class="metric-unit">%</span><span class="metric-bench" id="b_otif">Avg: 10%</span></div>
+          <div class="metric-row"><span class="metric-label" title="Reduction in carrying costs via better accuracy and reduced buffer stock">Carrying cost reduction</span><input class="metric-input" type="number" id="m_carrying" placeholder="Derived from accuracy until confirmed" oninput="markExplicitRecovery('mCarrying');recalc()" min="0" max="100"/><span class="metric-unit">%</span><span class="metric-bench" id="b_carrying">Avg: 15%</span></div>
+          <div class="metric-row"><span class="metric-label" title="Share of the revenue-risk gap expected to be realized as economic value; validate with Finance">OTIF value realization</span><input class="metric-input" type="number" id="m_otif" placeholder="Use industry avg until confirmed" oninput="recalc()" min="0" max="100"/><span class="metric-unit">%</span><span class="metric-bench" id="b_otif">Avg: 10%</span></div>
           <div class="metric-row"><span class="metric-label" title="% of current IT/legacy costs Cloud Inventory displaces">IT / legacy cost displaced</span><input class="metric-input" type="number" id="m_it" placeholder="Use industry avg until confirmed" oninput="recalc()" min="0" max="100"/><span class="metric-unit">%</span><span class="metric-bench" id="b_it">Avg: 60%</span></div>
           <div class="metric-row"><span class="metric-label" title="Annual cost to hold inventory: storage, insurance, obsolescence, capital cost">Carrying cost rate (% of inventory)</span><input class="metric-input" type="number" id="m_carryRate" placeholder="Use industry avg until confirmed" oninput="recalc();autoFlagConfidence()" min="0"/><span class="metric-unit">%</span><span class="metric-bench" id="b_carryRate">Avg: 25%</span></div>
         </div>
       </div>
 
       <!-- Confidence scoring -->
-      <div class="card">
+      <div class="card confidence-card">
         <div class="card-title">Model confidence</div>
         <div id="confidencePanel"></div>
+      </div>
+
+      <!-- Show advanced sections toggle (appears when some accordions are collapsed) -->
+      <div id="showAllSectionsRow" style="text-align:center;padding:4px 0 12px;">
+        <button class="btn btn-ghost btn-sm" onclick="expandAllCalcSections()" style="font-size:12.5px;color:var(--gray-500);">
+          ▸ Show advanced sections — operational drivers &amp; assumptions
+        </button>
       </div>
 
       <!-- Proof points -->
@@ -579,20 +684,22 @@
 
   <div class="section-divider"><span class="section-divider-label">Summary results</span></div>
   <div class="results-grid" id="roiGrid"></div>
+  <div id="contractEconomics"></div>
 
   <div class="btn-row">
     <button class="btn btn-primary" onclick="saveScenario()">
       <svg viewBox="0 0 16 16" fill="none"><path d="M13 15H3a1 1 0 01-1-1V2a1 1 0 011-1h7.5L14 4.5V14a1 1 0 01-1 1z" stroke="currentColor" stroke-width="1.5"/><path d="M10 1v4H5V1M5 9h6M5 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       Save scenario
     </button>
-    <button class="btn btn-cta" onclick="switchTab('exec')">
+    <button class="btn btn-primary" onclick="switchTab('exec')">
       <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="12" height="14" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       Executive presentation
     </button>
     <button class="btn btn-ghost" onclick="generateEmail()">✉️ Email template</button>
-    <button class="btn btn-ghost" onclick="showCRMModal()">📋 Push to CRM</button>
+    <button class="btn btn-ghost" onclick="showCRMModal()">📋 Copy for CRM</button>
     <button class="btn btn-ghost" onclick="generateShareURL()">🔗 Share link</button>
     <button class="btn btn-ghost" onclick="clearForm()">New scenario</button>
+    <button class="btn btn-ghost" onclick="showTemplatePicker()" title="Start from a pre-filled vertical template">🗂 Start from template</button>
   </div>
   </div><!-- /calcBody -->
 </div>
@@ -605,145 +712,282 @@
 
 <!-- ═══ COMPETITIVE ═══ -->
 <div id="tab-comp" class="pane">
-  <div class="page-header"><div><div class="page-title">Competitive displacement</div><div class="page-subtitle">Select the prospect's current solution. It auto-appears in the executive presentation.</div></div></div>
-  <div class="card">
-    <div class="field" style="max-width:380px;margin-bottom:0;"><label>Current competing solution</label>
-      <select id="compSelect" onchange="renderComp()">
-        <option value="">— Select competitor —</option>
-        <option value="sap">SAP WM / Extended WH Mgmt</option>
-        <option value="rf">Legacy RF / paper-based</option>
-        <option value="oracle">Oracle WMS</option>
-        <option value="excel">Spreadsheets / manual</option>
-        <option value="erp">ERP-native inventory module</option>
-        <option value="other">Other WMS</option>
-      </select>
+  <div class="page-header">
+    <div>
+      <div class="page-title">Competitive displacement</div>
+      <div class="page-subtitle">Curated battlecards and AI-powered research against any competitor.</div>
+    </div>
+    <div class="btn-row" style="margin-top:0;gap:6px;">
+      <button class="btn btn-ghost btn-sm" id="compDocxBtn" onclick="exportCompDocx()" style="display:none;">&#128196; Export Word</button>
+      <button class="btn btn-ghost btn-sm" id="compPdfBtn"  onclick="exportCompPDF()"  style="display:none;">&#128424; Export PDF</button>
     </div>
   </div>
-  <div id="compContent"><div class="empty-state"><p>Select a competing solution above to see the displacement narrative.</p></div></div>
-</div>
 
+  <!-- Sub-tabs: Battlecard | AI Research -->
+  <div class="comp-subtabs">
+    <button class="comp-subtab active" id="compSubtabBattlecard" onclick="switchCompTab('battlecard')">Battlecard</button>
+    <button class="comp-subtab" id="compSubtabResearch" onclick="switchCompTab('research')">&#10024; AI research</button>
+  </div>
+
+  <!-- BATTLECARD TAB -->
+  <div id="compPaneBattlecard">
+    <div class="card" style="margin-bottom:1rem;">
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;">
+        <div class="field" style="min-width:220px;flex:1;max-width:300px;margin-bottom:0;"><label>Cloud Inventory solution</label>
+          <select id="compSolutionFilter" onchange="renderCompFilter()">
+            <option value="cip">Cloud Inventory Platform (CIP)</option>
+            <option value="mep">Mobile Enterprise Platform (MEP)</option>
+            <option value="epp">Enterprise Printing Platform (EPP)</option>
+          </select>
+        </div>
+        <div class="field" style="min-width:260px;flex:2;max-width:460px;margin-bottom:0;"><label>Current competing solution</label>
+          <select id="compSelect" onchange="renderComp()">
+            <option value="">— Select competitor —</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div id="compContent"><div class="empty-state"><p>Select a competing solution above to load the battlecard and talking points.</p></div></div>
+  </div>
+
+  <!-- AI RESEARCH TAB -->
+  <div id="compPaneResearch" style="display:none;">
+    <div id="compResearchApp"></div>
+  </div>
+</div>
 <!-- ═══ SENSITIVITY ═══ -->
 <div id="tab-sensitivity" class="pane">
   <div class="page-header"><div><div class="page-title">Sensitivity analysis</div><div class="page-subtitle">See how much each assumption impacts the 5-yr NPV. Bars show the range if each input changes ±20–30%.</div></div>
-    <button class="btn btn-cta btn-sm" onclick="renderSensitivity()">Refresh</button>
+    <button class="btn btn-secondary btn-sm" onclick="renderSensitivity()">Refresh</button>
   </div>
   <div class="card"><div id="sensitivityChart"><div class="empty-state"><p>Fill in the Calculator to see sensitivity analysis.</p></div></div></div>
 </div>
 
 <!-- ═══ EXECUTIVE VIEW ═══ -->
 <div id="tab-exec" class="pane">
+  <div id="executiveReadinessBanner" class="executive-readiness-banner"></div>
   <div class="page-header">
-    <div><div class="page-title">Executive presentation</div><div class="page-subtitle">Complete the Three Whys below, then download as PDF or export to PowerPoint.</div></div>
-    <div class="btn-row" style="margin-top:0;">
-      <button class="btn btn-primary" onclick="downloadPDF()">
+    <div><div class="page-title">Executive presentation</div><div class="page-subtitle">Business value assessment — write your narrative, then download or share.</div></div>
+    <div class="btn-row exec-toolbar" style="margin-top:0;flex-wrap:wrap;gap:6px;">
+      <!-- Primary: most-used actions -->
+      <button class="btn btn-primary" id="pdfDownloadBtn" onclick="downloadPDF()">
         <svg viewBox="0 0 16 16" fill="none"><path d="M8 1v9M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         Download PDF
       </button>
-      <button class="btn btn-cta" id="pptxExportBtn" data-label="Export to PowerPoint" onclick="exportToPowerPoint()">
+      <button class="btn btn-secondary" id="pptxExportBtn" data-label="Export to PowerPoint" onclick="exportToPowerPoint()">
         <svg viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 6h3a1.5 1.5 0 010 3H5V6zM5 9v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Export to PowerPoint
       </button>
-      <span class="export-divider"></span>
-      <button class="btn btn-ghost" onclick="roiMethodologyPDF()" title="Personalized proof of how this ROI was calculated">📄 ROI methodology (PDF)</button>
-      <button class="btn btn-ghost" id="roiMethodPptBtn" onclick="roiMethodologyPPT()" title="ROI methodology as PowerPoint">📊 ROI methodology (PPT)</button>
-      <button class="btn btn-ghost" onclick="shareBusinessCase()" title="Create a trackable link to share this business case — see when the prospect opens it">🔗 Share &amp; track</button>
-      <button class="btn btn-ghost" onclick="togglePresentationMode()" title="Full-screen, large-type view for live demos">🖥 Present</button>
-      <button class="btn btn-ghost" onclick="window.print()">
-        <svg viewBox="0 0 16 16" fill="none"><rect x="3" y="1" width="10" height="5" rx="1" stroke="currentColor" stroke-width="1.5"/><path d="M3 6H1v7h14V6h-2" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><rect x="3" y="9" width="10" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/></svg>
-        Print
-      </button>
-      <button class="btn btn-cta" onclick="refreshExec()">Refresh preview</button>
-      <button class="btn btn-ghost" onclick="saveScenario()">Save</button>
-      <button class="btn btn-ghost" onclick="generateEmail()">✉️ Email</button>
-      <button class="btn btn-ghost" onclick="switchTab('calc')">← Edit inputs</button>
-    </div>
-  </div>
+      <button class="btn btn-ghost" onclick="openProposal()">Create executive proposal</button>
+      <button class="btn btn-ghost" onclick="shareBusinessCase()" title="Create a trackable shared link">🔗 Share &amp; track</button>
+      <button class="btn btn-primary" id="saveExecutiveViewBtn" onclick="saveExecutiveView()" title="Save the Three Whys and executive narrative">💾 Save executive view</button>
 
-  <!-- Scenario toggle bar -->
-  <div class="scenario-mode-bar" id="scenarioModeBar">
-    <div class="smb-label">Scenario range:</div>
-    <div class="smb-toggle">
-      <button class="smb-btn" data-mode="conservative" onclick="setScenarioMode('conservative')">Conservative <span class="smb-scale">70%</span></button>
-      <button class="smb-btn smb-active" data-mode="base" onclick="setScenarioMode('base')">Base case <span class="smb-scale">100%</span></button>
-      <button class="smb-btn" data-mode="aggressive" onclick="setScenarioMode('aggressive')">Aggressive <span class="smb-scale">130%</span></button>
-    </div>
-    <div class="smb-hint" id="smbHint">Showing base case assumptions</div>
-  </div>
-
-  <!-- Three Whys editor -->
-  <div class="card" style="margin-bottom:1.25rem;">
-    <div class="whys-header">
-      <div>
-        <div class="whys-title">Three Whys — business narrative</div>
-        <div class="whys-subtitle">These appear in the executive PDF. Industry defaults are pre-loaded. Customize or use AI to personalize.</div>
+      <!-- Secondary: exports overflow menu -->
+      <div class="exec-more-wrap" style="position:relative;">
+        <button class="btn btn-ghost" id="execMoreBtn" onclick="toggleExecMore()" title="More export options">More exports ▾</button>
+        <div id="execMoreMenu" style="display:none;position:absolute;top:calc(100% + 4px);right:0;background:var(--white);border:1px solid var(--gray-200);border-radius:10px;box-shadow:var(--shadow-md);z-index:50;min-width:210px;padding:6px 0;">
+          <button class="exec-menu-item" id="executiveWordBtn" onclick="toggleExecMore();exportExecutiveWord()">📝 Executive business case <span class="exec-menu-hint">Word document</span></button>
+          <div style="height:1px;background:var(--gray-100);margin:4px 0;"></div>
+          <button class="exec-menu-item" id="championPackBtn" disabled title="Unavailable pending governed output conversion">Champion Pack — unavailable in v6.9.1</button>
+          <button class="exec-menu-item" onclick="toggleExecMore();exportOnePager()" id="onePagerBtn">📄 Role one-pager <span class="exec-menu-hint">Internal only · based on audience</span></button>
+          <button class="exec-menu-item" onclick="toggleExecMore();roiMethodologyPDF()" id="roiMethodPdfBtn">📋 ROI methodology PDF</button>
+          <button class="exec-menu-item" onclick="toggleExecMore();roiMethodologyPPT()" id="roiMethodPptBtn">📊 ROI methodology PPT</button>
+          <div style="height:1px;background:var(--gray-100);margin:4px 0;"></div>
+          <button class="exec-menu-item" onclick="generateEmail();toggleExecMore()">✉️ Email template</button>
+          <button class="exec-menu-item" onclick="togglePresentationMode();toggleExecMore()">🖥 Present (fullscreen)</button>
+          <button class="exec-menu-item" onclick="window.print();toggleExecMore()">🖨 Print</button>
+        </div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:6px;">
-          <label style="font-size:12px;font-weight:600;color:var(--gray-600);white-space:nowrap;">Audience:</label>
-          <select id="execAudience" onchange="refreshExec()" style="font-size:12px;padding:6px 28px 6px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);background:var(--white);color:var(--gray-800);appearance:none;-webkit-appearance:none;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%2394A3B8' d='M5 6L0 0h10z'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 9px center;cursor:pointer;">
-            <option value="mixed">👥 Mixed audience</option>
-            <option value="cfo">💰 CFO</option>
-            <option value="coo">⚙️ COO / VP Operations</option>
-            <option value="ceo">🎯 CEO / Executive Sponsor</option>
-            <option value="cio">💻 CIO / CTO</option>
+
+      <!-- Tertiary: navigation + state -->
+      <button class="btn btn-ghost" onclick="switchTab('calc')">← Edit inputs</button>
+      <button class="btn btn-ghost" id="debriefToggleBtn" onclick="toggleDebriefPanel()" title="Log what happened after the meeting">📋 Log debrief</button>
+    </div>
+  </div>
+
+  <!-- Executive View presents only the saved governed Value Story. -->
+
+  <!-- Three Whys editor (v5.5.1) -->
+  <div class="exec-whys-layout">
+
+    <!-- Left: Three Whys card -->
+    <div class="whys-card" id="whysCard">
+      <div class="whys-card-head">
+        <div class="whys-head-top">
+          <div>
+            <div class="whys-title">Three whys — business narrative</div>
+            <div class="whys-subtitle">Fills the executive PDF. Use AI to personalize, or tap a mic to dictate.</div>
+          </div>
+          <div class="whys-head-actions">
+            <button class="btn btn-ghost btn-sm" onclick="loadThreeWhysDefaults()" title="Reset to industry defaults">↺ Reset</button>
+            <button class="btn btn-tertiary btn-sm" id="aiEnhanceBtn" onclick="aiEnhanceWhys()">✨ AI enhance</button>
+          </div>
+        </div>
+        <!-- Audience: pill chips instead of dropdown -->
+        <div class="whys-aud-row">
+          <span class="whys-aud-lbl">Audience</span>
+          <div class="whys-aud-chips" id="audChips">
+            <button class="whys-aud-chip active" data-aud="mixed"  onclick="setExecAudience(this,'mixed')" >Mixed</button>
+            <button class="whys-aud-chip"        data-aud="cfo"    onclick="setExecAudience(this,'cfo')"   >CFO</button>
+            <button class="whys-aud-chip"        data-aud="coo"    onclick="setExecAudience(this,'coo')"   >COO</button>
+            <button class="whys-aud-chip"        data-aud="ceo"    onclick="setExecAudience(this,'ceo')"   >CEO</button>
+            <button class="whys-aud-chip"        data-aud="cio"    onclick="setExecAudience(this,'cio')"   >CIO</button>
+          </div>
+          <!-- Hidden select kept for back-compat with refreshExec() -->
+          <select id="execAudience" style="display:none;" onchange="refreshExec()">
+            <option value="mixed">Mixed audience</option>
+            <option value="cfo">CFO</option>
+            <option value="coo">COO / VP Operations</option>
+            <option value="ceo">CEO / Executive Sponsor</option>
+            <option value="cio">CIO / CTO</option>
           </select>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="loadThreeWhysDefaults()">↺ Reset defaults</button>
-        <button class="btn btn-cta btn-sm" id="aiEnhanceBtn" onclick="aiEnhanceWhys()">✨ AI enhance</button>
       </div>
-    </div>
-    <div class="ai-status" id="aiEnhanceStatus"></div>
 
-    <div class="why-card why-card-act">
-      <div class="why-card-header">
-        <div class="why-number" style="background:#C81E10;">1</div>
-        <div>
+      <!-- AI status bar -->
+      <div class="ai-status" id="aiEnhanceStatus"></div>
+
+      <!-- Why 1 -->
+      <div class="why-block">
+        <div class="why-block-head">
+          <div class="why-number" style="background:#C81E10;">1</div>
           <span class="why-label-text" style="color:#C81E10;">Why act at all?</span>
           <span class="why-sublabel">The cost of the status quo</span>
         </div>
+        <div class="why-field-wrap">
+          <textarea id="why_act" data-dictate rows="5"
+            placeholder="Describe the burning platform — what happens if they do nothing? What is the cost of inaction in this specific industry and situation?"
+            oninput="saveThreeWhys();_whysUpdateComp()"></textarea>
+          <button class="why-mic-btn" id="whyMic_act" onclick="_whysMicToggle('why_act','whyMic_act')"
+            title="Dictate with microphone" aria-label="Dictate why act at all">
+            <svg viewBox="0 0 16 16" width="15" height="15" fill="none"><rect x="6" y="1" width="4" height="7" rx="2" fill="currentColor"/><path d="M4 8a4 4 0 008 0M8 12v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <p class="why-mic-hint">Tap the mic to dictate · Chrome and Edge supported</p>
       </div>
-      <textarea id="why_act" placeholder="Describe the burning platform — what happens if they do nothing? What is the cost of inaction in this specific industry and situation?" oninput="saveThreeWhys()"></textarea>
-    </div>
 
-    <div class="why-card why-card-ci">
-      <div class="why-card-header">
-        <div class="why-number" style="background:#0089A6;">2</div>
-        <div>
+      <!-- Why 2 -->
+      <div class="why-block">
+        <div class="why-block-head">
+          <div class="why-number" style="background:#0089A6;">2</div>
           <span class="why-label-text" style="color:#0089A6;">Why Cloud Inventory?</span>
           <span class="why-sublabel">Why this solution, not an alternative</span>
         </div>
+        <div class="why-field-wrap">
+          <textarea id="why_ci" data-dictate rows="5"
+            placeholder="What makes Cloud Inventory specifically the right choice — vs. their current solution, doing nothing, or a competitor?"
+            oninput="saveThreeWhys();_whysUpdateComp()"></textarea>
+          <button class="why-mic-btn" id="whyMic_ci" onclick="_whysMicToggle('why_ci','whyMic_ci')"
+            title="Dictate with microphone" aria-label="Dictate why Cloud Inventory">
+            <svg viewBox="0 0 16 16" width="15" height="15" fill="none"><rect x="6" y="1" width="4" height="7" rx="2" fill="currentColor"/><path d="M4 8a4 4 0 008 0M8 12v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <p class="why-mic-hint">Tap the mic to dictate · Chrome and Edge supported</p>
       </div>
-      <textarea id="why_ci" placeholder="What makes Cloud Inventory specifically the right choice for this prospect — vs. their current solution, doing nothing, or a competitor?" oninput="saveThreeWhys()"></textarea>
-    </div>
 
-    <div class="why-card why-card-now">
-      <div class="why-card-header">
-        <div class="why-number" style="background:#2E7D32;">3</div>
-        <div>
+      <!-- Why 3 -->
+      <div class="why-block">
+        <div class="why-block-head">
+          <div class="why-number" style="background:#2E7D32;">3</div>
           <span class="why-label-text" style="color:#2E7D32;">Why now?</span>
           <span class="why-sublabel">The urgency to act in this window</span>
         </div>
+        <div class="why-field-wrap">
+          <textarea id="why_now" data-dictate rows="5"
+            placeholder="What is the specific trigger or urgency that makes acting now — not next quarter — the right decision?"
+            oninput="saveThreeWhys();_whysUpdateComp()"></textarea>
+          <button class="why-mic-btn" id="whyMic_now" onclick="_whysMicToggle('why_now','whyMic_now')"
+            title="Dictate with microphone" aria-label="Dictate why now">
+            <svg viewBox="0 0 16 16" width="15" height="15" fill="none"><rect x="6" y="1" width="4" height="7" rx="2" fill="currentColor"/><path d="M4 8a4 4 0 008 0M8 12v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <p class="why-mic-hint">Tap the mic to dictate · Chrome and Edge supported</p>
       </div>
-      <textarea id="why_now" placeholder="What is the specific trigger or urgency that makes acting now — not next quarter — the right decision?" oninput="saveThreeWhys()"></textarea>
+
+      <!-- Completeness footer -->
+      <div class="whys-comp-foot">
+        <span class="whys-comp-lbl">Narrative completeness</span>
+        <div class="whys-comp-track"><div class="whys-comp-fill" id="whysCompFill" style="width:0%;"></div></div>
+        <span class="whys-comp-pct" id="whysCompPct">0%</span>
+      </div>
+    </div><!-- /whys-card -->
+
+    <!-- Right sidebar: value breakdown + cost of delay -->
+    <div class="exec-whys-sidebar">
+
+      <!-- Value breakdown mini chart -->
+      <div class="card exec-side-card" id="execValueBreakdownCard">
+        <div class="exec-side-head">
+          <div class="exec-side-title">Value breakdown</div>
+          <div class="exec-side-sub">Annual benefit by driver</div>
+        </div>
+        <div class="exec-side-body" id="execSideBreakdown">
+          <div class="empty-state" style="padding:1rem;font-size:12px;">No modeled value drivers yet.</div>
+        </div>
+        <div class="exec-side-total" id="execSideTotal" style="display:none;">
+          <span class="exec-side-total-lbl">Total annual benefit</span>
+          <span class="exec-side-total-val" id="execSideTotalVal"></span>
+        </div>
+      </div>
+
+      <!-- Cost of inaction mini panel -->
+      <div class="card exec-side-card" id="execInactionCard" style="display:none;">
+        <div class="exec-side-head">
+          <div class="exec-side-title">Cost of delay</div>
+          <div class="exec-side-sub">Foregone value per period of inaction</div>
+        </div>
+        <div class="exec-inaction-grid" id="execSideInaction"></div>
+      </div>
+
+    </div>
+  </div><!-- /exec-whys-layout -->
+  <div class="exec-preview-wrap"><div id="execDoc"></div></div>
+
+  <!-- ── After the meeting — driver resonance / Batch C ── -->
+  <div class="card debrief-card" id="debriefSection" style="display:none;margin-top:1.5rem;">
+    <div class="card-title" style="display:flex;align-items:center;gap:10px;justify-content:space-between;">
+      <span>📋 After the meeting — what resonated?</span>
+      <span id="debriefSaveState" style="font-size:12px;color:var(--gray-500);"></span>
+    </div>
+    <p style="font-size:13px;color:var(--gray-600);margin-bottom:16px;">
+      Record which drivers landed with the prospect. This builds a picture over time of what works for each vertical.
+    </p>
+    <div class="debrief-drivers" id="debriefDrivers"></div>
+    <div class="field" style="margin-top:14px;">
+      <label>Meeting outcome</label>
+      <select id="debriefOutcome" onchange="saveDebriefData()">
+        <option value="">— Select —</option>
+        <option value="progressed">✅ Progressed to next stage</option>
+        <option value="stalled">⏸ Stalled — needs follow-up</option>
+        <option value="lost">❌ Lost deal</option>
+        <option value="no_decision">🤷 No decision yet</option>
+        <option value="closed_won">🏆 Closed won</option>
+      </select>
+    </div>
+    <div class="field" style="margin-top:10px;">
+      <label>Meeting notes</label>
+      <textarea id="debriefNotes" rows="3" placeholder="Key objections, questions the prospect raised, next steps promised…" oninput="saveDebriefData()"></textarea>
     </div>
   </div>
-
-  <div class="exec-preview-wrap"><div id="execDoc"></div></div>
 </div>
+
+<!-- ═══ EXECUTIVE PROPOSAL ═══ -->
+<div id="tab-proposal" class="pane"><div id="proposalEditorWrap"></div></div>
 
 <!-- ═══ SAVED SCENARIOS ═══ -->
 <div id="tab-saved" class="pane">
   <div class="page-header">
     <div><div class="page-title">Saved scenarios</div><div class="page-subtitle">Scenarios saved to the database. Visible on any device after sign-in.</div></div>
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-      <button class="btn btn-ghost btn-sm ownership-filter"        data-filter="all"    onclick="setOwnershipFilter('all')">All</button>
-      <button class="btn btn-ghost btn-sm ownership-filter active" data-filter="mine"   onclick="setOwnershipFilter('mine')">Mine</button>
+      <button class="btn btn-ghost btn-sm ownership-filter active" data-filter="all"    onclick="setOwnershipFilter('all')">All</button>
+      <button class="btn btn-ghost btn-sm ownership-filter"        data-filter="mine"   onclick="setOwnershipFilter('mine')">Mine</button>
       <button class="btn btn-ghost btn-sm ownership-filter"        data-filter="shared" onclick="setOwnershipFilter('shared')">Shared with me</button>
       <select id="industryFilterSelect" class="industry-filter-select" onchange="setIndustryFilter(this.value)" title="Filter by industry">
         <option value="">All industries</option>
       </select>
       <button class="btn btn-ghost btn-sm" id="adminViewAllBtn" style="display:none;" onclick="toggleAdminViewAll()">👥 View all (team)</button>
-      <button class="btn btn-cta" onclick="switchTab('calc')">
+      <button class="btn btn-ghost btn-sm" onclick="showTemplatePicker()" title="Start from a vertical template">📋 Template</button>
+      <button class="btn btn-primary" onclick="switchTab('calc')">
         <svg viewBox="0 0 16 16" fill="none"><path d="M8 1v14M1 8h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         New scenario
       </button>
@@ -753,7 +997,7 @@
     <div class="card-title">Filter by deal stage</div>
     <div class="stage-filters" id="stageFilters"></div>
   </div>
-  <div class="card"><div id="scenarioList"></div></div>
+  <div class="card"><div id="scenarioList"><div class="empty-state"><p>Loading saved scenarios…</p></div></div></div>
 </div>
 
 <!-- ═══ COMPARE ═══ -->
@@ -761,7 +1005,7 @@
   <div class="page-header"><div><div class="page-title">Scenario comparison</div><div class="page-subtitle">Select up to 3 scenarios from Saved Scenarios to compare side-by-side.</div></div>
     <button class="btn btn-ghost btn-sm" onclick="switchTab('saved')">← Select scenarios</button>
   </div>
-  <div class="card"><div id="comparisonTable"><p style="color:#94A3B8;font-size:13px;">Select 2 or 3 scenarios from Saved Scenarios using the checkboxes.</p></div></div>
+  <div class="card"><div id="comparisonTable"><p style="color:#6B7A8D;font-size:13px;">Select 2 or 3 scenarios from Saved Scenarios using the checkboxes.</p></div></div>
 </div>
 
 <!-- ═══ ANALYTICS ═══ -->
@@ -769,7 +1013,22 @@
   <div class="page-header"><div><div class="page-title">Analytics</div><div class="page-subtitle">Usage and performance insights across all saved scenarios.</div></div>
     <button class="btn btn-ghost btn-sm" onclick="renderAnalytics()">Refresh</button>
   </div>
+  <div id="dealQueryCard" class="card" style="display:none;margin-bottom:1rem;">
+    <div class="card-title">✨ Ask about your deals</div>
+    <p style="font-size:12.5px;color:var(--gray-500);margin-bottom:10px;">e.g. "Which reps have the highest win rate?" or "Does prospect-supplied data correlate with winning?"</p>
+    <div style="display:flex;gap:8px;">
+      <input type="text" id="dealQueryInput" placeholder="Ask a question about deal performance…" style="flex:1;"
+        onkeydown="if(event.key==='Enter') askDealQuestion()"/>
+      <button class="btn btn-primary" onclick="askDealQuestion()">Ask</button>
+    </div>
+    <div id="dealQueryAnswer" style="display:none;"></div>
+  </div>
   <div id="analyticsPanel"></div>
+</div>
+
+<!-- ═══ SALES MANAGER ═══ -->
+<div id="tab-manager" class="pane">
+  <div id="salesManagerDashboard"><div class="empty-state"><p>Loading sales management workspace…</p></div></div>
 </div>
 
 <!-- ═══ ADMIN ═══ -->
@@ -784,7 +1043,7 @@
   <!-- Non-admin gate: shown to Rep/SE users who somehow reach this tab -->
   <div id="adminGate" style="display:none;">
     <div class="empty-state">
-      <svg width="40" height="40" viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="19" stroke="#E2E8F0" stroke-width="2"/><path d="M14 20h12M20 14v12" stroke="#94A3B8" stroke-width="2" stroke-linecap="round"/></svg>
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="19" stroke="#E2E8F0" stroke-width="2"/><path d="M14 20h12M20 14v12" stroke="#6B7A8D" stroke-width="2" stroke-linecap="round"/></svg>
       <p>Admin access required. Contact your administrator.</p>
     </div>
   </div>
@@ -795,10 +1054,14 @@
     <!-- Sub-navigation tabs within Admin -->
     <div class="admin-tabs">
       <button class="admin-tab active" data-panel="users"      onclick="switchAdminPanel('users')">👥 Users</button>
+      <button class="admin-tab"        data-panel="teams"      onclick="switchAdminPanel('teams')">🏢 Sales Teams</button>
       <button class="admin-tab"        data-panel="benchmarks" onclick="switchAdminPanel('benchmarks')">📊 Benchmarks</button>
       <button class="admin-tab"        data-panel="auditlog"   onclick="switchAdminPanel('auditlog')">📋 Audit log</button>
       <button class="admin-tab"        data-panel="versions"   onclick="switchAdminPanel('versions')">🗂 Version history</button>
       <button class="admin-tab"        data-panel="errors"     onclick="switchAdminPanel('errors')">🛠 Error log</button>
+      <button class="admin-tab"        data-panel="export"     onclick="switchAdminPanel('export')">⬇ Export</button>
+      <button class="admin-tab"        data-panel="cleanup"    onclick="switchAdminPanel('cleanup')">🧹 Cleanup</button>
+      <button class="admin-tab"        data-panel="competitive" onclick="switchAdminPanel('competitive')">Competitive Intelligence</button>
     </div>
 
     <!-- ─── USERS PANEL ─── -->
@@ -819,13 +1082,17 @@
           <div class="field" style="margin:0;">
             <label>Role</label>
             <select id="newRole">
-              <option value="rep">Rep / SE</option>
+              <option value="rep">Account Executive (AE)</option>
+              <option value="se">Solution Engineer (SE)</option>
               <option value="admin">Admin</option>
             </select>
           </div>
         </div>
+        <div class="admin-role-grid" aria-label="Additional roles">
+          <label><input type="checkbox" id="newRepRole"> Sales Rep</label><label><input type="checkbox" id="newSeRole"> Sales Engineer</label><label><input type="checkbox" id="newSalesManagerRole"> Sales Leader</label><label><input type="checkbox" id="newAdminRole"> Admin</label>
+        </div>
         <div class="btn-row" style="margin-top:.85rem;">
-          <button class="btn btn-cta" onclick="createUser()">Create user</button>
+          <button class="btn btn-primary" onclick="createUser()">Create user</button>
         </div>
         <div id="createUserError" class="field-hint" style="color:var(--red);display:none;margin-top:6px;"></div>
       </div>
@@ -842,7 +1109,7 @@
         </div>
         <div class="field-hint" id="tempPasswordEmailNote" style="margin-top:8px;"></div>
         <div class="btn-row" style="margin-top:.75rem;">
-          <button class="btn btn-cta btn-sm" onclick="emailCredentialsViaMailClient()">✉️ Email via my mail client</button>
+          <button class="btn btn-secondary btn-sm" onclick="emailCredentialsViaMailClient()">✉️ Email via my mail client</button>
           <button class="btn btn-ghost btn-sm" onclick="document.getElementById('tempPasswordCard').style.display='none'">Dismiss</button>
         </div>
       </div>
@@ -860,12 +1127,11 @@
       </div>
     </div>
 
+    <div id="adminPanel-teams" class="admin-panel" style="display:none;"><div id="salesTeamsAdmin"><div class="empty-state"><p>Loading Sales Teams…</p></div></div></div>
+
     <!-- ─── BENCHMARKS PANEL ─── -->
     <div id="adminPanel-benchmarks" class="admin-panel" style="display:none;">
       <div id="adminBenchmarkEditor"></div>
-      <div class="btn-row">
-        <button class="btn btn-danger" onclick="resetBenchmarks()">Reset to factory defaults</button>
-      </div>
     </div>
 
     <!-- ─── AUDIT LOG PANEL ─── -->
@@ -896,7 +1162,7 @@
             <input type="date" id="logFilterTo"/>
           </div>
           <div style="display:flex;gap:6px;">
-            <button class="btn btn-cta btn-sm" onclick="loadAuditLog(0)">Apply</button>
+            <button class="btn btn-primary btn-sm" onclick="loadAuditLog(0)">Apply</button>
             <button class="btn btn-ghost btn-sm" onclick="clearAuditFilters()">Clear</button>
           </div>
         </div>
@@ -941,7 +1207,7 @@
       <div class="card" style="margin-bottom:1rem;">
         <div class="card-title">Server error log</div>
         <p style="font-size:13px;color:var(--gray-600);margin:0 0 10px;">
-          Server-side errors captured for visibility. <span id="errorLogCount"></span>
+          Server and client-side errors captured automatically. <span id="errorLogCount"></span>
         </p>
         <div class="btn-row" style="margin-top:0;">
           <button class="btn btn-ghost btn-sm" onclick="loadErrorLog()">Refresh</button>
@@ -950,6 +1216,55 @@
       </div>
       <div id="errorLogList"></div>
     </div>
+
+    <!-- ─── EXPORT PANEL ─── -->
+    <div id="adminPanel-export" class="admin-panel" style="display:none;">
+      <div class="admin-section-title">Data export</div>
+      <p style="font-size:13px;color:var(--gray-600);margin-bottom:20px;">Download CSV snapshots of key data. Each file includes all records — active and soft-deleted.</p>
+      <div class="export-grid">
+        <div class="export-card">
+          <div class="export-card-icon">📋</div>
+          <div class="export-card-title">Scenarios</div>
+          <div class="export-card-desc">All saved scenarios across all reps — name, company, version, ROI, annual benefit, deal stage, dates.</div>
+          <button class="btn btn-primary btn-sm" onclick="adminExport('scenarios')">Download CSV</button>
+        </div>
+        <div class="export-card">
+          <div class="export-card-icon">🏢</div>
+          <div class="export-card-title">Customers</div>
+          <div class="export-card-desc">Customer records with owner, field inventory flag, and linked scenario count.</div>
+          <button class="btn btn-primary btn-sm" onclick="adminExport('customers')">Download CSV</button>
+        </div>
+        <div class="export-card">
+          <div class="export-card-icon">🔗</div>
+          <div class="export-card-title">Discovery sessions</div>
+          <div class="export-card-desc">Prospect discovery links — company, rep, open count, submission status, answer count.</div>
+          <button class="btn btn-primary btn-sm" onclick="adminExport('discovery')">Download CSV</button>
+        </div>
+        <div class="export-card">
+          <div class="export-card-icon">👥</div>
+          <div class="export-card-title">Users</div>
+          <div class="export-card-desc">All user accounts with role, status, last scenario saved, and total scenario count.</div>
+          <button class="btn btn-primary btn-sm" onclick="adminExport('users')">Download CSV</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── CLEANUP PANEL ─── -->
+    <div id="adminPanel-cleanup" class="admin-panel" style="display:none;">
+      <div class="admin-section-title">Data Cleanup &amp; Recovery</div>
+      <p class="cleanup-intro">Find test, duplicate, or obsolete records, preview everything affected, then safely remove or restore selected records.</p>
+      <div class="cleanup-view-tabs" role="tablist" aria-label="Data Cleanup and Recovery views">
+        <button class="active" id="cleanupFindTab" role="tab" aria-selected="true" onclick="adminCleanupView('find')">Find &amp; Remove</button>
+        <button id="cleanupRestoreTab" role="tab" aria-selected="false" onclick="adminCleanupView('removed')">Recently Removed</button>
+      </div>
+      <section id="cleanupFindView">
+        <div class="cleanup-search-wrap"><div class="cleanup-typeahead-wrap"><input id="cleanupSearch" class="cleanup-search-input" placeholder="Search customer, opportunity, or rep" oninput="adminCleanupTypeahead()" onkeydown="if(event.key==='Enter'){event.preventDefault();adminCleanupPreview()}"><div id="cleanupTypeaheadDropdown" class="cleanup-ta-dropdown" style="display:none;"></div></div><button class="btn btn-primary" onclick="adminCleanupPreview()">Preview Results</button></div>
+        <div class="cleanup-filter-grid"><label>Record status<select id="cleanupStatus"><option value="active">Active</option><option value="closed">Closed</option><option value="removed">Removed</option><option value="all">All</option></select></label><label>Scenario<select id="cleanupScenario"><option value="all">All</option><option value="current">Current versions</option><option value="prior">Prior versions</option></select></label><label>Prospect Link<select id="cleanupProspect"><option value="all">All</option><option value="submitted">Submitted</option><option value="draft">Draft / not submitted</option><option value="inactive">Inactive</option></select></label><details><summary>More Filters</summary><div class="cleanup-type-filters"><label><input type="checkbox" value="scenario" checked> Opportunities / scenarios</label><label><input type="checkbox" value="discovery" checked> Prospect / Discovery sessions</label><label><input type="checkbox" value="customer" checked> Customers</label><label><input type="checkbox" value="handoff" checked> Solution Fit / Handoff</label></div></details></div>
+        <div id="cleanupPreview" style="margin-top:16px;"></div>
+      </section>
+      <section id="cleanupRemovedView" hidden><div class="cleanup-recovery-toolbar"><input id="cleanupRemovedSearch" placeholder="Search customer, opportunity, or removed by"><select id="cleanupRemovedType"><option value="all">All record types</option><option value="scenario">Scenario</option><option value="customer">Customer</option><option value="discovery">Prospect / Discovery session</option><option value="handoff">Solution Fit / Handoff</option></select><button class="btn btn-tertiary" onclick="loadRecentlyDeleted()">Refresh</button></div><p class="cleanup-safe-note">Restoring an internal record does not reactivate prior public share or Prospect links.</p><div id="recentlyDeletedList"><div class="cleanup-no-match"><p>Choose Refresh to load recently removed records.</p></div></div></section>
+    </div>
+    <div id="adminPanel-competitive" class="admin-panel" style="display:none;"><div id="competitiveIntelligenceAdmin"><div class="empty-state"><p>Loading Competitive Intelligence…</p></div></div></div>
 
   </div><!-- end adminContent -->
 </div>
@@ -993,7 +1308,7 @@
         <div id="profilePwError" class="field-hint" style="color:var(--red);display:none;margin-bottom:.5rem;"></div>
         <div id="profilePwSuccess" class="field-hint" style="color:var(--green);display:none;margin-bottom:.5rem;"></div>
         <div class="btn-row" style="margin-top:.5rem;">
-          <button class="btn btn-cta" onclick="profileChangePassword()">Update password</button>
+          <button class="btn btn-primary" onclick="profileChangePassword()">Update password</button>
         </div>
       </div>
     </div>
@@ -1012,12 +1327,14 @@
   </div>
 </div>
 
-<!-- ═══ MUTUAL ACTION PLAN ═══ -->
+<!-- ═══ JOINT PROJECT PLAN ═══ -->
+<div id="tab-coach" class="pane"><div id="dealCoachWrap"></div></div>
+
+<!-- ═══ BUYER EVIDENCE & STAGE READINESS ═══ -->
+<div id="tab-readiness" class="pane"><div id="buyerReadinessWrap"></div></div>
+
+<!-- ═══ JOINT PROJECT PLAN ═══ -->
 <div id="tab-map" class="pane">
-  <div class="page-header">
-    <div><div class="page-title">Mutual Action Plan</div>
-    <div class="page-subtitle">Build a shared close plan with your prospect. They see a live link and check off their own steps.</div></div>
-  </div>
   <div id="mapListWrap"><div class="empty-state"><p>Loading…</p></div></div>
   <div id="mapEditorWrap" style="display:none;"></div>
 </div>
@@ -1028,19 +1345,30 @@
     <div><div class="page-title">Stakeholder map</div>
     <div class="page-subtitle">Map influence and support across the buying committee. Spot gaps before they cost you the deal.</div>
     <div id="stakeCompanyGate" class="field-hint" style="color:var(--amber);display:none;margin-top:4px;">Select or create a company to start mapping stakeholders.</div></div>
-    <div style="display:flex;gap:6px;align-items:center;">
-      <select id="stakeCompanySel" class="industry-filter-select" onchange="setStakeCompany(this.value)"><option value="">— Select a company —</option></select>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+      <div class="cs-input-wrap" style="min-width:200px;max-width:280px;position:relative;">
+        <input type="text" id="stakeCompanyInput" placeholder="Search company…"
+          autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+          oninput="stakeCompanySearch(this.value)"
+          onfocus="stakeCompanySearch(this.value)"
+          onblur="setTimeout(()=>{ const d=document.getElementById('stakeCompanyResults'); if(d) d.style.display='none'; },180)"
+          style="width:100%;"/>
+        <div id="stakeCompanyResults" class="cs-results" style="display:none;"></div>
+      </div>
+      <select id="stakeRepFilter" class="industry-filter-select" style="display:none;" onchange="_stakeRepFilter=this.value;loadStakeholders()">
+        <option value="">All reps</option>
+      </select>
       <button class="btn btn-primary btn-sm" id="stakeAiBtn" onclick="aiAnalyzeStakeholders()">✨ AI gap analysis</button>
       <button class="btn btn-ghost btn-sm" onclick="printStakeholderMap()" title="Print / save PDF">🖨 PDF</button>
       <button class="btn btn-ghost btn-sm" id="stakePptBtn" onclick="pptStakeholderMap()" title="Export PowerPoint">📊 PPT</button>
       <button class="btn btn-ghost btn-sm" onclick="suggestStakeholdersFromDiscovery()" title="Draft stakeholders from your value-engineering discovery answers">✨ Suggest from discovery</button>
-      <button class="btn btn-cta btn-sm" id="stakeAddBtn" onclick="addStakeholder()">+ Add stakeholder</button>
+      <button class="btn btn-primary btn-sm" id="stakeAddBtn" onclick="addStakeholder()">+ Add stakeholder</button>
     </div>
   </div>
   <div class="two-col" style="align-items:start;margin-bottom:1.25rem;">
     <div class="card">
       <div class="card-title">Influence × Support</div>
-      <div class="stake-quad-outer" id="stakeQuadrant"></div>
+      <div class="stake-quad-outer" id="stakeQuadrant"><div class="empty-state" style="height:100%;display:flex;align-items:center;justify-content:center;"><p>Select a company to view the stakeholder map.</p></div></div>
     </div>
     <div>
       <div class="card" style="margin-bottom:1rem;">
@@ -1050,7 +1378,7 @@
       <div class="card" id="stakeAiResult" style="display:none;"></div>
     </div>
   </div>
-  <div class="card"><div class="card-title">All stakeholders</div><div id="stakeList"></div></div>
+  <div class="card"><div class="card-title">All stakeholders</div><div id="stakeList"><div class="empty-state"><p>Select a company above to see its stakeholders.</p></div></div></div>
 </div>
 
 <!-- ═══ HOW TO USE ═══ -->
@@ -1107,6 +1435,32 @@
   </div>
 </div>
 
+<!-- ═══ ADMIN CUSTOMERS (command center) ═══ -->
+<div id="tab-admincustomers" class="pane">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Customers</div>
+      <div class="page-subtitle">All customers across the team. Search, then open a saved scenario or start a new one.</div>
+    </div>
+  </div>
+  <div id="adminCustomersApp"></div>
+</div>
+
+<!-- ═══ SOLUTION FIT & HANDOFF (SE) ═══ -->
+<div id="tab-solfit" class="pane">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Solution Fit &amp; Handoff</div>
+      <div class="page-subtitle">SE discovery, demo/fit, gaps, and services handoff — tied to the selected customer.</div>
+    </div>
+    <div class="btn-row" style="margin-top:0;">
+      <span id="sfSaveState" class="sf-savestate"></span>
+    </div>
+  </div>
+  <div id="sfGate" class="sf-gate"></div>
+  <div id="sfApp" style="display:none;"></div>
+</div>
+
 </main>
 </div>
 
@@ -1115,7 +1469,7 @@
 <!-- Email modal -->
 <div class="modal-overlay" id="emailModal">
   <div class="modal">
-    <button class="modal-close" onclick="closeModal('emailModal')">✕</button>
+    <button class="modal-close" aria-label="Close" onclick="closeModal('emailModal')">✕</button>
     <div class="modal-title">✉️ Email template</div>
     <span class="modal-label">Subject</span>
     <input type="text" id="emailSubject" placeholder="Subject line"/>
@@ -1123,7 +1477,8 @@
     <textarea id="emailBody" rows="18"></textarea>
     <div class="btn-row" style="margin-top:1rem;">
       <button class="btn btn-primary" onclick="openMailto()">Open in email client</button>
-      <button class="btn btn-cta" onclick="copyEmail()">Copy to clipboard</button>
+      <button class="btn btn-secondary" onclick="copyEmail()">Copy to clipboard</button>
+      <button class="btn btn-ghost" id="aiPersonalizeEmailBtn" onclick="aiPersonalizeEmail()" title="Rewrite the tone for the selected audience, keeping every number exact">✨ AI personalize</button>
       <button class="btn btn-ghost" onclick="closeModal('emailModal')">Close</button>
     </div>
   </div>
@@ -1132,13 +1487,13 @@
 <!-- Share modal (fallback) -->
 <div class="modal-overlay" id="shareModal">
   <div class="modal">
-    <button class="modal-close" onclick="closeModal('shareModal')">✕</button>
+    <button class="modal-close" aria-label="Close" onclick="closeModal('shareModal')">✕</button>
     <div class="modal-title">🔗 Share this scenario</div>
     <p style="font-size:13px;color:var(--gray-600);margin-bottom:12px;">Copy this link and send it to anyone. Opening the link will load this exact scenario.</p>
     <span class="modal-label">Share URL</span>
     <input type="text" id="shareUrlInput" readonly onclick="this.select()"/>
     <div class="btn-row" style="margin-top:1rem;">
-      <button class="btn btn-primary" onclick="navigator.clipboard.writeText(document.getElementById('shareUrlInput').value).then(()=>showToast('Copied!'))">Copy link</button>
+      <button class="btn btn-secondary" onclick="navigator.clipboard.writeText(document.getElementById('shareUrlInput').value).then(()=>showToast('Copied!'))">Copy link</button>
       <button class="btn btn-ghost" onclick="closeModal('shareModal')">Close</button>
     </div>
   </div>
@@ -1147,8 +1502,9 @@
 <!-- CRM modal -->
 <div class="modal-overlay" id="crmModal">
   <div class="modal">
-    <button class="modal-close" onclick="closeModal('crmModal')">✕</button>
-    <div class="modal-title">📋 Push to CRM</div>
+    <button class="modal-close" aria-label="Close" onclick="closeModal('crmModal')">✕</button>
+    <div class="modal-title">📋 Copy ROI summary for CRM</div>
+    <p style="font-size:13px;color:var(--gray-600);margin-bottom:16px;">Copies a formatted ROI summary to your clipboard. Paste it into your CRM opportunity note.</p>
     <p style="font-size:13px;color:var(--gray-600);margin-bottom:16px;">The ROI summary will be copied to your clipboard. Paste it as a note on your opportunity or deal record.</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       <button class="btn btn-primary" style="padding:14px;flex-direction:column;gap:4px;height:auto;" onclick="pushToCRM('salesforce');closeModal('crmModal')">
@@ -1156,7 +1512,7 @@
         <span>Salesforce</span>
         <span style="font-size:11px;opacity:.7;font-weight:400;">Opens login → paste note</span>
       </button>
-      <button class="btn btn-cta" style="padding:14px;flex-direction:column;gap:4px;height:auto;" onclick="pushToCRM('hubspot');closeModal('crmModal')">
+      <button class="btn btn-primary" style="padding:14px;flex-direction:column;gap:4px;height:auto;" onclick="pushToCRM('hubspot');closeModal('crmModal')">
         <span style="font-size:18px;">🟠</span>
         <span>HubSpot</span>
         <span style="font-size:11px;opacity:.7;font-weight:400;">Opens app → paste note</span>
@@ -1168,41 +1524,75 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite">
   <span class="toast-dot"></span>
-  <span id="toastMsg"></span>
+  <span id="toastMsg" role="status" aria-live="polite" aria-atomic="true"></span>
 </div>
 
 <script src="/roi-engine.js"></script>
+<script src="/questionnaire-roi-registry.js"></script>
+<script src="brand-system.js"></script>
+<script src="brand-palette.js"></script>
 <script src="currency.js"></script>
+<script src="format-utils.js"></script>
+<script src="industry-data.js"></script>
+<script src="scenario-templates.js"></script>
 <script src="app.js"></script>
 <script src="features.js"></script>
 <script src="narrative.js"></script>
 <script src="discovery.js"></script>
 <script src="impact-map.js"></script>
 <script src="versioning.js"></script>
-<!-- PptxGenJS: load local copy if present, else fall back to jsDelivr CDN.
-     onerror on the local tag triggers the CDN tag.  -->
-<script src="pptxgen.bundle.js" onerror="this.onerror=null;var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';document.head.appendChild(s);"></script>
+<!-- PowerPoint runtime: JSZip must load before the browser PptxGenJS bundle. -->
+<script src="/jszip.min.js"></script>
+<script src="/pptxgen.min.js"></script>
+<script src="executive-story.js"></script>
 <script src="pptx-export.js"></script>
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="3.7.0";</script>
+<script>const APP_VERSION="6.9.1";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
+<script src="ai-session.js"></script>
+<script src="customer-switcher.js"></script>
+<script src="application-knowledge.js"></script>
+<script src="assistant.js"></script>
 <script src="input-format.js"></script>
 <script src="exec-infographics.js"></script>
 <script src="benchmark-provenance.js"></script>
+<script src="/handoff-readiness.js"></script>
+<script src="solution-fit.js"></script>
+<script src="dictation.js"></script>
+<script src="admin-customers.js"></script>
 <script src="map.js"></script>
 <script src="stakeholders.js"></script>
 <script src="deal-export.js"></script>
+<script src="proposal.js"></script>
+<script src="deal-coach.js"></script>
+<script src="buyer-readiness.js"></script>
+<script src="comp-research.js"></script>
+<script src="sales-manager.js"></script>
 <script>
+function clientHasRole(user,key,label) { return !!user && (user.role===key || (user.roleKeys||[]).includes(key) || (user.roles||[]).includes(label||key)); }
 /* ── Auth guard — runs before any app code ──
    initAuth() is stored as a Promise so initAdminTab(), initHelpTab(),
    and initProfileTab() can await it rather than reading stale
    sessionStorage before the /api/auth/me response has arrived.       */
 window._authReady = (async function() {
   if (typeof window.ciAuth !== 'undefined') {
-    return await window.ciAuth.initAuth();
+    const r = await window.ciAuth.initAuth();
+    /* Reveal admin-only nav (Customers command center + Admin panel). */
+    try {
+      const u = window.ciAuth.getUser ? window.ciAuth.getUser() : {};
+      const isAdmin = clientHasRole(u,'admin','Admin');
+      const navC = document.getElementById('nav-admincustomers');
+      if (navC) navC.style.display = isAdmin ? 'flex' : 'none';
+      const navA = document.getElementById('nav-admin');
+      if (navA) navA.style.display = isAdmin ? 'flex' : 'none';
+      const canManage = isAdmin || (Array.isArray(u.roleKeys) && u.roleKeys.includes('sales_manager')) || (Array.isArray(u.roles) && (u.roles.includes('Sales Leader') || u.roles.includes('Sales Manager')));
+      const navM = document.getElementById('nav-manager');
+      if (navM) navM.style.display = canManage ? 'flex' : 'none';
+    } catch(e) {}
+    return r;
   }
   return null;
 })();
@@ -1210,39 +1600,7 @@ window._authReady = (async function() {
 function showCRMModal() { document.getElementById('crmModal')?.classList.add('open'); }
 function scrollToSection(id) { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior:'smooth', block:'start' }); }
 
-function downloadPDF() {
-  if (!checkConfidenceBeforeSharing()) return;
-  if (typeof saveThreeWhys === 'function') saveThreeWhys();
-  const v = getVals();
-  v.threeWhysAct = document.getElementById('why_act')?.value || '';
-  v.threeWhysCi  = document.getElementById('why_ci')?.value  || '';
-  v.threeWhysNow = document.getElementById('why_now')?.value || '';
-  const vForPDF = { ...v };
-  if (vForPDF.prospectLogoDataUrl && vForPDF.prospectLogoDataUrl.length > 50000) {
-    vForPDF.prospectLogoDataUrl = null;
-    showToast('Note: prospect logo omitted from PDF (file too large for URL).');
-  }
-  try {
-    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(vForPDF))));
-    window.open(window.location.origin + '/print.html#data=' + encoded, '_blank');
-    trackEvent('pdf_download', { company: v.company });
-  } catch(e) { showToast('Could not open PDF page — scenario may be too large.'); }
-}
-
-let currentScenarioMode = 'base';
-const SCENARIO_SCALES = { conservative:0.70, base:1.00, aggressive:1.30 };
-const SCENARIO_LABELS = {
-  conservative:'Conservative case — 70% of base improvement assumptions',
-  base:'Base case — using your entered assumptions',
-  aggressive:'Aggressive case — 130% of base improvement assumptions'
-};
-function setScenarioMode(mode) {
-  currentScenarioMode = mode;
-  document.querySelectorAll('.smb-btn').forEach(b => b.classList.toggle('smb-active', b.dataset.mode === mode));
-  const hint = document.getElementById('smbHint');
-  if (hint) hint.textContent = SCENARIO_LABELS[mode];
-  renderExec();
-}
+function downloadPDF(){showToast('Governed PDF is still loading. Please retry in Executive View.');}
 
 function checkConfidenceBeforeSharing() {
   if (typeof fieldStates === 'undefined') return true;
@@ -1281,7 +1639,7 @@ function refreshExec() {
 function applyDefaultsAndShowProof() {
   const ind = document.getElementById('industry')?.value;
   const card = document.getElementById('proofPointsCard');
-  if (ind && typeof PROOF_POINTS !== 'undefined' && PROOF_POINTS[ind]) { renderProofPoints(ind); if (card) card.style.display = 'block'; }
+  if (ind && typeof renderProofPoints === 'function') { renderProofPoints(ind); if (card) card.style.display = 'block'; }
   else if (card) card.style.display = 'none';
   if (typeof renderDiscoveryTab === 'function') renderDiscoveryTab();
   if (typeof renderCalcIndustryQuestions === 'function') renderCalcIndustryQuestions();
@@ -1296,14 +1654,10 @@ document.getElementById('industry')?.addEventListener('change', applyDefaultsAnd
 
 const _origSwitchTab = switchTab;
 window.switchTab = function(name) {
-  /* Unsaved-changes guard: if leaving the calculator with unsaved edits,
-     confirm before navigating away. */
-  if (typeof _calcDirty !== 'undefined' && _calcDirty && name !== 'calc') {
-    const calcVisible = document.getElementById('calcBody');
-    if (calcVisible && calcVisible.style.display !== 'none') {
-      if (!confirmDiscardChanges()) return;
-      clearCalcDirty();
-    }
+  /* Unsaved-changes: show a soft reminder instead of a blocking confirm().
+     Still lets the rep navigate freely — just reminds them to save first. */
+  if (name !== 'calc' && typeof hasUnsavedChanges === 'function' && hasUnsavedChanges()) {
+    _showUnsavedBanner();
   }
   _origSwitchTab(name);
   if (name === 'calc' && typeof initCalcTab === 'function') initCalcTab();
@@ -1312,19 +1666,224 @@ window.switchTab = function(name) {
   if (name === 'calc' && typeof initBenchmarkProvenance === 'function') initBenchmarkProvenance();
   if (name === 'calc' && typeof initCurrency === 'function') initCurrency();
   if (typeof updateContextHeader === 'function') updateContextHeader();
-  if (name === 'exec') { if (typeof loadThreeWhysDefaults === 'function') loadThreeWhysDefaults(); renderExec(); }
-  if (name === 'disc' && typeof renderDiscoveryTab === 'function') renderDiscoveryTab();
+  if (name === 'exec') {
+    if (typeof loadThreeWhysDefaults === 'function') loadThreeWhysDefaults();
+    renderExec();
+    if (typeof SFDictation!=='undefined' && SFDictation.supported) SFDictation.enhanceAll(document.getElementById('tab-exec'));
+    initDebriefSection();
+  }  if (name === 'disc' && typeof renderDiscoveryTab === 'function') renderDiscoveryTab();
   if (name === 'saved') { if (typeof renderListVersioned === 'function') renderListVersioned(); else if (typeof renderList === 'function') renderList(); }
   if (name === 'admin') initAdminTab();
   if (name === 'help')  initHelpTab();
   if (name === 'impact') initImpactTab();
   if (name === 'map')   initMapTab();
   if (name === 'stake') initStakeTab();
+  if (name === 'solfit' && typeof initSolutionFit === 'function') initSolutionFit();
+  if (name === 'admincustomers' && typeof initAdminCustomers === 'function') initAdminCustomers();
   if (name === 'profile') initProfileTab();
   const fab = document.getElementById('fabRow');
   if (fab) fab.style.display = name === 'calc' ? 'flex' : 'none';
+  /* Switching tabs should land at the top of the new tab, not wherever the
+     previous tab was scrolled. Also re-evaluates the back-to-top button. */
+  window.scrollTo({ top: 0, behavior: 'auto' });
+  const toTop = document.getElementById('fabToTop');
+  if (toTop) {
+    toTop.classList.add('fab-to-top-hidden');
+    /* The impact map has its own scroller-aware back-to-top; avoid two buttons. */
+    toTop.style.display = (name === 'impact') ? 'none' : '';
+  }
 };
 window.saveScenario = function() { if (typeof saveScenarioWithVersion === 'function') saveScenarioWithVersion(false); };
+
+/* ── Discovery submission notification badge ───────────────────────
+   Polls for unread submitted sessions and shows a dot on the
+   Discovery nav item. Clears when the rep opens the Discovery tab. */
+function updateDiscNotifBadge(count) {
+  const badge = document.getElementById('discNotifBadge');
+  if (!badge) return;
+  if (count > 0) {
+    badge.textContent = count > 9 ? '9+' : String(count);
+    badge.style.display = 'inline-flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+async function pollDiscNotif() {
+  try {
+    const r = await apiFetch('/api/discovery/unread-count');
+    if (r && r.ok) {
+      const d = await r.json();
+      updateDiscNotifBadge(d.count || 0);
+    }
+  } catch (e) { /* silent — badge is non-critical */ }
+}
+
+async function clearDiscNotif() {
+  updateDiscNotifBadge(0);
+  try { await apiFetch('/api/discovery/mark-viewed', { method: 'POST' }); }
+  catch (e) { /* silent */ }
+}
+
+/* Poll on load and every 2 minutes while the app is open */
+pollDiscNotif();
+setInterval(pollDiscNotif, 2 * 60 * 1000);
+window.clearDiscNotif = clearDiscNotif;
+
+/* ── Field inventory toggle ────────────────────────────────────────
+   Reads/writes has_field_inventory on the customer record (Option A).
+   Stored on window._hasFieldInventory for getVals() to read. */
+window._hasFieldInventory = false;
+window._currentCustomerId = null;
+
+function toggleFieldInventory() {
+  const newVal = !window._hasFieldInventory;
+  window._hasFieldInventory = newVal;
+  applyFieldInventoryState(newVal);
+  markCalcDirty && markCalcDirty();
+  recalc && recalc();
+  /* Re-render Discovery tab so field inventory questions appear/disappear
+     immediately — without the rep having to switch away and back. */
+  if (typeof renderDiscoveryTab === 'function') {
+    const discPane = document.getElementById('tab-disc');
+    if (discPane && discPane.classList.contains('active')) renderDiscoveryTab();
+    /* Also reset the section init flag so new sections open by default */
+    if (typeof window._discInitialized !== 'undefined') window._discInitialized = false;
+  }
+  /* Persist to customer record if we have one */
+  if (window._currentCustomerId) {
+    apiFetch('/api/customers/' + window._currentCustomerId + '/field-inventory', {
+      method: 'PATCH',
+      body: JSON.stringify({ hasFieldInventory: newVal })
+    }).catch(e => console.warn('field-inventory flag save failed:', e.message));
+  }
+}
+
+function applyFieldInventoryState(on) {
+  const btn = document.getElementById('hasFieldInventory');
+  const sec = document.getElementById('fieldInventorySection');
+  if (btn) btn.setAttribute('aria-checked', on ? 'true' : 'false');
+  if (sec) sec.style.display = on ? '' : 'none';
+}
+
+async function loadFieldInventoryFlag(customerId) {
+  if (!customerId) { window._hasFieldInventory = false; applyFieldInventoryState(false); return; }
+  window._currentCustomerId = customerId;
+  try {
+    const r = await apiFetch('/api/customers/' + customerId + '/field-inventory');
+    if (r && r.ok) {
+      const d = await r.json();
+      window._hasFieldInventory = !!d.hasFieldInventory;
+      applyFieldInventoryState(window._hasFieldInventory);
+    }
+  } catch(e) { /* silently leave as false */ }
+}
+window.toggleFieldInventory = toggleFieldInventory;
+window.loadFieldInventoryFlag = loadFieldInventoryFlag;
+
+/* ── Calculator scenario picker + version history ────────────────────
+   Lets a rep move between that customer's scenarios, and reach saved
+   versions, without leaving the calculator. */
+window._calcScenarioId = window._calcScenarioId || null;
+
+function refreshCalcScenarioPicker() {
+  const wrap = document.getElementById('calcScenarioPick');
+  const sel  = document.getElementById('calcScenarioSelect');
+  const vbtn = document.getElementById('calcVersionsBtn');
+  if (!wrap || !sel) return;
+  const company = (document.getElementById('companyName')?.value || '').trim();
+  const all = (typeof savedScenarios !== 'undefined' && Array.isArray(savedScenarios)) ? savedScenarios : [];
+  /* Current versions only — the dropdown lists scenarios, not versions. */
+  const customerId=window.currentScenarioCustomerId||window._currentCustomerId||null;
+  const mine = all.filter(s => s && s.isCurrent !== false && (customerId?s.customerId===customerId:s.company===company));
+  if (!company || mine.length === 0) { wrap.style.display = 'none'; return; }
+
+  mine.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+  const cur = window._calcScenarioId;
+  const active = mine.find(s => s.id === cur) || null;
+  sel.innerHTML = mine.map(s => {
+    const v = s.version ? ` (v${s.version})` : '';
+    return `<option value="${s.id}"${s.id === cur ? ' selected' : ''}>${escapeHtmlAttr(s.name || 'Untitled')}${v}</option>`;
+  }).join('');
+  if (!mine.some(s => s.id === cur)) sel.value = mine[0] ? mine[0].id : '';
+  wrap.style.display = 'inline-flex';
+
+  /* Show the versions button whenever a scenario is loaded. The count
+     from savedScenarios is unreliable because that list only contains
+     is_current=TRUE rows — every scenario appears exactly once, so the
+     filter always returns 1 and the button never shows. Instead, always
+     show the button when we have a loaded scenario; the modal will fetch
+     the real version list from the server and handle the single-version
+     case gracefully. */
+  if (vbtn) {
+    if (active) {
+      vbtn.style.display = '';
+      vbtn.textContent = '🕘 Versions';
+      vbtn.dataset.baseId = active.baseId || active.id;
+    } else {
+      vbtn.style.display = 'none';
+    }
+  }
+  if (typeof updateContextHeader === 'function') updateContextHeader();
+}
+
+function escapeHtmlAttr(s) {
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* Switching scenarios discards unsaved calculator edits, so route through
+   the same guard used by tab switching and logout. */
+async function onCalcScenarioPick(id) {
+  const sel = document.getElementById('calcScenarioSelect');
+  if (!id) return;
+  if (id === window._calcScenarioId) return;
+  if (typeof confirmDiscardChanges === 'function' && !confirmDiscardChanges()) {
+    if (sel && window._calcScenarioId) sel.value = window._calcScenarioId;  // revert
+    return;
+  }
+  if (typeof loadScenario === 'function') await loadScenario(id);
+  refreshCalcScenarioPicker();
+}
+
+function openCurrentVersionHistory() {
+  const vbtn = document.getElementById('calcVersionsBtn');
+  const baseId = vbtn && vbtn.dataset ? vbtn.dataset.baseId : null;
+  const target = baseId || window._calcScenarioId;
+  if (!target) { if (typeof showToast === 'function') showToast('Save this scenario first to see its versions.'); return; }
+  if (typeof showVersionHistory === 'function') showVersionHistory(target);
+  else if (typeof showToast === 'function') showToast('Version history is unavailable.');
+}
+window.refreshCalcScenarioPicker = refreshCalcScenarioPicker;
+window.onCalcScenarioPick = onCalcScenarioPick;
+window.openCurrentVersionHistory = openCurrentVersionHistory;
+
+/* ── Global back-to-top button ──────────────────────────────────────
+   The whole app scrolls on the window (main-content has no own overflow),
+   so one window-scoped button works on every tab. It fades in once the
+   user has scrolled past a threshold and returns them to the top. */
+function scrollPageToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  /* Some tabs render into a scrollable inner container; reset those too. */
+  document.querySelectorAll('.pane.active [data-scroll], .main-content').forEach(el => {
+    if (el.scrollTop > 0) el.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+}
+(function initBackToTop() {
+  const btn = document.getElementById('fabToTop');
+  if (!btn) return;
+  const SHOW_AFTER = 400; // px
+  let ticking = false;
+  const update = () => {
+    ticking = false;
+    const y = window.scrollY || document.documentElement.scrollTop || 0;
+    btn.classList.toggle('fab-to-top-hidden', y < SHOW_AFTER);
+  };
+  window.addEventListener('scroll', () => {
+    if (!ticking) { ticking = true; requestAnimationFrame(update); }
+  }, { passive: true });
+  update();
+})();
 
 /* ─────────────────────────────────────────
    ADMIN TAB
@@ -1336,7 +1895,7 @@ async function initAdminTab() {
   if (window._authReady) await window._authReady;
 
   const user = window.ciAuth ? window.ciAuth.getUser() : {};
-  const isAdmin = user.role === 'admin';
+  const isAdmin = clientHasRole(user,'admin','Admin');
   const gate    = document.getElementById('adminGate');
   const content = document.getElementById('adminContent');
   if (gate)    gate.style.display    = isAdmin ? 'none'  : 'block';
@@ -1348,6 +1907,179 @@ async function initAdminTab() {
   }
 }
 
+/* ── Admin: data export ── */
+async function adminExport(entity) {
+  const labels = { scenarios:'Scenarios', customers:'Customers', discovery:'Discovery sessions', users:'Users' };
+  showToast('Preparing ' + (labels[entity]||entity) + ' export\u2026');
+  try {
+    const resp = await apiFetch('/api/admin/export/' + entity);
+    if (!resp || !resp.ok) { showToast('Export failed — check your connection.'); return; }
+    if (resp.status === 204) { showToast('No data to export.'); return; }
+    const blob = await resp.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = entity + '.csv';
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+    showToast('\u2713 ' + (labels[entity]||entity) + ' downloaded');
+  } catch(e) { showToast('Export failed.'); }
+}
+
+/* Data Cleanup & Recovery is implemented in admin-cleanup-v661.js. */
+
+/* ── Batch C: After-the-meeting debrief / driver resonance ── */
+const DEBRIEF_DRIVERS = [
+  { key:'labor',      label:'Labor savings',                  icon:'👥' },
+  { key:'shrinkage',  label:'Shrinkage / write-off',          icon:'📉' },
+  { key:'carrying',   label:'Carrying cost',                  icon:'📦' },
+  { key:'turns',      label:'Inventory turns / capital freed',icon:'🔄' },
+  { key:'otif',       label:'OTIF / order accuracy',          icon:'🚚' },
+  { key:'downtime',   label:'Downtime reduction',             icon:'⚡' },
+  { key:'expedite',   label:'Expedite spend',                 icon:'🚨' },
+  { key:'field_inv',  label:'Field inventory',                icon:'🏗️' },
+  { key:'it',         label:'IT displacement',                icon:'💻' },
+  { key:'counting',   label:'Cycle count labour',             icon:'🔢' }
+];
+let _debriefResonated  = new Set();
+let _debriefQuestioned = new Set();
+let _debriefSaveTimer  = null;
+
+function initDebriefSection() {
+  const sec = document.getElementById('debriefSection');
+  if (!sec) return;
+  const scenarioId = window._calcScenarioId;
+  sec.style.display = scenarioId ? 'block' : 'none';
+  if (!scenarioId) return;
+  const driversEl = document.getElementById('debriefDrivers');
+  if (driversEl) {
+    const chipRow = (drivers, cls) =>
+      '<div class="debrief-chips ' + cls + '">' +
+      drivers.map(d => '<button class="debrief-chip ' + cls + '" data-key="' + d.key + '" onclick="' +
+        (cls === 'debrief-chips-q' ? 'toggleDebriefQuestioned' : 'toggleDebriefDriver') + '(\'' + d.key + '\')">' +
+        d.icon + ' ' + d.label + '</button>').join('') + '</div>';
+    driversEl.innerHTML =
+      '<div class="debrief-group-label">Which drivers resonated?</div>' + chipRow(DEBRIEF_DRIVERS, '') +
+      '<div class="debrief-group-label" style="margin-top:12px;">Which drivers were questioned or pushed back on?</div>' +
+      chipRow(DEBRIEF_DRIVERS, 'debrief-chips-q');
+  }
+  apiFetch('/api/scenarios/' + scenarioId + '/resonance').then(async resp => {
+    if (!resp || !resp.ok) return;
+    const data = await resp.json();
+    if (!data) return;
+    _debriefResonated  = new Set(data.drivers_resonated  || []);
+    _debriefQuestioned = new Set(data.drivers_questioned || []);
+    const outcome = document.getElementById('debriefOutcome');
+    const notes   = document.getElementById('debriefNotes');
+    if (outcome) outcome.value = data.meeting_outcome || '';
+    if (notes)   notes.value   = data.meeting_notes   || '';
+    renderDebriefChips();
+  }).catch(() => {});
+}
+
+function renderDebriefChips() {
+  document.querySelectorAll('.debrief-chips:not(.debrief-chips-q) .debrief-chip').forEach(btn => {
+    btn.classList.toggle('debrief-chip-on', _debriefResonated.has(btn.dataset.key));
+  });
+  document.querySelectorAll('.debrief-chips-q .debrief-chip').forEach(btn => {
+    btn.classList.toggle('debrief-chip-on', _debriefQuestioned.has(btn.dataset.key));
+  });
+}
+
+function toggleDebriefDriver(key) {
+  if (_debriefResonated.has(key)) _debriefResonated.delete(key); else _debriefResonated.add(key);
+  renderDebriefChips(); saveDebriefData();
+}
+function toggleDebriefQuestioned(key) {
+  if (_debriefQuestioned.has(key)) _debriefQuestioned.delete(key); else _debriefQuestioned.add(key);
+  renderDebriefChips(); saveDebriefData();
+}
+
+function saveDebriefData() {
+  clearTimeout(_debriefSaveTimer);
+  const stateEl = document.getElementById('debriefSaveState');
+  if (stateEl) stateEl.textContent = 'Saving\u2026';
+  _debriefSaveTimer = setTimeout(async () => {
+    const scenarioId = window._calcScenarioId;
+    if (!scenarioId) return;
+    const outcome = (document.getElementById('debriefOutcome') || {}).value || null;
+    const notes   = (document.getElementById('debriefNotes')   || {}).value || null;
+    try {
+      const resp = await apiFetch('/api/scenarios/' + scenarioId + '/resonance', {
+        method: 'PUT',
+        body: JSON.stringify({
+          driversResonated:  [..._debriefResonated],
+          driversQuestioned: [..._debriefQuestioned],
+          meetingNotes: notes, meetingOutcome: outcome
+        })
+      });
+      if (stateEl) stateEl.textContent = resp && resp.ok ? '\u2713 Saved' : '\u26A0 Save failed';
+      setTimeout(() => { if (stateEl) stateEl.textContent = ''; }, 2000);
+    } catch(e) { if (stateEl) stateEl.textContent = '\u26A0 Save failed'; }
+  }, 700);
+}
+window.toggleDebriefDriver     = toggleDebriefDriver;
+window.toggleDebriefQuestioned = toggleDebriefQuestioned;
+window.saveDebriefData         = saveDebriefData;
+window.initDebriefSection      = initDebriefSection;
+
+window.adminExport = adminExport;
+/* adminCleanupExecute renamed → adminCleanupExecuteSelected / adminCleanupExecuteAll */
+
+/* ── Exec toolbar: More exports dropdown ── */
+function toggleExecMore() {
+  const menu = document.getElementById('execMoreMenu');
+  if (!menu) return;
+  const open = menu.style.display === 'block';
+  menu.style.display = open ? 'none' : 'block';
+}
+/* Close when clicking outside */
+document.addEventListener('click', function(e) {
+  const wrap = document.querySelector('.exec-more-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    const menu = document.getElementById('execMoreMenu');
+    if (menu) menu.style.display = 'none';
+  }
+});
+
+/* ── Debrief panel toggle (from toolbar button) ── */
+function toggleDebriefPanel() {
+  const sec = document.getElementById('debriefSection');
+  if (!sec) { initDebriefSection(); return; }
+  const visible = sec.style.display !== 'none';
+  sec.style.display = visible ? 'none' : 'block';
+  if (!visible) sec.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+window.toggleExecMore = toggleExecMore;
+window.toggleDebriefPanel = toggleDebriefPanel;
+
+/* ── Sidebar "More tools" toggle ── */
+function toggleNavMore(btn) {
+  const items = document.getElementById('navMoreItems');
+  if (!items) return;
+  const open = items.style.display === 'block';
+  items.style.display = open ? 'none' : 'block';
+  const chevron = document.getElementById('navMoreChevron');
+  if (chevron) chevron.textContent = open ? '▸' : '▾';
+}
+window.toggleNavMore = toggleNavMore;
+
+/* Auto-expand More section if navigating to a tab inside it */
+const _hiddenTabs = ['compare','impact'];
+const _origSwitchTabMore = window.switchTab;
+window.switchTab = function(name) {
+  if (_hiddenTabs.includes(name)) {
+    const items = document.getElementById('navMoreItems');
+    if (items && items.style.display !== 'block') {
+      items.style.display = 'block';
+      const chevron = document.getElementById('navMoreChevron');
+      if (chevron) chevron.textContent = '▾';
+    }
+  }
+  _origSwitchTabMore(name);
+};
+
+/* Cleanup recovery handlers are implemented in admin-cleanup-v661.js. */
+
 function switchAdminPanel(panel) {
   document.querySelectorAll('.admin-tab').forEach(b =>
     b.classList.toggle('active', b.dataset.panel === panel)
@@ -1358,6 +2090,9 @@ function switchAdminPanel(panel) {
   if (panel === 'auditlog' && !_auditLoaded) loadAuditLog(0);
   if (panel === 'versions' && typeof renderVersionHistory === 'function') renderVersionHistory();
   if (panel === 'errors' && typeof loadErrorLog === 'function') loadErrorLog();
+  if (panel === 'cleanup' && typeof loadRecentlyDeleted === 'function') loadRecentlyDeleted();
+  if (panel === 'teams' && typeof loadSalesTeamsAdmin === 'function') loadSalesTeamsAdmin();
+  if (panel === 'competitive' && typeof loadCompetitiveAdmin === 'function') loadCompetitiveAdmin();
 }
 
 /* ─────────────────────────────────────────
@@ -1374,7 +2109,7 @@ async function populateAuditFilterDropdowns() {
      but guard here as belt-and-suspenders against direct calls.   */
   if (window._authReady) await window._authReady;
   const user = window.ciAuth ? window.ciAuth.getUser() : {};
-  if (user.role !== 'admin') return; // not an admin — skip API calls
+  if (!clientHasRole(user,'admin','Admin')) return; // not an admin — skip API calls
   try {
     /* User dropdown */
     const uResp = await apiFetch('/api/users');
@@ -1400,36 +2135,73 @@ async function populateAuditFilterDropdowns() {
 }
 
 /* ── Error log (admin) ── */
-async function loadErrorLog() {
-  const host = document.getElementById('errorLogList');
+var _elogFilter = 'all';
+async function loadErrorLog(filter) {
+  if (filter !== undefined) _elogFilter = filter;
+  const host    = document.getElementById('errorLogList');
   const countEl = document.getElementById('errorLogCount');
   if (!host) return;
-  if (typeof renderLoadingState === 'function') renderLoadingState(host, 'Loading error log…');
+  host.innerHTML = '<div class="empty-state"><p>Loading…</p></div>';
   try {
-    const resp = await apiFetch('/api/logs/errors?limit=100');
+    const resp = await apiFetch('/api/logs/errors?limit=200');
     if (!resp || !resp.ok) { host.innerHTML = '<div class="empty-state"><p>Could not load the error log.</p></div>'; return; }
-    const { errors, total } = await resp.json();
-    if (countEl) countEl.textContent = total ? `${total} recorded.` : 'None recorded — clean.';
-    if (!errors || !errors.length) {
-      if (typeof renderEmptyState === 'function') renderEmptyState(host, { icon: '✓', title: 'No errors recorded', sub: 'Nothing has gone wrong on the server recently.' });
-      else host.innerHTML = '<div class="empty-state"><p>No errors recorded.</p></div>';
+    var data = await resp.json();
+    var all = data.errors || [];
+    var total = data.total || 0;
+
+    /* Filter */
+    var filtered = all;
+    if (_elogFilter === 'client') filtered = all.filter(function(e){ return (e.source||'').startsWith('client'); });
+    if (_elogFilter === 'server') filtered = all.filter(function(e){ return !(e.source||'').startsWith('client'); });
+
+    /* Count badges */
+    var clientCount = all.filter(function(e){ return (e.source||'').startsWith('client'); }).length;
+    var serverCount = all.length - clientCount;
+    if (countEl) countEl.textContent = total ? total + ' recorded' + (total !== all.length ? ' (showing last 200)' : '') + '.' : 'None recorded — clean.';
+
+    /* Filter pills */
+    var pillHtml = '<div class="elog-filter-row">'
+      + '<button class="elog-pill' + (_elogFilter==='all'?' active':'') + '" onclick="loadErrorLog(\'all\')">All (' + all.length + ')</button>'
+      + '<button class="elog-pill' + (_elogFilter==='server'?' active':'') + '" onclick="loadErrorLog(\'server\')">Server (' + serverCount + ')</button>'
+      + '<button class="elog-pill' + (_elogFilter==='client'?' active':'') + '" onclick="loadErrorLog(\'client\')">Client / browser (' + clientCount + ')</button>'
+      + '</div>';
+
+    if (!filtered.length) {
+      host.innerHTML = pillHtml + '<div class="empty-state" style="margin-top:12px;"><p>✓ No ' + (_elogFilter !== 'all' ? _elogFilter + ' ' : '') + 'errors recorded.</p></div>';
       return;
     }
-    host.innerHTML = '<div class="error-log-list">' + errors.map(e => {
-      const when = e.occurred_at ? new Date(e.occurred_at).toLocaleString() : '—';
-      const lvl = (e.level || 'error').toLowerCase();
-      return `<div class="elog-item elog-${lvl}">
-        <div class="elog-head">
-          <span class="elog-level elog-lvl-${lvl}">${escapeHtml(e.level || 'error')}</span>
-          <span class="elog-source">${escapeHtml(e.source || '')}</span>
-          ${e.method ? `<span class="elog-route">${escapeHtml(e.method)} ${escapeHtml(e.path || '')}</span>` : ''}
-          <span class="elog-when">${escapeHtml(when)}</span>
-        </div>
-        <div class="elog-msg">${escapeHtml(e.message || '')}</div>
-      </div>`;
+
+    host.innerHTML = pillHtml + '<div class="error-log-list">' + filtered.map(function(e) {
+      var when = e.occurred_at ? new Date(e.occurred_at).toLocaleString() : '—';
+      var lvl  = (e.level || 'error').toLowerCase();
+      var isClient = (e.source || '').startsWith('client');
+      var srcLabel = isClient ? e.source.replace('client:', '').trim() : e.source;
+      var srcBadge = isClient
+        ? '<span class="elog-src-badge elog-src-client">browser</span>'
+        : '<span class="elog-src-badge elog-src-server">server</span>';
+      var route = (e.method && e.method !== 'CLIENT' && e.path)
+        ? '<span class="elog-route">' + escapeHtml(e.method) + ' ' + escapeHtml(e.path || '') + '</span>'
+        : (e.path ? '<span class="elog-route">' + escapeHtml(e.path) + '</span>' : '');
+      var stackId = 'estack-' + e.id;
+      var stackHtml = e.stack
+        ? '<button class="elog-stack-btn" onclick="var s=document.getElementById(\'' + stackId + '\');s.style.display=s.style.display===\'block\'?\'none\':\'block\'">Stack trace</button>'
+          + '<pre class="elog-stack" id="' + stackId + '" style="display:none;">' + escapeHtml(e.stack) + '</pre>'
+        : '';
+      return '<div class="elog-item elog-' + lvl + '">'
+        + '<div class="elog-head">'
+        + '<span class="elog-level elog-lvl-' + lvl + '">' + escapeHtml(e.level || 'error') + '</span>'
+        + srcBadge
+        + '<span class="elog-source">' + escapeHtml(srcLabel || '') + '</span>'
+        + route
+        + '<span class="elog-when">' + escapeHtml(when) + '</span>'
+        + '</div>'
+        + '<div class="elog-msg">' + escapeHtml(e.message || '') + '</div>'
+        + stackHtml
+        + '</div>';
     }).join('') + '</div>';
   } catch (err) {
     host.innerHTML = '<div class="empty-state"><p>Could not load the error log.</p></div>';
+    console.error('loadErrorLog error:', err);
   }
 }
 async function pruneErrorLog() {
@@ -1483,7 +2255,7 @@ function renderAuditTable(rows) {
   const actionColors = {
     'user.login': '#2E7D32', 'user.login_failed': '#C81E10', 'user.login_locked': '#C81E10',
     'user.logout': '#475569', 'user.created': '#0089A6', 'user.deactivated': '#C24A1E',
-    'scenario.saved': '#0F6E56', 'scenario.deleted': '#C81E10', 'pdf.downloaded': '#3C3489',
+    'scenario.saved': '#12786F', 'scenario.deleted': '#C81E10', 'pdf.downloaded': '#6A4C93',
     'audit.purge_completed': '#C81E10', 'audit.purge_pending': '#C24A1E'
   };
   return `<div class="audit-table-wrap"><table class="audit-table">
@@ -1587,7 +2359,7 @@ async function loadUsers() {
 }
 
 function renderUserTable(users) {
-  const roleColors = { admin: 'var(--purple)', rep: 'var(--navy)' };
+  const roleColors = { admin: 'var(--purple)', se: 'var(--cyan-dark)', rep: 'var(--navy)' };
   const me = window.ciAuth ? window.ciAuth.getUser() : {};
   return `<div class="user-table-wrap"><table class="user-table">
     <thead><tr>
@@ -1609,13 +2381,13 @@ function renderUserTable(users) {
         return `<tr class="${!u.is_active?'user-row-inactive':''}${isMe?' user-row-me':''}">
           <td><strong>${escapeHtml(u.username)}</strong>${isMe?' <span class="you-badge">you</span>':''}</td>
           <td style="font-size:12px;color:var(--gray-500);">${escapeHtml(u.email)}</td>
-          <td><span class="role-badge" style="background:${roleColors[u.role]||'var(--gray-500)'}20;color:${roleColors[u.role]||'var(--gray-500)'};">${u.role==='admin'?'Admin':'Rep / SE'}</span></td>
+          <td>${[...new Set([...(u.roles||[]),u.role].filter(Boolean))].map(r=>`<span class="role-badge" style="background:${roleColors[r]||'var(--gray-500)'}20;color:${roleColors[r]||'var(--gray-500)'};">${({admin:'Admin',se:'Solution Engineer',rep:'Sales Rep',sales_manager:'Sales Leader',value_engineering:'Value Engineering'})[r]||escapeHtml(r)}</span>`).join(' ')}</td>
           <td>${statusBadge}</td>
           <td style="font-size:12px;color:var(--gray-500);">${lastLogin}</td>
           <td style="text-align:center;">${u.scenario_count||0}</td>
           <td>
             <div style="display:flex;gap:5px;flex-wrap:wrap;">
-              <button class="btn btn-ghost btn-sm" onclick="editUser('${u.id}','${escapeHtml(u.username)}','${escapeHtml(u.email)}','${u.role}')">Edit</button>
+              <button class="btn btn-ghost btn-sm" onclick="editUser('${u.id}','${escapeHtml(u.username)}','${escapeHtml(u.email)}','${u.role}','${encodeURIComponent(JSON.stringify(u.roles||[u.role]))}')">Edit</button>
               ${!isMe ? `<button class="btn btn-ghost btn-sm" onclick="adminResetPassword('${u.id}','${escapeHtml(u.username)}','${escapeHtml(u.email)}')">Reset pw</button>` : ''}
               ${!isMe ? `<button class="btn ${u.is_active?'btn-danger':'btn-ghost'} btn-sm" onclick="toggleUserStatus('${u.id}','${escapeHtml(u.username)}',${u.is_active})">${u.is_active?'Deactivate':'Reactivate'}</button>` : ''}
             </div>
@@ -1631,6 +2403,7 @@ async function createUser() {
   const username = document.getElementById('newUsername').value.trim();
   const email    = document.getElementById('newEmail').value.trim();
   const role     = document.getElementById('newRole').value;
+  const roles    = [...new Set([role,document.getElementById('newRepRole').checked?'rep':null,document.getElementById('newSeRole').checked?'se':null,document.getElementById('newSalesManagerRole').checked?'sales_manager':null,document.getElementById('newAdminRole').checked?'admin':null].filter(Boolean))];
   const errEl    = document.getElementById('createUserError');
   errEl.style.display = 'none';
 
@@ -1639,7 +2412,7 @@ async function createUser() {
   try {
     const resp = await apiFetch('/api/users', {
       method: 'POST',
-      body: JSON.stringify({ username, email, role })
+      body: JSON.stringify({ username, email, role, roles })
     });
     const data = await resp.json();
     if (!resp.ok) { errEl.textContent = data.error || 'Failed to create user.'; errEl.style.display='block'; return; }
@@ -1658,6 +2431,10 @@ async function createUser() {
     document.getElementById('newUsername').value = '';
     document.getElementById('newEmail').value = '';
     document.getElementById('newRole').value = 'rep';
+    document.getElementById('newSalesManagerRole').checked = false;
+    document.getElementById('newRepRole').checked = false;
+    document.getElementById('newSeRole').checked = false;
+    document.getElementById('newAdminRole').checked = false;
 
     showToast(`User "${data.user.username}" created.`);
     loadUsers();
@@ -1707,25 +2484,28 @@ Any questions, just reply to this email.
 }
 
 /* ── Edit user modal ── */
-function editUser(id, username, email, role) {
+function editUser(id, username, email, role, rolesEncoded) {
+  let roles=[]; try{roles=JSON.parse(decodeURIComponent(rolesEncoded||''));}catch(e){roles=[role];}
   const modal = document.createElement('div');
   modal.className = 'modal-overlay open';
   modal.id = 'editUserModal';
   modal.innerHTML = `
     <div class="modal" style="max-width:460px;">
-      <button class="modal-close" onclick="document.getElementById('editUserModal').remove()">✕</button>
+      <button class="modal-close" aria-label="Close" onclick="document.getElementById('editUserModal').remove()">✕</button>
       <div class="modal-title">Edit user — ${escapeHtml(username)}</div>
       <div class="field"><label>Username</label><input type="text" id="editUsername" value="${escapeHtml(username)}"/></div>
       <div class="field"><label>Email</label><input type="email" id="editEmail" value="${escapeHtml(email)}"/></div>
       <div class="field"><label>Role</label>
         <select id="editRole">
-          <option value="rep" ${role==='rep'?'selected':''}>Rep / SE</option>
+          <option value="rep" ${role==='rep'?'selected':''}>Account Executive (AE)</option>
+          <option value="se" ${role==='se'?'selected':''}>Solution Engineer (SE)</option>
           <option value="admin" ${role==='admin'?'selected':''}>Admin</option>
         </select>
       </div>
+      <div class="admin-role-grid"><label><input type="checkbox" id="editRepRole" ${roles.includes('rep')?'checked':''}> Sales Rep</label><label><input type="checkbox" id="editSeRole" ${roles.includes('se')?'checked':''}> Sales Engineer</label><label><input type="checkbox" id="editSalesManagerRole" ${roles.includes('sales_manager')?'checked':''}> Sales Leader</label><label><input type="checkbox" id="editAdminRole" ${roles.includes('admin')?'checked':''}> Admin</label></div>
       <div id="editUserError" class="field-hint" style="color:var(--red);display:none;"></div>
       <div class="btn-row" style="margin-top:1rem;">
-        <button class="btn btn-cta" onclick="saveUserEdit('${id}')">Save changes</button>
+        <button class="btn btn-primary" onclick="saveUserEdit('${id}')">Save changes</button>
         <button class="btn btn-ghost" onclick="document.getElementById('editUserModal').remove()">Cancel</button>
       </div>
     </div>`;
@@ -1737,13 +2517,14 @@ async function saveUserEdit(id) {
   const username = document.getElementById('editUsername').value.trim();
   const email    = document.getElementById('editEmail').value.trim();
   const role     = document.getElementById('editRole').value;
+  const roles    = [...new Set([role,document.getElementById('editRepRole').checked?'rep':null,document.getElementById('editSeRole').checked?'se':null,document.getElementById('editSalesManagerRole').checked?'sales_manager':null,document.getElementById('editAdminRole').checked?'admin':null].filter(Boolean))];
   const errEl    = document.getElementById('editUserError');
   errEl.style.display = 'none';
 
   try {
     const resp = await apiFetch(`/api/users/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify({ username, email, role })
+      body: JSON.stringify({ username, email, role, roles })
     });
     const data = await resp.json();
     if (!resp.ok) { errEl.textContent = data.error||'Update failed.'; errEl.style.display='block'; return; }
@@ -1813,28 +2594,43 @@ let _helpCurrentSlug = null; // currently displayed page
 let _helpEditing     = false;
 
 async function initHelpTab() {
-  /* Wait for auth to resolve — apiFetch needs a valid token and the
-     edit button visibility depends on the confirmed user role.       */
-  if (window._authReady) await window._authReady;
+  /* Wait for auth — with a 5s timeout so we never hang on Loading... */
+  if (window._authReady) {
+    await Promise.race([
+      window._authReady,
+      new Promise(function(resolve){ setTimeout(resolve, 5000); })
+    ]);
+  }
 
   if (_helpPages.length) { renderHelpToc(); return; } // already loaded
-  const toc = document.getElementById('helpToc');
+  const toc     = document.getElementById('helpToc');
+  const content = document.getElementById('helpContent');
   try {
     const resp = await apiFetch('/api/help');
     if (!resp || !resp.ok) {
-      if (toc) toc.innerHTML = '<div class="empty-state"><p>Could not load topics.</p></div>';
+      if (toc)     toc.innerHTML     = '<div class="empty-state"><p>Could not load topics.</p></div>';
+      if (content) content.innerHTML = '<div class="empty-state"><p>Could not connect to the help service. Try refreshing the page.</p></div>';
+      if (typeof logClientError === 'function') logClientError('Help tab: /api/help returned ' + (resp ? resp.status : 'null'), 'help-tab');
       return;
     }
     _helpPages = await resp.json();
+    if (!_helpPages || !_helpPages.length) {
+      if (toc)     toc.innerHTML     = '<div class="empty-state"><p>No help topics found.</p></div>';
+      if (content) content.innerHTML = '<div class="empty-state"><p>The help content database appears empty. An admin can seed it via the migration.</p></div>';
+      return;
+    }
     renderHelpToc();
     // Show edit button for admins only
     const me = window.ciAuth ? window.ciAuth.getUser() : {};
     const editBtn = document.getElementById('helpEditBtn');
-    if (editBtn) editBtn.style.display = me.role === 'admin' ? 'block' : 'none';
+    if (editBtn) editBtn.style.display = clientHasRole(me,'admin','Admin') ? 'block' : 'none';
     // Open first page by default
-    if (_helpPages.length) loadHelpPage(_helpPages[0].slug);
+    loadHelpPage(_helpPages[0].slug);
   } catch(e) {
-    if (toc) toc.innerHTML = '<div class="empty-state"><p>Could not load topics.</p></div>';
+    if (toc)     toc.innerHTML     = '<div class="empty-state"><p>Error loading help topics.</p></div>';
+    if (content) content.innerHTML = '<div class="empty-state"><p>Could not load help content: ' + (e && e.message ? escapeHtml(e.message) : 'unknown error') + '</p></div>';
+    if (typeof logClientError === 'function') logClientError('Help tab init error: ' + (e && e.message), 'help-tab');
+    console.error('initHelpTab error:', e);
   }
 }
 
@@ -1869,7 +2665,7 @@ async function loadHelpPage(slug) {
 
     const me = window.ciAuth ? window.ciAuth.getUser() : {};
     const editBtn = document.getElementById('helpEditBtn');
-    if (editBtn) editBtn.style.display = me.role === 'admin' ? 'block' : 'none';
+    if (editBtn) editBtn.style.display = clientHasRole(me,'admin','Admin') ? 'block' : 'none';
 
     content.innerHTML = `
       <div class="help-page-header">
@@ -1926,7 +2722,7 @@ function startHelpEdit() {
         <textarea id="helpEditBody" class="help-edit-body" rows="20">${escapeHtml(currentHtml)}</textarea>
       </div>
       <div class="btn-row" style="margin-top:1rem;">
-        <button class="btn btn-cta" onclick="saveHelpPage()">Save changes</button>
+        <button class="btn btn-primary" onclick="saveHelpPage()">Save changes</button>
         <button class="btn btn-ghost" onclick="cancelHelpEdit()">Cancel</button>
       </div>
       <div id="helpEditError" class="field-hint" style="color:var(--red);display:none;"></div>
@@ -2015,8 +2811,8 @@ async function loadProfileInfo() {
     const resp = await apiFetch('/api/auth/me');
     if (!resp || !resp.ok) { wrap.innerHTML = '<p style="color:var(--red)">Could not load profile.</p>'; return; }
     const user = await resp.json();
-    const roleColors = { admin: 'var(--purple)', rep: 'var(--navy)' };
-    const roleLabels = { admin: 'Admin', rep: 'Rep / SE' };
+    const roleColors = { admin: 'var(--purple)', se: 'var(--cyan-dark)', rep: 'var(--navy)' };
+    const roleLabels = { admin: 'Admin', se: 'Solution Engineer', rep: 'Account Executive' };
     wrap.innerHTML = `
       <div class="profile-info-grid">
         <span class="pil">Username</span><span class="piv"><strong>${escapeHtml(user.username)}</strong></span>
@@ -2079,7 +2875,7 @@ function profileCheckStrength() {
   const pw = document.getElementById('profileNewPw')?.value || '';
   const checks = { len: pw.length>=12, upper:/[A-Z]/.test(pw), lower:/[a-z]/.test(pw), num:/[0-9]/.test(pw), special:/[^A-Za-z0-9]/.test(pw) };
   const score = Object.values(checks).filter(Boolean).length;
-  const colors = ['#E2E8F0','#C81E10','#C24A1E','#854F0B','#2E7D32','#0F6E56'];
+  const colors = ['#E2E8F0','#C81E10','#C24A1E','#A6791E','#2E7D32','#12786F'];
   const labels = ['','Very weak','Weak','Fair','Strong','Very strong'];
   const fill = document.getElementById('profileStrengthFill');
   const lbl  = document.getElementById('profileStrengthLabel');
@@ -2138,7 +2934,7 @@ async function openShareModal(scenarioId, scenarioName) {
   modal.id = 'shareScenarioModal';
   modal.innerHTML = `
     <div class="modal" style="max-width:500px;">
-      <button class="modal-close" onclick="document.getElementById('shareScenarioModal').remove()">✕</button>
+      <button class="modal-close" aria-label="Close" onclick="document.getElementById('shareScenarioModal').remove()">✕</button>
       <div class="modal-title">Share — "${escapeHtml(scenarioName)}"</div>
       <p style="font-size:13px;color:var(--gray-500);margin-bottom:1rem;">
         Shared users can view and load this scenario but cannot edit or delete it.
@@ -2161,7 +2957,7 @@ async function openShareModal(scenarioId, scenarioName) {
       }
       <div id="shareModalError" class="field-hint" style="color:var(--red);display:none;margin-top:.5rem;"></div>
       <div class="btn-row" style="margin-top:1rem;">
-        <button class="btn btn-cta" onclick="saveSharing('${scenarioId}')">Save sharing</button>
+        <button class="btn btn-primary" onclick="saveSharing('${scenarioId}')">Save sharing</button>
         <button class="btn btn-ghost" onclick="document.getElementById('shareScenarioModal').remove()">Cancel</button>
       </div>
     </div>`;
@@ -2187,6 +2983,9 @@ async function saveSharing(scenarioId) {
   } catch(e) { errEl.textContent = 'Network error. Please try again.'; errEl.style.display='block'; }
 }
 if (typeof checkShareURL === 'function') checkShareURL();
+/* recalc() moved here from app.js top-level: it depends on features.js globals
+   (prospectLogoDataUrl, confirmedFields) that only exist after all scripts load. */
+if (typeof recalc === 'function') recalc();
 /* loadDiscoverySession is async — restores active session token and answers from DB */
 if (typeof loadDiscoverySession === 'function') loadDiscoverySession();
 if (typeof renderConfidence === 'function') renderConfidence();
@@ -2195,6 +2994,70 @@ if (typeof renderCalcIndustryQuestions === 'function') renderCalcIndustryQuestio
 if (typeof fetchScenarios === 'function') fetchScenarios();
 /* Industry filter dropdown + admin view-all button (Feature 3) */
 /* Calculator company field — check-existing on blur (v2.3) */
+/* ── Customer search on the landing page ── */
+async function onCustomerSearch(q) {
+  const box = document.getElementById('customerSearchResults');
+  if (!box) return;
+  const params=new URLSearchParams({search:q||'',state:'active',limit:'8'});
+  const resp=await apiFetch('/api/customer-switcher?'+params);
+  const data=(resp&&resp.ok)?await resp.json():{items:[]};
+  const matches=data.items||[];
+  box.innerHTML = matches.length
+    ? matches.map(c => `<button type="button" class="cs-result" onclick="selectCustomerFromSearch('${escapeHtml(c.id)}')">
+        <span class="cs-name">${escapeHtml(c.name)}</span>
+        <span class="cs-meta">${c.scenarioCount||0} scenario${(c.scenarioCount===1)?'':'s'} · ${escapeHtml(c.owner||'')}${c.opportunity?` · ${escapeHtml(c.opportunity)}`:''}</span>
+      </button>`).join('')
+    : '<div class="cs-empty">No customers match this search within your authorized access.</div>';
+  box.style.display = 'block';
+}
+async function selectCustomerFromSearch(customerId) {
+  const box = document.getElementById('customerSearchResults');
+  if (box) box.style.display = 'none';
+  const input = document.getElementById('customerSearchInput');if(input)input.value='';
+  await selectCustomerContextById(customerId,{targetTab:'calc'});
+}
+/* Hide results when clicking away. */
+document.addEventListener('click', (e) => {
+  const bar = document.getElementById('customerSearchBar');
+  const box = document.getElementById('customerSearchResults');
+  if (bar && box && !bar.contains(e.target)) box.style.display = 'none';
+});
+/* Keyboard shortcuts handled by ux-enhancements.js (initKeyboardShortcuts) */
+function _showUnsavedBanner() {
+  /* Non-blocking unsaved-changes reminder — shows as a dismissable toast-style
+     bar rather than a blocking native dialog. Reps can still navigate freely. */
+  if (document.getElementById('unsavedBanner')) return;
+  const bar = document.createElement('div');
+  bar.id = 'unsavedBanner';
+  bar.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:var(--navy);border:1.5px solid #F59E0B;border-radius:10px;padding:10px 18px;display:flex;align-items:center;gap:14px;box-shadow:0 4px 24px rgba(0,0,0,.25);font-size:13px;color:rgba(255,255,255,.9);white-space:nowrap;';
+  bar.innerHTML = '<span style="color:#F59E0B;">⚠</span> You have unsaved changes.'
+    + ' <button onclick="switchTab(\'calc\');document.getElementById(\'unsavedBanner\')?.remove();" style="background:#F59E0B;color:#1E2931;border:none;border-radius:6px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;">Save now</button>'
+    + ' <button onclick="this.closest(\'#unsavedBanner\').remove();" style="background:none;border:none;color:rgba(255,255,255,.5);font-size:16px;cursor:pointer;padding:0 2px;">✕</button>';
+  document.body.appendChild(bar);
+  setTimeout(() => bar.remove(), 7000);
+}
+/* Escape closes the active modal.
+   Covers all dynamically created modals (version history, diff, template
+   picker, stakeholder, outcome, cleanup preview) and the static ones.
+   Ignores ESC when focus is inside a text input or textarea so reps can
+   clear fields normally. */
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  const active = document.activeElement;
+  if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')) return;
+  /* Find the last (topmost) open overlay */
+  const overlays = [...document.querySelectorAll('.modal-overlay.open, .modal-overlay[style*="display: flex"], .modal-overlay:not([style*="display: none"])')];
+  if (!overlays.length) return;
+  const top = overlays[overlays.length - 1];
+  /* Try the close button first so any cleanup logic in onclick fires */
+  const closeBtn = top.querySelector('.modal-close, [aria-label="Close"], .btn-modal-close');
+  if (closeBtn) { closeBtn.click(); return; }
+  /* Fallback: remove directly */
+  top.remove();
+});
+/* Invalidate the cache when scenarios change so new customers show up. */
+window.invalidateCustomerCache = function(){ _customerCache = null; };
+
 function calcCompanyCheck(input) {
   const typed = (input.value || '').trim();
   if (!typed || typeof checkCompanyOnEntry !== 'function') return;
@@ -2221,6 +3084,12 @@ recalc();
 const _fabEl = document.getElementById('fabRow'); if (_fabEl) _fabEl.style.display = 'flex';
 </script>
 <!-- FAB quick actions -->
+<!-- Global back-to-top button: appears on any tab once the page is scrolled
+     down, so the user never has to scroll all the way back manually. -->
+<button class="fab-to-top fab-to-top-hidden" id="fabToTop" onclick="scrollPageToTop()" title="Back to top" aria-label="Back to top">
+  <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 13V4M4 7l4-4 4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</button>
+
 <div class="fab-row" id="fabRow" style="display:none;">
   <button class="fab fab-secondary" onclick="saveScenario()" title="Save scenario" style="position:relative;">
     💾
@@ -2232,5 +3101,14 @@ const _fabEl = document.getElementById('fabRow'); if (_fabEl) _fabEl.style.displ
   </button>
 </div>
 
+<link rel="stylesheet" href="help-v6.css">
+<script src="help-v6.js"></script>
+<script src="admin-cleanup-v661.js"></script>
+<link rel="stylesheet" href="competitive-intelligence-v662.css">
+<script src="competitive-intelligence-v662.js"></script>
+<link rel="stylesheet" href="teams-admin.css">
+<script src="teams-admin.js"></script>
+<script src="ui-v4.js"></script>
+<script src="executive-output-adapters.js"></script>
 </body>
 </html>

@@ -28,20 +28,43 @@ async function ensureCustomer(ownerId, name, q) {
 async function listCustomersForOwner(ownerId) {
   const { query } = require('./db');
   const { rows } = await query(
-    `SELECT c.id, c.name, c.created_at, c.updated_at,
+    `SELECT c.id, c.name, c.created_at, c.updated_at, c.owner_id,
+            u.username AS owner_username,
             COUNT(s.id) FILTER (WHERE s.deleted_at IS NULL) AS scenario_count
        FROM customers c
+       LEFT JOIN users u ON u.id = c.owner_id
        LEFT JOIN scenarios s ON s.customer_id = c.id
       WHERE c.owner_id = $1
-      GROUP BY c.id
+      GROUP BY c.id, u.username
       ORDER BY c.name ASC`,
     [ownerId]
   );
-  return rows.map(r => ({
+  return rows.map(mapCustomerRow);
+}
+
+/* List ALL customers across every AE (SE / admin cross-customer view). */
+async function listAllCustomers() {
+  const { query } = require('./db');
+  const { rows } = await query(
+    `SELECT c.id, c.name, c.created_at, c.updated_at, c.owner_id,
+            u.username AS owner_username,
+            COUNT(s.id) FILTER (WHERE s.deleted_at IS NULL) AS scenario_count
+       FROM customers c
+       LEFT JOIN users u ON u.id = c.owner_id
+       LEFT JOIN scenarios s ON s.customer_id = c.id
+      GROUP BY c.id, u.username
+      ORDER BY c.name ASC`
+  );
+  return rows.map(mapCustomerRow);
+}
+
+function mapCustomerRow(r) {
+  return {
     id: r.id, name: r.name,
+    ownerId: r.owner_id, ownerUsername: r.owner_username || null,
     scenarioCount: Number(r.scenario_count) || 0,
     createdAt: r.created_at, updatedAt: r.updated_at
-  }));
+  };
 }
 
 /* Fetch a single customer, scoped to owner unless the caller is privileged
@@ -58,4 +81,4 @@ async function getCustomer(id, ownerId, allowAny = false) {
   return { id: c.id, name: c.name, ownerId: c.owner_id, createdAt: c.created_at, updatedAt: c.updated_at };
 }
 
-module.exports = { ensureCustomer, listCustomersForOwner, getCustomer };
+module.exports = { ensureCustomer, listCustomersForOwner, listAllCustomers, getCustomer };

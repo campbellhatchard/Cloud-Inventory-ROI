@@ -83,6 +83,13 @@ const ACTIONS = {
   USER_DEACTIVATED:         'user.deactivated',
   USER_REACTIVATED:         'user.reactivated',
   USER_TEMP_RESET:          'user.password_reset',
+  USER_ROLE_ADDED:          'user.role_added',
+  USER_ROLE_REMOVED:        'user.role_removed',
+  SALES_TEAM_CREATED:       'sales_team.created',
+  SALES_TEAM_UPDATED:       'sales_team.updated',
+  TEAM_MEMBER_ADDED:        'sales_team.member_added',
+  TEAM_MEMBER_REMOVED:      'sales_team.member_removed',
+  HANDOFF_ASSIGNMENT_CHANGED:'handoff.assignment_changed',
 
   // Scenarios
   SCENARIO_SAVED:           'scenario.saved',
@@ -90,6 +97,8 @@ const ACTIONS = {
   SCENARIO_DELETED:         'scenario.deleted',
   SCENARIO_SHARED:          'scenario.shared',
   SCENARIO_OUTCOME_SET:     'scenario.outcome_set',
+  HANDOFF_SAVED:            'handoff.saved',
+  ADMIN_EDIT_ON_BEHALF:     'admin.edit_on_behalf',
 
   // Discovery
   DISCOVERY_LINK_GENERATED: 'discovery.link_generated',

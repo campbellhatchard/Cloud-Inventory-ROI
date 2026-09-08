@@ -3,13 +3,15 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Mutual Action Plan — Cloud Inventory</title>
+<title>Joint Project Plan — Cloud Inventory</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="brand-tokens.css"/>
+<script src="brand-system.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-:root{--navy:#243646;--cyan:#00A7CF;--green:#2E7D32;--red:#C81E10;--amber:#C24A1E;
---g100:#F1F5F9;--g200:#E2E8F0;--g400:#94A3B8;--g600:#475569;--g800:#1E293B;
---font:'Inter',system-ui,sans-serif;}
+:root{--navy:var(--ci-dark);--cyan:var(--ci-blue);--green:var(--ci-green);--red:var(--ci-deep-red);--amber:var(--ci-orange-dark);
+--g100:var(--ci-neutral-100);--g200:var(--ci-border);--g400:#6B7A8D;--g600:var(--ci-neutral-600);--g800:#1E293B;
+--font:var(--ci-font);}
 body{font-family:var(--font);background:var(--navy);min-height:100vh;padding:2rem 1rem;}
 .wrap{max-width:760px;margin:0 auto;}
 .logo-row{display:flex;align-items:center;gap:12px;margin-bottom:1.5rem;}
@@ -24,7 +26,8 @@ body{font-family:var(--font);background:var(--navy);min-height:100vh;padding:2re
 .progress-label{display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--g600);margin-bottom:5px;}
 .progress-bar{height:10px;background:var(--g100);border-radius:6px;overflow:hidden;}
 .progress-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--green));border-radius:6px;transition:width .4s;}
-.phase{font-size:12px;font-weight:700;color:var(--cyan);text-transform:uppercase;letter-spacing:.06em;margin:1.4rem 0 .5rem;padding-bottom:4px;border-bottom:2px solid var(--g100);}
+.phase{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;font-weight:700;color:var(--cyan);text-transform:uppercase;letter-spacing:.06em;margin:1.4rem 0 .5rem;padding-bottom:4px;border-bottom:2px solid var(--g100);}
+.phase-count{font-size:10px;color:var(--g400);font-weight:600;letter-spacing:0;text-transform:none;}
 .ms{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--g200);border-radius:9px;margin-bottom:7px;background:#fff;}
 .ms.done{background:#F0FFF4;border-color:#A5D6A7;}
 .ms.done .ms-title{text-decoration:line-through;color:var(--g400);}
@@ -36,31 +39,48 @@ body{font-family:var(--font);background:var(--navy);min-height:100vh;padding:2re
 .ms-title{font-size:14px;font-weight:500;color:var(--g800);}
 .ms-sub{font-size:11px;color:var(--g400);margin-top:2px;}
 .ms-owner{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap;}
+.ms-status{display:inline-block;margin-left:6px;font-size:10px;font-weight:700;color:var(--g600);}
+.customer-summary{display:flex;gap:8px;flex-wrap:wrap;margin:-6px 0 16px;}
+.summary-chip{font-size:11px;padding:5px 9px;border-radius:99px;background:var(--g100);color:var(--g600);}
 .ow-rep{background:rgba(36,54,70,.1);color:var(--navy);}
-.ow-prospect{background:rgba(0,167,207,.12);color:#0083A3;}
+.ow-prospect{background:rgba(0,169,204,.12);color:var(--ci-blue-dark);}
 .ow-joint{background:rgba(46,125,50,.1);color:var(--green);}
 .overdue{color:var(--red)!important;font-weight:700;}
 .footer{padding:1rem 2rem;background:var(--g100);font-size:12px;color:var(--g600);display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;}
+.purpose{margin:0 0 1.15rem;padding:.85rem 1rem;background:#F0F9FF;border-left:3px solid var(--cyan);border-radius:0 7px 7px 0;color:var(--g700);font-size:14px;line-height:1.55;}
+.purpose strong{color:var(--navy);}
 .err-card{text-align:center;padding:3rem 2rem;}
 .err-card h2{color:var(--navy);font-size:19px;margin-bottom:8px;}
 .err-card p{color:var(--g400);font-size:14px;}
 .hint{font-size:11px;color:var(--g400);margin-top:1.2rem;text-align:center;}
+
+/* ── v4.0.0 polish: shared control metrics, focus ring, type ── */
+html{font-size:16px;}
+body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+input,select,textarea,button{font-family:inherit;}
+input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(0,169,204,.18);}
+:focus-visible{outline:2px solid var(--ci-blue);outline-offset:2px;border-radius:4px;}
+h1,h2,h3{letter-spacing:-.02em;text-wrap:pretty;}
+button{cursor:pointer;}
+@media(max-width:600px){body{padding:.75rem .5rem}.body{padding:1.25rem 1rem}.ms{align-items:flex-start;gap:8px;padding:10px 8px}.ms-owner{max-width:92px;white-space:normal;text-align:center}.footer{padding:1rem}.logo-row{margin-left:.25rem}}
 </style>
+<link rel="stylesheet" href="brand-tokens.css"/>
 </head>
 <body>
 <div class="wrap">
   <div class="logo-row">
-    <img class="logo" src="ci-logo-negative.png" alt="Cloud Inventory" onerror="this.src='ci-logo.png'"/>
-    <div class="logo-sub">Mutual Action Plan</div>
+    <img class="logo" data-ci-logo="logoNegative" alt="Cloud Inventory"/>
+    <div class="logo-sub">Joint Project Plan</div>
   </div>
   <div class="card">
     <div class="accent"></div>
     <div id="content" class="body">
+      <div class="purpose"><strong>Why we are sharing this plan</strong><br>It gives both teams one clear view of the actions, owners, and dates that support a successful evaluation and rollout. By validating the business case and resolving dependencies together, we can reduce risk and focus on the operational value Cloud Inventory can deliver.</div>
       <div class="err-card"><p>Loading your action plan…</p></div>
     </div>
     <div class="footer" id="footer" style="display:none;">
       <span id="repInfo"></span>
-      <span>Powered by Cloud Inventory</span>
+      <span id="audienceFooter"></span>
     </div>
   </div>
 </div>
@@ -89,42 +109,69 @@ async function load() {
 }
 
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtDate(d, long) {
+  if (!d) return '';
+  const raw = String(d).split('T')[0];
+  return new Date(raw + 'T12:00:00').toLocaleDateString('en-US', long
+    ? {month:'long',day:'numeric',year:'numeric'} : {month:'short',day:'numeric'});
+}
+function isOverdue(m) {
+  if (!m.dueDate || m.status === 'done') return false;
+  const today = new Date();
+  const local = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+  return String(m.dueDate).split('T')[0] < local;
+}
+function planGroups(ms) {
+  const saved = Array.isArray(plan.groups) ? plan.groups.filter(g => g && g.id && g.name) : [];
+  if (saved.length) return saved;
+  const defaults = ['Evaluate','Validate','Business Case','Legal & Procurement','Launch'];
+  const names = defaults.filter(p => ms.some(m => m.phase === p));
+  ms.forEach(m => { if (m.phase && !names.includes(m.phase)) names.push(m.phase); });
+  return names.map((name,i) => ({id:'legacy-'+i,name}));
+}
 
 function render() {
   const ms = plan.milestones || [];
-  const phases = ['Evaluate','Validate','Business Case','Legal & Procurement','Launch'];
+  const groups = planGroups(ms);
   const done = ms.filter(m => m.status === 'done').length;
   const pct = ms.length ? Math.round(done / ms.length * 100) : 0;
   const ownerLabels = { rep: 'Cloud Inventory', prospect: 'Your team', joint: 'Joint' };
 
   document.getElementById('content').innerHTML = `
     <div class="title">${esc(plan.title)}</div>
-    <div class="meta">${esc(plan.company || '')}${plan.target_close_date ? ' · Target: ' + new Date(plan.target_close_date).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : ''}</div>
+    <div class="meta">${esc(plan.company || '')}${plan.target_close_date ? ' · Target: ' + fmtDate(plan.target_close_date, true) : ''}</div>
     <div class="progress-wrap">
       <div class="progress-label"><span>Progress</span><span>${done} of ${ms.length} complete (${pct}%)</span></div>
       <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
     </div>
-    ${phases.filter(p => ms.some(m => m.phase === p)).map(p => `
-      <div class="phase">${p}</div>
-      ${ms.filter(m => m.phase === p).map(m => {
+    <div class="customer-summary"><span class="summary-chip">${ms.filter(m=>['prospect','joint'].includes(m.owner)&&m.status!=='done').length} actions for your team</span><span class="summary-chip">${ms.filter(isOverdue).length} overdue</span></div>
+    ${groups.map(g => {
+      const items = ms.filter(m => m.groupId === g.id || (!m.groupId && m.phase === g.name));
+      if (!items.length) return '';
+      return `<div class="phase"><span>${esc(g.name)}</span><span class="phase-count">${items.filter(m=>m.status==='done').length}/${items.length} complete</span></div>
+      ${items.map(m => {
         const yours = ['prospect','joint'].includes(m.owner);
         const isDone = m.status === 'done';
-        const overdue = !isDone && m.dueDate && new Date(m.dueDate) < new Date();
+        const overdue = isOverdue(m);
+        const statusLabel = m.status === 'in_progress' ? 'In progress' : isDone ? 'Complete' : 'Pending';
         return `<div class="ms ${isDone ? 'done' : ''}">
-          <div class="ms-check ${isDone ? 'done' : ''} ${yours ? '' : 'locked'}"
+          <button type="button" class="ms-check ${isDone ? 'done' : ''} ${yours ? '' : 'locked'}"
                title="${yours ? 'Click to mark ' + (isDone ? 'not done' : 'done') : 'Owned by Cloud Inventory'}"
-               onclick="${yours ? `toggle('${m.id}','${isDone ? 'pending' : 'done'}')` : ''}">${isDone ? '✓' : ''}</div>
+               aria-label="${yours ? 'Mark ' + esc(m.title) + ' ' + (isDone ? 'not complete' : 'complete') : esc(m.title) + ', owned by Cloud Inventory'}"
+               ${yours?'':'disabled'} onclick="${yours ? `toggle('${m.id}','${isDone ? 'pending' : 'done'}')` : ''}">${isDone ? '✓' : ''}</button>
           <div class="ms-info">
             <div class="ms-title">${esc(m.title)}</div>
-            <div class="ms-sub ${overdue ? 'overdue' : ''}">${m.dueDate ? 'Due ' + new Date(m.dueDate).toLocaleDateString('en-US',{month:'short',day:'numeric'}) + (overdue ? ' — overdue' : '') : 'No date set'}</div>
+            <div class="ms-sub ${overdue ? 'overdue' : ''}">${m.dueDate ? 'Due ' + fmtDate(m.dueDate) + (overdue ? ' — overdue' : '') : 'No date set'}<span class="ms-status">${statusLabel}</span></div>
           </div>
           <span class="ms-owner ow-${m.owner}">${ownerLabels[m.owner] || m.owner}</span>
         </div>`;
-      }).join('')}`).join('')}
+      }).join('')}`;
+    }).join('')}
     <div class="hint">Items tagged "Your team" or "Joint" can be checked off by you — updates are shared live with ${esc(plan.rep_name || 'your Cloud Inventory contact')}.</div>`;
 
   const f = document.getElementById('footer');
   f.style.display = 'flex';
+  document.getElementById('audienceFooter').textContent = window.CIBrand.audience('customer');
   document.getElementById('repInfo').textContent =
     'Your contact: ' + (plan.rep_name || '') + (plan.rep_email ? ' · ' + plan.rep_email : '');
 }

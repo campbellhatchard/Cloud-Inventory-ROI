@@ -1,12 +1,15 @@
 /* ═══════════════════════════════════════════════════════════════════
-   src/routes/maps.js — Mutual Action Plans
+   src/routes/maps.js — Joint Project Plans
    Rep endpoints (auth) + public prospect endpoints (token-gated).
    ═══════════════════════════════════════════════════════════════════ */
 const express   = require('express');
 const crypto    = require('crypto');
 const { query } = require('../db');
 const { log }   = require('../audit');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, hasRole } = require('../middleware/auth');
+const {hasPermission}=require('../authorization');
+const {buildJppPptx}=require('../exports/operational-pptx');
+const {safeFile}=require('../shared/output-brand');
 
 const router = express.Router();
 
@@ -14,14 +17,14 @@ const router = express.Router();
 router.get('/public/:token', async (req, res) => {
   try {
     const { rows } = await query(
-      `SELECT m.id, m.company, m.title, m.target_close_date, m.milestones,
+      `SELECT m.id, m.company, m.title, m.target_close_date, m.milestones, m.groups,
               m.is_active, m.updated_at, u.username AS rep_name, u.email AS rep_email
        FROM mutual_action_plans m JOIN users u ON u.id = m.owner_id
        WHERE m.token = $1`,
       [String(req.params.token || '')]
     );
     if (!rows.length) return res.status(404).json({ error: 'Plan not found.' });
-    if (!rows[0].is_active) return res.status(410).json({ error: 'This action plan link is no longer active.' });
+    if (!rows[0].is_active) return res.status(410).json({ error: 'This Joint Project Plan link is no longer active.' });
     res.json(rows[0]);
   } catch (e) { res.status(500).json({ error: 'Failed to load plan.' }); }
 });
@@ -58,33 +61,48 @@ router.put('/public/:token/milestone/:mid', async (req, res) => {
 /* ── All routes below require auth ── */
 router.use(requireAuth);
 
-/* List own plans */
+/* List own plans — admins can pass ?all=true to see all reps' plans */
 router.get('/', async (req, res) => {
   try {
-    const { rows } = await query(
-      `SELECT id, company, title, target_close_date, token, is_active,
-              milestones, created_at, updated_at
-       FROM mutual_action_plans WHERE owner_id = $1
-       ORDER BY updated_at DESC LIMIT 50`,
-      [req.user.id]
-    );
+    const canViewTeam = hasPermission(req.user,'view_team_customers') || hasPermission(req.user,'view_all_customers');
+    const showAll = canViewTeam && req.query.all === 'true';
+    let sql, params;
+    if (showAll) {
+      sql = `SELECT m.id, m.company, m.title, m.target_close_date, m.token, m.is_active,
+                    m.milestones, m.groups, m.created_at, m.updated_at,
+                    u.username AS owner_username
+             FROM mutual_action_plans m
+             JOIN users u ON u.id = m.owner_id
+             WHERE ($2 OR m.owner_id=$1 OR EXISTS(SELECT 1 FROM sales_team_memberships me JOIN sales_team_memberships om ON om.team_id=me.team_id AND om.user_id=m.owner_id AND om.is_active=TRUE WHERE me.user_id=$1 AND me.is_active=TRUE))
+             ORDER BY m.updated_at DESC LIMIT 200`;
+      params = [req.user.id,hasPermission(req.user,'view_all_customers')];
+    } else {
+      sql = `SELECT id, company, title, target_close_date, token, is_active,
+                    milestones, groups, created_at, updated_at
+             FROM mutual_action_plans WHERE owner_id = $1
+             ORDER BY updated_at DESC LIMIT 50`;
+      params = [req.user.id];
+    }
+    const { rows } = await query(sql, params);
     res.json(rows);
   } catch (e) { res.status(500).json({ error: 'Failed to load plans.' }); }
 });
 
+router.get('/:id/export-pptx',async(req,res)=>{try{const audience=req.query.audience==='internal'?'internal':'customer',all=hasPermission(req.user,'view_all_customers'),team=hasPermission(req.user,'view_team_customers'),{rows}=await query(`SELECT m.* FROM mutual_action_plans m WHERE m.id=$1 AND ($3 OR m.owner_id=$2 OR ($4 AND EXISTS(SELECT 1 FROM sales_team_memberships me JOIN sales_team_memberships om ON om.team_id=me.team_id AND om.user_id=m.owner_id AND om.is_active=TRUE WHERE me.user_id=$2 AND me.is_active=TRUE)))`,[req.params.id,req.user.id,all,team]);if(!rows.length)return res.status(404).json({error:'Plan not found or access denied.'});const buf=await buildJppPptx(rows[0],{audience});res.set('Content-Type','application/vnd.openxmlformats-officedocument.presentationml.presentation');res.set('Content-Disposition',`attachment; filename="Cloud-Inventory-${audience==='internal'?'Internal-':''}Joint-Project-Plan-${safeFile(rows[0].company)}-${new Date().toISOString().slice(0,10)}.pptx"`);res.send(buf);}catch(e){console.error('jpp_pptx.failed',{errorId:`jpp-${Date.now().toString(36)}`,message:e.message});res.status(500).json({error:'Joint Project Plan PowerPoint could not be generated.'});}});
+
 /* Create */
 router.post('/', async (req, res) => {
   try {
-    const { company, title, targetCloseDate, milestones, scenarioId } = req.body || {};
+    const { company, title, targetCloseDate, milestones, groups, scenarioId } = req.body || {};
     if (!company || !company.trim()) {
-      return res.status(400).json({ error: 'A company must be selected before saving an action plan.' });
+      return res.status(400).json({ error: 'A company must be selected before saving a Joint Project Plan.' });
     }
     const { rows } = await query(
-      `INSERT INTO mutual_action_plans (owner_id, scenario_id, company, title, target_close_date, milestones)
-       VALUES ($1,$2,$3,$4,$5,$6)
-       RETURNING id, company, title, target_close_date, token, is_active, milestones, created_at, updated_at`,
-      [req.user.id, scenarioId || null, (company||'').trim(), (title||'Mutual Action Plan').trim(),
-       targetCloseDate || null, JSON.stringify(milestones || [])]
+      `INSERT INTO mutual_action_plans (owner_id, scenario_id, company, title, target_close_date, milestones, groups)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)
+       RETURNING id, company, title, target_close_date, token, is_active, milestones, groups, created_at, updated_at`,
+      [req.user.id, scenarioId || null, (company||'').trim(), (title||'Joint Project Plan').trim(),
+       targetCloseDate || null, JSON.stringify(milestones || []), JSON.stringify(groups || [])]
     );
     await log({ userId: req.user.id, action: 'map.created', entityType: 'mutual_action_plan',
                 entityId: rows[0].id, detail: { company }, ipAddress: req.ip });
@@ -95,20 +113,22 @@ router.post('/', async (req, res) => {
 /* Update (title, date, milestones) */
 router.put('/:id', async (req, res) => {
   try {
-    const { company, title, targetCloseDate, milestones } = req.body || {};
+    const { company, title, targetCloseDate, milestones, groups } = req.body || {};
     if (company !== undefined && !String(company).trim()) {
       return res.status(400).json({ error: 'Company cannot be blank.' });
     }
     const { rows } = await query(
       `UPDATE mutual_action_plans
        SET company = COALESCE($1, company), title = COALESCE($2, title),
-           target_close_date = $3, milestones = COALESCE($4, milestones)
-       WHERE id = $5 AND owner_id = $6
-       RETURNING id, company, title, target_close_date, token, is_active, milestones, updated_at`,
+           target_close_date = $3, milestones = COALESCE($4, milestones),
+           groups = COALESCE($5, groups)
+       WHERE id = $6 AND owner_id = $7
+       RETURNING id, company, title, target_close_date, token, is_active, milestones, groups, updated_at`,
       [company !== undefined ? company.trim() : null,
        title   !== undefined ? title.trim()   : null,
        targetCloseDate || null,
        milestones !== undefined ? JSON.stringify(milestones) : null,
+       groups !== undefined ? JSON.stringify(groups) : null,
        req.params.id, req.user.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'Plan not found.' });

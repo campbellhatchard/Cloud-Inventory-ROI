@@ -166,9 +166,8 @@ INSERT INTO help_pages (slug, title, content, sort_order) VALUES
 <h3>How to Use content</h3>
 <p>Admin users can edit this content directly in the browser. Click <strong>Edit</strong> on any page to activate the inline editor. Changes are saved immediately to the database.</p>
 
-<h3>Default Admin account</h3>
-<p>Username: <code>admin</code> | Initial password: <code>CloudInventory2026!</code></p>
-<p>Log in directly — no forced password change on first login. Change it at your convenience via the Profile page (top-right avatar → My profile → Change password).</p>
+<h3>Admin account &amp; security</h3>
+<p>Admin credentials are provided separately to authorized administrators — they are intentionally not documented here. Change your password at any time via the Profile page (top-right avatar → My profile → Change password).</p>
 ', 6)
 
 ON CONFLICT (slug) DO NOTHING;

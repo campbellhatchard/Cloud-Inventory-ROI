@@ -4,43 +4,13 @@
    ═══════════════════════════════════════════════════ */
 
 /* ── Industry benchmark data ── */
-const IND = {
-  telecom:      { labor:30,shrinkage:45,carrying:20,otif:12,it:65,shrinkRate:2.5,carryRate:28,otifRisk:2.5,otifBaseline:92,otifTarget:97,invTurns:4,  downtime:30,expedite:25,count:40,throughput:30,accuracy:35,firstFix:35,utilization:20,leakage:30,label:'Telecommunications' },
-  mfg:          { labor:25,shrinkage:40,carrying:18,otif:10,it:60,shrinkRate:2.0,carryRate:25,otifRisk:2.0,otifBaseline:91,otifTarget:97,invTurns:6,  downtime:35,expedite:30,count:45,throughput:30,accuracy:35,firstFix:20,utilization:10,leakage:20,label:'Manufacturing' },
-  construction: { labor:20,shrinkage:35,carrying:15,otif:8, it:55,shrinkRate:3.0,carryRate:22,otifRisk:1.5,otifBaseline:88,otifTarget:95,invTurns:3,  downtime:25,expedite:25,count:35,throughput:25,accuracy:30,firstFix:35,utilization:20,leakage:30,label:'Engineering & Construction' },
-  oil:          { labor:22,shrinkage:38,carrying:17,otif:9, it:58,shrinkRate:2.8,carryRate:24,otifRisk:2.0,otifBaseline:89,otifTarget:96,invTurns:4,  downtime:30,expedite:28,count:40,throughput:30,accuracy:35,firstFix:35,utilization:18,leakage:30,label:'Oil & Gas' },
-  mining:       { labor:20,shrinkage:35,carrying:15,otif:8, it:55,shrinkRate:2.5,carryRate:23,otifRisk:1.5,otifBaseline:88,otifTarget:95,invTurns:3,  downtime:35,expedite:25,count:35,throughput:30,accuracy:35,firstFix:30,utilization:15,leakage:28,label:'Minerals & Mining' },
-  distribution: { labor:35,shrinkage:50,carrying:22,otif:15,it:70,shrinkRate:1.5,carryRate:30,otifRisk:3.0,otifBaseline:94,otifTarget:99,invTurns:12, downtime:20,expedite:35,count:50,throughput:35,accuracy:40,firstFix:20,utilization:10,leakage:20,label:'Wholesale Distribution' },
-  food:         { labor:28,shrinkage:42,carrying:18,otif:12,it:60,shrinkRate:2.2,carryRate:27,otifRisk:2.5,otifBaseline:92,otifTarget:98,invTurns:15, downtime:25,expedite:30,count:45,throughput:30,accuracy:35,firstFix:20,utilization:10,leakage:22,label:'Food & Beverage' },
-  retail:       { labor:30,shrinkage:40,carrying:22,otif:16,it:65,shrinkRate:1.5,carryRate:26,otifRisk:2.5,otifBaseline:95,otifTarget:99,invTurns:6,  downtime:25,expedite:35,count:45,throughput:30,accuracy:45,firstFix:25,utilization:12,leakage:25,label:'Medical Devices / Life Sciences' } /* PLACEHOLDER benchmarks — tune to validated figures */
-};
-
-/* ── Competitive data ── */
-const COMP = {
-  sap:   { name:'SAP WM / Extended WH Mgmt', cost:'$500K–$2M+ implementation', time:'12–24 months to go-live', maint:'18–22% annual maintenance',
-    pain:['Complex ABAP configuration requires expensive SAP consultants','High TCO with continuous customization costs','Difficult to adapt for mobile and field inventory','Upgrade cycles create prolonged operational risk'],
-    adv:['No-code configuration vs SAP ABAP — no consultants needed','Go-live in weeks, not years','Mobile-first UX built for warehouse and field workers','Fraction of the 3-year TCO','Native Field Inventory — no SAP equivalent'] },
-  rf:    { name:'Legacy RF / Paper-based', cost:'$50K–$300K in aging hardware', time:'No real-time visibility', maint:'High labor cost for manual reconciliation',
-    pain:['Zero real-time inventory visibility','Error-prone manual entry drives write-offs','Disconnected field operations create blind spots','Cannot scale without adding headcount'],
-    adv:['Real-time scan-verified accuracy at every transaction','Runs on modern devices — no RF gun refresh','Cloud-based — no on-premise infrastructure','Unified warehouse and field platform'] },
-  oracle:{ name:'Oracle WMS', cost:'$300K–$1.5M implementation', time:'9–18 months typical', maint:'20%+ annual support costs',
-    pain:['High implementation cost requires Oracle specialists','Limited mobile-first capabilities','Complex non-Oracle ERP integrations','Rigid licensing limits flexibility'],
-    adv:['ERP-agnostic API-first integration','Up to 10x faster deployment','Lower 3-year TCO','Field Inventory fills a gap Oracle cannot'] },
-  excel: { name:'Spreadsheets / Manual', cost:'Hidden: $80K–$200K/yr in labor waste', time:'Always running behind reality', maint:'Rework, reconciliation, audit overhead',
-    pain:['Zero real-time visibility','High error rates and write-offs','No audit trail or compliance support','Cannot support multi-site operations'],
-    adv:['Real-time scan-verified accuracy','Audit-ready reporting built in','Scales without adding headcount','ROI typically under 6 months'] },
-  erp:   { name:'ERP-Native Module', cost:'Included but capability-limited', time:'Not optimized for warehouse ops', maint:'Tied to ERP upgrade cycle',
-    pain:['Designed for records, not execution','Limited mobile scanning capability','No wave management or directed put-away','Field inventory blind spots'],
-    adv:['Purpose-built execution on top of your ERP','Scan-verified at every transaction','Field Inventory fills ERP gaps','API-first sync with any ERP'] },
-  other: { name:'Other WMS', cost:'$200K–$1M+ typical', time:'12–18 months average', maint:'15–20% annual maintenance',
-    pain:['High ongoing customization cost','Limited field operation flexibility','Mobile UX often retrofitted','Vendor lock-in'],
-    adv:['No-code config — adapt in hours','Single platform for warehouse and field','API-first for any ERP','Cloud-native SaaS'] }
-};
+/* IND (industry defaults) and COMP (competitor data) now live in
+   industry-data.js, loaded before app.js — shared with the PDF print page. */
 
 /* ════════════════════════════════════════
    Storage
    ════════════════════════════════════════ */
-/* OVERLAP_DEDUCTION + calcROI now provided by shared roi-engine.js */
+/* OVERLAP_METHOD + calcROI now provided by shared roi-engine.js */
 
 /* ── Scenario in-memory cache ──────────────────────────────────────
    savedScenarios is populated from /api/scenarios on page load and
@@ -49,19 +19,38 @@ const COMP = {
    ────────────────────────────────────────────────────────────────── */
 let savedScenarios = [];
 let _scenariosLoading = false;
+window._scenarioLoadResolved = false;
+window._currentBuyCycleStage=2;
+window._currentBuyCycleStageLabel='Stage 2 — Define Economic Consequences';
+window._currentOpportunityOutcome=null;
+window.getCurrentBuyCycleStage=()=>window._currentBuyCycleStage||2;
+window.getCurrentBuyCycleStageLabel=()=>window._currentOpportunityOutcome&&window._currentBuyCycleStage===7?`Closed ${window._currentOpportunityOutcome==='won'?'Won':'Lost'}`:window._currentBuyCycleStageLabel;
+function updateCurrentBuyCycleStageDisplay(saved=false){
+  const label=document.getElementById('currentBuyCycleStageDisplay'),help=document.getElementById('currentBuyCycleStageHelp');
+  if(label)label.textContent=window.getCurrentBuyCycleStageLabel();
+  if(help)help.textContent=saved?'Governed through Buyer Evidence & Stage Readiness.':'New opportunities begin at Stage 2. Save the scenario to activate Buyer Evidence.';
+}
 
 async function fetchScenarios() {
   if (_scenariosLoading) return;
   _scenariosLoading = true;
   try {
-    const resp = await apiFetch('/api/scenarios');
+    /* Admins see all users' scenarios so the customer → scenario lookup
+       works across the whole team, not just their own deals. */
+    const user    = window.ciAuth ? window.ciAuth.getUser() : {};
+    const canViewTeam = (typeof clientHasRole==='function'&&clientHasRole(user,'admin','Admin')) || (user.roleKeys||[]).includes('sales_manager') || (user.roles||[]).some(r=>r==='Sales Leader'||r==='Sales Manager');
+    const url     = canViewTeam ? '/api/scenarios?all=true' : '/api/scenarios';
+    const resp = await apiFetch(url);
     if (!resp || !resp.ok) return;
     const rows = await resp.json();
     /* Normalise DB row shape to match the legacy shape used by features.js */
     savedScenarios = rows.map(normaliseRow);
+    window._scenarioLoadResolved = true;
     updateSavedBadge();
     if (typeof renderListVersioned === 'function') renderListVersioned();
     else renderList();
+    if (typeof refreshCalcScenarioPicker === 'function') refreshCalcScenarioPicker();
+    window.maybeShowOnboarding?.();
   } catch(e) {
     console.error('fetchScenarios error:', e.message);
   } finally {
@@ -80,9 +69,12 @@ function normaliseRow(r) {
     name:          r.name,
     company:       r.company,
     industry:      r.industry,
+    currentBuyCycleStage: Number(r.current_buy_cycle_stage||2),
+    currentBuyCycleStageLabel: r.current_buy_cycle_stage_label || r.deal_stage || 'Stage 2 — Define Economic Consequences',
+    repAssessedStage: Number(r.rep_assessed_stage||r.current_buy_cycle_stage||2),
     dealStage:     r.deal_stage,
     execAudience:  r.exec_audience || 'mixed',
-    solution:      r.solution || 'all',
+    solution:      r.solution || 'cip',
     ownerUsername: r.owner_username,
     sharedWith:    r.shared_with   || [],
     date:          r.updated_at
@@ -94,14 +86,18 @@ function normaliseRow(r) {
     npv3:          parseFloat(r.npv3)           || 0,
     npv5:          parseFloat(r.npv5)           || 0,
     payback:       r.payback !== null ? parseFloat(r.payback) : null,
-    outcome:       r.outcome || '',
-    outcomeReason: r.outcome_reason || '',
+    outcome:       r.buy_cycle_outcome || '',
+    legacyOutcome: r.legacyOutcome || r.legacy_outcome || '',
+    legacyOutcomeReason: r.legacyOutcomeReason || r.outcome_reason || '',
     realizedValue: r.realized_value !== null && r.realized_value !== undefined ? parseFloat(r.realized_value) : null,
     outcomeAt:     r.outcome_at || null,
+    customerId:    r.customer_id || null,
     /* inputs come from GET /api/scenarios/:id — not included in list */
     inputs:        r.data || null
   };
 }
+function scenarioMatchesStageFilter(s,key){return !key||(key==='won'||key==='lost'?s.currentBuyCycleStage===7&&s.outcome===key:String(s.currentBuyCycleStage)===String(key));}
+function scenarioStageDisplay(s){if(s.currentBuyCycleStage===7&&s.outcome)return `Closed ${s.outcome==='won'?'Won':'Lost'}`;const short={2:'Economic Consequences',3:'Funding',4:'Decision Criteria',5:'Evaluation',6:'Vendor Selection',7:'Closed'};return `Stage ${s.currentBuyCycleStage||2} · ${short[s.currentBuyCycleStage||2]}`;}
 
 /* No-op stubs — keep callers working without errors */
 function loadSaved()         { return []; }
@@ -110,7 +106,7 @@ function persistSaved(arr)   { savedScenarios = arr; updateSavedBadge(); }
 /* ════════════════════════════════════════
    Navigation
    ════════════════════════════════════════ */
-const ALL_TABS = ['calc','disc','comp','exec','saved','compare','sensitivity','analytics','map','stake','admin','help','impact','profile'];
+const ALL_TABS = ['calc','disc','comp','exec','proposal','coach','readiness','saved','compare','sensitivity','analytics','manager','map','stake','solfit','admincustomers','admin','help','impact','profile'];
 
 function switchTab(name) {
   ALL_TABS.forEach(n => {
@@ -120,13 +116,17 @@ function switchTab(name) {
     if (nav) nav.classList.toggle('active', n === name);
   });
   document.body.classList.toggle('impact-active', name === 'impact');
-  if (name === 'comp')        { syncCompDropdowns(); renderComp(); }
+  if (name === 'comp')        { syncCompDropdowns(); window.renderCompFilter?.(); }
   if (name === 'exec')        renderExec();
   if (name === 'saved')       { renderList(); renderStageFilters(); }
   if (name === 'compare')     renderComparison();
   if (name === 'sensitivity') renderSensitivity();
   if (name === 'analytics')   renderAnalytics();
+  if (name === 'manager' && typeof initSalesManagerDashboard === 'function') initSalesManagerDashboard();
   if (name === 'admin')       adminUnlocked && renderAdminEditor();
+  if (name === 'coach')       renderDealCoach();
+  if (name === 'readiness' && typeof renderBuyerReadiness === 'function') renderBuyerReadiness();
+  if (name === 'disc' && typeof clearDiscNotif === 'function') clearDiscNotif();
   if (window.innerWidth <= 900) closeSidebar();
   trackEvent('tab_view', { tab: name });
 }
@@ -150,6 +150,16 @@ function closeSidebar() {
 function toggleAcc(btn) {
   btn.classList.toggle('open');
   btn.nextElementSibling.classList.toggle('closed');
+}
+
+function expandAllCalcSections() {
+  /* Open all closed accordions and hide the expand toggle */
+  document.querySelectorAll('.accordion .acc-head:not(.open)').forEach(h => {
+    h.classList.add('open');
+    if (h.nextElementSibling) h.nextElementSibling.classList.remove('closed');
+  });
+  const row = document.getElementById('showAllSectionsRow');
+  if (row) row.style.display = 'none';
 }
 
 /* ════════════════════════════════════════
@@ -201,7 +211,24 @@ function applyDefaults() {
     b_throughput:(d.throughput||0)+'%', b_accuracy:(d.accuracy||0)+'%',
     b_firstfix:(d.firstFix||0)+'%', b_utilization:(d.utilization||0)+'%', b_leakage:(d.leakage||0)+'%'
   };
-  Object.entries(bmap).forEach(([id,v]) => { const el=document.getElementById(id); if(el) el.textContent='Avg: '+v; });
+  /* Map bench span IDs to BENCHMARK_CITATIONS keys so tooltips show source */
+  const citMap = {
+    b_shrinkRate:'shrinkRate', b_shrinkage:'mShrinkage', b_carryRate:'carryRate',
+    b_carrying:'mCarrying', b_otifRisk:'otifRisk', b_otif:'mOtif',
+    b_labor:'mLabor', b_invTurns:'invTurns'
+  };
+  Object.entries(bmap).forEach(([id,v]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = 'Avg: ' + v;
+    const citKey = citMap[id];
+    const cite = (typeof BENCHMARK_CITATIONS !== 'undefined') ? BENCHMARK_CITATIONS[citKey] : null;
+    if (cite) {
+      el.title = cite.note + '\nSource: ' + cite.source + ' (' + cite.year + ')';
+      el.style.cursor = 'help';
+      el.style.textDecoration = 'underline dotted';
+    }
+  });
   const badge = document.getElementById('benchBadge');
   if (badge) badge.style.display = 'inline-flex';
   renderProofPoints(ind);
@@ -224,7 +251,14 @@ function syncDisc(discId, calcId) {
 /* ════════════════════════════════════════
    Form values
    ════════════════════════════════════════ */
-function g(id) { return Math.max(0, parseFloat(document.getElementById(id)?.value) || 0); }
+function g(id) {
+  const el = document.getElementById(id);
+  if (!el) return 0;
+  /* Strip commas (from live thousands-formatting) and $ before parsing, so a
+     displayed "27,000,000" reads as 27000000, not 27. */
+  const raw = String(el.value).replace(/[$,\s]/g, '');
+  return Math.max(0, parseFloat(raw) || 0);
+}
 function gs(id) { return document.getElementById(id)?.value || ''; }
 
 function metricPct(id, industryKey) {
@@ -245,6 +279,29 @@ function metricVal(id, industryKey) {
   return d && d[industryKey] !== undefined ? d[industryKey] : 0;
 }
 
+window._roiModelVersion = Number(window._roiModelVersion) || 28;
+window._explicitRecoveryInputs = Array.isArray(window._explicitRecoveryInputs) ? window._explicitRecoveryInputs : [];
+function markExplicitRecovery(name){
+  if(!window._explicitRecoveryInputs.includes(name)) window._explicitRecoveryInputs.push(name);
+}
+window.markExplicitRecovery=markExplicitRecovery;
+
+function refreshRoiModelUpgradeControl(){
+  const button=document.getElementById('roiModelUpgradeBtn');if(!button)return;
+  button.style.display=window._calcScenarioId&&Number(window._roiModelVersion)<28?'inline-flex':'none';
+}
+function previewRoiModelUpgrade(){
+  if(Number(window._roiModelVersion)>=28)return;
+  if(window._currentOpportunityOutcome){showToast('Closed opportunities cannot be upgraded. Create a new active business case if new analysis is required.');return;}
+  const prior=getVals(),legacy=calcROI({...prior,modelVersion:Number(window._roiModelVersion)||27}),modern=calcROI({...prior,modelVersion:28});
+  const currency=prior.currency||'USD',money=n=>new Intl.NumberFormat('en-US',{style:'currency',currency,maximumFractionDigits:0}).format(Number(n)||0);
+  const wrap=document.createElement('div');wrap.className='modal-overlay open';wrap.id='roiUpgradeModal';
+  wrap.innerHTML=`<div class="modal" role="dialog" aria-modal="true"><button class="modal-close" onclick="document.getElementById('roiUpgradeModal').remove()">✕</button><div class="modal-title">Preview ROI Model v2.8</div><p>This preview does not change the saved v2.7 record. Upgrading creates a new scenario version.</p><table style="width:100%;margin:14px 0"><tr><th></th><th>Saved v2.7</th><th>Preview v2.8</th></tr><tr><td>Annual benefit</td><td>${money(legacy.annualBenefit)}</td><td>${money(modern.annualBenefit)}</td></tr><tr><td>Contract ROI</td><td>${legacy.totalContractRoi==null?'Not available':Math.round(legacy.totalContractRoi)+'%'}</td><td>${modern.totalContractRoi==null?'Not available':Math.round(modern.totalContractRoi)+'%'}</td></tr></table><p style="font-size:12px;color:var(--gray-500)">v2.8 applies contribution-margin service economics, accuracy calibration, and governed overlap rules. Review assumptions before saving.</p><div class="btn-row"><button class="btn btn-ghost" onclick="document.getElementById('roiUpgradeModal').remove()">Keep v2.7</button><button class="btn btn-primary" onclick="confirmRoiModelUpgrade()">Create v2.8 version</button></div></div>`;
+  document.body.appendChild(wrap);
+}
+function confirmRoiModelUpgrade(){document.getElementById('roiUpgradeModal')?.remove();window._roiModelVersion=28;refreshRoiModelUpgradeControl();recalc();saveScenario();}
+window.previewRoiModelUpgrade=previewRoiModelUpgrade;window.confirmRoiModelUpgrade=confirmRoiModelUpgrade;
+
 function getVals() {
   const psvc = g('psvcCost'), hw = g('hwCost'), train = g('trainCost');
   const writeOffDollars = g('annualWriteOff');
@@ -256,23 +313,35 @@ function getVals() {
   const invTurnsCurrent   = g('invTurnsCurrent');
   const invTurnsBenchmark = g('invTurnsBenchmark');
   // Implementation timeline & ramp
-  const implMonths = Math.max(0, Math.min(18, g('implMonths') || 3));
-  const ramp1 = Math.min(100, g('ramp1') || 40) / 100;
-  const ramp2 = Math.min(100, g('ramp2') || 75) / 100;
-  const ramp3 = Math.min(100, g('ramp3') || 100) / 100;
+  const valueOrDefault = (id, fallback) => {
+    const raw = document.getElementById(id)?.value;
+    return raw === undefined || raw === null || String(raw).trim() === '' ? fallback : g(id);
+  };
+  const implMonths = Math.max(0, Math.min(18, valueOrDefault('implMonths', 3)));
+  const ramp1 = Math.min(100, valueOrDefault('ramp1', 40)) / 100;
+  const ramp2 = Math.min(100, valueOrDefault('ramp2', 75)) / 100;
+  const ramp3 = Math.min(100, valueOrDefault('ramp3', 100)) / 100;
 
+  const opportunityRaw=String(document.getElementById('opportunityValue')?.value||'').replace(/,/g,'').trim();
+  const opportunityValue=opportunityRaw===''?null:Number(opportunityRaw);
+  const storedOpportunityValue=window._opportunityValueOriginal;
+  const opportunityValueCurrency=opportunityValue!==storedOpportunityValue
+    ? ((typeof getCurrency==='function')?getCurrency():'USD')
+    : (window._opportunityValueStoredCurrency||((typeof getCurrency==='function')?getCurrency():'USD'));
   return {
     name: gs('scenarioName') || 'Unnamed scenario',
     company: gs('companyName') || 'Prospect',
     rep: gs('repName'),
     industry: gs('industry'),
     competitor: gs('competitor') || gs('compSelect'),
-    dealStage: gs('dealStage'),
     execAudience: gs('execAudience') || 'mixed',
-    solution: gs('solution') || 'all',
+    solution: gs('solution') || 'cip',
     currency: (typeof getCurrency === 'function') ? getCurrency() : 'USD',
+    opportunityValue:Number.isFinite(opportunityValue)?opportunityValue:null,
+    opportunityValueCurrency,
     revenue: g('revenue'), users: g('userCount'), labor: g('laborCost'),
     inventory: inventoryVal, itCost: g('itCost'), invest: g('invest'),
+    contractMonths: Math.max(1, Math.min(60, valueOrDefault('contractMonths', 36))),
     psvc, hw, train, otc: psvc+hw+train,
     discRate: g('discRate')/100,
     mLabor: metricPct('m_labor','labor'), mShrinkage: metricPct('m_shrinkage','shrinkage'),
@@ -282,21 +351,23 @@ function getVals() {
     otifBaseline, otifTarget,
     invTurnsCurrent, invTurnsBenchmark,
     /* ── v2.5 new calculation levers ── */
-    modelVersion: 27,
+    modelVersion: Number(window._roiModelVersion) || 28,
     laborWastePct:       g('laborWastePct') / 100,  // measured productivity waste (Option B)
     currentAccuracy:     g('currentAccuracy'),        // measured inventory accuracy % (Option A)
-    /* ── v2.7 Field Inventory levers ── */
-    repeatVisitsYr:      g('repeatVisitsYr'),
-    costPerTruckRoll:    g('costPerTruckRoll'),
-    mFirstFix:           metricPct('m_firstfix', 'firstFix'),
-    fieldTechs:          g('fieldTechs'),
-    addedJobsPerDay:     g('addedJobsPerDay'),
-    revenuePerJob:       g('revenuePerJob'),
-    workingDaysYr:       g('workingDaysYr') || 0,
-    mUtilization:        metricPct('m_utilization', 'utilization'),
-    fieldInventoryValue: g('fieldInventoryValue'),
-    fieldLeakagePct:     g('fieldLeakagePct') / 100,
-    mLeakage:            metricPct('m_leakage', 'leakage'),
+    explicitRecoveryInputs: Array.isArray(window._explicitRecoveryInputs) ? window._explicitRecoveryInputs.slice() : [],
+    /* ── Field inventory levers (opt-in) ── */
+    /* The customer flag is the source of truth. The visible switch mirrors it;
+       keeping this independent from the selected product prevents MEP/CIP from
+       silently adding or removing value drivers. */
+    hasFieldInventory:   window._hasFieldInventory === true,
+    fieldInvValue:       g('fieldInvValue'),
+    fieldLeakageRate:    g('fieldLeakageRate'),
+    mFieldLeakage:       g('mFieldLeakage') / 100,
+    fieldLocations:      g('fieldLocations'),
+    fieldReconcileCost:  g('fieldReconcileCost'),
+    fieldReconcilePerYr: g('fieldReconcilePerYr'),
+    fieldReconcilePersonHours: g('fieldReconcilePersonHours'),
+    mFieldCount:         g('mFieldCount') / 100,
     /* ── v2.6 WMS levers ── */
     ordersPerYr:         g('ordersPerYr'),
     costPerOrder:        g('costPerOrder'),
@@ -311,12 +382,19 @@ function getVals() {
     mDowntime:           metricPct('m_downtime', 'downtime'),
     expediteSpendYr:     g('expediteSpendYr'),
     mExpedite:           metricPct('m_expedite', 'expedite'),
+    servicePenaltyCostYr:g('servicePenaltyCostYr'),
+    mServicePenalty:     metricPct('m_servicePenalty', 'servicePenalty'),
+    lostSalesYr:         g('lostSalesYr'),
+    contributionMarginPct:g('contributionMarginPct') / 100,
+    repeatVisitsYr:      g('repeatVisitsYr'),
+    costPerTruckRoll:    g('costPerTruckRoll'),
+    mFirstFix:           metricPct('m_firstFix', 'firstFix'),
     countDaysYr:         g('countDaysYr'),
     countPeople:         g('countPeople'),
     mCount:              metricPct('m_count', 'count'),
     implMonths, ramp1, ramp2, ramp3,
-    prospectLogoDataUrl: prospectLogoDataUrl,
-    confidence: [...confirmedFields]
+    prospectLogoDataUrl: (typeof prospectLogoDataUrl !== 'undefined') ? prospectLogoDataUrl : null,
+    confidence: (typeof confirmedFields !== 'undefined') ? [...confirmedFields] : []
   };
 }
 
@@ -328,20 +406,8 @@ function getVals() {
 /* ════════════════════════════════════════
    Formatters
    ════════════════════════════════════════ */
-function fmt(n) {
-  if (typeof moneyAbbrev === 'function') return moneyAbbrev(n);
-  if (n===null||n===undefined||isNaN(n)) return '—';
-  const abs=Math.abs(Math.round(n));
-  if (abs>=1000000) return (n<0?'-$':'$')+(abs/1000000).toFixed(1).replace(/\.0$/,'')+'M';
-  if (abs>=10000)   return (n<0?'-$':'$')+Math.round(abs/1000)+'K';
-  return (n<0?'-$':'$')+abs.toLocaleString();
-}
-function fmtFull(n) {
-  if (typeof moneyFull === 'function') return moneyFull(n);
-  if (n===null||isNaN(n)) return '—';
-  return (n<0?'-$':'$')+Math.abs(Math.round(n)).toLocaleString();
-}
-function fmtPct(n) { return Math.round(n)+'%'; }
+/* fmt, fmtFull, fmtPct now live in format-utils.js (loaded before app.js),
+   shared with narrative.js and the PDF print page. */
 function rClass(n) { if (!n&&n!==0) return 'r-neu'; return n>0?'r-pos':n<0?'r-neg':'r-neu'; }
 function lbClass(n) { return n>=0?'pos':'neg'; }
 
@@ -409,10 +475,24 @@ function recalc() {
   }
 
   const lb=(id,val,cls)=>{ const e=el(id); if(!e)return; e.textContent=val; e.className='lb-value '+cls; };
-  lb('lb-benefit', fmt(r.annualBenefit), lbClass(r.annualBenefit));
-  lb('lb-roi',     r.roi?fmtPct(r.roi):'—', lbClass(r.roi));
-  lb('lb-npv3',    fmt(r.npv3), lbClass(r.npv3));
-  lb('lb-npv5',    fmt(r.npv5), lbClass(r.npv5));
+  /* Gate the headline KPIs: they read $0 / 0% until a customer is selected AND
+     meaningful inputs have been entered (or a saved scenario is loaded). This
+     avoids showing live numbers for an empty, customer-less exploratory form. */
+  const _companySelected = !!(v.company && v.company.trim() && v.company.trim() !== 'Prospect');
+  const _hasInputs = (v.revenue>0 || v.users>0 || v.inventory>0 || v.labor>0 || v.invest>0 || v.otc>0);
+  const _kpiLive = window._scenarioLoaded === true || (_companySelected && _hasInputs);
+  if (!_kpiLive) {
+    lb('lb-benefit', fmt(0), lbClass(0));
+    lb('lb-roi',     '0%', lbClass(0));
+    lb('lb-npv3',    fmt(0), lbClass(0));
+    lb('lb-npv5',    fmt(0), lbClass(0));
+  } else {
+    lb('lb-benefit', fmt(r.annualBenefit), lbClass(r.annualBenefit));
+    lb('lb-roi',     r.totalContractRoi===null?'—':fmtPct(r.totalContractRoi), lbClass(r.totalContractRoi));
+    lb('lb-npv3',    fmt(r.totalContractNetBenefit), lbClass(r.totalContractNetBenefit));
+    lb('lb-npv5',    fmt(r.totalContractNpv), lbClass(r.totalContractNpv));
+    const roiLabel = el('lb-roi-label'); if (roiLabel) roiLabel.textContent = `Total ${r.contractMonths}-month ROI`;
+  }
 
   const paySignStr  = r.paybackFromSigning  === null ? '—' : r.paybackFromSigning  >= 60 ? '60+ mo' : r.paybackFromSigning.toFixed(1)  + ' mo';
   const payLiveStr  = r.paybackFromGoLive   === null ? '—' : r.paybackFromGoLive   >= 60 ? '60+ mo' : r.paybackFromGoLive.toFixed(1)   + ' mo';
@@ -424,16 +504,46 @@ function recalc() {
   if (el('roiGrid')) el('roiGrid').innerHTML = `
     <div class="result-card r-hero"><div class="r-label">Annual benefit (steady-state)</div><div class="r-value">${fmtFull(r.annualBenefit)}</div></div>
     <div class="result-card ${rClass(r.netY1)}"><div class="r-label">Net benefit year 1${rampNote ? '<br><span style="font-size:10px;font-weight:400;opacity:.8">'+rampNote+'</span>' : ''}</div><div class="r-value">${fmtFull(r.netY1)}</div></div>
-    <div class="result-card r-blue"><div class="r-label">Year 1 ROI</div><div class="r-value">${fmtPct(r.roi)}</div></div>
-    <div class="result-card r-neu"><div class="r-label">Payback from signing<br><span style="font-size:10px;font-weight:400;color:var(--gray-400)">From go-live: ${payLiveStr}</span></div><div class="r-value">${paySignStr}</div></div>
-    <div class="result-card ${rClass(r.npv3)}"><div class="r-label">3-yr NPV (${fmtPct(v.discRate*100)})</div><div class="r-value">${fmtFull(r.npv3)}</div></div>
-    <div class="result-card ${rClass(r.npv5)}"><div class="r-label">5-yr NPV (${fmtPct(v.discRate*100)})</div><div class="r-value">${fmtFull(r.npv5)}</div></div>
-    <div class="result-card r-pos" title="Users × labor cost × productivity gain %"><div class="r-label">Labor savings</div><div class="r-value">${fmtFull(r.laborSav)}</div></div>
+    <div class="result-card r-blue"><div class="r-label">Total ${r.contractMonths}-month contract ROI</div><div class="r-value">${fmtPct(r.totalContractRoi)}</div></div>
+    <div class="result-card ${rClass(r.totalContractNetBenefit)}"><div class="r-label">Total contract net benefit</div><div class="r-value">${fmtFull(r.totalContractNetBenefit)}</div></div>
+    <div class="result-card r-neu"><div class="r-label">Payback from signing</div><div class="r-value">${r.contractPayback===null?'Not in term':r.contractPayback.toFixed(1)+' mo'}</div></div>
+    <div class="result-card ${rClass(r.totalContractNpv)}"><div class="r-label">Contract NPV (${fmtPct(v.discRate*100)})</div><div class="r-value">${fmtFull(r.totalContractNpv)}</div></div>
+    <div class="result-card r-pos" title="Economic value of recovered capacity; cashable only when overtime, contractors, or headcount cost is avoided"><div class="r-label">Labor capacity value</div><div class="r-value">${fmtFull(r.laborSav)}</div></div>
     <div class="result-card r-pos" title="Write-off baseline (${fmtFull(v.effectiveShrinkBase)}) × ${fmtPct(v.mShrinkage*100)} reduction"><div class="r-label">Write-off reduction</div><div class="r-value">${fmtFull(r.shrinkSav)}</div></div>
-    <div class="result-card r-pos" title="Overlap-corrected carry base × ${fmtPct(v.mCarrying*100)}${r.overlapAdj > 100 ? ' (adj. -'+fmtFull(r.overlapAdj)+' overlap)' : ''}"><div class="r-label">Carrying cost savings</div><div class="r-value">${fmtFull(r.carrySav)}</div></div>
-    ${r.turnsSav > 0 ? `<div class="result-card r-pos" title="Freed capital (${fmtFull(r.capitalFreed)}) × carry rate — overlap-corrected"><div class="r-label">Turns: capital freed</div><div class="r-value">${fmtFull(r.turnsSav)}</div></div>` : ''}
+    <div class="result-card r-pos" title="Incremental carrying-cost benefit after removing overlap with turns"><div class="r-label">Additional carrying-cost savings</div><div class="r-value">${fmtFull(r.carrySav)}</div></div>
+    ${r.turnsSav > 0 ? `<div class="result-card r-pos" title="Annual carrying-cost avoidance on ${fmtFull(r.capitalFreed)} of working capital identified"><div class="r-label">Turns: annual carrying savings</div><div class="r-value">${fmtFull(r.turnsSav)}</div></div>` : ''}
+    ${r.capitalFreed > 0 ? `<div class="result-card r-neu" title="Balance-sheet opportunity; not added directly to annual ROI"><div class="r-label">Working capital identified</div><div class="r-value">${fmtFull(r.capitalFreed)}</div></div>` : ''}
     <div class="result-card r-blue" title="${v.otifBaseline > 0 && v.otifTarget > 0 ? 'OTIF gap '+v.otifBaseline+'%→'+v.otifTarget+'% × revenue × improvement' : 'Revenue × at-risk % assumption'}"><div class="r-label">OTIF protection</div><div class="r-value">${fmtFull(r.otifSav)}</div></div>
     <div class="result-card r-pos"><div class="r-label">IT displaced</div><div class="r-value">${fmtFull(r.itSav)}</div></div>`;
+
+  const contractEl = el('contractEconomics');
+  if (contractEl && Array.isArray(r.contractYears)) {
+    const heads = r.contractYears.map(y => `<th>Year ${y.year}${y.months<12?`<br><small>${y.months} months</small>`:''}</th>`).join('');
+    const cells = (key, formatter, cls) => r.contractYears.map(y => `<td class="${cls?cls(y[key]):''}">${formatter(y[key])}</td>`).join('');
+    contractEl.innerHTML = `<div class="contract-economics card">
+      <div class="contract-summary-head"><div><div class="card-title">Complete ${r.contractMonths}-month contract economics</div><div class="field-hint">Annual, cumulative, and total-contract views use the same implementation and ramp assumptions.</div></div><div class="contract-term-pill">${r.contractMonths} months</div></div>
+      <div class="contract-total-grid">
+        <div><span>Total contract benefit</span><strong>${fmtFull(r.totalContractBenefit)}</strong></div>
+        <div><span>Total investment</span><strong>${fmtFull(r.totalContractInvestment)}</strong></div>
+        <div><span>Net economic benefit</span><strong>${fmtFull(r.totalContractNetBenefit)}</strong></div>
+        <div class="contract-total-roi"><span>Total contract ROI</span><strong>${fmtPct(r.totalContractRoi)}</strong></div>
+        <div><span>Payback</span><strong>${r.contractPayback===null?'Not achieved in term':r.contractPayback.toFixed(1)+' months'}</strong></div>
+      </div>
+      <div class="contract-table-wrap"><table class="contract-table"><thead><tr><th class="left">Annual economics</th>${heads}</tr></thead><tbody>
+        <tr><td class="left">Gross benefit</td>${cells('grossBenefit',fmtFull)}</tr>
+        <tr><td class="left">Investment</td>${cells('investment',fmtFull)}</tr>
+        <tr><td class="left">Net benefit</td>${cells('netBenefit',fmtFull,x=>x>=0?'pos':'neg')}</tr>
+        <tr><td class="left">Annual ROI</td>${cells('annualRoi',fmtPct)}</tr>
+        <tr><td class="left">Payback status</td>${cells('paybackStatus',x=>x)}</tr>
+      </tbody></table></div>
+      <div class="contract-table-wrap"><table class="contract-table"><thead><tr><th class="left">Cumulative economics</th>${heads}</tr></thead><tbody>
+        <tr><td class="left">Cumulative benefit</td>${cells('cumulativeBenefit',fmtFull)}</tr>
+        <tr><td class="left">Cumulative investment</td>${cells('cumulativeInvestment',fmtFull)}</tr>
+        <tr><td class="left">Cumulative net benefit</td>${cells('cumulativeNetBenefit',fmtFull,x=>x>=0?'pos':'neg')}</tr>
+        <tr><td class="left">Cumulative ROI</td>${cells('cumulativeRoi',fmtPct)}</tr>
+      </tbody></table></div>
+    </div>`;
+  }
 
   // Implementation hint — always show
   const implHint = el('implHint');
@@ -473,36 +583,153 @@ function recalc() {
 
   if (typeof autoFlagConfidence === 'function') autoFlagConfidence();
   if (typeof renderConfidence  === 'function') renderConfidence();
+  /* roiGrid was just rebuilt via innerHTML, which drops the guided number
+     badge — restamp it if guided mode is active. */
+  if (typeof isGuidedOn === 'function' && isGuidedOn() && typeof stampSectionNumbers === 'function') {
+    stampSectionNumbers(true);
+  }
 }
 
 /* ════════════════════════════════════════
    Competitive tab
    ════════════════════════════════════════ */
-function renderComp() {
-  const key = gs('compSelect') || gs('competitor');
+/* LEGACY_CURATED_COMPETITIVE_CONTENT compatibility renderer. Persistent
+   competitive-intelligence-v662.js is the only active screen authority. */
+function legacyRenderCompFilter() {
+  /* Rebuild the competitor dropdown based on selected solution */
+  const sol = (document.getElementById('compSolutionFilter') || {}).value || 'cip';
+  const sel = document.getElementById('compSelect');
+  if (!sel || typeof COMP === 'undefined') return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">\u2014 Select competitor \u2014</option>';
+  Object.entries(COMP).forEach(function([key, c]) {
+    if (!c.solution || c.solution === sol) {
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = c.name;
+      sel.appendChild(opt);
+    }
+  });
+  /* Restore previous selection if still valid */
+  if (prev && sel.querySelector('option[value="' + prev + '"]')) {
+    sel.value = prev;
+  } else {
+    sel.value = '';
+  }
+  legacyRenderComp();
+}
+
+function legacyRenderComp() {
+  const key = (document.getElementById('compSelect') || {}).value || gs('compSelect') || gs('competitor');
   const el  = document.getElementById('compContent');
-  if (!key) { el.innerHTML='<div class="empty-state"><p>Select a competing solution above.</p></div>'; return; }
+  const pdfBtn  = document.getElementById('compPdfBtn');
+  const docxBtn = document.getElementById('compDocxBtn');
+
+  if (!key) {
+    if (el) el.innerHTML = '<div class="empty-state"><p>Select a competing solution above to load the battlecard and talking points.</p></div>';
+    if (pdfBtn)  pdfBtn.style.display  = 'none';
+    if (docxBtn) docxBtn.style.display = 'none';
+    return;
+  }
+
   const c = COMP[key];
-  if (gs('competitor') !== key) document.getElementById('competitor').value = key;
-  el.innerHTML = `
-    <div class="comp-header-card">
-      <div class="comp-header-name">${c.name}</div>
-      <div class="comp-meta-row">
-        <div class="comp-meta-item"><div class="cm-label">Typical cost</div><div class="cm-value">${c.cost}</div></div>
-        <div class="comp-meta-item"><div class="cm-label">Time to value</div><div class="cm-value">${c.time}</div></div>
-        <div class="comp-meta-item"><div class="cm-label">Ongoing maintenance</div><div class="cm-value">${c.maint}</div></div>
-      </div>
-    </div>
-    <div class="comp-two">
-      <div class="comp-list-card pain">
-        <div class="comp-list-title">Pain points with ${c.name}</div>
-        ${c.pain.map(p=>`<div class="comp-row"><i class="comp-icon">✗</i><span>${p}</span></div>`).join('')}
-      </div>
-      <div class="comp-list-card adv">
-        <div class="comp-list-title">Cloud Inventory advantages</div>
-        ${c.adv.map(a=>`<div class="comp-row"><i class="comp-icon">✓</i><span>${a}</span></div>`).join('')}
-      </div>
-    </div>`;
+  if (!c) return;
+  /* Sync hidden competitor field used by exec view */
+  const compHidden = document.getElementById('competitor');
+  if (compHidden && gs('competitor') !== key) compHidden.value = key;
+  if (pdfBtn)  pdfBtn.style.display  = 'inline-flex';
+  if (docxBtn) docxBtn.style.display = 'inline-flex';
+
+  const TALK_TRACKS = {
+    sap:        '\u201cMost SAP shops we talk to are spending 20%+ of their WMS budget just keeping the system running \u2014 consultants, customizations, and upgrade projects that never quite end. Cloud Inventory gives you the same inventory control with zero ABAP and a fraction of the maintenance cost. Our last SAP displacement went live in 11 weeks.\u201d',
+    rf:         '\u201cRF-gun systems were built for a world where warehouses didn\u2019t move. Your team is managing field inventory on clipboards and radio calls, which means your shrinkage numbers are really just guesses. We give you real-time visibility across every truck, van, and job site \u2014 same platform as the warehouse.\u201d',
+    oracle:     '\u201cOracle WMS is a serious product, but it\u2019s engineered for Oracle shops. The moment you\u2019re connecting to a non-Oracle ERP or you want your field teams on mobile, the integration cost explodes. We\u2019re ERP-agnostic, API-first, and we deploy in months, not years.\u201d',
+    excel:      '\u201cSpreadsheets are really a hidden cost center \u2014 we typically find $80K to $200K a year in labor waste just from reconciliation, write-offs, and the time it takes to answer \u2018where is this inventory right now?\u2019 The ROI math is usually under six months, which is why this tends to be an easy buy-in.\u201d',
+    erp:        '\u201cERP inventory modules are great at recording transactions, but they\u2019re not designed for execution \u2014 no directed put-away, limited scanning, and zero support for field inventory. We sit on top of your ERP and handle the execution layer it was never built for.\u201d',
+    mep_lowcode:'\u201cLow-code platforms give you a blank canvas \u2014 which sounds good until you realize someone has to build and maintain every single workflow. MEP is purpose-built for governed enterprise workflow mobilization. No-code configuration, offline-first, and ERP-connected out of the box. Most of our customers are live in weeks, not quarters.\u201d',
+    mep_rfgen:  '\u201cRFgen is evaluated as a distinct product. Validate its current ERP, workflow, and offline capabilities from governed sources before positioning MEP.\u201d',
+    mep_rfsmart:'\u201cRF-SMART is evaluated as a distinct product. Validate current product-specific evidence before positioning MEP.\u201d',
+    other:      '\u201cMost WMS platforms were built to be configured once and frozen. If your business changes \u2014 new sites, new workflows, new ERP \u2014 you\u2019re back in a services engagement. We\u2019re no-code and cloud-native, so your team can adapt the system without calling us.\u201d'
+  };
+  const talk = TALK_TRACKS[key] || '';
+
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function listItems(arr) {
+    return (arr||[]).map(function(x){ return '<li>' + esc(x) + '</li>'; }).join('');
+  }
+
+  /* Determine product label */
+  const isMEP = c.solution === 'mep';
+  const productLabel = isMEP ? 'Mobile Enterprise Platform (MEP)' : 'Cloud Inventory Platform (CIP)';
+
+  el.innerHTML =
+    '<div class="comp-card">'
+    + '<div class="comp-card-head">'
+    +   '<div>'
+    +     '<span class="comp-card-name">' + esc(c.name) + '</span>'
+    +     '<span class="comp-product-tag">' + esc(productLabel) + '</span>'
+    +   '</div>'
+    +   '<span class="comp-current-tag">Current solution</span>'
+    + '</div>'
+    + '<div class="comp-meta-strip">'
+    +   '<div class="comp-meta-cell"><div class="comp-meta-lbl">Typical cost</div><div class="comp-meta-val">' + esc(c.cost) + '</div></div>'
+    +   '<div class="comp-meta-cell"><div class="comp-meta-lbl">Time to value</div><div class="comp-meta-val">' + esc(c.time) + '</div></div>'
+    +   '<div class="comp-meta-cell"><div class="comp-meta-lbl">Ongoing maintenance</div><div class="comp-meta-val">' + esc(c.maint) + '</div></div>'
+    + '</div>'
+    + '<div class="comp-battle-grid">'
+    +   '<div class="comp-battle-col comp-pain-col">'
+    +     '<div class="comp-battle-head">'
+    +       '<div class="comp-battle-icon comp-battle-icon-pain">!</div>'
+    +       '<div><div class="comp-battle-title">Pain points with ' + esc(c.name) + '</div>'
+    +       '<div class="comp-battle-sub">What the prospect is living with today</div></div>'
+    +     '</div>'
+    +     c.pain.map(function(p){ return '<div class="comp-item"><div class="comp-dot comp-dot-pain">\u2715</div><div class="comp-item-text">' + esc(p) + '</div></div>'; }).join('')
+    +   '</div>'
+    +   '<div class="comp-battle-col comp-adv-col">'
+    +     '<div class="comp-battle-head">'
+    +       '<div class="comp-battle-icon comp-battle-icon-adv">\u2713</div>'
+    +       '<div><div class="comp-battle-title">Why Cloud Inventory wins</div>'
+    +       '<div class="comp-battle-sub">How we win this displacement</div></div>'
+    +     '</div>'
+    +     c.adv.map(function(a){ return '<div class="comp-item"><div class="comp-dot comp-dot-adv">\u2713</div><div class="comp-item-text">' + esc(a) + '</div></div>'; }).join('')
+    +   '</div>'
+    + '</div>'
+    + '</div>'
+
+    /* Discovery + context detail strip */
+    + '<div class="comp-detail-grid">'
+    +   (c.targetProfile ? '<div class="comp-detail-card"><div class="comp-detail-lbl">Target account profile</div><p class="comp-detail-text">' + esc(c.targetProfile) + '</p></div>' : '')
+    +   (c.targetBuyers  ? '<div class="comp-detail-card"><div class="comp-detail-lbl">Target buyers</div><p class="comp-detail-text">' + esc(c.targetBuyers) + '</p></div>' : '')
+    +   (c.compLandscape ? '<div class="comp-detail-card"><div class="comp-detail-lbl">Competitive landscape</div><p class="comp-detail-text">' + esc(c.compLandscape) + '</p></div>' : '')
+    +   (c.compReframe   ? '<div class="comp-detail-card"><div class="comp-detail-lbl">Competitive reframe</div><p class="comp-detail-text">' + esc(c.compReframe) + '</p></div>' : '')
+    + '</div>'
+
+    /* Discovery questions */
+    + ((c.discPrequalify||[]).length || (c.discQualify||[]).length ? '<div class="comp-disc-grid">'
+    +   (c.discPrequalify ? '<div class="comp-disc-col"><div class="comp-disc-head">Discovery \u2014 prequalify</div><ul class="comp-disc-list">' + listItems(c.discPrequalify) + '</ul></div>' : '')
+    +   (c.discQualify    ? '<div class="comp-disc-col"><div class="comp-disc-head">Discovery \u2014 qualify</div><ul class="comp-disc-list">' + listItems(c.discQualify) + '</ul></div>' : '')
+    + '</div>' : '')
+
+    /* Talk track */
+    + (talk
+      ? '<div class="comp-talk-track">'
+        + '<div class="comp-talk-label">Talk track</div>'
+        + '<div class="comp-talk-text" id="compTalkText">' + esc(talk) + '</div>'
+        + '<button class="btn btn-ghost btn-sm" id="compTalkCopyBtn" onclick="_copyCompTalk()">Copy talk track</button>'
+        + '</div>'
+      : '');
+}
+
+
+function _copyCompTalk() {
+  const el = document.getElementById('compTalkCopyBtn');
+  const text = (document.getElementById('compTalkText') || {}).textContent || '';
+  if (navigator.clipboard) navigator.clipboard.writeText(text).catch(function(){});
+  if (el) {
+    el.textContent = 'Copied!';
+    el.style.color = 'var(--green)';
+    setTimeout(function(){ el.textContent = 'Copy talk track'; el.style.color = ''; }, 2000);
+  }
 }
 
 /* ════════════════════════════════════════
@@ -530,20 +757,105 @@ function buildPreviewScenarioTable(baseV) {
       <table class="e-tbl" style="margin-bottom:.5rem;">
         <thead><tr>
           <th class="left">Metric</th>
-          <th style="background:#854F0B;">Conservative (70%)</th>
+          <th style="background:#A6791E;">Conservative (70%)</th>
           <th style="background:#0089A6;">Base (100%)</th>
           <th style="background:#2E7D32;">Aggressive (130%)</th>
         </tr></thead>
         <tbody>
-          <tr><td class="left">Annual benefit</td>${scenarios.map(s=>`<td class="pos">${fmtFull(s.r.annualBenefit)}</td>`).join('')}</tr>
-          <tr><td class="left">Year 1 ROI</td>${scenarios.map(s=>`<td style="font-weight:600;color:#0089A6;">${fmtPct(s.r.roi)}</td>`).join('')}</tr>
-          <tr><td class="left">Payback period</td>${scenarios.map(s=>`<td>${payStr(s.r.payback)}</td>`).join('')}</tr>
-          <tr><td class="left">3-yr NPV</td>${scenarios.map(s=>`<td class="${s.r.npv3>=0?'pos':'neg'}">${fmtFull(s.r.npv3)}</td>`).join('')}</tr>
-          <tr><td class="left">5-yr NPV</td>${scenarios.map(s=>`<td class="${s.r.npv5>=0?'pos':'neg'}">${fmtFull(s.r.npv5)}</td>`).join('')}</tr>
+          <tr><td class="left">Total ${baseV.contractMonths}-month benefit</td>${scenarios.map(s=>`<td class="pos">${fmtFull(s.r.totalContractBenefit)}</td>`).join('')}</tr>
+          <tr><td class="left">Total contract ROI</td>${scenarios.map(s=>`<td style="font-weight:600;color:#0089A6;">${fmtPct(s.r.totalContractRoi)}</td>`).join('')}</tr>
+          <tr><td class="left">Payback period</td>${scenarios.map(s=>`<td>${payStr(s.r.contractPayback)}</td>`).join('')}</tr>
+          <tr><td class="left">Contract net benefit</td>${scenarios.map(s=>`<td class="${s.r.totalContractNetBenefit>=0?'pos':'neg'}">${fmtFull(s.r.totalContractNetBenefit)}</td>`).join('')}</tr>
+          <tr><td class="left">Contract NPV</td>${scenarios.map(s=>`<td class="${s.r.totalContractNpv>=0?'pos':'neg'}">${fmtFull(s.r.totalContractNpv)}</td>`).join('')}</tr>
         </tbody>
       </table>
       <p class="e-footnote">Conservative = 70% of base improvement %; Aggressive = 130%. Investment costs are fixed across all three scenarios.</p>
     </div>`;
+}
+
+/* ── Three Whys UI helpers (v5.5.1) ── */
+
+function setExecAudience(chip, val) {
+  /* Sync pill chips with the hidden select */
+  document.querySelectorAll('.whys-aud-chip').forEach(function(c){ c.classList.remove('active'); });
+  if (chip) chip.classList.add('active');
+  const sel = document.getElementById('execAudience');
+  if (sel) { sel.value = val; }
+  if (typeof refreshExec === 'function') refreshExec();
+}
+
+function _whysUpdateComp() {
+  const ids = ['why_act','why_ci','why_now'];
+  const filled = ids.filter(function(id){
+    const el = document.getElementById(id);
+    return el && el.value.trim().length > 15;
+  }).length;
+  const pct = Math.round(filled / ids.length * 100);
+  const fill = document.getElementById('whysCompFill');
+  const pctEl = document.getElementById('whysCompPct');
+  if (fill) fill.style.width = pct + '%';
+  if (pctEl) pctEl.textContent = pct + '%';
+}
+
+function _whysMicToggle(fieldId, btnId) {
+  /* Use existing SFDictation if available; otherwise degrade gracefully */
+  const field = document.getElementById(fieldId);
+  const btn   = document.getElementById(btnId);
+  if (!field || !btn) return;
+  if (typeof SFDictation !== 'undefined' && SFDictation.supported) {
+    /* Ensure the field is enhanced (idempotent) then trigger click on its dictate-btn */
+    SFDictation.enhance(field);
+    const dictBtn = field.closest('.dictate-wrap') && field.closest('.dictate-wrap').querySelector('.dictate-btn');
+    if (dictBtn) { dictBtn.click(); return; }
+  }
+  /* Fallback: toggle the visual state and show a toast */
+  if (btn.classList.contains('dictating')) {
+    btn.classList.remove('dictating');
+  } else {
+    btn.classList.add('dictating');
+    if (typeof showToast === 'function') showToast('Voice input requires Chrome or Edge with microphone permission.');
+    setTimeout(function(){ btn.classList.remove('dictating'); }, 2000);
+  }
+}
+
+function _execPopulateSidebar(valueRows, annualBenefit, monthlyInaction) {
+  /* Value breakdown sidebar card */
+  const bodyEl   = document.getElementById('execSideBreakdown');
+  const totalEl  = document.getElementById('execSideTotal');
+  const totalVal = document.getElementById('execSideTotalVal');
+  if (bodyEl && valueRows && valueRows.length > 0) {
+    const maxVal = Math.max.apply(null, valueRows.map(function(r){ return r.val; }).concat([1]));
+    const colors = ['#0089A6','#2E7D32','#12786F','#A6791E','#6A4C93','#45688A'];
+    bodyEl.innerHTML = valueRows.map(function(row, i) {
+      return '<div class="exec-side-bar-row">'
+        + '<span class="exec-side-bar-lbl">' + (row.label.length > 16 ? row.label.slice(0,16) + '…' : row.label) + '</span>'
+        + '<div class="exec-side-bar-track"><div class="exec-side-bar-fill" style="width:' + Math.round(row.val/maxVal*100) + '%;background:' + (colors[i]||colors[0]) + ';"></div></div>'
+        + '<span class="exec-side-bar-val">' + (typeof fmtFull === 'function' ? fmtFull(row.val) : '$-') + '</span>'
+        + '</div>';
+    }).join('');
+    if (totalEl) totalEl.style.display = 'flex';
+    if (totalVal) totalVal.textContent = typeof fmtFull === 'function' ? fmtFull(annualBenefit) : '';
+  }
+
+  /* Cost of inaction sidebar card */
+  const inEl = document.getElementById('execSideInaction');
+  const inCard = document.getElementById('execInactionCard');
+  if (inEl && inCard && monthlyInaction > 0) {
+    const fmt = typeof fmtFull === 'function' ? fmtFull : function(v){ return '$' + Math.round(v/1000) + 'K'; };
+    inEl.innerHTML = '<div class="exec-ia-cell"><div class="exec-ia-period">Per month</div>'
+      + '<div class="exec-ia-cost">' + fmt(monthlyInaction) + '</div>'
+      + '<div class="exec-ia-note">foregone value</div></div>'
+      + '<div class="exec-ia-cell hi"><div class="exec-ia-period">6-month delay</div>'
+      + '<div class="exec-ia-cost">' + fmt(monthlyInaction * 6) + '</div>'
+      + '<div class="exec-ia-note">typical eval</div></div>'
+      + '<div class="exec-ia-cell"><div class="exec-ia-period">12 months</div>'
+      + '<div class="exec-ia-cost">' + fmt(annualBenefit) + '</div>'
+      + '<div class="exec-ia-note">full year lost</div></div>';
+    inCard.style.display = 'block';
+  }
+
+  /* Sync completeness bar on render */
+  _whysUpdateComp();
 }
 
 function renderExec() {
@@ -570,28 +882,88 @@ function renderExec() {
   const r = calcROI(v);
   const indLabel = v.industry&&IND[v.industry] ? IND[v.industry].label : '—';
   const today = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
-  const comp = v.competitor ? COMP[v.competitor] : null;
+  /* Competitive claims are intentionally excluded from customer-facing
+     executive outputs unless governed evidence is explicitly supplied. */
+  const comp = null;
 
+  const DC = (typeof DRIVER_CHART_COLORS !== 'undefined') ? DRIVER_CHART_COLORS : ['#0089A6','#2E7D32','#12786F','#A6791E','#6A4C93','#45688A'];
   const valueRows=[
-    {label:'Labor & productivity savings',  val:r.laborSav,  color:'#0089A6'},
-    {label:'Shrinkage / write-off reduction',val:r.shrinkSav,color:'#2E7D32'},
-    {label:'Inventory carrying cost reduction',val:r.carrySav,color:'#0F6E56'},
-    {label:'OTIF / order accuracy improvement',val:r.otifSav, color:'#854F0B'},
-    {label:'Inventory turns — capital freed', val:r.turnsSav, color:'#6B3FA0'},
-    {label:'IT & legacy system displacement', val:r.itSav,   color:'#3C3489'}
+    {label:'Labor capacity value',           val:r.laborSav,  color:DC[0]},
+    {label:'Shrinkage / write-off reduction',val:r.shrinkSav,color:DC[1]},
+    {label:'Inventory carrying cost reduction',val:r.carrySav,color:DC[2]},
+    {label:'OTIF / order accuracy improvement',val:r.otifSav, color:DC[3]},
+    {label:'Inventory turns — annual carrying savings', val:r.turnsSav, color:DC[4]},
+    {label:'IT & legacy system displacement', val:r.itSav,   color:DC[5]}
   ].filter(row => row.val > 0).sort((a,b) => b.val - a.val);
   const maxVal=Math.max(...valueRows.map(x=>x.val),1);
 
+  const totalVal = valueRows.reduce((s,row) => s + row.val, 0) || 1;
   const bars=valueRows.map(row=>`
     <div class="e-bar-row">
       <span class="e-bar-lbl">${row.label}</span>
       <div class="e-bar-track"><div class="e-bar-fill" style="width:${Math.round((row.val/maxVal)*100)}%;background:${row.color};"></div></div>
+      <span class="e-bar-pct" style="color:${row.color};">${Math.round(row.val/totalVal*100)}%</span>
       <span class="e-bar-val">${fmtFull(row.val)}</span>
     </div>`).join('');
 
   const paySignStr = r.paybackFromSigning===null?'—':r.paybackFromSigning>=60?'60+ mo':r.paybackFromSigning.toFixed(1)+' mo';
   const payLiveStr = r.paybackFromGoLive===null?'—':r.paybackFromGoLive>=60?'60+ mo':r.paybackFromGoLive.toFixed(1)+' mo';
   const year1Pct   = Math.round(r.year1Factor*100);
+
+  /* ── Provenance: count prospect-verified vs rep-entered answers ── */
+  const da = (typeof discoveryAnswers !== 'undefined') ? discoveryAnswers : {};
+  const daKeys = Object.keys(da).filter(k => !k.endsWith('_by'));
+  const daAnswered = daKeys.filter(k => da[k] && String(da[k]).trim());
+  const daProspect = daKeys.filter(k => da[k + '_by'] === 'prospect' && da[k]);
+  const daRep      = daKeys.filter(k => da[k + '_by'] === 'rep' && da[k]);
+  const prospectPct = daAnswered.length ? Math.round(daProspect.length / daAnswered.length * 100) : 0;
+  const hasProvenanceData = daAnswered.length > 0;
+
+  const provenanceBanner = hasProvenanceData ? `
+    <div class="e-provenance-banner">
+      <div class="e-prov-icon">🔍</div>
+      <div class="e-prov-body">
+        <div class="e-prov-headline">
+          <strong>${daProspect.length} of ${daAnswered.length} inputs supplied directly by ${v.company || 'the prospect'}</strong>
+          — not vendor estimates.
+        </div>
+        <div class="e-prov-sub">
+          ${daProspect.length > 0 ? `${prospectPct}% of answered inputs were provided by the prospect's own team. ` : ''}${daRep.length > 0 ? `${daRep.length} figure${daRep.length !== 1 ? 's' : ''} entered by the Cloud Inventory rep. ` : ''}Documented model assumptions and approved benchmarks are used where applicable.
+          <span class="e-prov-link" onclick="switchTab('disc')">View sources →</span>
+        </div>
+      </div>
+      <div class="e-prov-chip ${prospectPct >= 50 ? 'e-prov-chip-high' : prospectPct >= 25 ? 'e-prov-chip-med' : 'e-prov-chip-low'}">
+        ${prospectPct}% prospect data
+      </div>
+    </div>` : '';
+
+  /* ── Cost of inaction ── */
+  /* Do not transform modeled annual benefit into a generic cost-of-delay
+     claim. Customer-facing urgency must come from confirmed narrative. */
+  const monthlyInaction = 0;
+  const inactionBlock = r.annualBenefit > 0 ? `
+    <div class="e-section e-inaction-section">
+      <div class="e-h2">Cost of delayed action</div>
+      <div class="e-inaction-lede">Every month without Cloud Inventory is a month these losses continue.</div>
+      <div class="e-inaction-grid">
+        <div class="e-inaction-card">
+          <div class="e-inaction-period">Per month</div>
+          <div class="e-inaction-cost">${fmtFull(monthlyInaction)}</div>
+          <div class="e-inaction-note">in recoverable value foregone</div>
+        </div>
+        <div class="e-inaction-card e-inaction-card-hi">
+          <div class="e-inaction-period">6-month delay</div>
+          <div class="e-inaction-cost">${fmtFull(monthlyInaction * 6)}</div>
+          <div class="e-inaction-note">typical evaluation-to-go-live cycle</div>
+        </div>
+        <div class="e-inaction-card">
+          <div class="e-inaction-period">12-month delay</div>
+          <div class="e-inaction-cost">${fmtFull(r.annualBenefit)}</div>
+          <div class="e-inaction-note">equivalent to a full year's benefit</div>
+        </div>
+      </div>
+      <div class="e-inaction-note-foot">Based on steady-state annual benefit of ${fmtFull(r.annualBenefit)}. Excludes compounding effects of improved inventory turns and reduced write-offs.</div>
+    </div>` : '';
 
   // Implementation proviso section for exec doc
   const implProvisoSection = v.implMonths > 0 || r.year1Factor < 0.99 ? `
@@ -606,7 +978,7 @@ function renderExec() {
             <div class="e-proviso-detail">No benefit accrues during implementation. Go-live in month ${v.implMonths+1}.</div>
           </div>
         </div>
-        <div class="e-proviso-card" style="border-left:4px solid #854F0B;">
+        <div class="e-proviso-card" style="border-left:4px solid #A6791E;">
           <div class="e-proviso-icon">📈</div>
           <div>
             <div class="e-proviso-label">Ramp-up to full efficiency</div>
@@ -628,12 +1000,12 @@ function renderExec() {
 
   // Overlap disclosure footnote
   const overlapNote = r.overlapAdj > 100
-    ? `A ${Math.round(OVERLAP_DEDUCTION*100)}% overlap deduction (${fmtFull(r.overlapAdj)}) has been applied to carrying cost savings to account for partial overlap with write-off reduction and inventory turns improvements. `
+    ? `${fmtFull(r.overlapAdj)} of overlapping carrying-cost estimates was removed; only the higher of the direct carrying-reduction and turns-based estimates is counted. `
     : '';
 
   const cfRows=r.cashflows.map(c=>`
     <tr>
-      <td class="left">Year ${c.yr}${c.isRamped ? ' <span style="font-size:9px;color:#854F0B;font-weight:600">(ramp-adjusted)</span>' : ''}</td>
+      <td class="left">Year ${c.yr}${c.isRamped ? ' <span style="font-size:9px;color:#A6791E;font-weight:600">(ramp-adjusted)</span>' : ''}</td>
       <td>${fmtFull(c.benefit)}</td>
       <td class="neg">(${fmtFull(c.invest)})</td>
       <td class="${c.net>=0?'pos':'neg'}">${fmtFull(c.net)}</td>
@@ -659,16 +1031,16 @@ function renderExec() {
     </div>`:'';
 
   // Proof points for exec doc
-  const proofPoints = (typeof PROOF_POINTS !== 'undefined' ? PROOF_POINTS[v.industry] : null) || [];
+  const proofPoints = window.selectedCustomerProofRecords || [];
   const proofSection = proofPoints.length?`
     <div class="e-section">
       <div class="e-h2">Customer results — ${indLabel}</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;">
         ${proofPoints.map(p=>`
           <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:.85rem;">
-            <div style="font-size:10px;font-weight:700;color:#1E2931;margin-bottom:4px;">${p.company}</div>
+            <div style="font-size:10px;font-weight:700;color:#1E2931;margin-bottom:4px;">${p.displayName}</div>
             <div style="font-size:11px;color:#334155;margin-bottom:4px;">${p.result}</div>
-            <div style="font-size:11px;font-weight:700;color:#2E7D32;">${p.metric}</div>
+            <div style="font-size:11px;font-weight:700;color:#2E7D32;">${p.metric}</div><div style="font-size:9px;color:#64748B;margin-top:5px;">Source: ${p.sourceDisplay}</div>
           </div>`).join('')}
       </div>
     </div>`:'';
@@ -684,7 +1056,7 @@ function renderExec() {
     ? `<div style="margin-top:1rem;display:flex;align-items:center;gap:12px;">
         <img src="${v.prospectLogoDataUrl}" style="height:32px;object-fit:contain;background:#fff;border-radius:4px;padding:2px 8px;" alt="Prospect logo"/>
         <span style="color:rgba(255,255,255,.4);font-size:14px;">×</span>
-        <img src="ci-logo-negative.png" style="height:28px;object-fit:contain;" alt="Cloud Inventory" onerror="this.style.display='none'"/>
+        <img src="${window.CIBrand.logo('logoNegative')}" style="height:28px;object-fit:contain;" alt="Cloud Inventory"/>
       </div>` : '';
 
   // Confidence indicator
@@ -700,18 +1072,20 @@ function renderExec() {
   document.getElementById('execDoc').innerHTML = `
   <div id="execPrintTarget">
     <div class="e-cover">
-      <img class="e-cover-logo" src="ci-logo-negative.png" alt="Cloud Inventory" onerror="this.style.display='none'"/>
+      <img class="e-cover-logo" src="${window.CIBrand.logo('logoNegative')}" alt="Cloud Inventory"/>
       <div class="e-tagline">Business Value Assessment</div>
       <div class="e-company">${v.company||'Your Company'}</div>
       <div class="e-sub">Cloud Inventory Platform &nbsp;·&nbsp; ${indLabel} &nbsp;·&nbsp; ${today}${v.rep?' &nbsp;·&nbsp; '+v.rep:''}</div>
       ${modeBadge}${prospectLogoHtml}${confNote}
     </div>
     <div class="e-kpis">
-      <div class="e-kpi"><div class="e-kv g">${fmtFull(r.annualBenefit)}</div><div class="e-kl">Annual benefit (steady-state)</div></div>
-      <div class="e-kpi"><div class="e-kv b">${fmtPct(r.roi)}</div><div class="e-kl">Year 1 ROI (ramp-adjusted)</div></div>
-      <div class="e-kpi"><div class="e-kv ${r.npv3>=0?'g':'r'}">${fmtFull(r.npv3)}</div><div class="e-kl">3-yr NPV (${fmtPct(v.discRate*100)})</div></div>
+      <div class="e-kpi"><div class="e-kv b">${fmtPct(r.totalContractRoi)}</div><div class="e-kl">Total ${r.contractMonths}-month contract ROI</div></div>
+      <div class="e-kpi"><div class="e-kv g">${fmtFull(r.totalContractNetBenefit)}</div><div class="e-kl">Net economic benefit</div></div>
+      <div class="e-kpi"><div class="e-kv ${r.totalContractNpv>=0?'g':'r'}">${fmtFull(r.totalContractNpv)}</div><div class="e-kl">Contract NPV (${fmtPct(v.discRate*100)})</div></div>
       <div class="e-kpi"><div class="e-kv">${paySignStr}</div><div class="e-kl">Payback from signing (${payLiveStr} from go-live)</div></div>
     </div>
+    ${provenanceBanner}
+    ${inactionBlock}
     <div class="e-body">
       <div class="e-section e-approach">
         <div class="e-approach-head">
@@ -725,14 +1099,14 @@ function renderExec() {
             <div class="e-approach-pd">Inputs captured through structured discovery of your actual metrics.</div>
           </div>
           <div class="e-approach-pillar">
-            <div class="e-approach-icon" style="background:#0F6E56;">◆</div>
+            <div class="e-approach-icon" style="background:#12786F;">◆</div>
             <div class="e-approach-pt">Decomposed value drivers</div>
             <div class="e-approach-pd">Benefit broken into independently-quantified drivers, each traceable to a metric.</div>
           </div>
           <div class="e-approach-pillar">
-            <div class="e-approach-icon" style="background:#854F0B;">◆</div>
+            <div class="e-approach-icon" style="background:#A6791E;">◆</div>
             <div class="e-approach-pt">Conservatively modeled</div>
-            <div class="e-approach-pd">Ramp-up, benchmark grounding, and overlap adjustments applied throughout.</div>
+            <div class="e-approach-pd">Ramp-up, documented Cloud Inventory model assumptions, approved benchmarks where applicable, and overlap adjustments are shown throughout.</div>
           </div>
           <div class="e-approach-pillar">
             <div class="e-approach-icon" style="background:#2E7D32;">◆</div>
@@ -749,23 +1123,16 @@ function renderExec() {
       <div class="e-section"><div class="e-h2">Annual value by category</div>
         <div class="e-driver-lede">Your value is decomposed into independently-quantified drivers, each traceable to a metric you provided and modeled conservatively.</div>
         ${bars}
-        <div class="e-bar-total"><span style="flex:1">Total annual value</span><span>${fmtFull(r.annualBenefit)}</span></div>
+        <div class="e-bar-total"><span>Total annual value</span><div></div><span style="color:var(--navy);">100%</span><span>${fmtFull(r.annualBenefit)}</span></div>
       </div>
       ${typeof buildExecInfographics === 'function' ? buildExecInfographics(r, v) : ''}
       <div class="e-section">
-        <div class="e-h2">5-year cash flow & NPV (discount rate: ${fmtPct(v.discRate*100)})</div>
-        <table class="e-tbl">
-          <thead><tr><th class="left">Year</th><th>Annual benefit</th><th>Total investment</th><th>Net cash flow</th><th>Present value</th><th>Cumulative NPV</th></tr></thead>
-          <tbody>
-            <tr class="otc-note"><td class="left">Year 0 — one-time costs</td><td></td><td class="neg">(${fmtFull(v.otc)})</td><td></td><td></td><td></td></tr>
-            ${cfRows}
-          </tbody>
-          <tfoot>
-            <tr class="tfoot-row"><td class="left">3-year total</td><td>${fmtFull(r.totalBenefit3)}</td><td class="neg">(${fmtFull(r.totalCost3)})</td><td class="${r.totalBenefit3-r.totalCost3>=0?'pos':'neg'}">${fmtFull(r.totalBenefit3-r.totalCost3)}</td><td></td><td class="${r.npv3>=0?'pos':'neg'}">${fmtFull(r.npv3)}</td></tr>
-            <tr class="tfoot-row"><td class="left">5-year total</td><td>${fmtFull(r.totalBenefit5)}</td><td class="neg">(${fmtFull(r.totalCost5)})</td><td class="${r.totalBenefit5-r.totalCost5>=0?'pos':'neg'}">${fmtFull(r.totalBenefit5-r.totalCost5)}</td><td></td><td class="${r.npv5>=0?'pos':'neg'}">${fmtFull(r.npv5)}</td></tr>
-          </tfoot>
-        </table>
-        <p class="e-footnote">${overlapNote}NPV discounts at ${fmtPct(v.discRate*100)}/yr. One-time costs (services: ${fmtFull(v.psvc)}, hardware: ${fmtFull(v.hw)}, training: ${fmtFull(v.train)}) are year-0 outflows. Year 1 benefit reflects ${year1Pct}% of steady-state due to ${v.implMonths}-month implementation and efficiency ramp.</p>
+        <div class="e-h2">Annual and cumulative ${r.contractMonths}-month contract economics</div>
+        <table class="e-tbl"><thead><tr><th class="left">Period</th><th>Gross benefit</th><th>Investment</th><th>Net benefit</th><th>Annual ROI</th><th>Cumulative net</th><th>Cumulative ROI</th><th>Payback status</th></tr></thead><tbody>
+          ${r.contractYears.map(y=>`<tr><td class="left">Year ${y.year}${y.months<12?' ('+y.months+' mo)':''}</td><td>${fmtFull(y.grossBenefit)}</td><td>${fmtFull(y.investment)}</td><td class="${y.netBenefit>=0?'pos':'neg'}">${fmtFull(y.netBenefit)}</td><td>${fmtPct(y.annualRoi)}</td><td class="${y.cumulativeNetBenefit>=0?'pos':'neg'}">${fmtFull(y.cumulativeNetBenefit)}</td><td>${fmtPct(y.cumulativeRoi)}</td><td>${y.paybackStatus}</td></tr>`).join('')}
+        </tbody><tfoot><tr class="tfoot-row"><td class="left">Total ${r.contractMonths}-month contract</td><td>${fmtFull(r.totalContractBenefit)}</td><td>${fmtFull(r.totalContractInvestment)}</td><td class="${r.totalContractNetBenefit>=0?'pos':'neg'}">${fmtFull(r.totalContractNetBenefit)}</td><td>—</td><td>${fmtFull(r.totalContractNetBenefit)}</td><td>${fmtPct(r.totalContractRoi)}</td><td>${r.contractPayback===null?'Not achieved in term':r.contractPayback.toFixed(1)+' months'}</td></tr></tfoot></table>
+        <div class="e-callout" style="margin-top:10px;"><strong>Contract NPV:</strong> ${fmtFull(r.totalContractNpv)} at ${fmtPct(v.discRate*100)} discount rate.</div>
+        <p class="e-footnote">${overlapNote}Labor productivity is presented as capacity value and becomes cash savings only when overtime, contractor, or headcount cost is avoided. OTIF value applies the stated realization rate to the revenue-risk gap; it is not booked as gross revenue. NPV discounts at ${fmtPct(v.discRate*100)}/yr. One-time costs (services: ${fmtFull(v.psvc)}, hardware: ${fmtFull(v.hw)}, training: ${fmtFull(v.train)}) are year-0 outflows. Benefits follow the configured implementation and monthly ramp across the full model horizon.</p>
       </div>
       <div class="e-section">
         <div class="e-h2">Investment summary</div>
@@ -777,7 +1144,7 @@ function renderExec() {
             <tr><td>Training & change management</td><td>One-time</td><td>${fmtFull(v.train)}</td></tr>
             <tr><td>Cloud Inventory annual subscription</td><td>Recurring/yr</td><td>${fmtFull(v.invest)}</td></tr>
           </tbody>
-          <tfoot><tr><td>Total year 1 investment</td><td></td><td>${fmtFull(r.totalInvestY1)}</td></tr></tfoot>
+          <tfoot><tr><td>Total ${r.contractMonths}-month investment</td><td></td><td>${fmtFull(r.totalContractInvestment)}</td></tr></tfoot>
         </table>
       </div>
       ${compSection}${proofSection}
@@ -792,7 +1159,7 @@ function renderExec() {
               <tr><td>Annual revenue</td><td>${fmtFull(v.revenue)}</td></tr>
               <tr><td>Inventory users</td><td>${Math.round(v.users).toLocaleString()}</td></tr>
               <tr><td>Avg. labor cost/user/yr</td><td>${fmtFull(v.labor)}</td></tr>
-              <tr><td>Annual inventory value</td><td>${fmtFull(v.inventory)}</td></tr>
+              <tr><td>Warehouse inventory value on hand</td><td>${fmtFull(v.inventory)}</td></tr>
               <tr><td>Current IT / legacy cost</td><td>${fmtFull(v.itCost)}</td></tr>
               <tr><td>Discount rate</td><td>${fmtPct(v.discRate*100)}</td></tr>
             </tbody>
@@ -800,10 +1167,10 @@ function renderExec() {
           <table class="e-assump-tbl">
             <thead><tr><th colspan="2">Benchmarks (${indLabel})</th></tr></thead>
             <tbody>
-              <tr><td>Labor productivity gain</td><td>${fmtPct(v.mLabor*100)}</td></tr>
+              <tr><td>Labor capacity recovered (cashable only when cost is avoided)</td><td>${fmtPct(v.mLabor*100)}</td></tr>
               <tr><td>Shrinkage reduction</td><td>${fmtPct(v.mShrinkage*100)}</td></tr>
               <tr><td>Carrying cost reduction</td><td>${fmtPct(v.mCarrying*100)}</td></tr>
-              <tr><td>OTIF improvement</td><td>${fmtPct(v.mOtif*100)}</td></tr>
+              <tr><td>OTIF value realization</td><td>${fmtPct(v.mOtif*100)}</td></tr>
               <tr><td>IT cost displaced</td><td>${fmtPct(v.mIt*100)}</td></tr>
               <tr><td>Shrinkage rate (baseline)</td><td>${fmtPct(v.shrinkRate*100)}</td></tr>
             </tbody>
@@ -812,12 +1179,21 @@ function renderExec() {
       </div>
       ${narrative.nextSection}
       <div class="e-footer">
-        <img class="e-footer-logo" src="ci-logo-full-color.png" alt="Cloud Inventory" onerror="this.style.display='none'"/>
-        <span class="e-footer-txt">Analysis uses industry benchmarks and prospect-supplied inputs. Actual results may vary. · cloudinventory.com</span>
+        <img class="e-footer-logo" src="${window.CIBrand.logo('logoColor')}" alt="Cloud Inventory"/>
+        <span class="e-footer-txt">Analysis uses customer-provided inputs supplemented by documented Cloud Inventory model assumptions and approved benchmarks where applicable. Actual results may vary. · cloudinventory.com</span>
       </div>
     </div>
   </div>`;
   trackEvent('exec_view', { company: v.company });
+
+  /* ── Populate the Three Whys sidebar cards ── */
+  _execPopulateSidebar(valueRows, r.annualBenefit, r.annualBenefit > 0 ? r.annualBenefit / 12 : 0);
+
+  /* ── Re-run SFDictation on the new textareas ── */
+  if (typeof SFDictation !== 'undefined' && SFDictation.supported) {
+    SFDictation.enhanceAll(document.getElementById('tab-exec'));
+  }
+  _whysUpdateComp();
 }
 
 /* ════════════════════════════════════════
@@ -841,14 +1217,29 @@ async function saveScenario() {
 
   const dataBlob = {
     ...v,
+    /* Three Whys are edited on the Exec view but aren't part of getVals(), so
+       capture them here — otherwise Save (incl. the Exec view's Save button)
+       would silently drop exec-view narrative edits. */
+    threeWhysAct: document.getElementById('why_act')?.value || '',
+    threeWhysCi:  document.getElementById('why_ci')?.value  || '',
+    threeWhysNow: document.getElementById('why_now')?.value || '',
     fieldStates:        typeof fieldStates !== 'undefined' ? { ...fieldStates } : {},
+    fieldProvenance:    typeof fieldProvenance !== 'undefined' ? { ...fieldProvenance } : {},
     annualBenefit:      r.annualBenefit,
     roi:                r.roi,
     npv3:               r.npv3,
     npv5:               r.npv5,
     payback:            r.payback,
     paybackFromSigning: r.paybackFromSigning,
-    year1Benefit:       r.year1Benefit
+    year1Benefit:       r.year1Benefit,
+    contractMonths:     r.contractMonths,
+    contractYears:      r.contractYears,
+    totalContractBenefit: r.totalContractBenefit,
+    totalContractInvestment: r.totalContractInvestment,
+    totalContractNetBenefit: r.totalContractNetBenefit,
+    totalContractRoi:   r.totalContractRoi,
+    totalContractNpv:   r.totalContractNpv,
+    contractPayback:    r.contractPayback
   };
 
   const existing = savedScenarios.find(s => s.company === v.company && s.name === v.name && s.isCurrent);
@@ -869,9 +1260,10 @@ async function _doSave(v, dataBlob, baseId, note) {
         company:      v.company,
         data:         dataBlob,
         industry:     v.industry     || null,
-        dealStage:    v.dealStage    || null,
         execAudience: v.execAudience || 'mixed',
-        solution:     v.solution     || 'all',
+        solution:     v.solution     || 'cip',
+        opportunityValue: v.opportunityValue,
+        opportunityValueCurrency: v.opportunityValueCurrency || v.currency,
         versionNote:  note           || null,
         baseId:       baseId         || null
       })
@@ -882,39 +1274,102 @@ async function _doSave(v, dataBlob, baseId, note) {
       return;
     }
     const saved = await resp.json();
+    window._opportunityValueOriginal=saved.opportunityProfile?.estimatedOpportunityValue??v.opportunityValue??null;
+    window._opportunityValueStoredCurrency=saved.opportunityProfile?.currency||v.opportunityValueCurrency||v.currency;
+    /* Saving creates a new immutable version. Subsequent Executive View
+       autosaves must target that new current row, not the version just left. */
+    window._calcScenarioId = saved.id;
+    window._scenarioLoaded = true;
     showToast(`Saved v${saved.version} — "${saved.name}"`);
+    /* Only now — after a confirmed successful save — is the form clean. */
+    if (typeof clearCalcDirty === 'function') clearCalcDirty();
     trackEvent('scenario_saved', { company: v.company, version: saved.version });
     await fetchScenarios();
+    if (typeof refreshCalcScenarioPicker === 'function') refreshCalcScenarioPicker();
   } catch(e) {
     console.error('_doSave error:', e.message);
     showToast('Save failed — check your connection.');
   }
 }
 
-async function loadScenario(id) {
+async function loadScenario(id, options = {}) {
   try {
-    let scenario = savedScenarios.find(x => x.id === id);
-    let inputs   = scenario?.inputs;
-    if (!inputs) {
-      const resp = await apiFetch('/api/scenarios/' + id);
-      if (!resp || !resp.ok) { showToast('Could not load scenario.'); return; }
-      const full = await resp.json();
-      inputs = full.data;
-      if (scenario) scenario.inputs = inputs;
+    /* Finish any pending narrative write against the scenario being left
+       before changing the active scenario id. */
+    if (window._calcScenarioId && typeof persistThreeWhys === 'function') {
+      await persistThreeWhys();
     }
+    if (typeof clearProposalContext === 'function') clearProposalContext();
+    let scenario = savedScenarios.find(x => x.id === id);
+    let inputs   = null;
+    let fullData = null;
+    /* Scenario selection must load the authoritative server record rather
+       than a possibly stale in-memory copy from an earlier customer view. */
+    const resp = await apiFetch('/api/scenarios/' + id);
+    if (!resp || !resp.ok) { showToast('Could not load scenario.'); return; }
+    fullData = await resp.json();
+    inputs = fullData.data;
+    window._roiModelVersion = Number(inputs && inputs.modelVersion) || 27;
+    window._explicitRecoveryInputs = Array.isArray(inputs && inputs.explicitRecoveryInputs) ? inputs.explicitRecoveryInputs.slice() : [];
+    window._currentBuyCycleStage=Number(fullData.currentBuyCycleStage||fullData.current_buy_cycle_stage||2);
+    window._currentBuyCycleStageLabel=fullData.currentBuyCycleStageLabel||fullData.deal_stage||'Stage 2 — Define Economic Consequences';
+    window._currentOpportunityOutcome=fullData.buy_cycle_outcome||null;
+    updateCurrentBuyCycleStageDisplay(true);
+    if (scenario) scenario.inputs = inputs;
+    await fetchScenarios();
     if (!inputs) { showToast('Scenario data not found.'); return; }
+    /* Establish scenario identity and its customer-level feature flags before
+       loadFromObject recalculates ROI. Previously the prior customer's flag
+       could be used for that first calculation; a later product selection then
+       exposed the corrected number and looked like the product changed ROI. */
+    window._calcScenarioId = id;
+    const cid = (scenario && scenario.customerId)
+             || (fullData && fullData.customer_id)
+             || (inputs && inputs.customerId)
+             || null;
+    if (typeof loadFieldInventoryFlag === 'function') {
+      if (cid) await loadFieldInventoryFlag(cid);
+      else {
+        window._hasFieldInventory = inputs.hasFieldInventory === true;
+        if (typeof applyFieldInventoryState === 'function') applyFieldInventoryState(window._hasFieldInventory);
+      }
+    }
+    window._loadingScenarioCurrency=true;
     if (typeof loadFromObject === 'function') loadFromObject(inputs);
+    window._loadingScenarioCurrency=false;
+    const profile=fullData.opportunityProfile||{};
+    const opportunity=document.getElementById('opportunityValue');
+    if(opportunity)opportunity.value=profile.estimatedOpportunityValue??'';
+    window._opportunityValueOriginal=profile.estimatedOpportunityValue??null;
+    window._opportunityValueStoredCurrency=profile.currency||inputs.currency||'USD';
+    if(typeof updateOpportunityValueCurrencyDisplay==='function')updateOpportunityValueCurrencyDisplay();
+    window._scenarioLoaded = true;
+    refreshRoiModelUpgradeControl();
+    if (typeof refreshCalcScenarioPicker === 'function') refreshCalcScenarioPicker();
+    /* Remember which customer this scenario belongs to, so the Solution Fit
+       tab can attach to it. */
+    window.currentScenarioCustomerId = cid;
+    window._sfSelectedCustomerId = cid;
+    if(cid&&(!window._activeCustomerMeta||window._activeCustomerMeta.id!==cid)){
+      try{const mr=await apiFetch('/api/customer-switcher?customerId='+encodeURIComponent(cid)+'&state=all&limit=1');if(mr&&mr.ok){const md=await mr.json();window._activeCustomerMeta=(md.items||[])[0]||null;window.applyCustomerPermissionMode?.(window._activeCustomerMeta);}}catch(_){}
+    }
     /* Reset + reattach discovery session to THIS scenario — prevents a
        prospect link from a previously-loaded customer being reused.    */
     if (typeof resetDiscoveryForScenario === 'function') await resetDiscoveryForScenario(id);
+    if (typeof loadAuthoritativeProposal === 'function') await loadAuthoritativeProposal(id);
+    if (typeof renderProofPoints === 'function') await renderProofPoints(inputs.industry);
     showToast('Loaded — "' + (scenario?.name || inputs.name || 'scenario') + '"');
-    switchTab('calc');
+    const targetTab = options.preserveWorkspace ? (options.targetTab || 'calc') : 'calc';
+    switchTab(targetTab);
     trackEvent('scenario_loaded', { company: inputs.company || '' });
+    return true;
   } catch(e) {
     console.error('loadScenario error:', e.message);
     showToast('Failed to load scenario.');
+    return false;
   }
 }
+window.loadScenario = loadScenario;
 
 async function deleteScenario(id) {
   const s = savedScenarios.find(x => x.id === id);
@@ -947,7 +1402,7 @@ function renderList() {
   const el = document.getElementById('scenarioList');
   if (!el) return;
   const current = savedScenarios.filter(s => s.isCurrent !== false);
-  const filtered = stageFilter ? current.filter(s => s.dealStage === stageFilter) : current;
+  const filtered = current.filter(s => scenarioMatchesStageFilter(s,stageFilter));
 
   if (!filtered.length) {
     el.innerHTML = '<div class="empty-state"><p>No scenarios saved yet. Build one in the Calculator.</p></div>';
@@ -957,7 +1412,6 @@ function renderList() {
 
   const initials    = n => n.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase()||'?';
   const payStr      = pb => pb===null?'—':pb>=60?'60+mo':pb.toFixed(1)+'mo';
-  const stageColors = { Discovery:'#0089A6', Demo:'#854F0B', Proposal:'#0F6E56', Negotiation:'#3C3489', 'Closed Won':'#2E7D32', 'Closed Lost':'#C81E10' };
   const me          = window.ciAuth ? window.ciAuth.getUser() : {};
 
   el.innerHTML = `<ul class="scenario-list">${filtered.map(s => `
@@ -970,7 +1424,7 @@ function renderList() {
           ${s.ownerUsername && s.ownerUsername !== me.username ? `<span class="shared-badge">shared by ${s.ownerUsername}</span>` : ''}
         </div>
         <div class="scenario-meta">${s.company}${s.industry&&IND[s.industry]?' · '+IND[s.industry].label:''} · ${s.date} · Payback: ${payStr(s.payback)}</div>
-        ${s.dealStage?`<span class="stage-pill" style="background:${stageColors[s.dealStage]||'#64748B'}20;color:${stageColors[s.dealStage]||'#64748B'};border:1px solid ${stageColors[s.dealStage]||'#64748B'}40">${s.dealStage}</span>`:''}
+        <span class="stage-pill">${scenarioStageDisplay(s)}</span>
       </div>
       <div class="scenario-kpis">
         <div class="sk-main">${fmtFull(s.annualBenefit)}/yr · ${fmtPct(s.roi)} ROI</div>
@@ -984,36 +1438,25 @@ function renderList() {
       </div>
     </li>`).join('')}
   </ul>
-  ${compareIds.size>=2?`<div class="compare-cta"><button class="btn btn-cta" onclick="switchTab('compare')">Compare ${compareIds.size} scenarios →</button></div>`:''}`;
+  ${compareIds.size>=2?`<div class="compare-cta"><button class="btn btn-primary" onclick="switchTab('compare')">Compare ${compareIds.size} scenarios →</button></div>`:''}`;
   renderStageFilters();
 }
 
 async function generateShareURLFromScenario(id) {
-  const s = savedScenarios.find(x => x.id === id);
-  let inputs = s?.inputs;
-  if (!inputs) {
-    const resp = await apiFetch('/api/scenarios/' + id);
-    if (!resp || !resp.ok) { showToast('Could not load scenario for sharing.'); return; }
-    const full = await resp.json();
-    inputs = full.data;
-  }
-  if (!inputs) { showToast('No data to share.'); return; }
-  const payload = btoa(unescape(encodeURIComponent(JSON.stringify(inputs))));
-  const url = window.location.origin + window.location.pathname + '#share=' + payload;
-  navigator.clipboard.writeText(url).then(() => showToast('🔗 Share link copied!'));
+  return shareBusinessCase(id);
 }
 
 /* ════════════════════════════════════════
    Clear form
    ════════════════════════════════════════ */
 /* ── Option A: accuracy-gap → suggested recovery % ──
-   Benchmark accuracy is 99.5%. The gap (benchmark − current) is mapped to
+   The internal modeling target is 99.5%. The gap (target − current) is mapped to
    a suggested shrink/carrying recovery %. This SUGGESTS only — the rep must
    click Apply; nothing is silently overwritten.                          */
-const ACCURACY_BENCHMARK = 99.5;
+const ACCURACY_MODEL_TARGET = 99.5;
 function computeAccuracyRecovery(currentAccuracy) {
-  if (!currentAccuracy || currentAccuracy <= 0 || currentAccuracy >= ACCURACY_BENCHMARK) return null;
-  const gap = ACCURACY_BENCHMARK - currentAccuracy;           // percentage points
+  if (!currentAccuracy || currentAccuracy <= 0 || currentAccuracy >= ACCURACY_MODEL_TARGET) return null;
+  const gap = ACCURACY_MODEL_TARGET - currentAccuracy;           // percentage points
   /* Map gap → recovery %: each point of gap ≈ 5% recoverable, capped at 60%.
      e.g. 92% accuracy → 7.5pt gap → ~38% suggested recovery.             */
   const suggested = Math.min(60, Math.round(gap * 5));
@@ -1026,7 +1469,7 @@ function renderAccuracySuggestion(v) {
   if (rec === null) { box.style.display = 'none'; return; }
   box.style.display = 'block';
   box.innerHTML =
-    `<span>Prospect accuracy <strong>${v.currentAccuracy}%</strong> → suggested recovery ` +
+    `<span>Prospect accuracy <strong>${v.currentAccuracy}%</strong> → internal-model recovery ` +
     `<strong>${rec}%</strong> for shrink &amp; carrying.</span> ` +
     `<button type="button" class="btn btn-ghost btn-sm" onclick="applyAccuracySuggestion(${rec})">Apply</button>`;
 }
@@ -1042,15 +1485,13 @@ function applyAccuracySuggestion(rec) {
    calculates identically; this only guides the rep's attention and
    labels the outputs.                                                   */
 const SOLUTION_EMPHASIS = {
-  wms:    { label: 'Warehouse Operations (WMS)', highlight: ['wms','count'] },
-  mep:    { label: 'Field Inventory (MEP)',      highlight: ['mep','downtime'] },
-  mfgmat: { label: 'Manufacturing Materials',    highlight: ['downtime','count'] },
-  all:    { label: 'All / Platform',             highlight: [] }
+  cip:    { label: 'Cloud Inventory Platform (CIP)', highlight: ['wms','count'] },
+  mep:    { label: 'Mobile Enterprise Platform (MEP)', highlight: ['mep','downtime'] }
 };
 function applySolutionEmphasis() {
   const sel = document.getElementById('solution');
   const sol = sel ? sel.value : 'all';
-  const cfg = SOLUTION_EMPHASIS[sol] || SOLUTION_EMPHASIS.all;
+  const cfg = SOLUTION_EMPHASIS[sol] || SOLUTION_EMPHASIS.cip;
   document.querySelectorAll('.field-group-label').forEach(el => el.classList.remove('driver-emphasis'));
   if (cfg.highlight.includes('wms')) {
     document.querySelectorAll('.wms-tag').forEach(t => {
@@ -1062,15 +1503,18 @@ function applySolutionEmphasis() {
       const lbl = t.closest('.field-group-label'); if (lbl) lbl.classList.add('driver-emphasis');
     });
   }
-  if (typeof recalc === 'function') recalc();
+  /* Product selection changes guidance and labels only. ROI is driven solely
+     by the entered assumptions and explicitly enabled value drivers. */
 }
 
 function clearForm() {
-  ['scenarioName','companyName','repName','revenue','userCount','inventoryValue','itCost',
+  ['scenarioName','companyName','repName','opportunityValue','revenue','userCount','inventoryValue','itCost',
    'psvcCost','hwCost','trainCost','annualWriteOff','otifBaseline','otifTarget',
    'invTurnsCurrent','invTurnsBenchmark'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   for(let i=1;i<=17;i++){ const el=document.getElementById('dq'+i); if(el) el.value=''; }
-  ['industry','competitor','compSelect','dealStage'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  ['industry','competitor','compSelect'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  window._currentBuyCycleStage=2;window._currentBuyCycleStageLabel='Stage 2 — Define Economic Consequences';window._currentOpportunityOutcome=null;updateCurrentBuyCycleStageDisplay(false);
+  window._opportunityValueOriginal=null;window._opportunityValueStoredCurrency=null;
   const audEl = document.getElementById('execAudience');
   if (audEl) audEl.value = 'mixed';
   ['why_act','why_ci','why_now'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
@@ -1083,19 +1527,22 @@ function clearForm() {
   ['m_labor','m_shrinkage','m_carrying','m_otif','m_it',
    'm_shrinkRate','m_carryRate','m_otifRisk',
    'downtimeEventsYr','downtimeHrsPerEvent','downtimeCostPerHr','m_downtime',
-   'expediteSpendYr','m_expedite','countDaysYr','countPeople','m_count',
+   'expediteSpendYr','m_expedite','servicePenaltyCostYr','m_servicePenalty','lostSalesYr','contributionMarginPct','repeatVisitsYr','costPerTruckRoll','m_firstFix','countDaysYr','countPeople','m_count',
    'laborWastePct','currentAccuracy',
-   'ordersPerYr','costPerOrder','pickRateGainPct','m_throughput','orderErrorPct','costPerError','m_accuracy',
-   'repeatVisitsYr','costPerTruckRoll','m_firstfix','fieldTechs','addedJobsPerDay','revenuePerJob','workingDaysYr','m_utilization','fieldInventoryValue','fieldLeakagePct','m_leakage'].forEach(id => {
+   'ordersPerYr','costPerOrder','pickRateGainPct','m_throughput','orderErrorPct','costPerError','m_accuracy','fieldReconcilePersonHours'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
-  const defaults={laborCost:55000,invest:80000,discRate:10,
+  const defaults={laborCost:55000,invest:80000,discRate:10,contractMonths:36,
     implMonths:3,ramp1:40,ramp2:75,ramp3:100};
   Object.entries(defaults).forEach(([id,v])=>{ const el=document.getElementById(id); if(el) el.value=v; });
   document.getElementById('benchBadge').style.display='none';
   prospectLogoDataUrl=null;
   confirmedFields=new Set();
   fieldStates={};
+  fieldProvenance={};
+  window._roiModelVersion=28;
+  window._explicitRecoveryInputs=[];
+  refreshRoiModelUpgradeControl();
   /* New blank scenario — clear any discovery session from a prior load */
   if (typeof resetDiscoveryForScenario === 'function') resetDiscoveryForScenario(null);
   if (typeof updateLogoPreview === 'function') updateLogoPreview();
@@ -1110,8 +1557,11 @@ function clearForm() {
    renderConfidence, renderList) are called from index.html
    after all scripts have loaded.
    ════════════════════════════════════════ */
-document.getElementById('todayDate').textContent =
+const _todayEl = document.getElementById('todayDate');
+if (_todayEl) _todayEl.textContent =
   new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
 
 updateSavedBadge();
-recalc();
+/* recalc() is deferred to the post-load init in index.html: it calls getVals()
+   which reads prospectLogoDataUrl / confirmedFields declared in features.js
+   (loaded after app.js). Running it here caused a ReferenceError at load. */
