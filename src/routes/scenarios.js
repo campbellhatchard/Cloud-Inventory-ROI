@@ -756,9 +756,11 @@ router.delete('/:id', async (req, res) => {
     if (sc.is_current) {
       await query(
         `UPDATE scenarios SET is_current = TRUE
-         WHERE base_id = $1 AND deleted_at IS NULL
-           AND id != $2
-         ORDER BY version DESC LIMIT 1`,
+         WHERE id = (
+           SELECT id FROM scenarios
+           WHERE base_id = $1 AND deleted_at IS NULL AND id != $2
+           ORDER BY version DESC LIMIT 1
+         )`,
         [sc.base_id, req.params.id]
       );
     }

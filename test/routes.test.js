@@ -206,7 +206,14 @@ describe('HTTP API integration', { skip: HAS_DB ? false : 'DATABASE_URL not set 
     assert.strictEqual(shell.json.exists, false, 'expected an empty shell');
     assert.strictEqual(shell.json.readiness, 0);
 
-    // Upsert with partial data → server computes readiness > 0.
+    // Creation is explicit: PUT must update an existing Solution Fit, never upsert.
+    const initial = await api('/api/handoffs/' + customerId, {
+      method: 'POST', token: adminToken,
+      body: { data: {} }
+    });
+    assert.strictEqual(initial.status, 201, 'handoff creation must use the governed POST path');
+
+    // Update with partial data → server computes readiness > 0.
     const put = await api('/api/handoffs/' + customerId, {
       method: 'PUT', token: adminToken,
       body: { data: { opportunity: { customer: company, solutionEngineer: 'Jo', products: 'CIP' } } }

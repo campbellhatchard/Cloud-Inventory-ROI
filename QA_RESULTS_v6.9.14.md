@@ -2,7 +2,7 @@
 
 Machine results are recorded in `RELEASE_GATE_RESULTS_v6.9.14.json`, `OUTPUT_RUNTIME_RESULTS_v6.9.14.json`, and `POSTGRES_INTEGRATION_RESULTS_v6.9.14.json`.
 
-The v6.9.14 candidate corrects the two failures exposed by the v6.9.13 PostgreSQL 16 certification run.
+The v6.9.14 candidate corrects the failures exposed by the v6.9.13 and initial v6.9.14 PostgreSQL 16 certification runs: request/response contract drift, PostgreSQL-invalid current-version promotion during deletion, and an obsolete implicit-upsert expectation in the Solution Fit integration journey.
 
 - Full local suite: passed with only the expected PostgreSQL-dependent skips.
 - Production locks: 172 passed, 0 failed, 0 skipped.

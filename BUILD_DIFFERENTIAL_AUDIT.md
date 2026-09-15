@@ -4,6 +4,8 @@
 
 - Corrected the PostgreSQL scenario integration request to supply the required top-level company field.
 - Corrected the scenario INSERT response to return the persisted `customer_id`.
+- Replaced PostgreSQL-invalid `UPDATE ... ORDER BY ... LIMIT` current-version promotion with an ordered scalar subquery.
+- Updated the handoff integration journey to use the governed explicit POST creation path before PUT update.
 - Advanced application and evidence manifests to v6.9.14.
 
 ## Intentionally preserved
@@ -22,6 +24,8 @@ None.
 
 - PostgreSQL scenario create/save/reload coverage now exercises the public request contract.
 - Response coverage verifies the persisted customer identity.
+- Scenario deletion coverage executes PostgreSQL-safe prior-version promotion.
+- Solution Fit coverage preserves the explicit-create/no-upsert contract.
 
 ## Unresolved deployment work
 
