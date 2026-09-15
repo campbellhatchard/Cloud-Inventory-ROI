@@ -136,7 +136,7 @@
       <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3M11 11l3-3-3-3M14 8H6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
       Sign out
     </button>
-    <span>Cloud Inventory · Nextworld</span>
+    <span>Cloud Inventory</span>
   </div>
 </nav>
 
@@ -774,7 +774,7 @@
         <svg viewBox="0 0 16 16" fill="none"><path d="M8 1v9M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         Download PDF
       </button>
-      <button class="btn btn-secondary" id="pptxExportBtn" data-label="Export to PowerPoint" onclick="exportToPowerPoint()">
+      <button class="btn btn-secondary" id="pptxExportBtn" data-label="Export to PowerPoint" onclick="exportToPowerPoint()" disabled aria-disabled="true" title="Executive PowerPoint initializes with the governed output service">
         <svg viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 6h3a1.5 1.5 0 010 3H5V6zM5 9v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Export to PowerPoint
       </button>
@@ -788,7 +788,7 @@
         <div id="execMoreMenu" style="display:none;position:absolute;top:calc(100% + 4px);right:0;background:var(--white);border:1px solid var(--gray-200);border-radius:10px;box-shadow:var(--shadow-md);z-index:50;min-width:210px;padding:6px 0;">
           <button class="exec-menu-item" id="executiveWordBtn" onclick="toggleExecMore();exportExecutiveWord()">📝 Executive business case <span class="exec-menu-hint">Word document</span></button>
           <div style="height:1px;background:var(--gray-100);margin:4px 0;"></div>
-          <button class="exec-menu-item" id="championPackBtn" disabled title="Unavailable pending governed output conversion">Champion Pack — unavailable in v6.9.1</button>
+          <button class="exec-menu-item" id="championPackBtn" disabled title="Unavailable pending governed output conversion">Champion Pack — unavailable pending governed conversion</button>
           <button class="exec-menu-item" onclick="toggleExecMore();exportOnePager()" id="onePagerBtn">📄 Role one-pager <span class="exec-menu-hint">Internal only · based on audience</span></button>
           <button class="exec-menu-item" onclick="toggleExecMore();roiMethodologyPDF()" id="roiMethodPdfBtn">📋 ROI methodology PDF</button>
           <button class="exec-menu-item" onclick="toggleExecMore();roiMethodologyPPT()" id="roiMethodPptBtn">📊 ROI methodology PPT</button>
@@ -819,7 +819,7 @@
             <div class="whys-subtitle">Fills the executive PDF. Use AI to personalize, or tap a mic to dictate.</div>
           </div>
           <div class="whys-head-actions">
-            <button class="btn btn-ghost btn-sm" onclick="loadThreeWhysDefaults()" title="Reset to industry defaults">↺ Reset</button>
+            <button class="btn btn-ghost btn-sm" onclick="restoreCustomerEvidence()" title="Restore only supported Discovery evidence">Restore customer evidence</button>
             <button class="btn btn-tertiary btn-sm" id="aiEnhanceBtn" onclick="aiEnhanceWhys()">✨ AI enhance</button>
           </div>
         </div>
@@ -857,13 +857,14 @@
         <div class="why-field-wrap">
           <textarea id="why_act" data-dictate rows="5"
             placeholder="Describe the burning platform — what happens if they do nothing? What is the cost of inaction in this specific industry and situation?"
-            oninput="saveThreeWhys();_whysUpdateComp()"></textarea>
+            oninput="markRepAuthored('act');saveThreeWhys();_whysUpdateComp()"></textarea>
           <button class="why-mic-btn" id="whyMic_act" onclick="_whysMicToggle('why_act','whyMic_act')"
             title="Dictate with microphone" aria-label="Dictate why act at all">
             <svg viewBox="0 0 16 16" width="15" height="15" fill="none"><rect x="6" y="1" width="4" height="7" rx="2" fill="currentColor"/><path d="M4 8a4 4 0 008 0M8 12v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
           </button>
         </div>
         <p class="why-mic-hint">Tap the mic to dictate · Chrome and Edge supported</p>
+        <p class="why-provenance" id="whyStatus_act">To validate</p>
       </div>
 
       <!-- Why 2 -->
@@ -876,13 +877,14 @@
         <div class="why-field-wrap">
           <textarea id="why_ci" data-dictate rows="5"
             placeholder="What makes Cloud Inventory specifically the right choice — vs. their current solution, doing nothing, or a competitor?"
-            oninput="saveThreeWhys();_whysUpdateComp()"></textarea>
+            oninput="markRepAuthored('ci');saveThreeWhys();_whysUpdateComp()"></textarea>
           <button class="why-mic-btn" id="whyMic_ci" onclick="_whysMicToggle('why_ci','whyMic_ci')"
             title="Dictate with microphone" aria-label="Dictate why Cloud Inventory">
             <svg viewBox="0 0 16 16" width="15" height="15" fill="none"><rect x="6" y="1" width="4" height="7" rx="2" fill="currentColor"/><path d="M4 8a4 4 0 008 0M8 12v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
           </button>
         </div>
         <p class="why-mic-hint">Tap the mic to dictate · Chrome and Edge supported</p>
+        <p class="why-provenance" id="whyStatus_ci">To validate</p>
       </div>
 
       <!-- Why 3 -->
@@ -895,13 +897,14 @@
         <div class="why-field-wrap">
           <textarea id="why_now" data-dictate rows="5"
             placeholder="What is the specific trigger or urgency that makes acting now — not next quarter — the right decision?"
-            oninput="saveThreeWhys();_whysUpdateComp()"></textarea>
+            oninput="markRepAuthored('now');saveThreeWhys();_whysUpdateComp()"></textarea>
           <button class="why-mic-btn" id="whyMic_now" onclick="_whysMicToggle('why_now','whyMic_now')"
             title="Dictate with microphone" aria-label="Dictate why now">
             <svg viewBox="0 0 16 16" width="15" height="15" fill="none"><rect x="6" y="1" width="4" height="7" rx="2" fill="currentColor"/><path d="M4 8a4 4 0 008 0M8 12v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
           </button>
         </div>
         <p class="why-mic-hint">Tap the mic to dictate · Chrome and Edge supported</p>
+        <p class="why-provenance" id="whyStatus_now">To validate</p>
       </div>
 
       <!-- Completeness footer -->
@@ -912,7 +915,7 @@
       </div>
     </div><!-- /whys-card -->
 
-    <!-- Right sidebar: value breakdown + cost of delay -->
+    <!-- Right sidebar: governed value breakdown -->
     <div class="exec-whys-sidebar">
 
       <!-- Value breakdown mini chart -->
@@ -928,15 +931,6 @@
           <span class="exec-side-total-lbl">Total annual benefit</span>
           <span class="exec-side-total-val" id="execSideTotalVal"></span>
         </div>
-      </div>
-
-      <!-- Cost of inaction mini panel -->
-      <div class="card exec-side-card" id="execInactionCard" style="display:none;">
-        <div class="exec-side-head">
-          <div class="exec-side-title">Cost of delay</div>
-          <div class="exec-side-sub">Foregone value per period of inaction</div>
-        </div>
-        <div class="exec-inaction-grid" id="execSideInaction"></div>
       </div>
 
     </div>
@@ -1473,12 +1467,18 @@
     <div class="modal-title">✉️ Email template</div>
     <span class="modal-label">Subject</span>
     <input type="text" id="emailSubject" placeholder="Subject line"/>
-    <span class="modal-label" style="margin-top:8px;display:block;">Body</span>
-    <textarea id="emailBody" rows="18"></textarea>
+    <div id="emailRevisionNotice" class="proposal-review-notice" hidden>The Executive Value Story has changed. Refresh the email before sharing.</div>
+    <span class="modal-label" style="margin-top:8px;display:block;">Greeting</span>
+    <input type="text" id="emailGreeting" maxlength="120"/>
+    <span class="modal-label" style="margin-top:8px;display:block;">Introduction</span>
+    <textarea id="emailIntro" rows="3" maxlength="800"></textarea>
+    <section class="proposal-review-notice" aria-label="Governed Value Story read only"><b>Governed Value Story — read only</b><pre id="emailGovernedBody" style="white-space:pre-wrap;font:inherit;margin:.75rem 0 0;"></pre></section>
+    <span class="modal-label" style="margin-top:8px;display:block;">Closing</span>
+    <textarea id="emailClosing" rows="3" maxlength="800"></textarea>
     <div class="btn-row" style="margin-top:1rem;">
       <button class="btn btn-primary" onclick="openMailto()">Open in email client</button>
       <button class="btn btn-secondary" onclick="copyEmail()">Copy to clipboard</button>
-      <button class="btn btn-ghost" id="aiPersonalizeEmailBtn" onclick="aiPersonalizeEmail()" title="Rewrite the tone for the selected audience, keeping every number exact">✨ AI personalize</button>
+      <button class="btn btn-ghost" id="aiPersonalizeEmailBtn" onclick="aiPersonalizeEmail()" title="Select an approved presentation style; governed facts never change">✨ AI presentation style</button>
       <button class="btn btn-ghost" onclick="closeModal('emailModal')">Close</button>
     </div>
   </div>
@@ -1545,11 +1545,13 @@
 <script src="/jszip.min.js"></script>
 <script src="/pptxgen.min.js"></script>
 <script src="executive-story.js"></script>
+<script src="economic-availability.js"></script>
+<script src="customer-email.js"></script>
 <script src="pptx-export.js"></script>
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="6.9.1";</script>
+<script>const APP_VERSION="6.9.13";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
 <script src="ai-session.js"></script>
@@ -1560,12 +1562,15 @@
 <script src="exec-infographics.js"></script>
 <script src="benchmark-provenance.js"></script>
 <script src="/handoff-readiness.js"></script>
+<script src="solution-fit-picker.js"></script>
+<script src="solution-fit-output-builders.js"></script>
 <script src="solution-fit.js"></script>
 <script src="dictation.js"></script>
 <script src="admin-customers.js"></script>
 <script src="map.js"></script>
 <script src="stakeholders.js"></script>
 <script src="deal-export.js"></script>
+<script src="proposal-output-builder.js"></script>
 <script src="proposal.js"></script>
 <script src="deal-coach.js"></script>
 <script src="buyer-readiness.js"></script>
@@ -1667,8 +1672,8 @@ window.switchTab = function(name) {
   if (name === 'calc' && typeof initCurrency === 'function') initCurrency();
   if (typeof updateContextHeader === 'function') updateContextHeader();
   if (name === 'exec') {
-    if (typeof loadThreeWhysDefaults === 'function') loadThreeWhysDefaults();
-    renderExec();
+    if (typeof initializeThreeWhysFromEvidence === 'function') initializeThreeWhysFromEvidence();
+    if (typeof window.renderExec === 'function') window.renderExec(); else showExecutiveValueStoryUnavailable();
     if (typeof SFDictation!=='undefined' && SFDictation.supported) SFDictation.enhanceAll(document.getElementById('tab-exec'));
     initDebriefSection();
   }  if (name === 'disc' && typeof renderDiscoveryTab === 'function') renderDiscoveryTab();

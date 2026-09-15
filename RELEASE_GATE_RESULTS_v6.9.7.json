@@ -1,0 +1,10 @@
+{"release":"6.9.7","environment":"Windows; DATABASE_URL not set","nodeVersion":"v22.22.0","npmVersion":"10.9.4","results":[
+{"command":"npm ci --omit=dev --no-audit --no-fund","exitCode":0,"passed":1,"failed":0,"skipped":0,"notTested":0,"durationSeconds":4.0},
+{"command":"npm test","exitCode":0,"passed":480,"failed":0,"skipped":3,"notTested":0,"durationSeconds":7.0},
+{"command":"npm run test:production-locks","exitCode":0,"passed":90,"failed":0,"skipped":0,"notTested":0,"durationSeconds":1.7},
+{"command":"npm run test:routes","exitCode":0,"passed":0,"failed":0,"skipped":1,"notTested":1,"durationSeconds":0.2,"note":"HTTP integration suite environment-blocked: DATABASE_URL not set."},
+{"command":"npm run test:brand","exitCode":0,"passed":19,"failed":0,"skipped":0,"notTested":0,"durationSeconds":0.3},
+{"command":"node scripts/check-release-lineage.js","exitCode":0,"passed":1,"failed":0,"skipped":0,"notTested":0,"durationSeconds":0.1},
+{"command":"node scripts/audit-active-output-paths.js","exitCode":0,"passed":1,"failed":0,"skipped":0,"notTested":0,"durationSeconds":0.2},
+{"command":"node scripts/generate-brand-assets.js --check","exitCode":0,"passed":1,"failed":0,"skipped":0,"notTested":0,"durationSeconds":0.2},
+{"command":"node scripts/generate-application-knowledge.js --check","exitCode":0,"passed":1,"failed":0,"skipped":0,"notTested":0,"durationSeconds":0.2}]}

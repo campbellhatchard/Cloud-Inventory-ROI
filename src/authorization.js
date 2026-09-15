@@ -3,10 +3,10 @@ const { query } = require('./db');
 
 const ROLE_PERMISSIONS = Object.freeze({
   rep: ['view_own_customers','edit_own_customers','view_own_customer_solution_fit'],
-  se: ['view_team_customers','view_team_solution_fits','edit_team_solution_fits','create_solution_fit'],
+  se: ['view_team_customers','view_team_solution_fits','edit_team_solution_fits','create_solution_fit','solution_fit_cross_account'],
   sales_manager: ['view_team_customers','view_team_solution_fits','view_sales_team','view_team_dashboard','approve_stage_override'],
   value_engineering: ['view_team_customers','view_team_solution_fits'],
-  admin: ['view_all_customers','edit_all_customers','view_all_solution_fits','edit_all_solution_fits','assign_solution_fit','manage_sales_teams','manage_team_members','view_team_dashboard','approve_stage_override']
+  admin: ['view_all_customers','edit_all_customers','view_all_solution_fits','edit_all_solution_fits','assign_solution_fit','manage_sales_teams','manage_team_members','view_team_dashboard','approve_stage_override','solution_fit_cross_account']
 });
 function rolesOf(user){return [...new Set([...(user?.roleKeys||[]),user?.role].filter(Boolean))];}
 function effectivePermissions(user){return [...new Set(rolesOf(user).flatMap(r=>ROLE_PERMISSIONS[r]||[]))];}
@@ -17,6 +17,7 @@ function resolveCustomerDecision(user,{owned=false,shared=false,teamScoped=false
   return teamScoped&&hasPermission(user,mode==='edit'?'edit_team_customers':'view_team_customers');
 }
 function resolveSolutionFitDecision(user,{owned=false,assigned=false,teamScoped=false,shared=false}={},mode='view'){
+  if(hasPermission(user,'solution_fit_cross_account'))return true;
   const scoped=owned||assigned||shared||teamScoped||hasPermission(user,'view_all_solution_fits');
   if(!scoped)return false;
   if(mode==='edit')return hasPermission(user,'edit_all_solution_fits')||hasPermission(user,'edit_team_solution_fits');
@@ -32,9 +33,9 @@ function customerScopeSql(alias='c',userParam='$1'){
     OR EXISTS(SELECT 1 FROM sales_team_memberships viewer JOIN sales_teams active_team ON active_team.id=viewer.team_id AND active_team.status='active' JOIN sales_team_memberships owner_m ON owner_m.team_id=viewer.team_id AND owner_m.user_id=${alias}.owner_id AND owner_m.is_active=TRUE AND owner_m.effective_start<=CURRENT_DATE AND (owner_m.effective_end IS NULL OR owner_m.effective_end>=CURRENT_DATE) WHERE viewer.user_id=${userParam} AND viewer.is_active=TRUE AND viewer.effective_start<=CURRENT_DATE AND (viewer.effective_end IS NULL OR viewer.effective_end>=CURRENT_DATE))
   )`;
 }
-async function customerAccess(user,customerId,mode='view'){
+async function customerAccess(user,customerId,mode='view',dataQuery=query){
   const global=hasPermission(user,mode==='edit'?'edit_all_customers':'view_all_customers');
-  const {rows}=await query(`SELECT c.id,c.name,c.owner_id,
+  const {rows}=await dataQuery(`SELECT c.id,c.name,c.owner_id,
     EXISTS(SELECT 1 FROM scenarios sx WHERE sx.customer_id=c.id AND $1=ANY(sx.shared_with) AND sx.deleted_at IS NULL) explicitly_shared,
     EXISTS(SELECT 1 FROM sales_team_memberships viewer JOIN sales_teams active_team ON active_team.id=viewer.team_id AND active_team.status='active' JOIN sales_team_memberships owner_m ON owner_m.team_id=viewer.team_id AND owner_m.user_id=c.owner_id AND owner_m.is_active=TRUE AND owner_m.effective_start<=CURRENT_DATE AND (owner_m.effective_end IS NULL OR owner_m.effective_end>=CURRENT_DATE) WHERE viewer.user_id=$1 AND viewer.is_active=TRUE AND viewer.effective_start<=CURRENT_DATE AND (viewer.effective_end IS NULL OR viewer.effective_end>=CURRENT_DATE)) team_scoped
     FROM customers c WHERE c.id=$2`,[user.id,customerId]);
@@ -45,22 +46,27 @@ async function customerAccess(user,customerId,mode='view'){
   let allowed=resolveCustomerDecision(user,{owned,shared:c.explicitly_shared,teamScoped:c.team_scoped},mode);
   return {exists:true,allowed,reasons,customer:c};
 }
-async function solutionFitAccess(user,customerId,mode='view'){
-  const c=await customerAccess(user,customerId,'view');if(!c.exists)return c;
-  const p=effectivePermissions(user),owner=String(c.customer.owner_id)===String(user.id);
-  const {rows}=await query(`SELECT primary_se_id,additional_se_ids,created_by FROM handoffs WHERE customer_id=$1 AND deleted_at IS NULL`,[customerId]);
+async function solutionFitAccess(user,customerId,mode='view',dataQuery=query){
+  if(hasPermission(user,'solution_fit_cross_account')){
+    const {rows}=await dataQuery(`SELECT c.id,c.name,c.owner_id FROM customers c WHERE c.id=$1 AND c.deleted_at IS NULL AND COALESCE(c.status,'active')='active'`,[customerId]);
+    if(!rows.length)return {exists:false,allowed:false,reasons:[]};
+    return {exists:true,allowed:true,reasons:['solution_fit_cross_account'],customer:rows[0]};
+  }
+  const c=await customerAccess(user,customerId,'view',dataQuery);if(!c.exists)return c;
+  const p=effectivePermissions(user),owned=String(c.customer.owner_id)===String(user.id);
+  const {rows}=await dataQuery(`SELECT primary_se_id,additional_se_ids,created_by FROM handoffs WHERE customer_id=$1 AND deleted_at IS NULL`,[customerId]);
   const h=rows[0]||{},assigned=String(h.primary_se_id||'')===String(user.id)||(h.additional_se_ids||[]).map(String).includes(String(user.id));
   const allowed=resolveSolutionFitDecision(user,{owned,assigned,teamScoped:c.reasons.includes('team_membership'),shared:c.reasons.includes('explicit_sharing')},mode);
   return {...c,allowed,reasons:[...c.reasons,...(assigned?['solution_fit_assignment']:[]),...(p.includes(mode==='view'?'view_all_solution_fits':'edit_all_solution_fits')?['global_permission']:[])]};
 }
-async function scenarioAccess(user,scenarioId,mode='view'){
-  const {rows}=await query(`SELECT id,owner_id,customer_id,shared_with FROM scenarios WHERE id=$1 AND deleted_at IS NULL`,[scenarioId]);
+async function scenarioAccess(user,scenarioId,mode='view',dataQuery=query){
+  const {rows}=await dataQuery(`SELECT id,owner_id,customer_id,shared_with FROM scenarios WHERE id=$1 AND deleted_at IS NULL`,[scenarioId]);
   if(!rows.length)return {exists:false,allowed:false,reasons:[]};const s=rows[0];
   if(hasPermission(user,mode==='edit'?'edit_all_customers':'view_all_customers'))return {exists:true,allowed:true,reasons:['global_permission'],scenario:s};
   if(String(s.owner_id)===String(user.id))return {exists:true,allowed:true,reasons:['customer_ownership'],scenario:s};
   if((s.shared_with||[]).map(String).includes(String(user.id)))return {exists:true,allowed:mode==='view',reasons:['explicit_sharing'],scenario:s};
   if(!s.customer_id)return {exists:true,allowed:false,reasons:[],scenario:s};
-  const c=await customerAccess(user,s.customer_id,mode);return {...c,scenario:s};
+  const c=await customerAccess(user,s.customer_id,mode,dataQuery);return {...c,scenario:s};
 }
 /* A base_id identifies an opportunity; it never authorizes one. Resolve the
    active scenario and delegate to centralized scenario authorization. */

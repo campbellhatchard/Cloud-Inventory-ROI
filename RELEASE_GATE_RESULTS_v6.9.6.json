@@ -1,0 +1,27 @@
+{
+  "release": "6.9.6",
+  "generatedAt": "2026-09-05T09:12:06-05:00",
+  "finalClassification": "Product Owner decision required",
+  "summary": {"passed": 11, "failed": 0, "skipped": 3, "notTested": 8},
+  "gates": [
+    {"command":"npm ci --omit=dev --no-audit --no-fund","exitCode":null,"passed":0,"failed":0,"skipped":0,"notTested":1,"durationMs":0,"note":"npm executable unavailable; no PASS claimed"},
+    {"command":"npm test","exitCode":null,"passed":0,"failed":0,"skipped":0,"notTested":1,"durationMs":0,"note":"exact npm alias unavailable; component commands below executed"},
+    {"command":"node test/roi-engine.test.js","exitCode":0,"passed":34,"failed":0,"skipped":0,"notTested":0,"durationMs":398},
+    {"command":"node --test [complete-suite group]","exitCode":0,"passed":377,"failed":0,"skipped":3,"notTested":0,"durationMs":3249},
+    {"command":"node --test [v6.9.0-v6.9.6 permanent group]","exitCode":0,"passed":63,"failed":0,"skipped":0,"notTested":0,"durationMs":1500},
+    {"command":"npm run test:production-locks","exitCode":null,"passed":0,"failed":0,"skipped":0,"notTested":1,"durationMs":0,"note":"exact npm alias unavailable; production-lock behavior executed directly"},
+    {"command":"node --test [production-regression-lock suite]","exitCode":0,"passed":84,"failed":0,"skipped":0,"notTested":0,"durationMs":2213},
+    {"command":"npm run test:routes","exitCode":null,"passed":0,"failed":0,"skipped":0,"notTested":1,"durationMs":0,"note":"exact npm alias unavailable"},
+    {"command":"node --test test/routes.test.js","exitCode":0,"passed":0,"failed":0,"skipped":0,"notTested":1,"durationMs":604,"note":"suite reported DATABASE_URL unavailable; HTTP integration not tested"},
+    {"command":"npm run test:brand","exitCode":null,"passed":0,"failed":0,"skipped":0,"notTested":1,"durationMs":0,"note":"exact npm alias unavailable; component behavior executed directly"},
+    {"command":"node --test test/v670-brand-system.test.js test/v671-brand-integrity.test.js test/v672-brand-final-enforcement.test.js","exitCode":0,"passed":19,"failed":0,"skipped":0,"notTested":0,"durationMs":857},
+    {"command":"node scripts/check-release-lineage.js","exitCode":0,"passed":1,"failed":0,"skipped":0,"notTested":0,"durationMs":400},
+    {"command":"node scripts/audit-active-output-paths.js","exitCode":0,"passed":1,"failed":0,"skipped":0,"notTested":0,"durationMs":300},
+    {"command":"node scripts/generate-brand-assets.js --check","exitCode":0,"passed":1,"failed":0,"skipped":0,"notTested":0,"durationMs":435},
+    {"command":"node scripts/generate-application-knowledge.js --check","exitCode":0,"passed":1,"failed":0,"skipped":0,"notTested":0,"durationMs":406},
+    {"command":"node --check server.js src/routes/scenarios.js src/shared/value-history.js public/features.js public/narrative.js scripts/check-release-lineage.js","exitCode":0,"passed":1,"failed":0,"skipped":0,"notTested":0,"durationMs":753},
+    {"command":"Authenticated Render browser QA","exitCode":null,"passed":0,"failed":0,"skipped":0,"notTested":1,"durationMs":0},
+    {"command":"Fresh archive extraction: lineage + v6.9.6 behavior + active-output + generated assets","exitCode":0,"passed":15,"failed":0,"skipped":0,"notTested":0,"durationMs":1408},
+    {"command":"Live PostgreSQL migration/behavior QA","exitCode":null,"passed":0,"failed":0,"skipped":0,"notTested":1,"durationMs":0}
+  ]
+}

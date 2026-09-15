@@ -67,8 +67,7 @@
       _v[k] = clamp(_v[k], 0, 100);
     }
     _v.implMonths = clamp(_v.implMonths, 0, 60);
-    const parsedContractMonths = parseInt(v.contractMonths, 10);
-    _v.contractMonths = Number.isFinite(parsedContractMonths) ? clamp(parsedContractMonths, 1, 60) : 36;
+    _v.contractMonths = clamp(parseInt(v.contractMonths, 10) || 36, 1, 60);
     const ramp = (value, fallback) => {
       if (value === undefined || value === null || value === '') return fallback;
       const n = parseFloat(value);

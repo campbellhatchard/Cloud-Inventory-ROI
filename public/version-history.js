@@ -7,6 +7,79 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.13', date: '2026-09-06', tag: 'postgres-certification',
+    title: 'PostgreSQL Integration and Proposal PDF Certification',
+    summary: 'Runs the complete PostgreSQL integration boundary in certification mode and proves Proposal PDF uses the shared governed production builder.',
+    highlights: ['Proposal Preview and PDF share one audience-aware production builder.', 'GitHub CI requires all PostgreSQL suites with zero skips.', 'Release artifacts contain sanitized database and per-output machine evidence.']
+  },
+  {
+    version: '6.9.12', date: '2026-09-06', tag: 'runtime-certification',
+    title: 'True Output Runtime Certification and Web Draft Audience',
+    summary: 'Embeds governed readiness in Web documents and records actual per-output runtime evidence.',
+    highlights: ['Executive Web and Proposal Preview classify Draft Only content as Internal Use Only.', 'Proposal and Battlecard Word use extracted production builders.', 'The release gate consumes one machine result per active output.']
+  },
+  {
+    version: '6.9.11', date: '2026-09-06', tag: 'output-authority',
+    title: 'Final Output Authority and Draft Classification',
+    summary: 'Aligns Proposal formats to one immutable Executive source, classifies internal drafts correctly, and adds executable release evidence.',
+    highlights: ['Draft Proposals use Internal Use Only branding.', 'Customer proposals exclude internal commercial notes.', 'Every active output has a keyed executable smoke result.']
+  },
+  {
+    version: '6.9.10', date: '2026-09-06', tag: 'output-runtime',
+    title: 'Output Runtime Integrity and Saved-State Authority',
+    summary: 'Repairs methodology PowerPoint runtime, fails Proposal output closed, and makes JPP and Solution Fit outputs respect saved authority.',
+    highlights: ['Internal PowerPoint chrome is audience-aware.', 'Proposal AI rewriting is inactive and pricing follows modeled investment.', 'Unsaved JPP and failed Solution Fit saves block customer output.']
+  },
+  {
+    version: '6.9.9', date: '2026-09-06', tag: 'fact-integrity',
+    title: 'Customer Fact Integrity + Economic Availability',
+    summary: 'Distinguishes unavailable economics from zero and locks customer email and proposal facts to the current authoritative value story.',
+    highlights: ['Missing ROI never renders as 0%.', 'Email and proposal facts remain governed through copy and export.', 'AI is limited to approved presentation choices and seller-authored narrative fields.']
+  },
+  {
+    version: '6.9.8', date: '2026-09-05', tag: 'runtime-integrity',
+    title: 'Customer Communication Runtime Integrity',
+    summary: 'Governs customer email readiness and AI wrappers, restores native Prospect currency, and leaves one server-authoritative Executive PowerPoint path.',
+    highlights: ['Null ROI and payback display as not yet established.', 'AI email personalization cannot change governed facts.', 'Inactive Champion Kit UI now matches its registry state.']
+  },
+  {
+    version: '6.9.7', date: '2026-09-05', tag: 'customer-governance',
+    title: 'Complete Customer-Surface Governance',
+    summary: 'Moves the Prospect economic preview to the server, governs customer email and Executive PowerPoint from saved value-story data, hardens narrative evidence links and makes Rep Confirmed currency server-owned.',
+    highlights: ['Removes the Prospect 70% range and derived monthly delay claim.', 'Customer email now honors Executive Output Readiness.', 'Champion Kit is unavailable until its governed conversion is complete.']
+  },
+  {
+    version: '6.9.6', date: '2026-09-05', tag: 'lineage-recovery',
+    title: 'Lineage Recovery & Rep Confirmed Provenance',
+    summary: 'Restores the verified v6.9.4 release lineage and makes Rep Confirmed an immutable, server-governed confirmation of one exact value without changing ROI math or customer-supported value.'
+  },
+  {
+    version: '6.9.4', date: '2026-09-04', tag: 'executive-provenance',
+    title: 'Executive Narrative Provenance & Fail-Closed Outputs',
+    summary: 'Removes generic narrative and legacy Executive fallbacks while preserving the actual source and validation state of every Three Why.',
+    highlights: ['Customer-supported Discovery is the only automatic narrative source.', 'Rep, AI, historical and customer-supported text remain visibly distinct.', 'Executive customer output fails closed when its authoritative Value Story is unavailable.']
+  },
+  {
+    version: '6.9.3', date: '2026-09-04', tag: 'solution-fit-runtime',
+    title: 'Solution Fit Runtime Authorization & Picker Recovery',
+    summary: 'Corrects the governed non-cross-account authorization path and makes Solution Fit customer loading recoverable without widening access.',
+    highlights: [
+      'Executes real authorization behavior for SE, Rep, manager, Admin, multi-role, inactive and deleted customer cases.',
+      'Adds distinct loading, results, search-empty, system-empty, error, retry and pagination states to the dedicated Solution Fit picker.',
+      'Keeps Sales Engineer cross-account authority isolated to Solution Fit; customer and scenario access remain unchanged.'
+    ]
+  },
+  {
+    version: '6.9.2', date: '2026-09-04', tag: 'solution-fit-access',
+    title: 'Sales Engineer Cross-Account Solution Fit Access',
+    summary: 'Adds isolated cross-account customer discovery and explicit Solution Fit create/open/edit access for active Sales Engineers without widening general opportunity access.',
+    highlights: [
+      'Adds a dedicated, server-paginated Solution Fit customer search across active customers for Sales Engineers and Admins.',
+      'Keeps cross-account authority isolated to Solution Fit; general customer, scenario, opportunity and output permissions are unchanged.',
+      'Supports explicit create/open actions for active customers even when no ROI scenario exists, preserving customer ownership and creator attribution.'
+    ]
+  },
+  {
     version: '6.9.1', date: '2026-09-04', tag: 'release-integrity',
     title: 'Governed Publishing and Release Integrity',
     changes: ['Frozen, customer-safe Business Case publishing with explicit readiness acknowledgement', 'Retired legacy share and print economics and disabled unconverted Champion Pack', 'Approved-revision Battlecard exports, readable executive narratives and permanent release controls']

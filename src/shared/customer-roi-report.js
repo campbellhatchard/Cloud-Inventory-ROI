@@ -55,6 +55,7 @@ function buildCustomerROIReportData(source = {}) {
       year1Benefit: roi.year1Benefit,
       totalBenefit: roi.totalContractBenefit,
       totalInvestment: roi.totalContractInvestment,
+      investmentEstablished: story.economics.investmentEstablished,
       netValue: roi.totalContractNetBenefit,
       contractRoi: roi.totalContractRoi,
       npv: roi.totalContractNpv,

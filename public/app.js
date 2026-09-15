@@ -427,8 +427,10 @@ function recalc() {
   const woHint = el('writeOffHint');
   if (woHint) {
     if (v.annualWriteOff > 0) {
-      woHint.textContent = `Using $${v.annualWriteOff.toLocaleString()} — prospect-supplied figure`;
-      woHint.style.color = 'var(--green)';
+      const sourceState=typeof fieldStates!=='undefined'?fieldStates.annualWriteOff:null;
+      const sourceLabel=sourceState==='confirmed_prospect'?'Prospect submitted':sourceState==='confirmed_customer'?'Customer revalidated':sourceState==='confirmed'?'Internally confirmed':sourceState==='estimated'?'Rep estimate':'Source not yet classified';
+      woHint.textContent = `Using $${v.annualWriteOff.toLocaleString()} — ${sourceLabel}`;
+      woHint.style.color = ['confirmed_prospect','confirmed_customer'].includes(sourceState)?'var(--green)':'var(--amber)';
     } else if (v.inventory > 0) {
       woHint.textContent = `Derived: ${fmtFull(v.inventory)} × ${fmtPct(v.shrinkRate*100)} = ${fmtFull(v.effectiveShrinkBase)} — enter actual figure to improve accuracy`;
       woHint.style.color = 'var(--amber)';
@@ -736,43 +738,6 @@ function _copyCompTalk() {
    Executive presentation
    ════════════════════════════════════════ */
 /* ── Scenario comparison table helper ── */
-function buildPreviewScenarioTable(baseV) {
-  const scales = { conservative: 0.70, base: 1.00, aggressive: 1.30 };
-  const scenarios = ['conservative','base','aggressive'].map(mode => {
-    const sc = scales[mode];
-    const sv = sc === 1 ? baseV : {
-      ...baseV,
-      mLabor: Math.min(baseV.mLabor*sc,0.95), mShrinkage: Math.min(baseV.mShrinkage*sc,0.95),
-      mCarrying: Math.min(baseV.mCarrying*sc,0.95), mOtif: Math.min(baseV.mOtif*sc,0.95),
-      mIt: Math.min(baseV.mIt*sc,0.95),
-      effectiveShrinkBase: baseV.annualWriteOff > 0 ? baseV.annualWriteOff : baseV.inventory * Math.min(baseV.shrinkRate*sc,0.20)
-    };
-    const r = calcROI(sv);
-    return { mode, r };
-  });
-  const payStr = pb => pb===null?'—':pb>=60?'60+mo':pb.toFixed(1)+'mo';
-  return `
-    <div class="e-section">
-      <div class="e-h2">Scenario range — conservative / base / aggressive</div>
-      <table class="e-tbl" style="margin-bottom:.5rem;">
-        <thead><tr>
-          <th class="left">Metric</th>
-          <th style="background:#A6791E;">Conservative (70%)</th>
-          <th style="background:#0089A6;">Base (100%)</th>
-          <th style="background:#2E7D32;">Aggressive (130%)</th>
-        </tr></thead>
-        <tbody>
-          <tr><td class="left">Total ${baseV.contractMonths}-month benefit</td>${scenarios.map(s=>`<td class="pos">${fmtFull(s.r.totalContractBenefit)}</td>`).join('')}</tr>
-          <tr><td class="left">Total contract ROI</td>${scenarios.map(s=>`<td style="font-weight:600;color:#0089A6;">${fmtPct(s.r.totalContractRoi)}</td>`).join('')}</tr>
-          <tr><td class="left">Payback period</td>${scenarios.map(s=>`<td>${payStr(s.r.contractPayback)}</td>`).join('')}</tr>
-          <tr><td class="left">Contract net benefit</td>${scenarios.map(s=>`<td class="${s.r.totalContractNetBenefit>=0?'pos':'neg'}">${fmtFull(s.r.totalContractNetBenefit)}</td>`).join('')}</tr>
-          <tr><td class="left">Contract NPV</td>${scenarios.map(s=>`<td class="${s.r.totalContractNpv>=0?'pos':'neg'}">${fmtFull(s.r.totalContractNpv)}</td>`).join('')}</tr>
-        </tbody>
-      </table>
-      <p class="e-footnote">Conservative = 70% of base improvement %; Aggressive = 130%. Investment costs are fixed across all three scenarios.</p>
-    </div>`;
-}
-
 /* ── Three Whys UI helpers (v5.5.1) ── */
 
 function setExecAudience(chip, val) {
@@ -818,7 +783,7 @@ function _whysMicToggle(fieldId, btnId) {
   }
 }
 
-function _execPopulateSidebar(valueRows, annualBenefit, monthlyInaction) {
+function _execPopulateSidebar(valueRows, annualBenefit) {
   /* Value breakdown sidebar card */
   const bodyEl   = document.getElementById('execSideBreakdown');
   const totalEl  = document.getElementById('execSideTotal');
@@ -837,363 +802,13 @@ function _execPopulateSidebar(valueRows, annualBenefit, monthlyInaction) {
     if (totalVal) totalVal.textContent = typeof fmtFull === 'function' ? fmtFull(annualBenefit) : '';
   }
 
-  /* Cost of inaction sidebar card */
-  const inEl = document.getElementById('execSideInaction');
-  const inCard = document.getElementById('execInactionCard');
-  if (inEl && inCard && monthlyInaction > 0) {
-    const fmt = typeof fmtFull === 'function' ? fmtFull : function(v){ return '$' + Math.round(v/1000) + 'K'; };
-    inEl.innerHTML = '<div class="exec-ia-cell"><div class="exec-ia-period">Per month</div>'
-      + '<div class="exec-ia-cost">' + fmt(monthlyInaction) + '</div>'
-      + '<div class="exec-ia-note">foregone value</div></div>'
-      + '<div class="exec-ia-cell hi"><div class="exec-ia-period">6-month delay</div>'
-      + '<div class="exec-ia-cost">' + fmt(monthlyInaction * 6) + '</div>'
-      + '<div class="exec-ia-note">typical eval</div></div>'
-      + '<div class="exec-ia-cell"><div class="exec-ia-period">12 months</div>'
-      + '<div class="exec-ia-cost">' + fmt(annualBenefit) + '</div>'
-      + '<div class="exec-ia-note">full year lost</div></div>';
-    inCard.style.display = 'block';
-  }
-
   /* Sync completeness bar on render */
   _whysUpdateComp();
 }
 
-function renderExec() {
-  // Apply Conservative / Base / Aggressive scaling
-  const mode = (typeof currentScenarioMode !== 'undefined') ? currentScenarioMode : 'base';
-  const scales = { conservative: 0.70, base: 1.00, aggressive: 1.30 };
-  const scale = scales[mode] || 1.0;
-
-  const rawV = getVals();
-
-  // Scale improvement assumptions (not inputs or investment costs)
-  const v = scale === 1 ? rawV : {
-    ...rawV,
-    mLabor:     Math.min(rawV.mLabor    * scale, 0.95),
-    mShrinkage: Math.min(rawV.mShrinkage * scale, 0.95),
-    mCarrying:  Math.min(rawV.mCarrying  * scale, 0.95),
-    mOtif:      Math.min(rawV.mOtif      * scale, 0.95),
-    mIt:        Math.min(rawV.mIt        * scale, 0.95),
-    effectiveShrinkBase: rawV.annualWriteOff > 0
-      ? rawV.annualWriteOff
-      : rawV.inventory * Math.min(rawV.shrinkRate * scale, 0.20)
-  };
-
-  const r = calcROI(v);
-  const indLabel = v.industry&&IND[v.industry] ? IND[v.industry].label : '—';
-  const today = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
-  /* Competitive claims are intentionally excluded from customer-facing
-     executive outputs unless governed evidence is explicitly supplied. */
-  const comp = null;
-
-  const DC = (typeof DRIVER_CHART_COLORS !== 'undefined') ? DRIVER_CHART_COLORS : ['#0089A6','#2E7D32','#12786F','#A6791E','#6A4C93','#45688A'];
-  const valueRows=[
-    {label:'Labor capacity value',           val:r.laborSav,  color:DC[0]},
-    {label:'Shrinkage / write-off reduction',val:r.shrinkSav,color:DC[1]},
-    {label:'Inventory carrying cost reduction',val:r.carrySav,color:DC[2]},
-    {label:'OTIF / order accuracy improvement',val:r.otifSav, color:DC[3]},
-    {label:'Inventory turns — annual carrying savings', val:r.turnsSav, color:DC[4]},
-    {label:'IT & legacy system displacement', val:r.itSav,   color:DC[5]}
-  ].filter(row => row.val > 0).sort((a,b) => b.val - a.val);
-  const maxVal=Math.max(...valueRows.map(x=>x.val),1);
-
-  const totalVal = valueRows.reduce((s,row) => s + row.val, 0) || 1;
-  const bars=valueRows.map(row=>`
-    <div class="e-bar-row">
-      <span class="e-bar-lbl">${row.label}</span>
-      <div class="e-bar-track"><div class="e-bar-fill" style="width:${Math.round((row.val/maxVal)*100)}%;background:${row.color};"></div></div>
-      <span class="e-bar-pct" style="color:${row.color};">${Math.round(row.val/totalVal*100)}%</span>
-      <span class="e-bar-val">${fmtFull(row.val)}</span>
-    </div>`).join('');
-
-  const paySignStr = r.paybackFromSigning===null?'—':r.paybackFromSigning>=60?'60+ mo':r.paybackFromSigning.toFixed(1)+' mo';
-  const payLiveStr = r.paybackFromGoLive===null?'—':r.paybackFromGoLive>=60?'60+ mo':r.paybackFromGoLive.toFixed(1)+' mo';
-  const year1Pct   = Math.round(r.year1Factor*100);
-
-  /* ── Provenance: count prospect-verified vs rep-entered answers ── */
-  const da = (typeof discoveryAnswers !== 'undefined') ? discoveryAnswers : {};
-  const daKeys = Object.keys(da).filter(k => !k.endsWith('_by'));
-  const daAnswered = daKeys.filter(k => da[k] && String(da[k]).trim());
-  const daProspect = daKeys.filter(k => da[k + '_by'] === 'prospect' && da[k]);
-  const daRep      = daKeys.filter(k => da[k + '_by'] === 'rep' && da[k]);
-  const prospectPct = daAnswered.length ? Math.round(daProspect.length / daAnswered.length * 100) : 0;
-  const hasProvenanceData = daAnswered.length > 0;
-
-  const provenanceBanner = hasProvenanceData ? `
-    <div class="e-provenance-banner">
-      <div class="e-prov-icon">🔍</div>
-      <div class="e-prov-body">
-        <div class="e-prov-headline">
-          <strong>${daProspect.length} of ${daAnswered.length} inputs supplied directly by ${v.company || 'the prospect'}</strong>
-          — not vendor estimates.
-        </div>
-        <div class="e-prov-sub">
-          ${daProspect.length > 0 ? `${prospectPct}% of answered inputs were provided by the prospect's own team. ` : ''}${daRep.length > 0 ? `${daRep.length} figure${daRep.length !== 1 ? 's' : ''} entered by the Cloud Inventory rep. ` : ''}Documented model assumptions and approved benchmarks are used where applicable.
-          <span class="e-prov-link" onclick="switchTab('disc')">View sources →</span>
-        </div>
-      </div>
-      <div class="e-prov-chip ${prospectPct >= 50 ? 'e-prov-chip-high' : prospectPct >= 25 ? 'e-prov-chip-med' : 'e-prov-chip-low'}">
-        ${prospectPct}% prospect data
-      </div>
-    </div>` : '';
-
-  /* ── Cost of inaction ── */
-  /* Do not transform modeled annual benefit into a generic cost-of-delay
-     claim. Customer-facing urgency must come from confirmed narrative. */
-  const monthlyInaction = 0;
-  const inactionBlock = r.annualBenefit > 0 ? `
-    <div class="e-section e-inaction-section">
-      <div class="e-h2">Cost of delayed action</div>
-      <div class="e-inaction-lede">Every month without Cloud Inventory is a month these losses continue.</div>
-      <div class="e-inaction-grid">
-        <div class="e-inaction-card">
-          <div class="e-inaction-period">Per month</div>
-          <div class="e-inaction-cost">${fmtFull(monthlyInaction)}</div>
-          <div class="e-inaction-note">in recoverable value foregone</div>
-        </div>
-        <div class="e-inaction-card e-inaction-card-hi">
-          <div class="e-inaction-period">6-month delay</div>
-          <div class="e-inaction-cost">${fmtFull(monthlyInaction * 6)}</div>
-          <div class="e-inaction-note">typical evaluation-to-go-live cycle</div>
-        </div>
-        <div class="e-inaction-card">
-          <div class="e-inaction-period">12-month delay</div>
-          <div class="e-inaction-cost">${fmtFull(r.annualBenefit)}</div>
-          <div class="e-inaction-note">equivalent to a full year's benefit</div>
-        </div>
-      </div>
-      <div class="e-inaction-note-foot">Based on steady-state annual benefit of ${fmtFull(r.annualBenefit)}. Excludes compounding effects of improved inventory turns and reduced write-offs.</div>
-    </div>` : '';
-
-  // Implementation proviso section for exec doc
-  const implProvisoSection = v.implMonths > 0 || r.year1Factor < 0.99 ? `
-    <div class="e-section e-proviso-section">
-      <div class="e-h2">Implementation timeline &amp; assumptions</div>
-      <div class="e-proviso-grid">
-        <div class="e-proviso-card" style="border-left:4px solid #0089A6;">
-          <div class="e-proviso-icon">📅</div>
-          <div>
-            <div class="e-proviso-label">Implementation period</div>
-            <div class="e-proviso-value">${v.implMonths} month${v.implMonths!==1?'s':''}</div>
-            <div class="e-proviso-detail">No benefit accrues during implementation. Go-live in month ${v.implMonths+1}.</div>
-          </div>
-        </div>
-        <div class="e-proviso-card" style="border-left:4px solid #A6791E;">
-          <div class="e-proviso-icon">📈</div>
-          <div>
-            <div class="e-proviso-label">Ramp-up to full efficiency</div>
-            <div class="e-proviso-value">${Math.round(v.ramp1*100)}% / ${Math.round(v.ramp2*100)}% / ${Math.round(v.ramp3*100)}%</div>
-            <div class="e-proviso-detail">Months 1 / 2 / 3+ post go-live. Year 1 captures ${year1Pct}% of steady-state annual benefit.</div>
-          </div>
-        </div>
-        <div class="e-proviso-card" style="border-left:4px solid #2E7D32;">
-          <div class="e-proviso-icon">💰</div>
-          <div>
-            <div class="e-proviso-label">Break-even from contract signing</div>
-            <div class="e-proviso-value">${paySignStr}</div>
-            <div class="e-proviso-detail">From go-live: ${payLiveStr}. Includes ${v.implMonths}-month implementation and efficiency ramp.</div>
-          </div>
-        </div>
-      </div>
-      <div class="e-footnote" style="margin-top:.75rem;">All ROI, payback, and NPV figures account for the implementation period and post-go-live efficiency ramp. Year 1 benefit of ${fmtFull(r.year1Benefit)} reflects ${year1Pct}% of the ${fmtFull(r.annualBenefit)} steady-state annual benefit.</div>
-    </div>` : '';
-
-  // Overlap disclosure footnote
-  const overlapNote = r.overlapAdj > 100
-    ? `${fmtFull(r.overlapAdj)} of overlapping carrying-cost estimates was removed; only the higher of the direct carrying-reduction and turns-based estimates is counted. `
-    : '';
-
-  const cfRows=r.cashflows.map(c=>`
-    <tr>
-      <td class="left">Year ${c.yr}${c.isRamped ? ' <span style="font-size:9px;color:#A6791E;font-weight:600">(ramp-adjusted)</span>' : ''}</td>
-      <td>${fmtFull(c.benefit)}</td>
-      <td class="neg">(${fmtFull(c.invest)})</td>
-      <td class="${c.net>=0?'pos':'neg'}">${fmtFull(c.net)}</td>
-      <td>${fmtFull(c.pv)}</td>
-      <td class="${c.cumPV>=0?'pos':'neg'}">${fmtFull(c.cumPV)}</td>
-    </tr>`).join('');
-
-  const compSection = comp?`
-    <div class="e-section">
-      <div class="e-h2">Competitive displacement: ${comp.name}</div>
-      <table class="e-comp-tbl">
-        <thead><tr><th>Category</th><th>${comp.name}</th><th>Cloud Inventory</th></tr></thead>
-        <tbody>
-          <tr><td class="left">Investment</td><td>${comp.cost}</td><td>${fmtFull(v.invest)}/yr + ${fmtFull(v.otc)} one-time</td></tr>
-          <tr><td class="left">Time to value</td><td>${comp.time}</td><td>Weeks, not months</td></tr>
-          <tr><td class="left">Maintenance</td><td>${comp.maint}</td><td>Included in SaaS</td></tr>
-        </tbody>
-      </table>
-      <div class="e-comp-grid">
-        <div><div class="e-comp-col-title bad">Pain points</div>${comp.pain.map(p=>`<div class="e-comp-item"><span class="e-comp-x">✗</span>${p}</div>`).join('')}</div>
-        <div><div class="e-comp-col-title good">CI advantages</div>${comp.adv.map(a=>`<div class="e-comp-item"><span class="e-comp-check">✓</span>${a}</div>`).join('')}</div>
-      </div>
-    </div>`:'';
-
-  // Proof points for exec doc
-  const proofPoints = window.selectedCustomerProofRecords || [];
-  const proofSection = proofPoints.length?`
-    <div class="e-section">
-      <div class="e-h2">Customer results — ${indLabel}</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;">
-        ${proofPoints.map(p=>`
-          <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:.85rem;">
-            <div style="font-size:10px;font-weight:700;color:#1E2931;margin-bottom:4px;">${p.displayName}</div>
-            <div style="font-size:11px;color:#334155;margin-bottom:4px;">${p.result}</div>
-            <div style="font-size:11px;font-weight:700;color:#2E7D32;">${p.metric}</div><div style="font-size:9px;color:#64748B;margin-top:5px;">Source: ${p.sourceDisplay}</div>
-          </div>`).join('')}
-      </div>
-    </div>`:'';
-
-  const modeLabels = { conservative:'Conservative case — 70%', base:'Base case — 100%', aggressive:'Aggressive case — 130%' };
-  const modeBadge = mode !== 'base'
-    ? `<div style="display:inline-flex;align-items:center;gap:5px;background:${mode==='conservative'?'rgba(230,81,0,.25)':'rgba(46,125,50,.25)'};color:${mode==='conservative'?'#FFCC80':'#A5D6A7'};border-radius:12px;padding:3px 10px;font-size:10px;font-weight:700;margin-top:8px;letter-spacing:.04em;">${modeLabels[mode]}</div>`
-    : '';
-
-  // Scenario comparison table for preview
-  const scenarioCompTable = buildPreviewScenarioTable(rawV);
-  const prospectLogoHtml = v.prospectLogoDataUrl
-    ? `<div style="margin-top:1rem;display:flex;align-items:center;gap:12px;">
-        <img src="${v.prospectLogoDataUrl}" style="height:32px;object-fit:contain;background:#fff;border-radius:4px;padding:2px 8px;" alt="Prospect logo"/>
-        <span style="color:rgba(255,255,255,.4);font-size:14px;">×</span>
-        <img src="${window.CIBrand.logo('logoNegative')}" style="height:28px;object-fit:contain;" alt="Cloud Inventory"/>
-      </div>` : '';
-
-  // Confidence indicator
-  const confEl = document.getElementById('confidencePanel');
-  const confPct = confEl ? parseInt(confEl.querySelector('.conf-score')?.textContent) : null;
-  const confNote = confPct!==null ? `<div style="font-size:10px;color:rgba(255,255,255,.45);margin-top:8px;">Model confidence: ${confPct}% of inputs confirmed with prospect</div>` : '';
-
-  // Build narrative sections from narrative.js
-  const narrative = (typeof buildNarrativeSections === 'function')
-    ? buildNarrativeSections(v, r)
-    : { headlineSection:'', whysSection:'', roiSection:'', timelineSection:'', criteriaSection:'', nextSection:'' };
-
-  document.getElementById('execDoc').innerHTML = `
-  <div id="execPrintTarget">
-    <div class="e-cover">
-      <img class="e-cover-logo" src="${window.CIBrand.logo('logoNegative')}" alt="Cloud Inventory"/>
-      <div class="e-tagline">Business Value Assessment</div>
-      <div class="e-company">${v.company||'Your Company'}</div>
-      <div class="e-sub">Cloud Inventory Platform &nbsp;·&nbsp; ${indLabel} &nbsp;·&nbsp; ${today}${v.rep?' &nbsp;·&nbsp; '+v.rep:''}</div>
-      ${modeBadge}${prospectLogoHtml}${confNote}
-    </div>
-    <div class="e-kpis">
-      <div class="e-kpi"><div class="e-kv b">${fmtPct(r.totalContractRoi)}</div><div class="e-kl">Total ${r.contractMonths}-month contract ROI</div></div>
-      <div class="e-kpi"><div class="e-kv g">${fmtFull(r.totalContractNetBenefit)}</div><div class="e-kl">Net economic benefit</div></div>
-      <div class="e-kpi"><div class="e-kv ${r.totalContractNpv>=0?'g':'r'}">${fmtFull(r.totalContractNpv)}</div><div class="e-kl">Contract NPV (${fmtPct(v.discRate*100)})</div></div>
-      <div class="e-kpi"><div class="e-kv">${paySignStr}</div><div class="e-kl">Payback from signing (${payLiveStr} from go-live)</div></div>
-    </div>
-    ${provenanceBanner}
-    ${inactionBlock}
-    <div class="e-body">
-      <div class="e-section e-approach">
-        <div class="e-approach-head">
-          <div class="e-approach-title">A data-driven business case</div>
-          <div class="e-approach-lede">Every figure in this assessment was built from <strong>${v.company||'your'} operational data</strong> — not vendor assumptions — using a structured, transparent method engineered to withstand financial scrutiny.</div>
-        </div>
-        <div class="e-approach-pillars">
-          <div class="e-approach-pillar">
-            <div class="e-approach-icon" style="background:#0089A6;">◆</div>
-            <div class="e-approach-pt">Your data, not assumptions</div>
-            <div class="e-approach-pd">Inputs captured through structured discovery of your actual metrics.</div>
-          </div>
-          <div class="e-approach-pillar">
-            <div class="e-approach-icon" style="background:#12786F;">◆</div>
-            <div class="e-approach-pt">Decomposed value drivers</div>
-            <div class="e-approach-pd">Benefit broken into independently-quantified drivers, each traceable to a metric.</div>
-          </div>
-          <div class="e-approach-pillar">
-            <div class="e-approach-icon" style="background:#A6791E;">◆</div>
-            <div class="e-approach-pt">Conservatively modeled</div>
-            <div class="e-approach-pd">Ramp-up, documented Cloud Inventory model assumptions, approved benchmarks where applicable, and overlap adjustments are shown throughout.</div>
-          </div>
-          <div class="e-approach-pillar">
-            <div class="e-approach-icon" style="background:#2E7D32;">◆</div>
-            <div class="e-approach-pt">Independently verifiable</div>
-            <div class="e-approach-pd">Full calculation methodology available on request for finance review.</div>
-          </div>
-        </div>
-      </div>
-      ${narrative.headlineSection}
-      ${narrative.whysSection}
-      ${implProvisoSection}
-      ${narrative.roiSection}
-      ${scenarioCompTable}
-      <div class="e-section"><div class="e-h2">Annual value by category</div>
-        <div class="e-driver-lede">Your value is decomposed into independently-quantified drivers, each traceable to a metric you provided and modeled conservatively.</div>
-        ${bars}
-        <div class="e-bar-total"><span>Total annual value</span><div></div><span style="color:var(--navy);">100%</span><span>${fmtFull(r.annualBenefit)}</span></div>
-      </div>
-      ${typeof buildExecInfographics === 'function' ? buildExecInfographics(r, v) : ''}
-      <div class="e-section">
-        <div class="e-h2">Annual and cumulative ${r.contractMonths}-month contract economics</div>
-        <table class="e-tbl"><thead><tr><th class="left">Period</th><th>Gross benefit</th><th>Investment</th><th>Net benefit</th><th>Annual ROI</th><th>Cumulative net</th><th>Cumulative ROI</th><th>Payback status</th></tr></thead><tbody>
-          ${r.contractYears.map(y=>`<tr><td class="left">Year ${y.year}${y.months<12?' ('+y.months+' mo)':''}</td><td>${fmtFull(y.grossBenefit)}</td><td>${fmtFull(y.investment)}</td><td class="${y.netBenefit>=0?'pos':'neg'}">${fmtFull(y.netBenefit)}</td><td>${fmtPct(y.annualRoi)}</td><td class="${y.cumulativeNetBenefit>=0?'pos':'neg'}">${fmtFull(y.cumulativeNetBenefit)}</td><td>${fmtPct(y.cumulativeRoi)}</td><td>${y.paybackStatus}</td></tr>`).join('')}
-        </tbody><tfoot><tr class="tfoot-row"><td class="left">Total ${r.contractMonths}-month contract</td><td>${fmtFull(r.totalContractBenefit)}</td><td>${fmtFull(r.totalContractInvestment)}</td><td class="${r.totalContractNetBenefit>=0?'pos':'neg'}">${fmtFull(r.totalContractNetBenefit)}</td><td>—</td><td>${fmtFull(r.totalContractNetBenefit)}</td><td>${fmtPct(r.totalContractRoi)}</td><td>${r.contractPayback===null?'Not achieved in term':r.contractPayback.toFixed(1)+' months'}</td></tr></tfoot></table>
-        <div class="e-callout" style="margin-top:10px;"><strong>Contract NPV:</strong> ${fmtFull(r.totalContractNpv)} at ${fmtPct(v.discRate*100)} discount rate.</div>
-        <p class="e-footnote">${overlapNote}Labor productivity is presented as capacity value and becomes cash savings only when overtime, contractor, or headcount cost is avoided. OTIF value applies the stated realization rate to the revenue-risk gap; it is not booked as gross revenue. NPV discounts at ${fmtPct(v.discRate*100)}/yr. One-time costs (services: ${fmtFull(v.psvc)}, hardware: ${fmtFull(v.hw)}, training: ${fmtFull(v.train)}) are year-0 outflows. Benefits follow the configured implementation and monthly ramp across the full model horizon.</p>
-      </div>
-      <div class="e-section">
-        <div class="e-h2">Investment summary</div>
-        <table class="e-invest-tbl">
-          <thead><tr><th>Cost component</th><th>Type</th><th>Amount</th></tr></thead>
-          <tbody>
-            <tr><td>Professional services / implementation</td><td>One-time</td><td>${fmtFull(v.psvc)}</td></tr>
-            <tr><td>Hardware (scanners, devices, printers)</td><td>One-time</td><td>${fmtFull(v.hw)}</td></tr>
-            <tr><td>Training & change management</td><td>One-time</td><td>${fmtFull(v.train)}</td></tr>
-            <tr><td>Cloud Inventory annual subscription</td><td>Recurring/yr</td><td>${fmtFull(v.invest)}</td></tr>
-          </tbody>
-          <tfoot><tr><td>Total ${r.contractMonths}-month investment</td><td></td><td>${fmtFull(r.totalContractInvestment)}</td></tr></tfoot>
-        </table>
-      </div>
-      ${compSection}${proofSection}
-      ${narrative.timelineSection}
-      ${narrative.criteriaSection}
-      <div class="e-section">
-        <div class="e-h2">Input assumptions</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-          <table class="e-assump-tbl">
-            <thead><tr><th colspan="2">Prospect profile</th></tr></thead>
-            <tbody>
-              <tr><td>Annual revenue</td><td>${fmtFull(v.revenue)}</td></tr>
-              <tr><td>Inventory users</td><td>${Math.round(v.users).toLocaleString()}</td></tr>
-              <tr><td>Avg. labor cost/user/yr</td><td>${fmtFull(v.labor)}</td></tr>
-              <tr><td>Warehouse inventory value on hand</td><td>${fmtFull(v.inventory)}</td></tr>
-              <tr><td>Current IT / legacy cost</td><td>${fmtFull(v.itCost)}</td></tr>
-              <tr><td>Discount rate</td><td>${fmtPct(v.discRate*100)}</td></tr>
-            </tbody>
-          </table>
-          <table class="e-assump-tbl">
-            <thead><tr><th colspan="2">Benchmarks (${indLabel})</th></tr></thead>
-            <tbody>
-              <tr><td>Labor capacity recovered (cashable only when cost is avoided)</td><td>${fmtPct(v.mLabor*100)}</td></tr>
-              <tr><td>Shrinkage reduction</td><td>${fmtPct(v.mShrinkage*100)}</td></tr>
-              <tr><td>Carrying cost reduction</td><td>${fmtPct(v.mCarrying*100)}</td></tr>
-              <tr><td>OTIF value realization</td><td>${fmtPct(v.mOtif*100)}</td></tr>
-              <tr><td>IT cost displaced</td><td>${fmtPct(v.mIt*100)}</td></tr>
-              <tr><td>Shrinkage rate (baseline)</td><td>${fmtPct(v.shrinkRate*100)}</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-      ${narrative.nextSection}
-      <div class="e-footer">
-        <img class="e-footer-logo" src="${window.CIBrand.logo('logoColor')}" alt="Cloud Inventory"/>
-        <span class="e-footer-txt">Analysis uses customer-provided inputs supplemented by documented Cloud Inventory model assumptions and approved benchmarks where applicable. Actual results may vary. · cloudinventory.com</span>
-      </div>
-    </div>
-  </div>`;
-  trackEvent('exec_view', { company: v.company });
-
-  /* ── Populate the Three Whys sidebar cards ── */
-  _execPopulateSidebar(valueRows, r.annualBenefit, r.annualBenefit > 0 ? r.annualBenefit / 12 : 0);
-
-  /* ── Re-run SFDictation on the new textareas ── */
-  if (typeof SFDictation !== 'undefined' && SFDictation.supported) {
-    SFDictation.enhanceAll(document.getElementById('tab-exec'));
-  }
-  _whysUpdateComp();
+function showExecutiveValueStoryUnavailable() {
+  const el=document.getElementById('execDoc');
+  if(el)el.innerHTML='<div class="card executive-story-error"><h2>Executive Value Story unavailable</h2><p>The governed Executive Value Story could not be loaded. Customer output is unavailable until the authoritative service is restored.</p><div class="btn-row"><button class="btn btn-primary" onclick="window.renderExec?.()">Retry</button><button class="btn btn-ghost" onclick="switchTab(\'calc\')">Return to ROI</button></div></div>';
 }
 
 /* ════════════════════════════════════════
@@ -1223,6 +838,7 @@ async function saveScenario() {
     threeWhysAct: document.getElementById('why_act')?.value || '',
     threeWhysCi:  document.getElementById('why_ci')?.value  || '',
     threeWhysNow: document.getElementById('why_now')?.value || '',
+    threeWhysMeta: typeof threeWhysMeta !== 'undefined' ? threeWhysMeta : {},
     fieldStates:        typeof fieldStates !== 'undefined' ? { ...fieldStates } : {},
     fieldProvenance:    typeof fieldProvenance !== 'undefined' ? { ...fieldProvenance } : {},
     annualBenefit:      r.annualBenefit,
@@ -1519,6 +1135,7 @@ function clearForm() {
   if (audEl) audEl.value = 'mixed';
   ['why_act','why_ci','why_now'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   if (typeof threeWhys !== 'undefined') { threeWhys.act=''; threeWhys.ci=''; threeWhys.now=''; }
+  if (typeof threeWhysMeta !== 'undefined') threeWhysMeta={};
   // Clear assumption fields entirely — they should show "Use industry avg
   // until confirmed" placeholder text, not a hardcoded generic number, so
   // selecting an industry (or leaving it blank) drives the calc-time fallback

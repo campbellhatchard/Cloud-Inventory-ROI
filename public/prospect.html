@@ -327,6 +327,7 @@ button{cursor:pointer;}
 <script src="/roi-engine.js"></script>
 <script src="/questionnaire-roi-registry.js"></script>
 <script src="discovery.js"></script>
+<script src="native-currency.js"></script>
 <script>
 /* ════════════════════════════════════════
    PROSPECT VIEW — discovery.js questions
@@ -940,9 +941,8 @@ function computeDriverProgress() {
 
 /* ═══════════════════════════════════════════════════════════════════
    LIVE ROI PANEL
-   Builds engine inputs from prospectAnswers via the sync field map,
-   runs calcROI(), and renders a conservative range in the sidebar.
-   Conservative = 70% of base recovery assumptions.
+   Renders the allow-listed server preview tied to this Discovery token.
+   The browser does not own economic mapping, assumptions, or calculation.
    ═══════════════════════════════════════════════════════════════════ */
 
 /* Map: sync field name → roi-engine input key (most are identical) */
@@ -989,7 +989,7 @@ const IND_DEFAULTS = {
   telecom:       { revenue:200e6, users:100, labor:72000, inventory:25e6, mLabor:0.20, mShrinkage:0.30, mCarrying:0.20, carryRate:0.25, mOtif:0.10, otifRisk:0.02, mIt:0.50, invTurnsBenchmark:8, discRate:0.10 },
   oil:           { revenue:300e6, users:80, labor:85000, inventory:35e6, mLabor:0.20, mShrinkage:0.28, mCarrying:0.22, carryRate:0.28, mOtif:0.10, otifRisk:0.02, mIt:0.50, invTurnsBenchmark:6, discRate:0.12 },
   food:          { revenue:90e6, users:50, labor:48000, inventory:6e6, mLabor:0.20, mShrinkage:0.35, mCarrying:0.18, carryRate:0.25, mOtif:0.10, otifRisk:0.025, mIt:0.50, invTurnsBenchmark:15, discRate:0.10 },
-  retail:        { revenue:0, users:0, labor:0, inventory:0, mLabor:0, mShrinkage:0, mCarrying:0, carryRate:0, mOtif:0, otifRisk:0, mIt:0, invTurnsBenchmark:0, discRate:0.10 },
+  retail:        { revenue:60e6, users:35, labor:42000, inventory:5e6, mLabor:0.18, mShrinkage:0.35, mCarrying:0.18, carryRate:0.25, mOtif:0.10, otifRisk:0.02, mIt:0.50, invTurnsBenchmark:10, discRate:0.10 },
   default:       { revenue:80e6, users:40, labor:52000, inventory:10e6, mLabor:0.20, mShrinkage:0.30, mCarrying:0.20, carryRate:0.25, mOtif:0.10, otifRisk:0.02, mIt:0.50, invTurnsBenchmark:10, discRate:0.10 },
 };
 
@@ -1117,61 +1117,38 @@ function buildROIInputs() {
   return { inp, answered };
 }
 
-function computeLiveROI() {
-  if (typeof calcROI !== 'function') return null;
+async function computeLiveROI() {
   try {
-    const { inp, answered } = buildROIInputs();
-    /* Base case */
-    const base = calcROI(inp);
-    /* Conservative: scale all recovery assumptions to 70% */
-    const consInp = { ...inp,
-      mLabor: inp.mLabor * 0.7, mShrinkage: inp.mShrinkage * 0.7,
-      mCarrying: inp.mCarrying * 0.7, mOtif: inp.mOtif * 0.7,
-      mIt: inp.mIt * 0.7, mDowntime: inp.mDowntime * 0.7, mExpedite: inp.mExpedite * 0.7,
-      mCount: inp.mCount * 0.7, mThroughput: inp.mThroughput * 0.7,
-      mAccuracy: inp.mAccuracy * 0.7, mFieldLeakage: inp.mFieldLeakage * 0.7,
-      mFieldCount: inp.mFieldCount * 0.7, mServicePenalty: inp.mServicePenalty * 0.7,
-      mFirstFix: inp.mFirstFix * 0.7,
-    };
-    const cons = calcROI(consInp);
-
-    const prospectFieldCount = ROI_DRIVERS.filter(d => prospectDriverUnlocked(d, answered)).length;
-    const hasEnough = prospectFieldCount >= 1 && base.annualBenefit > 0;
-
-    return { base, cons, answered, prospectFieldCount, hasEnough, inp };
+    const response=await fetch('/api/discovery/sessions/'+encodeURIComponent(token)+'/roi-preview',{credentials:'same-origin'});
+    if(!response.ok)throw new Error('Preview unavailable');
+    return await response.json();
   } catch(e) {
-    console.error('computeLiveROI:', e.message);
-    return null;
+    console.error('computeLiveROI:', e.message);return null;
   }
 }
 
-function renderValuePanel() {
+async function renderValuePanel() {
   const host = document.getElementById('roiLiveCard');
   if (!host) return;
 
-  const result = computeLiveROI();
+  host.innerHTML='<div class="roi-empty">Updating the governed preview…</div>';
+  const result = await computeLiveROI();
 
   /* Not enough data yet */
-  if (!result || !result.hasEnough) {
+  if (!result || !result.activeDrivers || !result.activeDrivers.length) {
     host.innerHTML = '<div class="roi-empty-icon">📊</div>'
       + '<div class="roi-empty">Answer a few questions to see a live estimate of what Cloud Inventory could be worth for your operation.</div>';
     return;
   }
 
-  const { base, cons, answered, prospectFieldCount, inp } = result;
-  const fmt = n => {
-    if (!n || n < 0) return '$0';
-    if (n >= 1e6) return '$' + (n/1e6).toFixed(1) + 'M';
-    if (n >= 1000) return '$' + Math.round(n/1000) + 'k';
-    return '$' + Math.round(n).toLocaleString();
-  };
+  const prospectFieldCount=result.activeDrivers.length;
+  const fmt = n => window.CINativeCurrency.formatCompactCurrency(n,result.currency);
 
   /* Driver rows */
-  const totalBase = base.annualBenefit || 1;
-  const driverRows = ROI_DRIVERS.map(d => {
-    const amount = base[d.sav] || 0;
-    const hasInputs = prospectDriverUnlocked(d, answered);
-    const locked = !hasInputs;
+  const totalBase = result.modeledAnnualBenefit || 1;
+  const driverRows = result.activeDrivers.map(d => {
+    const amount = d.modeledAnnualBenefit || 0;
+    const locked = false;
     const pct = Math.round((amount / totalBase) * 100);
 
     return `<div class="roi-driver-row">
@@ -1181,7 +1158,7 @@ function renderValuePanel() {
     </div>`;
   }).join('');
 
-  const lockedDrivers = ROI_DRIVERS.filter(d => !prospectDriverUnlocked(d, answered));
+  const lockedDrivers = [];
   const nudgeHtml = lockedDrivers.length
     ? `<div class="roi-nudge"><strong>${lockedDrivers.length} area${lockedDrivers.length!==1?'s':''} need data</strong> — additional answers can add supported value drivers to this estimate.</div>`
     : '';
@@ -1193,17 +1170,8 @@ function renderValuePanel() {
   const allQ = sections.reduce((s,sec)=>s+sec.questions.length,0);
   const confPct = allQ > 0 ? Math.round((answeredQ / allQ) * 100) : 0;
 
-  /* Cost of inaction */
-  const monthly = Math.round((cons.annualBenefit || 0) / 12);
-  const inactionHtml = cons.annualBenefit > 10000
-    ? `<div class="roi-inaction">
-        <div class="roi-inaction-label">Per month without Cloud Inventory</div>
-        <div class="roi-inaction-cost">${fmt(monthly)}</div>
-        <div class="roi-inaction-sub">in recoverable value foregone</div>
-      </div>`
-    : '';
-  const investmentNotice = (base.totalInvestY1||0) <= 0
-    ? '<div class="roi-disclaimer" style="margin-top:8px;"><strong>ROI and payback are not yet calculated.</strong> The investment has not been defined by your Cloud Inventory team.</div>'
+  const investmentNotice = !result.investmentDefined
+    ? '<div class="roi-disclaimer" style="margin-top:8px;"><strong>ROI and payback are not yet calculated because investment has not been defined.</strong></div>'
     : '';
 
   /* Populate nudge card separately */
@@ -1222,14 +1190,11 @@ function renderValuePanel() {
   host.innerHTML = `
     <div class="roi-eyebrow"><div class="roi-live-dot"></div> Live estimate — updates as you answer</div>
     <div class="roi-range-wrap">
-      <div class="roi-lo">${fmt(cons.annualBenefit)}</div>
-      <div class="roi-sep">–</div>
-      <div class="roi-hi">${fmt(base.annualBenefit)}</div>
+      <div class="roi-hi">${fmt(result.modeledAnnualBenefit)}</div>
     </div>
     <div class="roi-range-label">estimated annual benefit</div>
-    ${inactionHtml}
     ${investmentNotice}
-    <div class="roi-disclaimer">Based only on value drivers supported by answers entered so far. The range applies 70%–100% of the starting recovery assumptions.</div>
+    <div class="roi-disclaimer">${result.previewDisclaimer}</div>
 
     <div style="border-top:1px solid var(--gray-100);margin:12px -16px;padding:12px 16px 0;">
       <div class="roi-driver-head">Where the value comes from</div>

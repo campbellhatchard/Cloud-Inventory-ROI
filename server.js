@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   server.js  —  Cloud Inventory ROI Builder  v6.8.5
+   server.js  —  Cloud Inventory ROI Builder  v6.9.13
    Database-backed multi-user edition — production hardened
 
    Security layers applied (Phase 10):
@@ -20,10 +20,14 @@ const helmet     = require('helmet');
 const rateLimit  = require('express-rate-limit');
 /* This middleware is used by early admin routes as well as later APIs. */
 const { requireAuth, hasRole } = require('./src/middleware/auth');
-const { calcROI: calcROIShared } = require('./src/shared/roi-engine');
 const { scenarioAccess, opportunityAccessByBaseId } = require('./src/authorization');
+const { loadExecutiveSource } = require('./src/shared/executive-source');
 const { buildExecutiveValueStory } = require('./src/shared/executive-value-story');
 const { evaluateExecutiveOutputReadiness } = require('./src/shared/executive-output-readiness');
+const { resolveProposalOutput, proposalFilename } = require('./src/shared/proposal-output');
+const { buildProposalDocx } = require('./src/exports/proposal-docx');
+const { buildCompetitiveDocx } = require('./src/exports/competitive-docx');
+const economicAvailability = require('./public/economic-availability');
 const brand = require('./src/shared/brand-system');
 const applicationKnowledge = require('./src/shared/application-knowledge');
 const christie = require('./src/shared/christie-context');
@@ -213,6 +217,7 @@ const stakeholdersRouter = require('./src/routes/stakeholders');
 app.use('/api/stakeholders', stakeholdersRouter);
 const handoffsRouter = require('./src/routes/handoffs');
 app.use('/api/handoffs', handoffsRouter);
+app.use('/api/solution-fit/customers', require('./src/routes/solution-fit-customers'));
 app.use('/api/solution-fit/catalog', require('./src/routes/solution-fit-catalog'));
 app.use('/api/sales-teams', require('./src/routes/sales-teams'));
 app.use('/api/customer-switcher', require('./src/routes/customer-switcher'));
@@ -276,7 +281,7 @@ app.get('/api/solution-engineers', requireAuth, async (req, res) => {
   try {
     const { hasPermission, getTeamUsers } = require('./src/authorization');
     let rows;
-    if (hasPermission(req.user,'view_all_solution_fits')) ({rows}=await db().query(`SELECT id,username,email,role,roles FROM users WHERE is_active=TRUE AND (role='se' OR 'se'=ANY(roles) OR role='admin' OR 'admin'=ANY(roles)) ORDER BY username`));
+    if (hasPermission(req.user,'solution_fit_cross_account')) ({rows}=await db().query(`SELECT id,username,role,roles FROM users WHERE is_active=TRUE AND (role='se' OR 'se'=ANY(roles) OR role='admin' OR 'admin'=ANY(roles)) ORDER BY username`));
     else rows=await getTeamUsers(req.user.id,'se');
     res.json(rows.map(r => ({ id: r.id, name: r.username, role: (r.roles||[]).includes('admin')?'admin':'se', roles:r.roles||[r.role] })));
   } catch (err) {
@@ -1224,197 +1229,36 @@ app.get('/api/export/battlecard/:id', requireAuth, async(req,res)=>{try{
  const x=rows[0];res.json({product:x.product_name,version:x.version,findings:(x.content_json?.findings||[]).map(f=>({category:String(f.category||''),claim:String(f.claim||'')}))});
  }catch(_){res.status(500).json({error:'Battlecard could not be loaded.'});}});
 app.post('/api/export/battlecard-docx', requireAuth, async (req, res) => {
-  try {
-    let { competitorName, cost, time, maint, pain, adv, talk, company, repName,researchStatus,battlecardRevisionId } = req.body;
-    if(!battlecardRevisionId)return res.status(409).json({error:'Formal export requires an approved Battlecard revision.'});
-    let authorityLabel=String(researchStatus||'Research — not yet approved');
-    if(battlecardRevisionId){
-      const governed=await db().query(`SELECT r.version,r.published_at,r.content_json,p.product_name FROM competitive_battlecard_revisions r JOIN competitive_battlecards b ON b.id=r.battlecard_id JOIN competitive_products p ON p.id=b.product_id WHERE r.id=$1 AND b.current_revision_id=r.id AND b.status IN ('current','refresh_recommended') AND p.status='active' AND r.published_at IS NOT NULL`,[battlecardRevisionId]);
-      if(!governed.rows.length)return res.status(404).json({error:'Authoritative Battlecard revision not found.'});
-      const g=governed.rows[0],findings=Array.isArray(g.content_json?.findings)?g.content_json.findings:[];
-      competitorName=g.product_name;pain=findings.map(x=>x.claim);adv=[];talk='';cost=time=maint='See governed source details';authorityLabel=`Approved Battlecard v${g.version} · ${new Date(g.published_at).toLocaleDateString('en-US')}`;
-    }
-    if (!competitorName) return res.status(400).json({ error: 'competitorName required' });
-
-    const {
-      Document, Packer, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, Footer,
-      HeadingLevel, WidthType, BorderStyle, ShadingType, TableLayoutType, VerticalAlign
-    } = require('docx');
-
-    const date = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-    const wordBrand = brand.documentTheme('internal');
-    const esc  = s => String(s || '');
-
-    const mkPara = (runs, opts = {}) => new Paragraph({ children: Array.isArray(runs) ? runs : [runs], ...opts });
-    const mkRun  = (text, opts = {}) => new TextRun({ text: esc(text), size: wordBrand.type.body, font: wordBrand.font, ...opts });
-    const hr = () => new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: wordBrand.accent } }, spacing: { before: 120, after: 120 } });
-
-    const metaRow = (label, value) => new TableRow({ children: [
-      new TableCell({
-        children: [mkPara(mkRun(label, { bold: true }))],
-        width: { size: 3200, type: WidthType.DXA },
-        shading: { type: ShadingType.CLEAR, fill: wordBrand.canvas },
-        borders: { bottom: { style: BorderStyle.SINGLE, size: 1, color: wordBrand.border }, right: { style: BorderStyle.SINGLE, size: 1, color: wordBrand.border } }
-      }),
-      new TableCell({
-        children: [mkPara(mkRun(value))],
-        width: { size: 5800, type: WidthType.DXA },
-        borders: { bottom: { style: BorderStyle.SINGLE, size: 1, color: wordBrand.border } }
-      })
-    ]});
-
-    const maxRows = Math.max((pain || []).length, (adv || []).length);
-    const battleRows = [
-      new TableRow({ children: [
-        new TableCell({ children: [mkPara(mkRun('Pain points with ' + competitorName, { bold: true, color: brand.document.background.replace('#','') }))],
-          width: { size: 4500, type: WidthType.DXA }, shading: { type: ShadingType.CLEAR, fill: wordBrand.danger } }),
-        new TableCell({ children: [mkPara(mkRun('Cloud Inventory advantages', { bold: true, color: brand.document.background.replace('#','') }))],
-          width: { size: 4500, type: WidthType.DXA }, shading: { type: ShadingType.CLEAR, fill: wordBrand.success } })
-      ]}),
-      ...Array.from({ length: maxRows }, (_, i) => new TableRow({ children: [
-        new TableCell({ children: [i < (pain||[]).length
-          ? mkPara([mkRun('\u2715  ', { bold: true, color: wordBrand.danger }), mkRun(pain[i])], { spacing: { before: 60, after: 60 } })
-          : new Paragraph({})],
-          width: { size: 4500, type: WidthType.DXA },
-          shading: { type: ShadingType.CLEAR, fill: i % 2 === 0 ? wordBrand.background : wordBrand.dangerSurface },
-          borders: { bottom: { style: BorderStyle.SINGLE, size: 1, color: wordBrand.border }, right: { style: BorderStyle.SINGLE, size: 1, color: wordBrand.border } }
-        }),
-        new TableCell({ children: [i < (adv||[]).length
-          ? mkPara([mkRun('\u2713  ', { bold: true, color: wordBrand.success }), mkRun(adv[i])], { spacing: { before: 60, after: 60 } })
-          : new Paragraph({})],
-          width: { size: 4500, type: WidthType.DXA },
-          shading: { type: ShadingType.CLEAR, fill: i % 2 === 0 ? wordBrand.background : wordBrand.successSurface },
-          borders: { bottom: { style: BorderStyle.SINGLE, size: 1, color: wordBrand.border } }
-        })
-      ]}))
-    ];
-
-    const children = [
-      new Paragraph({ children:[new ImageRun({ data:fs.readFileSync(path.join(PUBLIC_DIR,wordBrand.logo)), transformation:{width:180,height:Math.round(180*wordBrand.logoAspect)} })], spacing:{after:90} }),
-      mkPara(mkRun('INTERNAL COMPETITIVE INTELLIGENCE', { bold: true, size: wordBrand.type.label, color: wordBrand.danger }), { spacing: { after: 70 } }),
-      mkPara(mkRun('Competitive Battlecard: ' + competitorName, { bold: true, size: wordBrand.type.pageTitle, color: wordBrand.heading }), { spacing: { after: 80 } }),
-      mkPara(mkRun(authorityLabel, { bold: true, size: wordBrand.type.label, color: wordBrand.muted }), { spacing: { after: 70 } }),
-      mkPara(mkRun(esc(company) + (repName ? '  \u00b7  Prepared by ' + esc(repName) : '') + '  \u00b7  ' + date, { size: wordBrand.type.label, color: wordBrand.muted }), { spacing: { after: 160 } }),
-      hr(),
-      new Paragraph({ text: 'Current solution overview', heading: HeadingLevel.HEADING_2, spacing: { before: 240, after: 80 } }),
-      new Table({ rows: [metaRow('Typical cost', esc(cost)), metaRow('Time to value', esc(time)), metaRow('Ongoing maintenance', esc(maint))],
-        width: { size: 9000, type: WidthType.DXA }, layout: TableLayoutType.FIXED, columnWidths: [3200, 5800] }),
-      new Paragraph({ spacing: { after: 200 } }),
-      new Paragraph({ text: 'Battlecard', heading: HeadingLevel.HEADING_2, spacing: { before: 240, after: 80 } }),
-      new Table({ rows: battleRows, width: { size: 9000, type: WidthType.DXA }, layout: TableLayoutType.FIXED, columnWidths: [4500, 4500] }),
-      new Paragraph({ spacing: { after: 200 } }),
-    ];
-
-    if (talk) {
-      children.push(new Paragraph({ text: 'Talk track', heading: HeadingLevel.HEADING_2, spacing: { before: 240, after: 80 } }));
-      children.push(mkPara(mkRun(talk, { italics: true }), {
-        shading: { type: ShadingType.CLEAR, fill: wordBrand.infoSurface },
-        border: { left: { style: BorderStyle.SINGLE, size: 12, color: wordBrand.accent } },
-        indent: { left: 200 }, spacing: { before: 80, after: 80 }
-      }));
-    }
-
-    const doc  = new Document({ styles:brandedWordStyles(wordBrand), sections: [{
-      footers: {
-        default: new Footer({ children: [
-          new Paragraph({
-            children: [mkRun(wordBrand.footer + ' · Prepared for ' + esc(company || 'the intended recipient'), { size: wordBrand.type.caption, color: wordBrand.muted })],
-            alignment: 'center'
-          })
-        ] })
-      },
-      children
-    }] });
-    const buf  = await Packer.toBuffer(doc);
-    const safe = esc(competitorName).replace(/[^a-zA-Z0-9]/g, '-');
-    const filename = `Cloud-Inventory-Internal-Battlecard-${safe}-${new Date().toISOString().split('T')[0]}.docx`;
-
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send(buf);
-  } catch (err) {
-    console.error('battlecard-docx error:', err.message);
-    res.status(500).json({ error: 'Word export failed: ' + err.message });
-  }
+ try {
+  const {battlecardRevisionId,company,repName}=req.body||{};
+  if(!battlecardRevisionId)return res.status(409).json({error:'Formal export requires an approved Battlecard revision.'});
+  const governed=await db().query(`SELECT r.version,r.published_at,r.content_json,p.product_name FROM competitive_battlecard_revisions r JOIN competitive_battlecards b ON b.id=r.battlecard_id JOIN competitive_products p ON p.id=b.product_id WHERE r.id=$1 AND b.current_revision_id=r.id AND b.status IN ('current','refresh_recommended') AND p.status='active' AND r.published_at IS NOT NULL`,[battlecardRevisionId]);
+  if(!governed.rows.length)return res.status(404).json({error:'Authoritative Battlecard revision not found.'});
+  const g=governed.rows[0],findings=Array.isArray(g.content_json?.findings)?g.content_json.findings:[];
+  const buffer=await buildCompetitiveDocx({competitorName:g.product_name,authorityLabel:`Approved Battlecard v${g.version} · ${new Date(g.published_at).toLocaleDateString('en-US')}`,findings,company,repName,logoData:fs.readFileSync(path.join(PUBLIC_DIR,brand.documentTheme('internal').logo))});
+  const safe=String(g.product_name).replace(/[^a-z0-9]+/gi,'-');
+  res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+  res.setHeader('Content-Disposition',`attachment; filename="Cloud-Inventory-Internal-Battlecard-${safe}-${new Date().toISOString().slice(0,10)}.docx"`);
+  res.send(buffer);
+ } catch (error) { console.error('battlecard-docx error:',error.message);res.status(500).json({error:'Word export failed.'}); }
 });
-
 /* Customer-ready executive proposal. The scenario id is the only proposal
    authority accepted from the browser; content is loaded from the server. */
 app.post('/api/export/proposal-docx', requireAuth, async (req, res) => {
-  try {
-    const { Document, Packer, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, Footer,
-      HeadingLevel, WidthType, BorderStyle, ShadingType, TableLayoutType, AlignmentType } = require('docx');
-    const clean = (value, max = 1600) => String(value == null ? '' : value).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, max);
-    const list = (value, limit = 12) => Array.isArray(value) ? value.slice(0, limit) : [];
-    const scenarioId=String(req.body?.scenarioId||'');
-    if(!scenarioId)return res.status(400).json({error:'A scenario is required for proposal export.'});
-    const access=await scenarioAccess(req.user,scenarioId,'view');
-    if(!access.exists)return res.status(404).json({error:'Scenario not found.'});
-    if(!access.allowed)return res.status(403).json({error:'Access denied.'});
-    const stored=await db().query(`SELECT data->'proposalDraft' proposal FROM scenarios WHERE id=$1 AND deleted_at IS NULL`,[scenarioId]);
-    const proposal=stored.rows[0]?.proposal;
-    if(!proposal)return res.status(409).json({error:'Save the proposal before exporting.'});
-    const scenarioRows=await db().query(`SELECT s.*,u.username owner_username FROM scenarios s JOIN users u ON u.id=s.owner_id WHERE s.id=$1 AND s.deleted_at IS NULL`,[scenarioId]);
-    const scenario=scenarioRows.rows[0];
-    const [governance,stakeholders,discovery,handoff,plans]=await Promise.all([
-      db().query('SELECT evidence FROM scenario_stage_governance WHERE scenario_id=$1',[scenarioId]),
-      db().query('SELECT id,name,title,role,engaged FROM stakeholders WHERE owner_id=$1 AND LOWER(company)=LOWER($2)',[scenario.owner_id,scenario.company]),
-      db().query(`SELECT DISTINCT ON (a.question_id) a.question_id,a.answer,a.entered_by,a.updated_at FROM discovery_answers a JOIN discovery_sessions d ON d.id=a.session_id WHERE d.scenario_id=$1 ORDER BY a.question_id,a.updated_at DESC`,[scenarioId]),
-      scenario.customer_id?db().query('SELECT data FROM handoffs WHERE customer_id=$1 AND deleted_at IS NULL',[scenario.customer_id]):Promise.resolve({rows:[]}),
-      db().query(`SELECT title,milestones,updated_at FROM mutual_action_plans WHERE scenario_id=$1 OR (owner_id=$2 AND LOWER(company)=LOWER($3)) ORDER BY (scenario_id=$1) DESC,updated_at DESC LIMIT 1`,[scenarioId,scenario.owner_id,scenario.company])
-    ]);
-    const story=buildExecutiveValueStory({scenario,governance:governance.rows[0]||{},stakeholders:stakeholders.rows,discovery:discovery.rows,solutionFit:handoff.rows[0]||null,jointProjectPlan:plans.rows[0]||null,proposal});
-    const readiness=evaluateExecutiveOutputReadiness(story,{outputType:'proposal'});
-    if(readiness.status==='draft_only'&&!req.body?.internalDraft)return res.status(409).json({error:'This proposal is Draft Only. Resolve blockers or explicitly export an internal draft.',readiness});
-    if(readiness.status==='review'&&!req.body?.reviewAcknowledged)return res.status(409).json({error:'Review acknowledgement is required before export.',readiness});
-    const company = clean(story.meta.customer, 160) || 'Prospect';
-    const wordBrand = brand.documentTheme('customer');
-    const title = clean(proposal.title, 220) || (company + ' executive proposal');
-    const text = (value, opts = {}) => new TextRun({ text: clean(value), font: wordBrand.font, size: wordBrand.type.body, ...opts });
-    const para = (value, opts = {}) => new Paragraph({ children: [text(value, opts.run || {})], ...opts });
-    const heading = value => new Paragraph({ text: clean(value), heading: HeadingLevel.HEADING_2, spacing: { before: 250, after: 90 } });
-    const bullets = values => list(values).map(item => new Paragraph({ children:[text(typeof item === 'string' ? item : '')], bullet:{level:0}, spacing:{after:60} }));
-    const table = (values, left, right) => new Table({ rows: list(values).map(row => new TableRow({ children:[
-      new TableCell({ children:[para(row[left], { run:{ bold:true } })], width:{size:4300,type:WidthType.DXA}, shading:{type:ShadingType.CLEAR,fill:wordBrand.canvas}, borders:{bottom:{style:BorderStyle.SINGLE,size:1,color:wordBrand.border}} }),
-      new TableCell({ children:[para(row[right])], width:{size:4700,type:WidthType.DXA}, borders:{bottom:{style:BorderStyle.SINGLE,size:1,color:wordBrand.border}} })
-    ] })), width:{size:9000,type:WidthType.DXA}, layout:TableLayoutType.FIXED, columnWidths:[4300,4700] });
-    const meta = [
-      { label:'Prepared for', value:company }, { label:'Prepared by', value:clean(proposal.preparedBy,160) || 'Cloud Inventory' },
-      { label:'Solution', value:clean(story.meta.solution,180) }, { label:'Contract term', value:clean(story.economics.contractMonths+' months',80) },
-      { label:'Proposal date', value:clean(proposal.proposalDate,40) }, { label:'Valid through', value:clean(proposal.validThrough,40) }
-    ];
-    const children = [
-      new Paragraph({ children:[new ImageRun({ data:fs.readFileSync(path.join(PUBLIC_DIR,wordBrand.logo)), transformation:{width:180,height:Math.round(180*wordBrand.logoAspect)} })], spacing:{after:90} }),
-      para('Commercial proposal', { run:{bold:true,size:wordBrand.type.label,color:wordBrand.accent}, spacing:{before:160,after:80} }),
-      para(title, { run:{bold:true,size:wordBrand.type.display,color:wordBrand.heading}, spacing:{after:110} }),
-      para('Prepared for ' + company, { run:{size:wordBrand.type.sectionHeading,color:wordBrand.muted}, spacing:{after:160} }),
-      table(meta, 'label', 'value'),
-      ...(req.body?.internalDraft?[para('DRAFT — NOT READY FOR CUSTOMER SHARING',{run:{bold:true,color:wordBrand.danger},spacing:{after:120}})]:[]),
-      heading('Executive summary'), para(proposal.situation),
-      new Paragraph({ text:'Our recommendation', heading:HeadingLevel.HEADING_3, spacing:{before:150,after:50} }), para(proposal.recommendation),
-      new Paragraph({ text:'Expected outcome', heading:HeadingLevel.HEADING_3, spacing:{before:150,after:50} }), para(`${story.economics.annualBenefit.toLocaleString()} ${story.meta.currency} annual customer benefit; ${story.economics.totalContractBenefit.toLocaleString()} total contract benefit; ${story.economics.netEconomicBenefit.toLocaleString()} net economic benefit; ${Math.round(story.economics.contractRoi)}% contract ROI.`, { shading:{type:ShadingType.CLEAR,fill:wordBrand.infoSurface}, border:{left:{style:BorderStyle.SINGLE,size:12,color:wordBrand.accent}}, indent:{left:160}, spacing:{before:100,after:100} }),
-      heading('The value case'),
-      new Paragraph({ text:'Why change', heading:HeadingLevel.HEADING_3 }), para(story.threeWhys.whyChange.value),
-      new Paragraph({ text:'Why Cloud Inventory', heading:HeadingLevel.HEADING_3 }), para(story.threeWhys.whyCloudInventory.value),
-      new Paragraph({ text:'Why now', heading:HeadingLevel.HEADING_3 }), para(story.threeWhys.whyNow.value),
-      heading('Solution and investment'), new Paragraph({ text:'In scope', heading:HeadingLevel.HEADING_3 }), ...bullets(story.solutionAlignment.priorityWorkflows.map(x=>x.name)),
-      new Paragraph({ text:'Commercial investment', heading:HeadingLevel.HEADING_3, spacing:{before:140,after:60} }), table(proposal.investment, 'label', 'value'),
-      new Paragraph({ text:'Delivery approach', heading:HeadingLevel.HEADING_3, spacing:{before:140,after:50} }), para(`ROI modeling assumption: ${story.implementationContext.modelingMonths||0} months to implementation/go-live. This is not a delivery commitment.`),
-      heading('Success and next steps'), new Paragraph({ text:'How we will measure success', heading:HeadingLevel.HEADING_3, spacing:{after:60} }), table(story.economics.activeDrivers.slice(0,5).map(x=>({metric:x.label,target:x.annualValue.toLocaleString()+' '+story.meta.currency+' / year · '+x.status})), 'metric', 'target'),
-      new Paragraph({ text:'Joint next steps', heading:HeadingLevel.HEADING_3, spacing:{before:140,after:60} }), ...bullets(story.nextSteps.items.map(x=>[x.milestone,x.owner,x.dueDate].filter(Boolean).join(' — ')))
-    ];
-    const doc = new Document({ styles:brandedWordStyles(wordBrand), sections:[{ footers:{ default:new Footer({ children:[new Paragraph({ children:[text(wordBrand.footer+' · Prepared for '+company+' · Story '+story.storyRevision, {size:wordBrand.type.caption,color:wordBrand.muted})], alignment:AlignmentType.CENTER })] }) }, children }] });
-    const buffer = await Packer.toBuffer(doc);
-    const safe = company.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'Prospect';
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename="Cloud-Inventory-Proposal-${safe}-${new Date().toISOString().slice(0,10)}.docx"`);
-    res.send(buffer);
-  } catch (err) {
-    console.error('proposal-docx error:', err.message);
-    res.status(500).json({ error:'Word export failed.' });
-  }
+ try {
+  const scenarioId=String(req.body?.scenarioId||'');
+  if(!scenarioId)return res.status(400).json({error:'A scenario is required for proposal export.'});
+  const source=await loadExecutiveSource(req.user,scenarioId);
+  if(source.error)return res.status(source.status).json({error:source.error});
+  if(!source.proposal)return res.status(409).json({error:'Save the proposal before exporting.'});
+  const story=buildExecutiveValueStory(source),readiness=evaluateExecutiveOutputReadiness(story,{outputType:'proposal'});
+  let output;try{output=resolveProposalOutput(readiness,{internalDraft:req.body?.internalDraft,reviewAcknowledged:req.body?.reviewAcknowledged});}catch(error){return res.status(error.status||500).json({error:error.message,readiness});}
+  const company=String(story.meta.customer||'Prospect'),buffer=await buildProposalDocx({story,proposal:source.proposal,audience:output.audience,draft:output.draft,logoData:fs.readFileSync(path.join(PUBLIC_DIR,brand.documentTheme(output.audience).logo))});
+  res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+  res.setHeader('X-Executive-Readiness',readiness.status);res.setHeader('X-Output-Audience',output.audience);
+  res.setHeader('Content-Disposition',`attachment; filename="${proposalFilename(company,{draft:output.draft})}"`);res.send(buffer);
+ } catch (error) { console.error('proposal-docx error:',error.message);res.status(500).json({error:'Word export failed.'}); }
 });
-
 /* Natural-language question over aggregate deal data (Admin Analytics).
    Two-step: (1) AI picks which pre-written query/queries answer the
    question, from the fixed catalog in src/deal-queries.js — the model
@@ -1642,6 +1486,15 @@ app.get('/api/discovery/sessions/:token', async (req, res) => {
   } catch(err) { res.status(500).json({ error: 'Failed to load discovery session.' }); }
 });
 
+app.get('/api/discovery/sessions/:token/roi-preview', async (req,res)=>{try{
+  const token=String(req.params.token||'').trim();if(!await isValidDiscoveryToken(token))return res.status(400).json({error:'Invalid token.'});
+  const {query}=db();const session=await query(`SELECT ds.*,s.data scenario_data FROM discovery_sessions ds JOIN scenarios s ON s.id=ds.scenario_id WHERE ds.token=$1`,[token]);if(!session.rows.length)return res.status(404).json({error:'Session not found.'});const s=session.rows[0];if(!s.is_active)return res.status(410).json({error:'This prospect link is no longer active.'});if(s.expires_at&&new Date(s.expires_at)<new Date())return res.status(410).json({error:'This prospect link has expired.'});
+  const questions=(await query(`SELECT question_id,canonical_input,unit,conversion FROM discovery_session_questions WHERE discovery_session_id=$1 ORDER BY display_order`,[s.id])).rows;
+  const answers=(await query(`SELECT question_id,answer FROM discovery_answers WHERE session_id=$1`,[s.id])).rows;
+  const {buildProspectPreview}=require('./src/shared/prospect-roi-preview');const data=s.scenario_data||{};
+  res.json(buildProspectPreview({industry:s.industry,currency:data.currency||'USD',questions,answers,scenarioData:{invest:data.invest,otc:data.otc,contractMonths:data.contractMonths,hasFieldInventory:s.has_field_inventory}}));
+}catch(err){console.error('Prospect ROI preview error:',err.message);res.status(500).json({error:'Modeled preview is temporarily unavailable.'});}});
+
 app.put('/api/discovery/sessions/:token/answers', async (req, res) => {
   try {
     const token = String(req.params.token || '').trim();
@@ -1814,7 +1667,6 @@ app.post('/api/prospect-sessions', (req, res) => res.status(410).json({ error: '
 
 app.use('/api/business-case-shares', require('./src/routes/business-case-shares'));
 
-
 app.get('/api/business-case-shares', requireAuth, async (req, res) => {
   try {
     const { scenarioId } = req.query;
@@ -1906,16 +1758,11 @@ app.post('/api/prospect-assist', aiLimiter, async (req, res) => {
       'You have no access to internal strategy, coaching, risk, champion, economic-buyer, stakeholder classification, competitive, forecast, qualification, closing, discount, notes, or comments. If asked outside questionnaire Help, politely redirect to the Cloud Inventory contact.',
       'ACTIVE FIELD CONTEXT: ' + JSON.stringify(safeField)
     ].join(' ');
-    const safeMessages = messages.slice(-8).map(m => ({
-      role: m && m.role === 'assistant' ? 'assistant' : 'user',
-      content: String((m && m.content) || '').slice(0, 2000)
-    })).filter(m => m.content);
-    if (!safeMessages.length) return res.status(400).json({ error: 'messages required.' });
     const payload = {
       model: ANTHROPIC_MODEL,
       max_tokens: 500,
       system,
-      messages: safeMessages
+      messages: messages.slice(-8)
     };
     const aiResp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',

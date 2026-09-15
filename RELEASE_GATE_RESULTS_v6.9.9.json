@@ -1,0 +1,16 @@
+{
+  "release": "6.9.9",
+  "node": "22.22.0",
+  "npm": "10.9.4",
+  "gates": [
+    {"command":"npm ci --omit=dev --no-audit --no-fund","status":"pass","exitCode":0,"durationSeconds":5.4},
+    {"command":"npm test","status":"pass","exitCode":0,"durationSeconds":9.8,"passed":491,"skipped":3},
+    {"command":"npm run test:routes","status":"pass","exitCode":0,"durationSeconds":0.2,"note":"DATABASE_URL not set; integration suite reported its governed environment skip."},
+    {"command":"npm run test:production-locks","status":"pass","exitCode":0,"durationSeconds":1.7,"passed":101},
+    {"command":"JavaScript syntax validation","status":"pass","exitCode":0,"durationSeconds":24.6,"files":186},
+    {"command":"node scripts/audit-active-output-paths.js","status":"pass","exitCode":0,"registeredModules":30}
+  ],
+  "failures": 0,
+  "notTested": ["Live PostgreSQL route integration because DATABASE_URL was not supplied"],
+  "productOwnerApprovalRequired": true
+}

@@ -3,7 +3,7 @@
 /* Dependency-free, in-memory PDF writer. It uses standard PDF fonts and
    vector drawing commands, so it is reliable on Render and leaves no temp
    files behind. */
-const fs=require('fs'),path=require('path'),zlib=require('zlib'),brand = require('../shared/brand-system');
+const fs=require('fs'),path=require('path'),zlib=require('zlib'),brand = require('../shared/brand-system'),economic=require('../../public/economic-availability');
 const theme = brand.documentTheme('customer');
 const PAGE = { w: 612, h: 792, left: 50, right: 562, top: 64, bottom: 54 };
 const rgb = hex => { const v=String(hex).replace('#',''); return [0,2,4].map(i=>parseInt(v.slice(i,i+2),16)/255); };
@@ -12,8 +12,8 @@ const esc = value => String(value == null ? '' : value)
   .replace(/[–—]/g,'-').replace(/[‘’]/g,"'").replace(/[“”]/g,'"').replace(/·/g,'|')
   .normalize('NFKD').replace(/[^\x20-\x7E\xA9]/g,'')
   .replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)').replace(/[\r\n]+/g,' ');
-const money = (value,currency) => `${currency} ${Math.round(Number(value)||0).toLocaleString('en-US')}`;
-const pct = value => value == null ? 'N/A' : `${Math.round(Number(value))}%`;
+const money = (value,currency) => economic.hasEconomicValue(value)?`${currency} ${Math.round(Number(value)).toLocaleString('en-US')}`:'N/A';
+const pct = value => economic.percent(value,{missing:'N/A'});
 const wrap = (value,max=78) => { const words=String(value||'').split(/\s+/).filter(Boolean),out=[];let line='';for(const word of words){if((line+' '+word).trim().length>max&&line){out.push(line);line=word;}else line=(line+' '+word).trim();}if(line)out.push(line);return out.length?out:['']; };
 
 function builder(report,{internalDraft=false}={}){
@@ -31,7 +31,7 @@ function builder(report,{internalDraft=false}={}){
 
   addPage('Executive value story');
   for(const [label,item] of [['Why change',report.executiveSummary.threeWhys.whyChange],['Why now',report.executiveSummary.threeWhys.whyNow],['Why Cloud Inventory',report.executiveSummary.threeWhys.whyCloudInventory]]){text(label,{size:11,bold:true,width:70,colorHex:theme.accessibleAccent});text(item.value,{size:10,width:86});text(item.status,{size:8,width:90,colorHex:theme.muted});y-=10;}
-  ensure(195);heading('Financial summary');const f=report.financials,top=y;metric('Annual benefit',money(f.annualBenefit,report.currency),50,top,120);metric('Contract investment',money(f.totalInvestment,report.currency),180,top,120);metric('Net value',money(f.netValue,report.currency),310,top,120);metric('Contract ROI',pct(f.contractRoi),440,top,122);y-=75;metric('Contract benefit',money(f.totalBenefit,report.currency),50,y,160);metric('NPV',money(f.npv,report.currency),226,y,160);metric('Payback',f.paybackMonths==null?'Not in term':`${f.paybackMonths.toFixed(1)} months`,402,y,160);y-=75;footer();
+  ensure(195);heading('Financial summary');const f=report.financials,top=y;metric('Annual benefit',money(f.annualBenefit,report.currency),50,top,120);metric('Contract investment',money(f.totalInvestment,report.currency),180,top,120);metric('Net value',money(f.netValue,report.currency),310,top,120);metric('Contract ROI',pct(f.contractRoi),440,top,122);y-=75;metric('Contract benefit',money(f.totalBenefit,report.currency),50,y,160);metric('NPV',money(f.npv,report.currency),226,y,160);metric('Payback',economic.paybackLabel({paybackMonths:f.paybackMonths,investmentEstablished:f.investmentEstablished}),402,y,160);y-=75;footer();
 
   addPage('Contract value over time');
   const chartTop=y-20,chartBottom=chartTop-180,chartLeft=74,chartRight=548,max=Math.max(1,...report.chartData.contractTimeline.flatMap(d=>[d.benefit,d.investment,Math.max(0,d.netValue)]));ops.push(`${color(theme.border)} RG .5 w ${chartLeft} ${chartBottom} m ${chartLeft} ${chartTop} l ${chartRight} ${chartTop} l S`);

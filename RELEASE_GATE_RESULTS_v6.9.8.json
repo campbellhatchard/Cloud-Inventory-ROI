@@ -1,0 +1,20 @@
+{
+  "release": "6.9.8",
+  "status": "local_gates_passed",
+  "passed": 486,
+  "failed": 0,
+  "skipped": 3,
+  "total": 489,
+  "gates": {
+    "npmCiProduction": "passed",
+    "npmTest": "passed",
+    "productionLocks": {"passed": 96, "failed": 0, "skipped": 0},
+    "routes": {"passed": 0, "failed": 0, "skipped": 0, "note": "Route source suite completed successfully; database integration is environment-dependent."},
+    "brand": {"passed": 19, "failed": 0, "skipped": 0},
+    "lineage": "passed",
+    "activeOutputAudit": "passed",
+    "brandAssets": "passed",
+    "applicationKnowledge": "passed"
+  },
+  "notTested": ["Render post-deployment browser validation", "PostgreSQL integration tests requiring DATABASE_URL"]
+}

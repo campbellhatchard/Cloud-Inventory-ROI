@@ -1,0 +1,10 @@
+{
+  "applicationVersion": "6.9.13",
+  "parentVersion": "6.9.12",
+  "parentArchive": "cloud-inventory-roi-v6.9.12-render-ready.zip",
+  "parentSha256": "a2559fd052884c1a9f5d866799f8b111fe1b2662060aa65cea73df97707a00b8",
+  "roiModelVersion": 28,
+  "brandSystemVersion": "1.0",
+  "applicationKnowledgeVersion": "1.0",
+  "christiePersonaVersion": "1.0"
+}

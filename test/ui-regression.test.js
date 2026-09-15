@@ -132,9 +132,9 @@ test('PowerPoint runtime loads JSZip first and normalizes the browser constructo
   assert.ok(index.indexOf('<script src="/jszip.min.js">') < index.indexOf('<script src="/pptxgen.min.js">'));
   assert.match(server, /app\.get\('\/jszip\.min\.js'/);
   assert.match(pptxExport, /window\.PptxGenJS/);
-  assert.match(pptxExport, /window\.pptxgen = window\.PptxGenJS/);
+  assert.match(pptxExport, /window\.pptxgen=window\.PptxGenJS/);
   assert.match(pptxExport, /async function ensurePptxReady\(\)/);
-  assert.match(pptxExport, /if \(!\(await ensurePptxReady\(\)\)\) return;/);
+  assert.doesNotMatch(pptxExport, /exportToPowerPoint/);
   assert.match(dealExport, /await ensurePptxReady\(\)/);
 });
 
@@ -145,7 +145,7 @@ test('PowerPoint-only colors use PptxGenJS hex values', () => {
 });
 
 test('narrative action labels contain real icons, not escaped code text', () => {
-  assert.match(index, />↺ Reset<\/button>/);
+  assert.match(index, />Restore customer evidence<\/button>/);
   assert.match(index, />✨ AI enhance<\/button>/);
   assert.doesNotMatch(index, /\\u21ba|\\u2728/);
 });
@@ -162,7 +162,8 @@ test('solution selection is presentation-only and cannot change ROI inputs', () 
 });
 
 test('executive Three Whys autosave to the active scenario and AI output saves immediately', () => {
-  assert.match(narrative, /setTimeout\(persistThreeWhys, 700\)/);
+  assert.match(narrative, /setTimeout\(persistThreeWhys,\s*700\)/);
+  assert.match(narrative, /threeWhysMeta/);
   assert.match(narrative, /\/api\/scenarios\/.*\/narrative/);
   assert.match(narrative, /await persistThreeWhys\(\)/);
   assert.match(app, /await persistThreeWhys\(\)/);
@@ -170,7 +171,7 @@ test('executive Three Whys autosave to the active scenario and AI output saves i
   assert.match(scenarioRoutes, /router\.patch\('\/:id\/narrative'/);
   assert.match(scenarioRoutes, /current_target AS/);
   assert.match(scenarioRoutes, /SET data = s\.data \|\| \$1::jsonb, updated_at = NOW\(\)/);
-  assert.match(narrative, /window\._calcScenarioId = result\.id/);
+  assert.match(narrative, /window\._calcScenarioId\s*=\s*result\.id/);
   assert.match(index, /id="saveExecutiveViewBtn"/);
   assert.match(narrative, /async function saveExecutiveView\(\)/);
   const saveStart = app.indexOf('async function _doSave');
@@ -262,7 +263,9 @@ test('Joint Project Plans support ordered custom groupings and customer-ready va
   assert.match(dealExport, /deMapGroups\(m, ms\)/);
   assert.match(dealExport, /Joint Project Plan/);
   assert.match(dealExport, /Why we are sharing this plan/);
-  assert.match(dealExport, /rowsPerSlide = 11/);
+  assert.match(dealExport, /getSavedMapForOutput/);
+  assert.match(dealExport, /\/api\/maps\/.*export-pptx/);
+  assert.doesNotMatch(dealExport, /legacyPptActionPlan/);
   assert.doesNotMatch(dealExport, /One slide per phase/);
   assert.match(prospectMap, /function planGroups\(ms\)/);
   assert.match(prospectMap, /Joint Project Plan/);
@@ -285,7 +288,7 @@ test('contract term drives simultaneous annual, cumulative, and total-contract p
   assert.match(app, /totalContractNetBenefit/);
   assert.match(fs.readFileSync(path.join(root,'src/shared/customer-roi-report.js'),'utf8'), /contractRoi: roi.totalContractRoi/);
   assert.match(fs.readFileSync(path.join(root,'src/shared/customer-roi-report.js'),'utf8'), /cumulativeRoi: row.cumulativeRoi/);
-  assert.match(pptxExport, /totalContractRoi/);
+  assert.match(fs.readFileSync(path.join(root,'src/exports/executive-pptx.js'),'utf8'), /contractRoi|totalContractRoi/);
   assert.match(dealExport, /Total contract ROI/);
 });
 

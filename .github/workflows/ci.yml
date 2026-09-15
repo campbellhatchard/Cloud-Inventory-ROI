@@ -15,6 +15,7 @@ jobs:
           --health-timeout 5s --health-retries 5
     env:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/ci_test
+      REQUIRE_DATABASE_INTEGRATION: '1'
       JWT_SECRET: ci-test-secret
       ADMIN_PASSWORD: CloudInventory2026!
       NODE_ENV: test
@@ -34,10 +35,17 @@ jobs:
         run: node test/migration-schema-compat.test.js
       - name: Phase 1 regression tests
         run: node test/phase1.test.js
-      - name: Route/integration tests
-        run: npm run test:routes
-
-      - name: UI and startup regression tests
-        run: node --test test/ui-regression.test.js test/production-regression-locks.test.js
-      - name: Full application regression suite
-        run: npm test
+      - name: PostgreSQL integration suites
+        run: npm run test:postgres
+      - name: Full release certification gates
+        run: npm run release:gates
+      - name: Upload release certification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloud-inventory-roi-v6.9.13-certification-evidence
+          if-no-files-found: error
+          path: |
+            POSTGRES_INTEGRATION_RESULTS_v6.9.13.json
+            RELEASE_GATE_RESULTS_v6.9.13.json
+            OUTPUT_RUNTIME_RESULTS_v6.9.13.json

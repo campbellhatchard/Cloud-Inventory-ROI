@@ -4,26 +4,42 @@ These rules apply to this build and MUST be carried forward unchanged into every
 
 ## 0.1 AUTHORITATIVE BASELINE — ABSOLUTE RULE
 
-The ONLY authoritative baseline for a production release is the exact Git commit/tree currently deployed from production `main`, independently verified against the production hosting service before development or release integration begins.
-
-For v6.9.1 that baseline is:
-
-- commit `19c9d9b537f8eedf593110360c876817eb107297`
-- tree `b050db4e2fdf89fb4d47361e0218a9d739da4b79`
-- version v6.9.0
-
-A validated production artifact may be used to reconstruct that exact tree, but an earlier/raw developer ZIP is provenance only and must never supersede the deployed Git tree.
+The authoritative source package is the exact archive and SHA explicitly specified by the current Product Owner build instruction and recorded in the current `release-lineage.json` manifest.
 
 Do not:
 
-- start from an older version or development branch
-- substitute a previous raw ZIP because it has the requested version number
+- start from an archive or branch not named by the current Product Owner instruction
 - merge from an older archive
-- reconstruct production files from memory
-- replace unrelated production files with stale copies
-- weaken or delete cumulative regression protection to make a new build pass
+- reconstruct files from memory
+- substitute a “cleaner” historical build
+- use another package because its tests pass
+- selectively copy old implementations over newer implementations
 
-All work must be applied FORWARD from the exact production baseline. If the production commit/tree cannot be verified or reconstructed exactly, **STOP THE BUILD** rather than substitute another source.
+All work must be applied FORWARD from the exact authoritative baseline.
+
+If the authoritative package cannot be located or opened:
+
+**STOP THE BUILD.**
+
+Do not substitute another version.
+
+---
+
+# 0.17 CRITICAL PATH TESTS MUST EXECUTE BEHAVIOR
+
+Critical-path release tests must invoke production behavior with controlled data or equivalent governed fixtures. Static source inspection alone is insufficient for customerAccess, scenarioAccess, solutionFitAccess, publication, value story, output readiness, customer-safe projection, battlecard approval, and ROI output governance. Source assertions may supplement but must not replace behavioral proof. Permanent behavioral regressions must remain in both the complete test suite and production-regression-lock suite.
+
+# 0.18 FAIL-CLOSED CUSTOMER OUTPUT INVARIANT
+
+If an authoritative customer-output service, adapter, or data source fails, the application must show an unavailable/error state. It may never fall back to a legacy or independently calculated customer output.
+
+# 0.19 NO GENERIC CUSTOMER NARRATIVE FALLBACK INVARIANT
+
+Missing customer narrative remains missing / To validate. Industry templates, AI drafts, marketing copy, and seller hypotheses may never silently become governed customer facts.
+
+# 0.20 CUSTOMER NARRATIVE PROVENANCE INVARIANT
+
+Every Three Why used by the Executive Value Story must preserve its actual source and validation state. Customer-supported, rep-authored, AI-drafted, historical-unknown, reviewed vendor positioning, and empty states must remain distinguishable.
 
 ---
 
@@ -257,7 +273,7 @@ Codex may provide test evidence but may not self-assign final Product Owner appr
 
 Before modifying source, run and document:
 
-1. exact production Git commit and tree (plus any reference artifact filename/hash)
+1. exact package filename
 2. application version
 3. git/package version indicators
 4. ROI model version
@@ -270,11 +286,7 @@ Before modifying source, run and document:
 11. active Battlecard export
 12. active Solution Fit workflow
 
-Produce:
-
-`BASELINE_INHERITANCE_AUDIT.md`
-
-The report must prove this build started from v6.9.0.
+Produce `BASELINE_INHERITANCE_AUDIT.md`. The report must prove the build started from the exact archive and SHA recorded by the current release-lineage manifest.
 
 ---
 
@@ -308,5 +320,96 @@ Once a release-blocking defect receives a regression test, that test becomes par
 Do not delete, skip, weaken or rewrite the test merely to make a new build pass.
 
 If architecture legitimately changes, replace the test only with equivalent or stronger protection.
+
+---
+
+# 0.16 SE CROSS-ACCOUNT SOLUTION FIT INVARIANT
+
+An active Sales Engineer discovers every active customer and can create, view, and edit its Solution Fit without ownership, team, scenario, or prior-assignment dependency. This authority is limited to the Solution Fit workflow. The same Sales Engineer does not gain broader customer, scenario, opportunity, Discovery, Buyer Evidence, Proposal, Executive output, stakeholder, Joint Project Plan, financial, or manager access unless another assigned role independently grants it.
+
+Every future baseline audit, differential audit, release manifest, QA report, deployment validation, and readiness report must state:
+
+> SE Solution Fit Scope:
+> Sales Engineers have cross-account access to all active customers for
+> Solution Fit discovery/create/view/edit only. This does not confer general
+> cross-account customer, scenario or opportunity access.
+
+---
+
+## 0.21 REP CONFIRMED VALUE INVARIANT
+
+Rep Confirmed applies to one exact value and one immutable internal confirmation event. It increases Model Confidence but never customer-supported value. If the value changes, the active Rep Confirmed state is removed until the new value is deliberately reconfirmed.
+
+Rep Confirmed is seller-supported evidence. It is never Prospect Verified, Customer Revalidated, Buyer Evidence, customer narrative validation, or customer evidence for Executive Output Readiness.
+
+---
+
+## 0.22 RELEASE-LINEAGE AND TEST MONOTONICITY
+
+Every release must include a machine-readable `release-lineage.json` that agrees with the package and release manifest. The parent archive and SHA must be those named by the current Product Owner instruction. The permanent-test manifest is cumulative: registered tests and governance invariants may not silently disappear or be weakened.
+
+---
+
+## 0.23 CUSTOMER-SURFACE REGISTRY INVARIANT
+
+Any active function intentionally producing customer/prospect-facing economic, value, implementation or commitment claims must be registered as a customer-facing surface.
+
+No customer-facing surface may independently call or reproduce ROI calculations outside its declared authoritative service.
+
+---
+
+## 0.24 AUTHORITATIVE OUTPUT GENERATOR INVARIANT
+
+A governed customer-facing output may have one authoritative production generation path. Browser compatibility helpers may not reproduce an Executive document generator, economic projection, or customer-claim composition path. If the authoritative adapter or service is unavailable, the control must fail closed and must not fall back to a second generator.
+
+---
+
+## 0.25 NULL IS NOT ZERO INVARIANT
+
+A missing, undefined, blank, or mathematically unavailable economic value may never be converted to zero solely through numeric coercion in a customer-facing surface. Every customer-facing financial formatter must distinguish missing, zero, numeric value, and not-achieved status.
+
+## 0.26 GOVERNED MESSAGE FACT-LOCK INVARIANT
+
+A customer-facing communication may expose seller-editable presentation language, but governed facts must remain locked to their authoritative application source through the final Copy, Send, or Export action. Rendering governed facts into an editable free-text field does not satisfy this rule.
+
+## 0.27 AI CUSTOMER CLAIM INVARIANT
+
+AI may assist presentation, but it may not originate new customer facts, customer commitments, dates, economic values, buyer validation, implementation commitments, or evidence claims. Prompt-only restrictions are insufficient.
+
+## 0.28 SAVED-STATE CUSTOMER OUTPUT INVARIANT
+
+If the Output Registry declares the authoritative source as a saved record, customer output must be generated from that saved record. Mutable browser state, pending autosave state, or unsaved drafts may not silently substitute for saved authority. Local changes must successfully save and reload the authoritative record or output must block.
+
+## 0.29 OUTPUT CONTROL AVAILABILITY INVARIANT
+
+An output action may not appear enabled when its prerequisites are not satisfied. Unsaved records, failed saves, and unavailable authoritative adapters must leave customer-output controls disabled and unable to invoke a compatibility generator.
+
+## 0.30 NO COMPATIBILITY FALLBACK CUSTOMER GENERATOR INVARIANT
+
+A customer output may not retain an older compatibility generator that becomes active when its authoritative path is missing or its saved-record prerequisite is absent. Customer output fails closed.
+
+## 0.31 CROSS-FORMAT EXECUTIVE STORY INVARIANT
+
+Every output representing the Executive Value Story or Proposal must load the same canonical Executive source and produce the same provenance and readiness interpretation for the same scenario revision. A PDF, Word, PowerPoint, email, or browser format may not implement its own evidence loader.
+
+## 0.32 INTERNAL-DRAFT CLASSIFICATION INVARIANT
+
+Any output offered through an Internal Draft action must use the Internal Use Only Brand System audience across the entire artifact. A draft banner on a customer-classified document is not sufficient.
+
+## 0.33 EXECUTABLE RUNTIME-COVERAGE INVARIANT
+
+Every active Output Registry entry must have an executable smoke test whose successful execution is recorded in the current release gate results. A file path, source regex, or nonexistent test anchor is not runtime coverage.
+
+## 0.34 TRUE RUNTIME OUTPUT CERTIFICATION INVARIANT
+
+A runtime smoke test must execute the same production builder, generator, route service, or document renderer used by the active Output Registry owner. An unrelated generator, generic HTML fixture, generic OOXML file, or source-pattern assertion cannot certify another output. Every active output must emit its own machine-readable execution result, and the recorded owner and authoritative source must match the Output Registry.
+
+## 0.35 WEB DRAFT AUDIENCE INVARIANT
+
+Any registered customer-facing Web or Preview output in Draft Only state must visually become an Internal Draft inside the rendered document. A readiness banner outside the document does not replace Internal Use Only classification within content that can be printed, copied, or captured.
+
+## 0.36 LIVE POSTGRESQL RELEASE INVARIANT
+
+A controlled production pilot cannot be classified GREEN when a registered PostgreSQL integration suite is skipped or NOT TESTED. Release certification requires a clean non-production PostgreSQL database, all migrations, all database integration suites, zero database test failures, and zero database skips. Automated tests must never use the production customer database.
 
 ---

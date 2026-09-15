@@ -1,8 +1,8 @@
 'use strict';
 const fs=require('fs'),path=require('path');
 const { Document,Packer,Paragraph,TextRun,ImageRun,Table,TableRow,TableCell,Footer,Header,HeadingLevel,WidthType,ShadingType,AlignmentType,PageBreak }=require('docx');
-const brand=require('../shared/brand-system'),theme=brand.documentTheme('customer');
-const hex=value=>String(value||'').replace('#',''),money=(n,c)=>`${c} ${Math.round(Number(n)||0).toLocaleString('en-US')}`,pct=n=>n==null?'N/A':`${Math.round(Number(n))}%`;
+const brand=require('../shared/brand-system'),theme=brand.documentTheme('customer'),economic=require('../../public/economic-availability');
+const hex=value=>String(value||'').replace('#',''),money=(n,c)=>economic.hasEconomicValue(n)?`${c} ${Math.round(Number(n)).toLocaleString('en-US')}`:'N/A',pct=n=>economic.percent(n,{missing:'N/A'});
 const text=(value,opts={})=>new TextRun({text:String(value==null?'':value),font:theme.font,size:opts.size||theme.type.body,bold:opts.bold,color:hex(opts.color||theme.body),break:opts.break});
 const p=(value,opts={})=>new Paragraph({children:Array.isArray(value)?value:[text(value,opts)],heading:opts.heading,spacing:{after:opts.after==null?120:opts.after,line:276},alignment:opts.alignment,keepNext:opts.keepNext});
 const heading=value=>p(value,{heading:HeadingLevel.HEADING_1,keepNext:true});
@@ -23,7 +23,7 @@ async function buildExecutiveDocx(report,{internalDraft=false}={}){
  for(const [label,item] of [['Why change',report.executiveSummary.threeWhys.whyChange],['Why now',report.executiveSummary.threeWhys.whyNow],['Why Cloud Inventory',report.executiveSummary.threeWhys.whyCloudInventory]]){children.push(p(label,{bold:true,color:theme.accessibleAccent,keepNext:true}));children.push(p(item.value));children.push(p(item.status,{size:theme.type.small,color:theme.muted}));}
  children.push(heading('Financial summary'));
  children.push(table(['Metric','Value'],[
-  ['Annual customer benefit',money(f.annualBenefit,report.currency)],['Total contract benefit',money(f.totalBenefit,report.currency)],['Modeled customer investment',money(f.totalInvestment,report.currency)],['Net economic benefit',money(f.netValue,report.currency)],['Total contract ROI',pct(f.contractRoi)],['NPV',money(f.npv,report.currency)],['Payback',f.paybackMonths==null?'Not achieved within contract term':`${f.paybackMonths.toFixed(1)} months`]
+  ['Annual customer benefit',money(f.annualBenefit,report.currency)],['Total contract benefit',money(f.totalBenefit,report.currency)],['Modeled customer investment',money(f.totalInvestment,report.currency)],['Net economic benefit',money(f.netValue,report.currency)],['Total contract ROI',pct(f.contractRoi)],['NPV',money(f.npv,report.currency)],['Payback',economic.paybackLabel({paybackMonths:f.paybackMonths,investmentEstablished:f.investmentEstablished})]
  ],[5500,3500]));
  children.push(heading('Contract value by year'));
  children.push(table(['Year','Benefit','Investment','Net value','Cumulative ROI'],report.years.map(row=>[String(row.year),money(row.benefit,report.currency),money(row.investment,report.currency),money(row.netValue,report.currency),pct(row.cumulativeRoi)]),[900,2100,2100,2100,1800]));
