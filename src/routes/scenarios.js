@@ -602,7 +602,7 @@ router.post('/', async (req, res) => {
             industry, deal_stage, exec_audience, solution, data, version_note,
             outcome,outcome_reason,realized_value,outcome_at)
          VALUES ($1, $2, TRUE, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,$13,$14,$15,$16)
-         RETURNING id, base_id, version, name, company, is_current,
+         RETURNING id, base_id, version, name, company, customer_id, is_current,
                    industry, deal_stage, exec_audience, solution, version_note,
                    created_at, updated_at`,
         [

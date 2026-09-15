@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "6.9.13",
+  "release": "6.9.14",
   "tests": [
     {"invariant":"Customer Business Case","path":"test/release-integrity.test.js"},
     {"invariant":"customer-safe payload","path":"test/release-integrity.test.js"},

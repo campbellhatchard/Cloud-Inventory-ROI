@@ -183,4 +183,4 @@ Edit `public/scenario-templates.js`, add an entry to `SCENARIO_TEMPLATES`:
 
 ## Version
 
-Current: **v6.9.13** — Final PostgreSQL Integration Gate and Proposal PDF Runtime Certification. Built from the exact verified v6.9.12 archive. ROI Model remains v2.8, Brand System remains v1.0, Knowledge remains v1.0, and Christie Persona remains v1.0. Deployment requires Product Owner approval.
+Current: **v6.9.14** — PostgreSQL Scenario Contract Correction. Built from the exact verified v6.9.13 archive. ROI Model remains v2.8, Brand System remains v1.0, Knowledge remains v1.0, and Christie Persona remains v1.0. Deployment requires Product Owner approval.

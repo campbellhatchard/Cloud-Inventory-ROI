@@ -128,7 +128,10 @@ describe('HTTP API integration', { skip: HAS_DB ? false : 'DATABASE_URL not set 
       users: 50, labor: 60000, mLabor: 0.25, invest: 120000, otc: 150000,
       revenue: 80000000, modelVersion: 27, implMonths: 3, ramp1: 0.4, ramp2: 0.75, ramp3: 1.0
     };
-    const created = await api('/api/scenarios', { method: 'POST', token: adminToken, body: { data: inputs, name: inputs.name } });
+    const created = await api('/api/scenarios', {
+      method: 'POST', token: adminToken,
+      body: { data: inputs, name: inputs.name, company: inputs.company }
+    });
     assert.ok([200, 201].includes(created.status), `create status ${created.status}`);
     const saved = created.json && (created.json.scenario || created.json);
     const id = saved && saved.id;

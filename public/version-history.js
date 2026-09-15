@@ -7,6 +7,12 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.14', date: '2026-09-15', tag: 'postgres-contract',
+    title: 'PostgreSQL Scenario Contract Correction',
+    summary: 'Aligns the PostgreSQL integration request with the required scenario API contract and returns the persisted customer relationship after scenario creation.',
+    highlights: ['Scenario integration requests send the required top-level company.', 'Created scenarios return their persisted customer ID.', 'ROI formulas, authorization, migrations, and Render configuration are unchanged.']
+  },
+  {
     version: '6.9.13', date: '2026-09-06', tag: 'postgres-certification',
     title: 'PostgreSQL Integration and Proposal PDF Certification',
     summary: 'Runs the complete PostgreSQL integration boundary in certification mode and proves Proposal PDF uses the shared governed production builder.',
