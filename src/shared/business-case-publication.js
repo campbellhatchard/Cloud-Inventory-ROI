@@ -9,7 +9,7 @@ function customerPayload(story,readiness,publishedAt){
  return {schemaVersion:1,customer:str(story.meta.customer),currency:str(story.meta.currency),scenarioVersion:story.meta.scenarioVersion,storyRevision:story.storyRevision,modelVersion:story.meta.modelVersion,publishedAt,
   readiness:{status:readiness.status,label:readiness.label},
   threeWhys:Object.fromEntries(['whyChange','whyNow','whyCloudInventory'].map(k=>[k,str(story.threeWhys[k]?.value)])),
-  economics:Object.fromEntries(['annualBenefit','totalContractBenefit','totalContractInvestment','netEconomicBenefit','contractRoi','npv','payback','contractMonths'].map(k=>[k,e[k]])),
+  economics:Object.fromEntries(['annualBenefit','totalContractBenefit','totalContractInvestment','investmentEstablished','netEconomicBenefit','contractRoi','npv','payback','paybackState','contractMonths'].map(k=>[k,e[k]])),
   drivers:arr(e.activeDrivers).map(d=>({label:str(d.label),annualValue:d.annualValue,status:d.customerSupported?'Customer provided':'Cloud Inventory model assumption — validate'})),
   nextSteps:arr(story.nextSteps?.items).map(s=>({milestone:str(s.milestone),owner:str(s.owner),dueDate:str(s.dueDate)}))};
 }

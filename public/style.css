@@ -1258,6 +1258,12 @@ body.livebar-off .guided-nav{top:calc(var(--topbar-h) + 8px);}
 .sf-gate-card h3{margin:0 0 8px;color:var(--navy);}
 .sf-gate-card p{color:var(--gray-600);font-size:var(--fs-base);margin:0 0 14px;}
 .sf-gate-card select{width:100%;padding:10px;border:1.5px solid var(--gray-200);border-radius:8px;margin-bottom:12px;font-size:var(--fs-base);}
+.sf-customer-search-label{display:block;margin:18px 0 6px;font-size:12px;font-weight:800;color:var(--gray-700);text-transform:uppercase;letter-spacing:.04em}
+.sf-customer-search{width:100%;padding:12px 14px;border:1.5px solid var(--gray-300);border-radius:9px;font-size:15px;outline:none}.sf-customer-search:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,174,214,.12)}
+.sf-customer-results{display:grid;gap:8px;margin-top:12px;max-height:420px;overflow:auto}.sf-customer-result{display:grid;grid-template-columns:minmax(190px,1fr) minmax(130px,.55fr) auto;align-items:center;gap:14px;padding:13px;border:1px solid var(--gray-200);border-radius:10px;background:#fff}.sf-customer-result:hover{border-color:var(--cyan)}
+.sf-customer-result-main,.sf-customer-result-status{display:flex;flex-direction:column;gap:3px}.sf-customer-result-main span,.sf-customer-result-status small{font-size:12px;color:var(--gray-600)}.sf-customer-result-actions{display:flex;justify-content:flex-end}.sf-customer-loading,.sf-customer-empty{padding:22px;text-align:center;color:var(--gray-600);background:var(--gray-50);border-radius:9px}.sf-load-more{margin-top:10px}
+.sf-customer-error{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:18px;border:1px solid var(--red);border-radius:9px;background:#fff5f5;color:var(--gray-700)}.sf-customer-error strong{color:var(--red)}.sf-customer-error .btn{margin-top:6px}
+@media(max-width:760px){.sf-customer-result{grid-template-columns:1fr}.sf-customer-result-actions{justify-content:flex-start}}
 
 /* ── Top bar (customer name + save state) ── */
 .sf-topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;

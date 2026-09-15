@@ -6,6 +6,12 @@
 
 let _maps = [];            // list cache
 let _mapCurrent = null;    // plan being edited
+let _mapDirty = false;     // customer outputs require an exact saved record
+
+function mapOutputReady(){return !!(_mapCurrent&&_mapCurrent.id&&!_mapDirty);}
+function mapUpdateOutputControls(){for(const id of ['mapPdfIntBtn','mapPdfCustBtn','mapPptIntBtn','mapPptCustBtn','mapShareBtn']){const b=document.getElementById(id);if(b){b.disabled=!mapOutputReady();b.setAttribute('aria-disabled',String(!mapOutputReady()));}}}
+function mapMarkDirty(){_mapDirty=true;mapUpdateOutputControls();}
+function getSavedMapForOutput(){if(!_mapCurrent?.id){showToast('Save the Joint Project Plan before creating a customer output.');return null;}if(_mapDirty){showToast('Save your Joint Project Plan changes before creating a customer output.');return null;}const saved=_maps.find(x=>String(x.id)===String(_mapCurrent.id));return saved?mapNormalizeStructure(JSON.parse(JSON.stringify(saved))):mapNormalizeStructure(JSON.parse(JSON.stringify(_mapCurrent)));}
 
 const MAP_PHASES = ['Evaluate', 'Validate', 'Business Case', 'Legal & Procurement', 'Launch'];
 const MAP_OWNERS = { rep: 'Cloud Inventory', prospect: 'Customer', joint: 'Joint' };
@@ -256,6 +262,7 @@ function newMap() {
     milestones: [],
     groups: mapDefaultGroups()
   };
+  _mapDirty = true;
   renderMapEditor();
 }
 
@@ -263,6 +270,7 @@ async function openMap(id) {
   const m = _maps.find(x => x.id === id);
   if (!m) return;
   _mapCurrent = mapNormalizeStructure(JSON.parse(JSON.stringify(m)));
+  _mapDirty = false;
   renderMapEditor();
 }
 
@@ -296,7 +304,7 @@ function renderMapEditor() {
           </div>
           <div class="field-hint" style="margin-top:5px;">The prospect sees a live view and can check off their own items. Updates appear when you reopen the plan.</div>
         </div>`
-      : `<button class="btn btn-primary btn-sm" onclick="shareMap()">🔗 Share with prospect</button>`)
+      : `<button class="btn btn-primary btn-sm" id="mapShareBtn" onclick="shareMap()">🔗 Share with prospect</button>`)
     : `<span class="field-hint">Save the plan first to generate a prospect link.</span>`;
 
   ed.innerHTML = `
@@ -325,8 +333,8 @@ function renderMapEditor() {
         <button class="btn btn-primary" id="mapSaveBtn" onclick="saveMap()">Save plan</button>
         <button class="btn btn-primary" onclick="aiGenerateMap()" id="mapAiBtn">✨ Generate milestones with AI</button>
         <span class="export-divider"></span>
-        <button class="btn btn-ghost btn-sm" onclick="printActionPlan('internal')" title="Print / save internal PDF">🖨 PDF (internal)</button>
-        <button class="btn btn-ghost btn-sm" onclick="printActionPlan('customer')" title="Print / save customer PDF">🖨 PDF (customer)</button>
+        <button class="btn btn-ghost btn-sm" id="mapPdfIntBtn" onclick="printActionPlan('internal')" title="Print / save internal PDF">🖨 PDF (internal)</button>
+        <button class="btn btn-ghost btn-sm" id="mapPdfCustBtn" onclick="printActionPlan('customer')" title="Print / save customer PDF">🖨 PDF (customer)</button>
         <button class="btn btn-ghost btn-sm" id="mapPptIntBtn" onclick="pptActionPlan('internal')" title="Export internal PowerPoint">📊 PPT (internal)</button>
         <button class="btn btn-ghost btn-sm" id="mapPptCustBtn" onclick="pptActionPlan('customer')" title="Export customer PowerPoint">📊 PPT (customer)</button>
         ${shareBlock}
@@ -349,6 +357,8 @@ function renderMapEditor() {
   const mapInput = document.getElementById('mapCompanyInput');
   if (mapInput) mapInput.value = m.company || '';
   mapUpdateGate();
+  ed.querySelectorAll('input,select,textarea').forEach(el=>{el.addEventListener('input',mapMarkDirty);el.addEventListener('change',mapMarkDirty);});
+  mapUpdateOutputControls();
 }
 
 /* Company typeahead for the MAP editor */
@@ -455,7 +465,7 @@ function msField(id, field, value) {
   const x = (_mapCurrent.milestones || []).find(m => m.id === id);
   if (x) { x[field] = value; if (field === 'status') renderMapEditor(); }
 }
-function addMilestone(groupId, position) {
+function addMilestone(groupId, position) { mapMarkDirty();
   captureMapHeaderFields();
   _mapCurrent.milestones = _mapCurrent.milestones || [];
   const select = document.getElementById('mapAddGroup');
@@ -476,12 +486,12 @@ function addMilestone(groupId, position) {
   mapRebuildMilestoneOrder();
   renderMapEditor();
 }
-function removeMilestone(id) {
+function removeMilestone(id) { mapMarkDirty();
   _mapCurrent.milestones = (_mapCurrent.milestones || []).filter(m => m.id !== id);
   renderMapEditor();
 }
 
-function moveMilestone(id, delta) {
+function moveMilestone(id, delta) { mapMarkDirty();
   captureMapHeaderFields();
   const item = _mapCurrent.milestones.find(m => m.id === id);
   if (!item) return;
@@ -495,7 +505,7 @@ function moveMilestone(id, delta) {
   renderMapEditor();
 }
 
-function moveMilestoneToGroup(id, groupId) {
+function moveMilestoneToGroup(id, groupId) { mapMarkDirty();
   captureMapHeaderFields();
   const item = _mapCurrent.milestones.find(m => m.id === id);
   const group = _mapCurrent.groups.find(g => g.id === groupId);
@@ -506,7 +516,7 @@ function moveMilestoneToGroup(id, groupId) {
   renderMapEditor();
 }
 
-function addMapGroup() {
+function addMapGroup() { mapMarkDirty();
   captureMapHeaderFields();
   const input = document.getElementById('mapNewGroupName');
   const name = (input && input.value || '').trim();
@@ -524,7 +534,7 @@ function renameMapGroup(id, value) {
   _mapCurrent.milestones.filter(m => m.groupId === id).forEach(m => { m.phase = group.name; });
 }
 
-function moveMapGroup(id, delta) {
+function moveMapGroup(id, delta) { mapMarkDirty();
   captureMapHeaderFields();
   const from = _mapCurrent.groups.findIndex(g => g.id === id);
   const to = from + delta;
@@ -534,7 +544,7 @@ function moveMapGroup(id, delta) {
   renderMapEditor();
 }
 
-function removeMapGroup(id) {
+function removeMapGroup(id) { mapMarkDirty();
   const groups = _mapCurrent.groups;
   if (groups.length <= 1) { showToast('A plan needs at least one grouping.'); return; }
   const at = groups.findIndex(g => g.id === id);
@@ -582,11 +592,12 @@ async function saveMap() {
   await loadMaps();
   const fresh = _maps.find(x => x.id === saved.id);
   if (fresh) { _mapCurrent = mapNormalizeStructure(JSON.parse(JSON.stringify(fresh))); }
+  _mapDirty = false;
   renderMapEditor();
 }
 
 async function shareMap() {
-  if (!_mapCurrent.id) { showToast('Save the plan first.'); return; }
+  if (!getSavedMapForOutput()) return;
   const resp = await apiFetch('/api/maps/' + _mapCurrent.id + '/share', { method: 'POST' });
   if (!resp || !resp.ok) { showToast('Could not generate link.'); return; }
   const data = await resp.json();
@@ -618,6 +629,9 @@ Looking forward to working through this together.
 `;
   window.location.href = 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
 }
+
+window.getSavedMapForOutput=getSavedMapForOutput;
+window.mapOutputReady=mapOutputReady;
 
 /* ── AI milestone generation ── */
 async function aiGenerateMap() {

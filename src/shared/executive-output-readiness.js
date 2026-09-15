@@ -1,14 +1,19 @@
 /* Live presentation governance. This never writes or changes BuyCycle state. */
-const OUTPUTS=new Set(['executive_view','pdf','pptx','proposal','share']);
+const {hasEconomicValue,investmentEstablished}=require('../../public/economic-availability');
+const OUTPUTS=new Set(['executive_view','pdf','docx','pptx','proposal','share','customer_email']);
 const issue=(id,category,title,detail,fixAction)=>({id,category,title,detail,fixAction});
-function finiteEconomics(e={}){return['annualBenefit','totalContractBenefit','totalContractInvestment','netEconomicBenefit','contractRoi','npv'].every(k=>Number.isFinite(Number(e[k])))&&(e.payback===null||Number.isFinite(Number(e.payback)));}
+function finiteEconomics(e={}){return['annualBenefit','totalContractBenefit','totalContractInvestment','netEconomicBenefit','contractRoi','npv'].every(k=>hasEconomicValue(e[k]))&&(e.payback===null||hasEconomicValue(e.payback));}
 function evaluateExecutiveOutputReadiness(story,{outputType='executive_view',proposalState={}}={}){
  if(!OUTPUTS.has(outputType))throw Object.assign(new Error('Unsupported executive output type.'),{status:400});
  const blockers=[],warnings=[],strengths=[],why=story.threeWhys||{},e=story.economics||{};
  if(!story.meta?.scenarioId)blockers.push(issue('unsaved','value_story','Unsaved opportunity','Save the opportunity before creating a clean customer output.','Save scenario'));
  if(!story.meta?.customer||['prospect','your company'].includes(String(story.meta.customer).toLowerCase()))blockers.push(issue('customer','value_story','Customer name required','Select or enter the correct customer.','Edit customer'));
- for(const [key,label] of [['whyChange','Why Change'],['whyNow','Why Now'],['whyCloudInventory','Why Cloud Inventory']])if(!why[key]||why[key].status==='To validate'||why[key].value==='To validate')blockers.push(issue(key,'value_story',`${label} is missing`,'The executive narrative is structurally incomplete.','Edit Three Whys'));
- if(!finiteEconomics(e))blockers.push(issue('financial_validity','economics','Financial model is not valid','One or more canonical financial values cannot be interpreted.','Review ROI Inputs'));
+ for(const [key,label] of [['whyChange','Why Change'],['whyNow','Why Now'],['whyCloudInventory','Why Cloud Inventory']]){
+  const item=why[key],missing=!item||item.status==='To validate'||item.value==='To validate';
+  if(missing)blockers.push(issue(key,'value_story',`${label} is missing`,'Three Why is missing.','Edit Three Whys'));
+  else if(!['customer_discovery','customer_validated'].includes(item.source)&&item.status!=='Cloud Inventory position — reviewed')warnings.push(issue(`${key}_validation`,'value_story','Narrative requires validation',`${label}: ${item.status||'Needs validation'}.`,'Edit Three Whys'));
+ }
+ if(!finiteEconomics(e)||!investmentEstablished(e)||!hasEconomicValue(e.contractRoi))blockers.push(issue('financial_validity','economics','Commercial investment / ROI is not yet established','Complete the modeled customer investment so Contract ROI and payback status can be governed.','Review ROI Inputs'));
  if(Number(e.maturity?.level)<2)blockers.push(issue('roi_maturity','economics','Customer data is required','ROI Maturity must reach Level 2 — Customer Data for clean customer sharing.','Review ROI Inputs'));
  const assumptions=(e.activeDrivers||[]).filter(d=>!d.customerSupported);if(assumptions.length)warnings.push(issue('assumption_drivers','economics','Value drivers require validation',assumptions.map(d=>d.label).join(', '),'Review ROI Inputs'));
  const valueWarnings=e.valueHistoryWarnings||[];if(valueWarnings.length)warnings.push(issue('value_history','economics','Material values need evidence review',valueWarnings.map(v=>`${v.canonicalInput}: ${v.different?'model differs from latest customer value':v.status}`).join(', '),'Open Value History'));

@@ -1,56 +1,28 @@
 # Release readiness evidence — v6.9.1
+Final release classification belongs to the Product Owner. This document assigns no readiness colour and does not certify deployment.
 
-This report records release evidence and known limits. Production deployment remains subject to the guarded local gates and post-push GitHub/Render verification.
+## Preserved
+Exact v6.9.0 baseline, Solution Fit creation/recovery/MEP configuration, ROI Model 2.8, governed BuyCycle, team authorization, brand/persona authorities, native currency and existing production regression coverage.
 
-## Preserved from live v6.9.0
+## Corrected
+Frozen customer-safe publication; canonical view/customer permission checks; readiness and explicit review acknowledgement; old-link expiry; successful public renderer; story-owned report economics; mandatory approved Battlecard revision; registry ownership/load checks; dark PPT branding and long executive narratives; PDF long cover names/copyright encoding; customer stakeholder projection; JPP ungrouped milestone output; LF artifacts and version metadata.
 
-- Solution Fit creation/recovery and governed MEP application configuration.
-- ROI Model 2.8 / modelVersion 28.
-- Governed BuyCycle and evidence semantics.
-- Team/customer/scenario authorization.
-- Brand 1.0, Application Knowledge 1.0 and Christie Persona 1.0.
-- Native-currency behavior.
-- Explicit-zero ramp, Field Inventory, Medical Devices customer-input-only, contract authority, Prospect AI and Three Whys production locks.
-- Full cumulative CI/regression coverage.
+## Removed or disabled
+Legacy raw scenario-share creation/read endpoints return 410. Legacy base64 share import and raw print page no longer generate customer economics. Executive 70/100/130 selector removed. Champion Pack explicitly disabled pending governed conversion.
 
-## Corrected in v6.9.1
+## Tests
+403 node:test cases: 400 pass, 0 fail, 3 skipped; standalone ROI engine: 34 pass.
+Production-lock subset: 44 pass, 0 fail.
+Syntax: 169 source files, zero failures. Clean production install and generated-artifact checks pass.
+HTTP route suite: skipped, not certified.
 
-- Frozen exact-version customer-safe Business Case publication.
-- Independent scenario and customer permission checks before publication.
-- Draft/Review/Ready publication gating with explicit Review acknowledgement.
-- Legacy public raw scenario and print economics retirement.
-- Customer report economics sourced from the canonical Executive Value Story.
-- Approved-current Battlecard revision required for formal exports.
-- Champion Pack explicitly inactive pending governed conversion.
-- Output registry ownership/load/route/control integrity.
-- Executive/JPP/Stakeholder customer-safe output refinements.
-- Permanent active-output and frozen-publication regression gates.
-- Migration 035 publication immutability contract.
+## Remaining risks / approval conditions
+- PostgreSQL and full authenticated/public HTTP flows have not been tested. Migration 035 and authorization/immutability claims require integration validation.
+- Render and SendGrid were not connected or exercised.
+- All-output visual certification is incomplete. Executive PDF/PPT and JPP/Stakeholder PPT fixture review does not cover every customer export. Word rendering is blocked by missing LibreOffice and unavailable Office automation.
+- PDF generator retains limited standard-font character support; non-Latin customer names and extreme table content need additional coverage. Native USD/GBP numerical values were checked without FX conversion.
+- Snapshot retention during hard deletion of scenario/user records requires database verification against existing foreign keys.
+- Registry checks prove selected route/control presence and generator loading, not every live click path or database authorization.
+- Existing links intentionally expire; plan rep communication and republishing.
 
-## Fresh independent evidence
-
-- Syntax: 170 source JS/CJS files, zero failures.
-- ROI engine: 37/37.
-- Version consistency: 6.9.1; 161 history entries well formed.
-- Migration compatibility: 72/72 across 35 migrations.
-- Phase 1: pass.
-- v6.9.0 Solution Fit locks: 10/10.
-- Permanent production locks: 14/14.
-- Application Knowledge / Brand generated checks: pass.
-- Active output audit: pass.
-- Release-integrity suite without dependencies: 11 executed assertions passed; 2 cases could not load missing `jszip`/`docx` modules.
-- Cumulative `npm test` without usable installed dependencies: 342 passed, 9 module-loading failures, 3 DB skips. This is not a full-suite pass.
-
-## Mandatory deployment conditions
-
-The deployment script must complete a fresh `npm ci`, full cumulative `npm test`, production locks, route tests, syntax/semantic guards and exact canonical-tree match before it may push. GitHub CI then applies migration 035 against PostgreSQL and reruns the cumulative suite. Render must auto-deploy the exact pushed SHA and reach `live`, followed by `/health` and publication smoke verification.
-
-## Residual risks requiring controlled verification
-
-- Real PostgreSQL migration/trigger execution and retention behavior.
-- Full authenticated role/customer/publication matrix.
-- Concurrent publication behavior.
-- Render and SendGrid runtime behavior.
-- All-output visual certification, particularly Word rendering and extreme/non-Latin content.
-
-Legacy Business Case links intentionally do not silently follow newer scenario versions; republishing may be required.
+The ZIP is supplied for review and controlled validation. Do not equate the requested render-ready filename with approval. No production-ready claim is made.

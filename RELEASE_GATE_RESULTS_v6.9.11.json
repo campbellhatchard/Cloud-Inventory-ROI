@@ -1,0 +1,224 @@
+{
+  "release": "6.9.11",
+  "baseline": {
+    "archive": "cloud-inventory-roi-v6.9.10-render-ready.zip",
+    "sha256": "d0d8f0046a9b86f79d377388efa2bb10314458fd8cf47e0eccad5d4d2d5b1e16"
+  },
+  "generatedAt": "2026-09-07T00:45:50.771Z",
+  "environment": {
+    "node": "v22.22.0",
+    "npm": "10.9.4",
+    "platform": "win32-x64",
+    "databaseAvailable": false,
+    "nodeEnv": "test"
+  },
+  "gates": [
+    {
+      "name": "production-dependencies",
+      "command": "npm ci --omit=dev --no-audit --no-fund",
+      "exitCode": 0,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "notTested": 0,
+      "durationMs": 4736
+    },
+    {
+      "name": "full-test-suite",
+      "command": "npm test",
+      "exitCode": 0,
+      "passed": 501,
+      "failed": 0,
+      "skipped": 3,
+      "notTested": 3,
+      "durationMs": 5317
+    },
+    {
+      "name": "production-locks",
+      "command": "npm run test:production-locks",
+      "exitCode": 0,
+      "passed": 145,
+      "failed": 0,
+      "skipped": 0,
+      "notTested": 0,
+      "durationMs": 2967
+    },
+    {
+      "name": "routes",
+      "command": "npm run test:routes",
+      "exitCode": 0,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "notTested": 0,
+      "durationMs": 769
+    },
+    {
+      "name": "brand-tests",
+      "command": "npm run test:brand",
+      "exitCode": 0,
+      "passed": 19,
+      "failed": 0,
+      "skipped": 0,
+      "notTested": 0,
+      "durationMs": 788
+    },
+    {
+      "name": "lineage",
+      "command": "node scripts/check-release-lineage.js",
+      "exitCode": 0,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "notTested": 0,
+      "durationMs": 95
+    },
+    {
+      "name": "active-output-audit",
+      "command": "node scripts/audit-active-output-paths.js",
+      "exitCode": 0,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "notTested": 0,
+      "durationMs": 128
+    },
+    {
+      "name": "brand-assets",
+      "command": "node scripts/generate-brand-assets.js --check",
+      "exitCode": 0,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "notTested": 0,
+      "durationMs": 89
+    },
+    {
+      "name": "application-knowledge",
+      "command": "node scripts/generate-application-knowledge.js --check",
+      "exitCode": 0,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "notTested": 0,
+      "durationMs": 159
+    },
+    {
+      "name": "active-output-runtime-matrix",
+      "command": "node --test test/output-runtime-matrix.test.js",
+      "exitCode": 0,
+      "passed": 28,
+      "failed": 0,
+      "skipped": 0,
+      "notTested": 0,
+      "durationMs": 838,
+      "outputResults": [
+        {
+          "outputId": "executive-web",
+          "result": "PASS"
+        },
+        {
+          "outputId": "executive-pdf",
+          "result": "PASS"
+        },
+        {
+          "outputId": "executive-docx",
+          "result": "PASS"
+        },
+        {
+          "outputId": "executive-pptx",
+          "result": "PASS"
+        },
+        {
+          "outputId": "proposal-preview",
+          "result": "PASS"
+        },
+        {
+          "outputId": "proposal-pdf",
+          "result": "PASS"
+        },
+        {
+          "outputId": "proposal-docx",
+          "result": "PASS"
+        },
+        {
+          "outputId": "jpp-customer-pdf",
+          "result": "PASS"
+        },
+        {
+          "outputId": "jpp-customer-pptx",
+          "result": "PASS"
+        },
+        {
+          "outputId": "jpp-internal-pdf",
+          "result": "PASS"
+        },
+        {
+          "outputId": "jpp-internal-pptx",
+          "result": "PASS"
+        },
+        {
+          "outputId": "stakeholder-pdf",
+          "result": "PASS"
+        },
+        {
+          "outputId": "stakeholder-pptx",
+          "result": "PASS"
+        },
+        {
+          "outputId": "solution-summary-pdf",
+          "result": "PASS"
+        },
+        {
+          "outputId": "solution-risk-pdf",
+          "result": "PASS"
+        },
+        {
+          "outputId": "solution-handoff-pdf",
+          "result": "PASS"
+        },
+        {
+          "outputId": "competitive-pdf",
+          "result": "PASS"
+        },
+        {
+          "outputId": "competitive-docx",
+          "result": "PASS"
+        },
+        {
+          "outputId": "roi-methodology-pdf",
+          "result": "PASS"
+        },
+        {
+          "outputId": "roi-methodology-pptx",
+          "result": "PASS"
+        },
+        {
+          "outputId": "impact-map-pdf",
+          "result": "PASS"
+        },
+        {
+          "outputId": "role-one-pager-pptx",
+          "result": "PASS"
+        },
+        {
+          "outputId": "customer-share-html",
+          "result": "PASS"
+        },
+        {
+          "outputId": "prospect-roi-preview",
+          "result": "PASS"
+        },
+        {
+          "outputId": "customer-value-email",
+          "result": "PASS"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "passed": true,
+    "failedGates": [],
+    "databaseDependentTests": "NOT TESTED when reported as skipped by the suite"
+  }
+}

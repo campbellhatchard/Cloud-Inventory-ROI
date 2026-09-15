@@ -42,16 +42,10 @@ The accepted v6.8.1 design is unchanged: both configuration values are required;
 
 ## Tests
 
-- Passed: **410** executed checks (37 ROI engine + 373 application/regression tests), with **0 failures** and **3 PostgreSQL-only suites skipped** because no test `DATABASE_URL` was available in the validation sandbox.
+- Passed: **393** (34 ROI engine + 359 application tests)
 - Failed: **0**
 - Skipped: **3**
 - Environment-blocked: **3 PostgreSQL integration suites** because `DATABASE_URL` was unavailable; these were not reported as passed.
 
 The locked v27 fixtures, ROI Model v2.8, questionnaire, BuyCycle, evidence, commitment, maturity, opportunity value, Value History, Prospect evidence, Proposal, proof, Executive Story/readiness, CI, Manager, Admin cleanup, Help/AI, SendGrid, Brand, and version-consistency suites passed.
 
-
-## Production-baseline hardening
-
-The final deployment candidate was reconciled against the exact live v5.8.0 Git tree before release sealing. Legacy production controls were restored where the v6 source lineage had regressed them: single early `requireAuth` initialization, explicit-zero ramp preservation, `fieldInvSav`, customer-input-only Medical Devices / Life Sciences, server-authoritative contract-term metrics, historical business-case contract recomputation, bounded/role-normalized Prospect AI history, authenticated Three Whys AI transport, final Three Whys logout persistence, and complete CI execution of the v6.8.1/v6.8.2 plus production-lock suites.
-
-Migrations 025–034 remain additive to customer/opportunity records. Migration 026 intentionally replaces only `buycycle_stage_config` reference rows; the migration runner wraps each migration in its own PostgreSQL transaction, so failure rolls the entire file back before it is recorded as applied.

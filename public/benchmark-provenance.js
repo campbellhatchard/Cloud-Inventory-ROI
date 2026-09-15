@@ -28,7 +28,7 @@ const BENCHMARK_SOURCES = {
 /* Industry keys whose entire benchmark set is provisional (not yet validated
    against real deployment data). These trigger a visible rep-facing banner. */
 const PLACEHOLDER_INDUSTRIES = {
-  retail: 'Medical Devices / Life Sciences has no bundled benchmark values in v6.9.1; customer-specific assumptions are required.'
+  retail: 'Medical Devices / Life Sciences benchmarks are provisional placeholders and have not yet been validated against deployment data.'
 };
 
 function isPlaceholderIndustry(key) {
@@ -45,7 +45,7 @@ function updateBenchmarkBanner() {
   if (isPlaceholderIndustry(key)) {
     host.style.display = 'flex';
     host.innerHTML = `<span class="bpb-icon" aria-hidden="true">\u26A0</span>
-      <span><strong>Customer inputs required.</strong> ${escBench(PLACEHOLDER_INDUSTRIES[key])}
+      <span><strong>Provisional benchmarks.</strong> ${escBench(PLACEHOLDER_INDUSTRIES[key])}
       Confirm key figures with the customer through discovery before sharing this business case externally.</span>`;
   } else {
     host.style.display = 'none';

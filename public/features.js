@@ -69,6 +69,11 @@ function loadFromObject(i) {
   const _tw = { act: i.threeWhysAct || '', ci: i.threeWhysCi || '', now: i.threeWhysNow || '' };
   ['act','ci','now'].forEach(k => { const el = document.getElementById('why_'+k); if (el) el.value = _tw[k]; });
   if (typeof threeWhys !== 'undefined') { threeWhys.act = _tw.act; threeWhys.ci = _tw.ci; threeWhys.now = _tw.now; }
+  if (typeof threeWhysMeta !== 'undefined') {
+    threeWhysMeta = i.threeWhysMeta || {};
+    ['act','ci','now'].forEach(k=>{const mk=THREE_WHY_KEYS[k];if(_tw[k]&&!threeWhysMeta[mk])threeWhysMeta[mk]=metaFor('historical_unknown');});
+    renderThreeWhyStatus?.();
+  }
   // Restore new fields
   // NOTE: ramp1/ramp2/ramp3 are handled separately below — they are stored as
   // decimals (0.40) but the input fields hold percents (40), so they need a
@@ -430,19 +435,20 @@ function autoFlagConfidence() {
 function openDataSourceMenu(fieldId) {
   const current = fieldStates[fieldId] || '';
   if(!current)return;
-  const f=CONFIDENCE_FIELDS.find(x=>x.id===fieldId)||{label:fieldId},p=fieldProvenance[fieldId]||{},old=document.getElementById('dataSourceModal');if(old)old.remove();
-  const wrap=document.createElement('div');wrap.id='dataSourceModal';wrap.className='data-source-modal';wrap.innerHTML=`<div class="data-source-card" role="dialog" aria-modal="true"><header><div><span>Value Source &amp; History</span><h3>${f.label}</h3></div><button type="button" onclick="document.getElementById('dataSourceModal').remove()">×</button></header><div class="value-history-summary"><b>${p.source||'Current working value'}</b><small>${p.date?'Evidence date '+p.date:'Customer validation has not been recorded for this value.'}</small></div><form onsubmit="saveDataSource(event,'${fieldId}')"><label><input type="radio" name="dataSourceState" value="estimated" ${current==='estimated'?'checked':''}> <b>Rep Estimate</b><small>Seller working value — needs customer validation</small></label><label><input type="radio" name="dataSourceState" value="confirmed" ${current==='confirmed'?'checked':''}> <b>Rep Confirmed</b><small>Internally reviewed; not customer supplied</small></label><label class="prospect-state"><input type="radio" name="dataSourceState" value="confirmed_prospect" ${current==='confirmed_prospect'?'checked':''} disabled> <b>Prospect Verified</b><small>Created only by an immutable Prospect Link submission</small></label><footer><button type="button" class="btn btn-ghost" onclick="openValueHistory('${fieldId}')">View history</button><button type="button" class="btn btn-ghost" onclick="openRevalidateValue('${fieldId}')">Revalidate Value</button><button type="button" class="btn btn-ghost" onclick="document.getElementById('dataSourceModal').remove()">Cancel</button><button class="btn btn-primary">Save working source</button></footer></form></div>`;document.body.appendChild(wrap);
+  const f=CONFIDENCE_FIELDS.find(x=>x.id===fieldId)||{label:fieldId},p=fieldProvenance[fieldId]||{},modernConfirmed=current==='confirmed'&&p.eventId&&p.source==='Internally confirmed',old=document.getElementById('dataSourceModal');if(old)old.remove();
+  const confirmationDetail=modernConfirmed?`<b>Confirmed by: ${escapeHtml(p.confirmedBy||'Authorized Cloud Inventory user')}</b><small>Confirmed: ${new Date(p.confirmedAt||p.date||Date.now()).toLocaleString()}</small>${p.note?`<small>Internal note: ${escapeHtml(p.note)}</small>`:''}`:current==='confirmed'?'<b>Legacy Rep Confirmed — provenance needs review</b><small>Reconfirm this exact value to create authoritative actor and date provenance.</small>':`<b>${escapeHtml(p.source||'Current working value')}</b><small>${p.date?'Evidence date '+escapeHtml(p.date):'Customer validation has not been recorded for this value.'}</small>`;
+  const wrap=document.createElement('div');wrap.id='dataSourceModal';wrap.className='data-source-modal';wrap.innerHTML=`<div class="data-source-card" role="dialog" aria-modal="true"><header><div><span>Value Source &amp; History</span><h3>${f.label}</h3></div><button type="button" onclick="document.getElementById('dataSourceModal').remove()">×</button></header><div class="value-history-summary">${confirmationDetail}</div><form onsubmit="saveDataSource(event,'${fieldId}')"><label><input type="radio" name="dataSourceState" value="estimated" ${current==='estimated'?'checked':''}> <b>Rep Estimate</b><small>Seller working value — not internally confirmed and not customer supported.</small></label><label><input type="radio" name="dataSourceState" value="confirmed" ${current==='confirmed'?'checked':''}> <b>Rep Confirmed</b><small>This exact value was internally reviewed by Cloud Inventory. It is not customer-supported evidence.</small></label><label id="repConfirmationNote"><span>Internal note/reference (optional)</span><textarea id="repConfirmNote" maxlength="1000" placeholder="Reviewed against Q2 operating report.">${escapeHtml(p.note||'')}</textarea></label><label class="prospect-state"><input type="radio" name="dataSourceState" value="confirmed_prospect" ${current==='confirmed_prospect'?'checked':''} disabled> <b>Prospect Verified</b><small>Created only by an immutable Prospect Link submission</small></label><footer><button type="button" class="btn btn-ghost" onclick="openValueHistory('${fieldId}')">View history</button><button type="button" class="btn btn-ghost" onclick="openRevalidateValue('${fieldId}')">Revalidate Value</button><button type="button" class="btn btn-ghost" onclick="document.getElementById('dataSourceModal').remove()">Cancel</button><button class="btn btn-primary">${current==='confirmed'?'Reconfirm this value':'Confirm / save source'}</button></footer></form></div>`;document.body.appendChild(wrap);
 }
-function saveDataSource(event,fieldId){event.preventDefault();const prior=fieldStates[fieldId],state=document.querySelector('input[name="dataSourceState"]:checked')?.value;if(!state)return;if(prior==='confirmed_prospect'&&state!=='confirmed_prospect'&&!confirm('This input was verified directly by the prospect. Downgrade and remove that provenance?'))return;if(state==='confirmed_customer'){const source=document.getElementById('dataSourceName').value.trim(),date=document.getElementById('dataSourceDate').value,stakeholder=document.getElementById('dataSourceStakeholder').value.trim();if(!source||!date){showToast('Customer Provided requires a source and date.');return;}fieldProvenance[fieldId]={state,source,date,stakeholder};}else if(state!=='confirmed_prospect')delete fieldProvenance[fieldId];fieldStates[fieldId]=state;if(['confirmed','confirmed_customer','confirmed_prospect'].includes(state))confirmedFields.add(fieldId);else confirmedFields.delete(fieldId);document.getElementById('dataSourceModal')?.remove();renderConfidence();if(typeof markCalcDirty==='function')markCalcDirty();}
+async function saveDataSource(event,fieldId){event.preventDefault();const prior=fieldStates[fieldId],state=document.querySelector('input[name="dataSourceState"]:checked')?.value;if(!state)return;if(prior==='confirmed_prospect'&&state!=='confirmed_prospect'&&!confirm('This input was verified directly by the prospect. Downgrade and remove that provenance?'))return;if(state==='confirmed'){if(!window._calcScenarioId){showToast?.('Save the scenario before confirming this internal value.');return;}const el=document.getElementById(fieldId),value=el?.value;if(value===undefined||value===''){showToast?.('Enter and save a value before confirming it.');return;}const button=event.submitter;button&&button.setAttribute('disabled','');try{const r=await apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/value-history/'+encodeURIComponent(fieldId)+'/rep-confirm',{method:'POST',body:JSON.stringify({value,note:document.getElementById('repConfirmNote')?.value||'',currency:document.getElementById('currency')?.value||undefined})});const x=await r.json().catch(()=>({}));if(!r.ok){showToast?.(x.error||'Rep confirmation could not be recorded.');return;}fieldStates[fieldId]='confirmed';fieldProvenance[fieldId]={...x.provenance,value:x.normalized_value??x.value_text};confirmedFields.add(fieldId);document.getElementById('dataSourceModal')?.remove();renderConfidence();showToast?.('This exact value is now internally confirmed.');return;}catch(_){showToast?.('Rep confirmation could not be recorded.');return;}finally{button&&button.removeAttribute('disabled');}}if(state!=='confirmed_prospect')delete fieldProvenance[fieldId];fieldStates[fieldId]=state;if(['confirmed_customer','confirmed_prospect'].includes(state))confirmedFields.add(fieldId);else confirmedFields.delete(fieldId);document.getElementById('dataSourceModal')?.remove();renderConfidence();if(typeof markCalcDirty==='function')markCalcDirty();}
 function toggleConfidence(fieldId){openDataSourceMenu(fieldId);}
-document.addEventListener('input',function(e){const id=e.target&&e.target.id;if(!id||!CONFIDENCE_FIELDS.some(f=>f.id===id))return;const state=fieldStates[id],p=fieldProvenance[id]||{};if(!['confirmed_prospect','confirmed_customer'].includes(state))return;const current=Number(String(e.target.value||'').replace(/[$,%\s,]/g,'')),origin=Number(String(p.value??'').replace(/[$,%\s,]/g,''));if(Number.isFinite(current)&&Number.isFinite(origin)&&current!==origin){fieldStates[id]='estimated';fieldProvenance[id]={state:'estimated',source:'Rep updated — needs customer validation',previousEventId:p.eventId||null};confirmedFields.delete(id);renderConfidence();showToast?.('Value changed. Prospect/customer verification was removed; revalidate this working value.');}},true);
+document.addEventListener('input',function(e){const id=e.target&&e.target.id;if(!id||!CONFIDENCE_FIELDS.some(f=>f.id===id))return;const state=fieldStates[id],p=fieldProvenance[id]||{};if(!['confirmed','confirmed_prospect','confirmed_customer'].includes(state))return;const current=Number(String(e.target.value||'').replace(/[$,%\s,]/g,'')),origin=Number(String(p.value??'').replace(/[$,%\s,]/g,''));if(Number.isFinite(current)&&Number.isFinite(origin)&&current!==origin){fieldStates[id]='estimated';fieldProvenance[id]={state:'estimated',source:state==='confirmed'?'Rep updated — needs internal reconfirmation':'Rep updated — needs customer validation',previousEventId:p.eventId||null};confirmedFields.delete(id);renderConfidence();showToast?.(state==='confirmed'?'Value changed. Rep confirmation was removed; reconfirm the new working value if appropriate.':'Value changed. Prospect/customer verification was removed; revalidate this working value.');}},true);
 
 async function openValueHistory(fieldId){
   if(!window._calcScenarioId)return showToast?.('Save this scenario before viewing Value History.');document.getElementById('dataSourceModal')?.remove();
   const old=document.getElementById('valueHistoryModal');if(old)old.remove();const wrap=document.createElement('div');wrap.id='valueHistoryModal';wrap.className='modal-overlay';wrap.innerHTML=`<div class="modal-card modal-wide"><div class="modal-header"><div><h2>Financial Value History</h2><p>${(CONFIDENCE_FIELDS.find(x=>x.id===fieldId)||{label:fieldId}).label} · opportunity-wide evidence</p></div><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button></div><div id="valueHistoryBody" class="modal-body">Loading…</div></div>`;document.body.appendChild(wrap);
-  try{const r=await apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/value-history?input='+encodeURIComponent(fieldId));if(!r.ok)throw Error();const x=await r.json(),h=x.inputs[fieldId]||{},used=h.valueUsed,supported=h.latestCustomerSupported,canApply=x.selectedScenario.isCurrent&&!x.selectedScenario.isClosed,body=document.getElementById('valueHistoryBody');body.innerHTML=`<div class="history-comparison"><div><small>Value used in Scenario v${x.selectedScenario.version}</small><b>${used?used.value_text:'Not captured'}</b></div><div><small>Latest customer-supported value</small><b>${supported?supported.value_text:'None'}</b><span>${h.supportedFreshness?.status||'Needs Review'}</span></div></div>${canApply?'':'<div class="history-immutable">🔒 Historical or closed scenario — values remain viewable but cannot be applied.</div>'}`+(h.events||[]).map(e=>`<article class="value-event"><div><b>${e.value_text||e.normalized_value}</b><small>${valueEventLabel(e.event_type)} · ${new Date(e.evidence_date||e.created_at).toLocaleDateString()}${e.source_scenario_version?' · Scenario v'+e.source_scenario_version:''}</small>${e.occurredAfterScenario?'<em>Occurred after this scenario</em>':''}</div>${canApply?`<button class="btn btn-ghost btn-sm" onclick="applyValueEvent('${fieldId}','${e.id}')">Apply to Current Business Case</button>`:''}</article>`).join('')||'<p>No value events have been recorded yet.</p>'; }catch(_){document.getElementById('valueHistoryBody').innerHTML='<p>Value History could not be loaded.</p>';}
+  try{const r=await apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/value-history?input='+encodeURIComponent(fieldId));if(!r.ok)throw Error();const x=await r.json(),h=x.inputs[fieldId]||{},used=h.valueUsed,supported=h.latestCustomerSupported,canApply=x.selectedScenario.isCurrent&&!x.selectedScenario.isClosed,body=document.getElementById('valueHistoryBody');body.innerHTML=`<div class="history-comparison"><div><small>Value used in Scenario v${x.selectedScenario.version}</small><b>${used?used.value_text:'Not captured'}</b></div><div><small>Latest customer-supported value</small><b>${supported?supported.value_text:'None'}</b><span>${h.supportedFreshness?.status||'Needs Review'}</span></div></div>${canApply?'':'<div class="history-immutable">🔒 Historical or closed scenario — values remain viewable but cannot be applied.</div>'}`+(h.events||[]).map(e=>`<article class="value-event"><div><b>${escapeHtml(e.value_text||e.normalized_value)}</b><small>${valueEventLabel(e.event_type)} · ${new Date(e.created_at).toLocaleString()}${e.source_scenario_version?' · Scenario v'+e.source_scenario_version:''}</small>${e.event_type==='rep_confirmed'?`<small>Confirmed by ${escapeHtml(e.actor_username||'authorized internal user')} · Internal review</small>${e.evidence_note?`<small>${escapeHtml(e.evidence_note)}</small>`:''}`:''}${e.occurredAfterScenario?'<em>Occurred after this scenario</em>':''}</div>${canApply?`<button class="btn btn-ghost btn-sm" onclick="applyValueEvent('${fieldId}','${e.id}')">Apply to Current Business Case</button>`:''}</article>`).join('')||'<p>No value events have been recorded yet.</p>'; }catch(_){document.getElementById('valueHistoryBody').innerHTML='<p>Value History could not be loaded.</p>';}
 }
-function valueEventLabel(type){return ({prospect_submitted:'Prospect submitted',customer_revalidated:'Customer revalidated',customer_provided:'Customer provided',rep_updated:'Rep updated — needs validation',legacy_scenario_snapshot:'Legacy scenario value',legacy_prospect_recovered:'Recovered legacy Prospect Link'})[type]||String(type||'Value event').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());}
+function valueEventLabel(type){return ({prospect_submitted:'Prospect submitted',customer_revalidated:'Customer revalidated',customer_provided:'Customer provided',rep_confirmed:'Rep Confirmed',rep_updated:'Rep Updated — needs reconfirmation/customer validation',legacy_scenario_snapshot:'Legacy scenario value',legacy_prospect_recovered:'Recovered legacy Prospect Link'})[type]||String(type||'Value event').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());}
 async function openRevalidateValue(fieldId){if(!window._calcScenarioId)return showToast?.('Save this scenario first.');document.getElementById('dataSourceModal')?.remove();const company=(document.getElementById('companyName')||{}).value||'';let people=[];try{const r=await apiFetch('/api/stakeholders?company='+encodeURIComponent(company));if(r.ok)people=await r.json();}catch(_){}const current=(document.getElementById(fieldId)||{}).value||'';const wrap=document.createElement('div');wrap.id='valueHistoryModal';wrap.className='modal-overlay';wrap.innerHTML=`<div class="modal-card"><div class="modal-header"><div><h2>Revalidate Value</h2><p>Confirm unchanged or record the customer’s updated value. This adds evidence; it does not rewrite a saved scenario.</p></div><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button></div><form class="modal-body" onsubmit="submitRevalidation(event,'${fieldId}')"><label>Validated value<input id="revalidateValue" value="${String(current).replace(/"/g,'&quot;')}" required></label><label>Validating stakeholder<select id="revalidateStakeholder" required><option value="">Select stakeholder…</option>${people.map(p=>`<option value="${p.id}">${p.name} — ${p.title||p.role}</option>`).join('')}</select></label><label>Evidence date<input id="revalidateDate" type="date" max="${new Date().toISOString().slice(0,10)}" value="${new Date().toISOString().slice(0,10)}" required></label><label>Source<select id="revalidateSource" required><option>Value review meeting</option><option>Customer email</option><option>Customer spreadsheet</option><option>Executive business-case review</option></select></label><label>Evidence note (optional)<textarea id="revalidateNote"></textarea></label><label><input id="revalidateApply" type="checkbox"> Apply to the current working business case after recording</label><footer><button type="button" class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Cancel</button><button class="btn btn-primary">Record customer revalidation</button></footer></form></div>`;document.body.appendChild(wrap);}
 async function submitRevalidation(event,fieldId){event.preventDefault();const body={value:document.getElementById('revalidateValue').value,stakeholderId:document.getElementById('revalidateStakeholder').value,evidenceDate:document.getElementById('revalidateDate').value,source:document.getElementById('revalidateSource').value,note:document.getElementById('revalidateNote').value};const r=await apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/value-history/'+encodeURIComponent(fieldId)+'/revalidate',{method:'POST',body:JSON.stringify(body)});if(!r.ok){const x=await r.json().catch(()=>({}));return showToast?.(x.error||'Revalidation could not be recorded.');}const created=await r.json();if(document.getElementById('revalidateApply').checked)await applyValueEvent(fieldId,created.id);document.getElementById('valueHistoryModal')?.remove();showToast?.('Customer revalidation added to Value History.');}
 async function applyValueEvent(fieldId,eventId){const r=await apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/value-history/'+encodeURIComponent(fieldId)+'/apply',{method:'POST',body:JSON.stringify({eventId})});if(!r.ok)return showToast?.('This value cannot be applied here.');const x=await r.json(),a=x.apply,el=document.getElementById(fieldId);if(el)el.value=a.value;fieldStates[fieldId]=a.fieldState;fieldProvenance[fieldId]={...a.provenance,value:a.value};confirmedFields.add(fieldId);recalc?.();renderConfidence();markCalcDirty?.();document.getElementById('valueHistoryModal')?.remove();showToast?.('Validated value applied. Save a new scenario version when ready.');}
@@ -520,91 +526,41 @@ function renderConfidence() {
    7. EMAIL TEMPLATE GENERATOR
    Creates a ready-to-send follow-up email
    ───────────────────────────────────────── */
-function generateEmail() {
-  const v = getVals();
-  const r = calcROI(v);
-  const indLabel = v.industry && IND[v.industry] ? IND[v.industry].label : 'your industry';
-  const paybackStr = r.payback === null ? 'under 12 months' :
-    r.payback >= 60 ? 'approximately 5 years' : `approximately ${r.payback.toFixed(0)} months`;
-
-  const subject = `Cloud Inventory ROI Analysis — ${v.company || 'Your Company'}`;
-  const body = `Hi [First Name],
-
-Thank you for taking the time to explore Cloud Inventory with us. As promised, I've put together a business case summary based on what we discussed.
-
-EXECUTIVE SUMMARY FOR ${(v.company || 'YOUR COMPANY').toUpperCase()}
-
-Based on your inputs — ${Math.round(v.users)} inventory users, ${fmtFull(v.inventory)} in annual inventory value, and ${fmtFull(v.revenue)} in revenue — here is what Cloud Inventory could deliver for your ${indLabel} operations:
-
-  • Annual benefit:       ${fmtFull(r.annualBenefit)}
-  • Year 1 ROI:          ${fmtPct(r.roi)}
-  • Payback period:      ${paybackStr}
-  • 3-year NPV (${fmtPct(v.discRate*100)} discount rate):  ${fmtFull(r.npv3)}
-  • 5-year NPV:          ${fmtFull(r.npv5)}
-
-WHERE THE VALUE COMES FROM
-
-  • Labor & productivity:    ${fmtFull(r.laborSav)}/yr
-  • Shrinkage reduction:     ${fmtFull(r.shrinkSav)}/yr
-  • Carrying cost reduction: ${fmtFull(r.carrySav)}/yr
-  • OTIF improvement:        ${fmtFull(r.otifSav)}/yr
-  • IT system displacement:  ${fmtFull(r.itSav)}/yr
-
-TOTAL INVESTMENT
-
-  • One-time (services + hardware + training): ${fmtFull(v.otc)}
-  • Annual subscription:                       ${fmtFull(v.invest)}
-  • Total year 1 investment:                   ${fmtFull(r.totalInvestY1)}
-
-These figures are based on ${indLabel} industry benchmarks and the inputs you shared with us. I'm happy to refine any assumptions as we learn more about your environment.
-
-SUGGESTED NEXT STEPS
-
-1. Share this analysis with your finance and operations stakeholders
-2. Schedule a 30-minute technical discovery call to tighten the assumptions
-3. Arrange a live demo focused on your specific workflows
-
-I've attached a full executive presentation for your review. Let me know if you'd like me to adjust any of the assumptions or build out a more detailed ROI model.
-
-Looking forward to our next conversation.
-
-Best regards,
-${v.rep || '[Your name]'}
-Cloud Inventory — a Nextworld Company
-cloudinventory.com`;
-
-  document.getElementById('emailSubject').value = subject;
-  document.getElementById('emailBody').value = body;
-  document.getElementById('emailModal').classList.add('open');
-  trackEvent('email_generated', { company: v.company });
+async function generateEmail() {
+  const id=window._calcScenarioId;
+  if(!id){showToast('Save the scenario before creating customer-facing value messaging.');return;}
+  try{
+    const [storyResponse,readinessResponse]=await Promise.all([
+      apiFetch('/api/scenarios/'+encodeURIComponent(id)+'/executive-value-story'),
+      apiFetch('/api/scenarios/'+encodeURIComponent(id)+'/executive-output-readiness?output=customer_email')
+    ]);
+    if(!storyResponse?.ok||!readinessResponse?.ok)throw new Error('Governed customer value story unavailable.');
+    const story=await storyResponse.json(),readiness=await readinessResponse.json();
+    if(readiness.status==='draft_only'){showToast('Customer value email is Draft Only. Complete the required validation before creating customer-facing messaging.');return;}
+    if(readiness.status==='review'){
+      const accepted=window.confirm('This message is Review Before Sharing. Review the listed assumptions and acknowledge before creating it. Continue?');if(!accepted)return;
+      const ack=await apiFetch('/api/scenarios/'+encodeURIComponent(id)+'/executive-output-readiness/acknowledge',{method:'POST',body:JSON.stringify({outputType:'customer_email'})});if(!ack?.ok)throw new Error('Review acknowledgement could not be recorded.');
+    }
+    const email=window.CustomerEmail.buildCustomerEmail(story);
+    window._governedCustomerEmail={story,readiness,email};
+    document.getElementById('emailSubject').value=email.subject;document.getElementById('emailGreeting').value=email.greeting;document.getElementById('emailIntro').value=email.intro;document.getElementById('emailGovernedBody').textContent=email.locked;document.getElementById('emailClosing').value=email.closing;document.getElementById('emailRevisionNotice').hidden=true;document.getElementById('emailModal').classList.add('open');trackEvent('email_generated',{company:story.meta.customer,readiness:readiness.status});
+  }catch(e){console.error('generateEmail error:',e.message);showToast(e.message||'Customer value email could not be created.');}
 }
 
-/* AI personalize: rewrite the tone/framing of the template for the
-   selected audience and any recorded debrief notes, while keeping
-   every number in the email exactly as computed — never letting the
-   model touch the figures themselves. */
+/* AI may select approved presentation styles only. It cannot author prose. */
 async function aiPersonalizeEmail() {
   const btn = document.getElementById('aiPersonalizeEmailBtn');
-  const bodyEl = document.getElementById('emailBody');
-  if (!btn || !bodyEl) return;
+  if (!btn) return;
   const orig = btn.innerHTML;
   btn.disabled = true;
   btn.textContent = '✨ Personalizing…';
 
   try {
-    const v = getVals();
-    const r = calcROI(v);
+    const governed=window._governedCustomerEmail;
+    if(!governed)throw new Error('Create the governed customer value email first.');
     const audience = (document.getElementById('execAudience') || {}).value || 'mixed';
     const audienceLabel = { cfo:'CFO', coo:'VP Operations / COO', ceo:'CEO / Executive Sponsor', cio:'CIO / IT', mixed:'a mixed executive audience' }[audience] || 'a mixed executive audience';
-    const debriefNotes = (document.getElementById('debriefNotes') || {}).value || '';
-    const currentBody = bodyEl.value;
-
-    const prompt = `Rewrite this sales follow-up email to sound natural and personalized for ${audienceLabel}, while keeping every number, dollar figure, and percentage EXACTLY as written — do not change, round, or recalculate any figure. Keep it professional but less templated. ${debriefNotes ? 'The rep noted this from their last conversation with the prospect, weave it in naturally where relevant: "' + debriefNotes.replace(/"/g,"'").slice(0,300) + '"' : ''}
-
-Current email:
-${currentBody}
-
-Return ONLY the rewritten email body — no preamble, no explanation, no markdown formatting, no subject line.`;
+    const prompt = `Select an approved presentation style for ${audienceLabel}. Return JSON only: {"introStyle":"concise|consultative|executive|technical","closingStyle":"validation|concise|executive|technical"}. Do not write email prose or customer facts.`;
 
     const resp = await apiFetch('/api/enhance', {
       method: 'POST',
@@ -614,10 +570,11 @@ Return ONLY the rewritten email body — no preamble, no explanation, no markdow
     const data = await resp.json();
     const text = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('').trim();
     if (!text) throw new Error('Empty response');
-
-    bodyEl.value = text;
-    showToast('✨ Email personalized — review before sending.');
-    trackEvent('email_ai_personalized', { company: v.company, audience });
+    const selection=JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g,''));
+    const merged=window.CustomerEmail.mergePersonalization(governed.email,selection);
+    governed.email=merged;document.getElementById('emailIntro').value=merged.intro;document.getElementById('emailClosing').value=merged.closing;
+    showToast('✨ Approved email presentation style applied.');
+    trackEvent('email_ai_personalized', { company: governed.story.meta.customer, audience, readiness:governed.readiness.status });
   } catch(e) {
     console.error('aiPersonalizeEmail error:', e.message);
     showToast('Could not personalize — the original template is still in the box.');
@@ -628,18 +585,14 @@ Return ONLY the rewritten email body — no preamble, no explanation, no markdow
 }
 window.aiPersonalizeEmail = aiPersonalizeEmail;
 
-function copyEmail() {
-  const subject = document.getElementById('emailSubject').value;
-  const body = document.getElementById('emailBody').value;
-  const full = 'Subject: ' + subject + '\n\n' + body;
-  navigator.clipboard.writeText(full).then(() => showToast('Email copied to clipboard!'));
+async function composeCurrentGovernedEmail(){
+  const governed=window._governedCustomerEmail,id=window._calcScenarioId;if(!governed||!id)throw new Error('Refresh the governed email before sharing.');
+  const response=await apiFetch('/api/scenarios/'+encodeURIComponent(id)+'/executive-value-story');if(!response?.ok)throw new Error('The current Executive Value Story could not be verified.');const current=await response.json();
+  if(current.storyRevision!==governed.email.storyRevision){document.getElementById('emailRevisionNotice').hidden=false;throw new Error('The Executive Value Story has changed. Refresh the email before sharing.');}
+  return window.CustomerEmail.compose(governed.email,{greeting:document.getElementById('emailGreeting').value,intro:document.getElementById('emailIntro').value,closing:document.getElementById('emailClosing').value});
 }
-
-function openMailto() {
-  const subject = encodeURIComponent(document.getElementById('emailSubject').value);
-  const body    = encodeURIComponent(document.getElementById('emailBody').value);
-  window.open(`mailto:?subject=${subject}&body=${body}`);
-}
+async function copyEmail() {try{const email=await composeCurrentGovernedEmail(),subject=document.getElementById('emailSubject').value;await navigator.clipboard.writeText('Subject: '+subject+'\n\n'+email.body);showToast('Email copied to clipboard!');}catch(e){showToast(e.message);}}
+async function openMailto() {try{const email=await composeCurrentGovernedEmail(),subject=encodeURIComponent(document.getElementById('emailSubject').value);window.open(`mailto:?subject=${subject}&body=${encodeURIComponent(email.body)}`);}catch(e){showToast(e.message);}}
 
 /* ─────────────────────────────────────────
    8. CRM PUSH (Salesforce / HubSpot)

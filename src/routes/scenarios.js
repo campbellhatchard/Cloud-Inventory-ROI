@@ -24,14 +24,14 @@ const { BUYCYCLE_MIN_STAGE, parseBuyCycleStage, getBuyCycleStageLabel } = requir
 const { parseOpportunityValue, validateOpportunityCurrency, buildOpportunityProfile } = require('../shared/opportunity-value');
 const { normalizeProposalDraft, proposalMeta } = require('../shared/proposal-state');
 const { validateSelection, resolveApproved, relevant } = require('../shared/customer-proof-catalog');
-const { buildPptxContext } = require('../shared/pptx-context');
 const { buildExecutiveValueStory } = require('../shared/executive-value-story');
 const { buildCustomerROIReportData } = require('../shared/customer-roi-report');
 const { evaluateExecutiveOutputReadiness } = require('../shared/executive-output-readiness');
 const { buildExecutivePptx } = require('../exports/executive-pptx');
 const { buildExecutivePdf } = require('../exports/executive-pdf');
 const { buildExecutiveDocx } = require('../exports/executive-docx');
-const { FINANCIAL_INPUTS, EVENT_TYPES, normalizeValue, sameValue, freshness, isFinancialInput, isCustomerEvent, unitFor, buildSnapshotRows, enforceProvenance, summarize } = require('../shared/value-history');
+const { loadExecutiveSource, executiveStoryFor, executiveReportFor } = require('../shared/executive-source');
+const { FINANCIAL_INPUTS, EVENT_TYPES, normalizeValue, sameValue, freshness, isFinancialInput, isCustomerEvent, unitFor, savedScenarioCurrency, buildSnapshotRows, enforceProvenance, summarize } = require('../shared/value-history');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -46,12 +46,13 @@ async function authorizedScenario(user,id,mode='view'){
 
 async function captureScenarioValueHistory(client,{scenario,sourceScenarioId,data,userId}){
   const rows=buildSnapshotRows(data),ids=rows.map(x=>x.originEventId).filter(Boolean);
-  const events=ids.length?(await client.query(`SELECT * FROM roi_value_events WHERE id=ANY($1::uuid[]) AND base_id=$2`,[ids,scenario.base_id])).rows:[];
+  const events=ids.length?(await client.query(`SELECT e.*,u.is_active AS internal_actor_valid FROM roi_value_events e LEFT JOIN users u ON u.id=e.actor_user_id WHERE e.id=ANY($1::uuid[]) AND e.base_id=$2`,[ids,scenario.base_id])).rows:[];
   const byId=new Map(events.map(e=>[String(e.id),e]));
   const prior=sourceScenarioId?(await client.query(`SELECT * FROM scenario_roi_value_snapshots WHERE scenario_id=$1`,[sourceScenarioId])).rows:[];
   const priorByInput=new Map(prior.map(x=>[x.canonical_input,x]));
   const fieldStates={...(data.fieldStates||{})},fieldProvenance={...(data.fieldProvenance||{})};
   for(let row of rows){
+    row.baseId=scenario.base_id;
     row=enforceProvenance(row,byId.get(String(row.originEventId)));
     const old=priorByInput.get(row.canonicalInput),changed=old&&!sameValue(old.normalized_value??old.value_text,row.normalizedValue??row.valueText);
     let origin=row.originEventId&&byId.has(String(row.originEventId))?row.originEventId:null;
@@ -65,25 +66,17 @@ async function captureScenarioValueHistory(client,{scenario,sourceScenarioId,dat
   await client.query(`UPDATE scenarios SET data=jsonb_set(jsonb_set(data,'{fieldStates}',$2::jsonb,true),'{fieldProvenance}',$3::jsonb,true) WHERE id=$1`,[scenario.id,JSON.stringify(fieldStates),JSON.stringify(fieldProvenance)]);
 }
 
-async function loadExecutiveSource(user,id){
-    const access=await scenarioAccess(user,id,'view');
-    if(!access.exists)return {error:'Scenario not found.',status:404};
-    if(!access.allowed)return {error:'Access denied.',status:403};
-    const scenarioResult=await query(`SELECT s.*,u.username owner_username FROM scenarios s JOIN users u ON u.id=s.owner_id WHERE s.id=$1 AND s.deleted_at IS NULL`,[id]);
-    if(!scenarioResult.rows.length)return {error:'Scenario not found.',status:404};
-    const scenario=scenarioResult.rows[0];
-    const [governance,stakeholders,discovery,handoff,plans,valueHistory]=await Promise.all([
-      query('SELECT evidence FROM scenario_stage_governance WHERE scenario_id=$1',[scenario.id]),
-      query('SELECT id,name,title,role,engaged FROM stakeholders WHERE owner_id=$1 AND LOWER(company)=LOWER($2)',[scenario.owner_id,scenario.company]),
-      query(`SELECT DISTINCT ON (a.question_id) a.question_id,a.answer,a.entered_by,a.updated_at FROM discovery_answers a JOIN discovery_sessions d ON d.id=a.session_id WHERE d.scenario_id=$1 ORDER BY a.question_id,a.updated_at DESC`,[scenario.id]),
-      scenario.customer_id?query('SELECT data FROM handoffs WHERE customer_id=$1 AND deleted_at IS NULL',[scenario.customer_id]):Promise.resolve({rows:[]}),
-      query(`SELECT title,milestones,updated_at FROM mutual_action_plans WHERE scenario_id=$1 OR (owner_id=$2 AND LOWER(company)=LOWER($3)) ORDER BY (scenario_id=$1) DESC,updated_at DESC LIMIT 1`,[scenario.id,scenario.owner_id,scenario.company]),
-      query(`SELECT x.canonical_input,x.normalized_value scenario_value,x.field_state,e.id event_id,e.normalized_value customer_value,e.event_type,e.evidence_date,e.created_at event_created_at FROM scenario_roi_value_snapshots x LEFT JOIN LATERAL(SELECT * FROM roi_value_events v WHERE v.base_id=x.base_id AND v.canonical_input=x.canonical_input AND v.event_type IN('prospect_submitted','customer_revalidated','customer_provided','legacy_prospect_recovered') ORDER BY COALESCE(v.evidence_date,v.created_at::date) DESC,v.created_at DESC LIMIT 1)e ON TRUE WHERE x.scenario_id=$1`,[scenario.id])
-    ]);
-    return {scenario,governance:governance.rows[0]||{},stakeholders:stakeholders.rows,discovery:discovery.rows,solutionFit:handoff.rows[0]||null,jointProjectPlan:plans.rows[0]||null,proposal:scenario.data?.proposalDraft||null,valueHistory:valueHistory.rows};
+const WHY_META_KEYS=Object.freeze({threeWhysAct:'whyChange',threeWhysCi:'whyCloudInventory',threeWhysNow:'whyNow'});
+function normalizeNarrativeMeta(narrative,requestedMeta={},submittedAnswers=[]){
+  const submitted=new Map(submittedAnswers.map(a=>[String(a.question_id),a]));
+  const evidence={whyChange:submitted.get('ve5')||submitted.get('ve6')||null,whyNow:submitted.get('ve2')||null},out={};
+  for(const [field,key] of Object.entries(WHY_META_KEYS)){
+    const value=String(narrative[field]||'').trim(),requested=requestedMeta?.[key]||{},reference=evidence[key],matches=key!=='whyCloudInventory'&&value&&reference&&sameValue(value,String(reference.answer_text||reference.answer||'').trim());
+    const source=!value?'empty':matches?'customer_discovery':requested.source==='ai_draft'?'ai_draft':requested.source==='historical_unknown'?'historical_unknown':'rep_authored';
+    out[key]={source,validationStatus:source==='customer_discovery'?'Customer supported':source==='ai_draft'?'AI draft — review and validate':source==='empty'?'To validate':'Needs validation',updatedAt:new Date().toISOString(),...(source==='customer_discovery'?{discoverySubmissionId:reference.submission_id,submissionNumber:Number(reference.submission_number),questionId:String(reference.question_id),submittedAt:reference.submitted_at,sourceScenarioId:reference.source_scenario_id||null,sourceScenarioVersion:reference.source_scenario_version==null?null:Number(reference.source_scenario_version)}:{})};
+  }
+  return out;
 }
-async function executiveStoryFor(user,id){const source=await loadExecutiveSource(user,id);return source.error?source:buildExecutiveValueStory(source);}
-async function executiveReportFor(user,id){const source=await loadExecutiveSource(user,id);return source.error?source:buildCustomerROIReportData(source);}
 
 router.get('/:id/executive-value-story',async(req,res)=>{try{const story=await executiveStoryFor(req.user,req.params.id);if(story.error)return res.status(story.status).json({error:story.error});res.json(story);}catch(err){console.error('Executive Value Story error:',err.message);res.status(500).json({error:'Failed to build Executive Value Story.'});}});
 router.get('/:id/executive-output-readiness',async(req,res)=>{try{const story=await executiveStoryFor(req.user,req.params.id);if(story.error)return res.status(story.status).json({error:story.error});res.json(evaluateExecutiveOutputReadiness(story,{outputType:String(req.query.output||'executive_view')}));}catch(err){res.status(err.status||500).json({error:err.message||'Failed to evaluate executive output readiness.'});}});
@@ -140,12 +133,6 @@ async function exportReport(req,res,kind){
 }
 router.get('/:id/export-pdf',(req,res)=>exportReport(req,res,'pdf'));
 router.get('/:id/export-docx',(req,res)=>exportReport(req,res,'docx'));
-
-/* Thin R13 compatibility adapter over the one authoritative story. */
-router.get('/:id/pptx-context',async(req,res)=>{
-  try{const source=await loadExecutiveSource(req.user,req.params.id);if(source.error)return res.status(source.status).json({error:source.error});const story=buildExecutiveValueStory(source);res.json(buildPptxContext({story,scenario:source.scenario,jointProjectPlan:source.jointProjectPlan}));
-  }catch(err){console.error('PowerPoint context error:',err.message);res.status(500).json({error:'Failed to build PowerPoint context.'});}
-});
 
 /* ── Shared columns (never return full JSONB on list to keep payload small) ── */
 const LIST_COLS = `
@@ -269,7 +256,7 @@ router.get('/:id/discovery-submissions/:submissionId',async(req,res)=>{try{
 router.get('/:id/value-history',async(req,res)=>{try{
   const sc=await authorizedScenario(req.user,req.params.id);if(sc.error)return res.status(sc.status).json({error:sc.error});
   const input=req.query.input?String(req.query.input):null;if(input&&!isFinancialInput(input))return res.status(400).json({error:'Unknown financial input.'});
-  const events=(await query(`SELECT e.*,ds.submission_number FROM roi_value_events e LEFT JOIN discovery_submissions ds ON ds.id=e.discovery_submission_id WHERE e.base_id=$1 ${input?'AND e.canonical_input=$2':''} ORDER BY e.created_at DESC`,input?[sc.base_id,input]:[sc.base_id])).rows;
+  const events=(await query(`SELECT e.*,ds.submission_number,u.username actor_username FROM roi_value_events e LEFT JOIN discovery_submissions ds ON ds.id=e.discovery_submission_id LEFT JOIN users u ON u.id=e.actor_user_id WHERE e.base_id=$1 ${input?'AND e.canonical_input=$2':''} ORDER BY e.created_at DESC`,input?[sc.base_id,input]:[sc.base_id])).rows;
   const snapshots=(await query(`SELECT * FROM scenario_roi_value_snapshots WHERE base_id=$1 ${input?'AND canonical_input=$2':''} ORDER BY scenario_version DESC,canonical_input`,input?[sc.base_id,input]:[sc.base_id])).rows;
   const selected=snapshots.filter(x=>String(x.scenario_id)===String(sc.id));const grouped={};for(const key of new Set([...events.map(x=>x.canonical_input),...selected.map(x=>x.canonical_input)])){const ev=events.filter(x=>x.canonical_input===key).map(x=>({...x,freshness:isCustomerEvent(x)?freshness(x.evidence_date||x.created_at):{status:'Needs Review',days:null,customerSupported:false},occurredAfterScenario:(Number(x.source_scenario_version)||0)>Number(sc.version)}));grouped[key]=summarize(ev,selected.find(x=>x.canonical_input===key));}
   res.json({baseId:sc.base_id,selectedScenario:{id:sc.id,version:sc.version,isCurrent:sc.is_current,isClosed:!!(sc.governed_outcome||sc.outcome)},inputs:grouped,events,snapshots});
@@ -285,10 +272,30 @@ router.post('/:id/value-history/:canonicalInput/revalidate',async(req,res)=>{try
   await log({userId:req.user.id,action:'roi_value.revalidated',entityType:'roi_value_event',entityId:created.rows[0].id,detail:{baseId:sc.base_id,canonicalInput:input,scenarioId:sc.id},ipAddress:req.ip});res.status(201).json({...created.rows[0],freshness:freshness(b.evidenceDate)});
 }catch(err){console.error('Value revalidation error:',err.message);res.status(err.code==='23503'?400:500).json({error:err.message||'Failed to revalidate value.'});}});
 
+router.post('/:id/value-history/:canonicalInput/rep-confirm',async(req,res)=>{try{
+  const access=await authorizedScenario(req.user,req.params.id,'edit');if(access.error)return res.status(access.status).json({error:access.error});
+  const input=String(req.params.canonicalInput),b=req.body||{};if(!isFinancialInput(input))return res.status(400).json({error:'This field is not a financial ROI input.'});
+  const value=normalizeValue(b.value);if(value===null)return res.status(400).json({error:'A valid current value is required.'});
+  const note=String(b.note||'').trim().slice(0,1000)||null;
+  const result=await transaction(async client=>{
+    const locked=await client.query(`SELECT s.id,s.base_id,s.version,s.is_current,s.data,s.outcome,g.outcome governed_outcome FROM scenarios s LEFT JOIN scenario_stage_governance g ON g.scenario_id=s.id WHERE s.id=$1 AND s.deleted_at IS NULL FOR UPDATE OF s`,[access.id]);const sc=locked.rows[0];
+    if(!sc||!sc.is_current||sc.governed_outcome||sc.outcome)throw Object.assign(new Error('Rep confirmation is available only on an active current scenario.'),{status:409});
+    if(!sameValue(sc.data?.[input],value))throw Object.assign(new Error('Save the current working value before confirming it.'),{status:409});
+    const actor=await client.query('SELECT id,username FROM users WHERE id=$1 AND is_active=TRUE',[req.user.id]);if(!actor.rows.length)throw Object.assign(new Error('An active internal user is required to confirm this value.'),{status:403});
+    const previous=await client.query(`SELECT id FROM roi_value_events WHERE base_id=$1 AND canonical_input=$2 AND event_type='rep_confirmed' ORDER BY created_at DESC LIMIT 1`,[sc.base_id,input]);
+    const created=await client.query(`INSERT INTO roi_value_events(base_id,canonical_input,event_type,value_text,normalized_value,currency,unit,source_scenario_id,source_scenario_version,evidence_source,evidence_note,evidence_date,actor_user_id,provenance_state,supersedes_event_id) VALUES($1,$2,'rep_confirmed',$3,$4,$5,$6,$7,$8,'Internal review',$9,CURRENT_DATE,$10,'confirmed',$11) RETURNING *`,[sc.base_id,input,String(b.value),value,savedScenarioCurrency(sc.data),unitFor(input),sc.id,sc.version,note,req.user.id,previous.rows[0]?.id||null]);
+    const event=created.rows[0],provenance={state:'confirmed',eventId:event.id,source:'Internally confirmed',value:event.normalized_value??event.value_text,confirmedBy:actor.rows[0].username,confirmedAt:event.created_at,note:event.evidence_note};
+    await client.query(`UPDATE scenarios SET data=jsonb_set(jsonb_set(COALESCE(data,'{}'::jsonb),'{fieldStates}',COALESCE(data->'fieldStates','{}'::jsonb)||jsonb_build_object($2,'confirmed'),true),'{fieldProvenance}',COALESCE(data->'fieldProvenance','{}'::jsonb)||jsonb_build_object($2,$3::jsonb),true),updated_at=NOW() WHERE id=$1`,[sc.id,input,JSON.stringify(provenance)]);
+    return{event,actor:actor.rows[0],provenance,sc};
+  });
+  await log({userId:req.user.id,action:'roi_value.rep_confirmed',entityType:'roi_value_event',entityId:result.event.id,detail:{baseId:result.sc.base_id,canonicalInput:input,scenarioId:result.sc.id,normalizedValue:value},ipAddress:req.ip});
+  res.status(201).json({...result.event,actor_username:result.actor.username,provenance:result.provenance});
+}catch(err){console.error('Rep confirmation error:',err.message);res.status(err.status||500).json({error:err.status?err.message:'Rep confirmation could not be recorded.'});}});
+
 router.post('/:id/value-history/:canonicalInput/apply',async(req,res)=>{try{
   const sc=await authorizedScenario(req.user,req.params.id,'edit');if(sc.error)return res.status(sc.status).json({error:sc.error});if(!sc.is_current||sc.governed_outcome||sc.outcome)return res.status(409).json({error:'Closed or historical scenario values cannot be changed.'});
-  const input=String(req.params.canonicalInput);const event=await query(`SELECT * FROM roi_value_events WHERE id=$1 AND base_id=$2 AND canonical_input=$3`,[req.body?.eventId,sc.base_id,input]);if(!event.rows.length)return res.status(404).json({error:'Value event not found for this opportunity.'});
-  await log({userId:req.user.id,action:'roi_value.applied',entityType:'roi_value_event',entityId:event.rows[0].id,detail:{baseId:sc.base_id,canonicalInput:input,targetScenarioId:sc.id},ipAddress:req.ip});const eventType=event.rows[0].event_type;res.json({apply:{canonicalInput:input,value:event.rows[0].normalized_value??event.rows[0].value_text,fieldState:eventType==='prospect_submitted'?'confirmed_prospect':['customer_revalidated','customer_provided'].includes(eventType)?'confirmed_customer':'estimated',provenance:{eventId:event.rows[0].id,source:eventType,date:event.rows[0].evidence_date||event.rows[0].created_at,stakeholderId:event.rows[0].stakeholder_id,stakeholder:event.rows[0].stakeholder_name_snapshot}},dirty:true,scenarioUnchanged:true});
+  const input=String(req.params.canonicalInput);const event=await query(`SELECT e.*,u.username actor_username,u.is_active internal_actor_valid FROM roi_value_events e LEFT JOIN users u ON u.id=e.actor_user_id WHERE e.id=$1 AND e.base_id=$2 AND e.canonical_input=$3`,[req.body?.eventId,sc.base_id,input]);if(!event.rows.length)return res.status(404).json({error:'Value event not found for this opportunity.'});
+  await log({userId:req.user.id,action:'roi_value.applied',entityType:'roi_value_event',entityId:event.rows[0].id,detail:{baseId:sc.base_id,canonicalInput:input,targetScenarioId:sc.id},ipAddress:req.ip});const eventType=event.rows[0].event_type;res.json({apply:{canonicalInput:input,value:event.rows[0].normalized_value??event.rows[0].value_text,fieldState:eventType==='prospect_submitted'?'confirmed_prospect':['customer_revalidated','customer_provided'].includes(eventType)?'confirmed_customer':eventType==='rep_confirmed'&&event.rows[0].internal_actor_valid?'confirmed':'estimated',provenance:{eventId:event.rows[0].id,source:eventType==='rep_confirmed'?'Internally confirmed':eventType,date:event.rows[0].evidence_date||event.rows[0].created_at,confirmedBy:event.rows[0].actor_username,note:event.rows[0].evidence_note,stakeholderId:event.rows[0].stakeholder_id,stakeholder:event.rows[0].stakeholder_name_snapshot}},dirty:true,scenarioUnchanged:true});
 }catch(err){res.status(500).json({error:'Failed to apply value event.'});}});
 
 /* ═══════════════════════════════════════
@@ -409,30 +416,24 @@ router.patch('/:id/narrative', async (req, res) => {
     threeWhysCi:  typeof body.threeWhysCi  === 'string' ? body.threeWhysCi.trim()  : '',
     threeWhysNow: typeof body.threeWhysNow === 'string' ? body.threeWhysNow.trim() : ''
   };
-  if (Object.values(narrative).some(value => value.length > 8000)) {
+  if ([narrative.threeWhysAct,narrative.threeWhysCi,narrative.threeWhysNow].some(value => value.length > 8000)) {
     return res.status(400).json({ error: 'Narrative sections must be 8,000 characters or fewer.' });
   }
 
   try {
+    const access=await authorizedScenario(req.user,req.params.id,'edit');if(access.error)return res.status(access.status).json({error:access.error});
+    const target=await query('SELECT id,base_id FROM scenarios WHERE base_id=$1 AND is_current=TRUE AND deleted_at IS NULL',[access.base_id]);if(!target.rows.length)return res.status(404).json({error:'Current scenario not found.'});
+    const submitted=await query(`SELECT a.question_id,a.answer_text,s.id submission_id,s.submission_number,s.submitted_at,s.source_scenario_id,s.source_scenario_version FROM discovery_submissions s JOIN discovery_submission_answers a ON a.submission_id=s.id WHERE s.id=(SELECT id FROM discovery_submissions WHERE base_id=$1 ORDER BY submitted_at DESC,submission_number DESC LIMIT 1)`,[access.base_id]);
+    narrative.threeWhysMeta=normalizeNarrativeMeta(narrative,body.threeWhysMeta,submitted.rows);
     const { rows } = await query(
-      `WITH requested AS (
-         SELECT base_id FROM scenarios WHERE id = $2 AND deleted_at IS NULL
-       ), current_target AS (
-         SELECT s.id
-         FROM scenarios s JOIN requested r ON r.base_id = s.base_id
-         WHERE s.is_current = TRUE AND s.deleted_at IS NULL
-           AND (s.owner_id = $3 OR $3 = ANY(s.shared_with) OR $4)
-         LIMIT 1
-       )
-       UPDATE scenarios s
-       SET data = s.data || $1::jsonb, updated_at = NOW()
-       FROM current_target t
-       WHERE s.id = t.id
+      `WITH current_target AS (SELECT id FROM scenarios WHERE id=$2 AND is_current=TRUE AND deleted_at IS NULL)
+       UPDATE scenarios s SET data = s.data || $1::jsonb, updated_at = NOW()
+       FROM current_target t WHERE s.id=t.id
        RETURNING s.id, s.updated_at`,
-      [JSON.stringify(narrative), req.params.id, req.user.id, hasRole(req.user,'admin')]
+      [JSON.stringify(narrative), target.rows[0].id]
     );
     if (!rows.length) return res.status(404).json({ error: 'Scenario not found or access denied.' });
-    res.json({ saved: true, id: rows[0].id, updatedAt: rows[0].updated_at });
+    res.json({ saved: true, id: rows[0].id, updatedAt: rows[0].updated_at, threeWhysMeta:narrative.threeWhysMeta });
   } catch (err) {
     console.error('Autosave scenario narrative error:', err.message);
     res.status(500).json({ error: 'Failed to save executive narrative.' });
@@ -544,15 +545,7 @@ router.post('/', async (req, res) => {
           roi:           r.roi           || 0,
           npv3:          r.npv3          || 0,
           npv5:          r.npv5          || 0,
-          payback:       r.paybackFromSigning != null ? r.paybackFromSigning : null,
-          contractMonths:          r.contractMonths,
-          contractYears:           r.contractYears,
-          totalContractBenefit:    r.totalContractBenefit,
-          totalContractInvestment: r.totalContractInvestment,
-          totalContractNetBenefit: r.totalContractNetBenefit,
-          totalContractRoi:        r.totalContractRoi,
-          totalContractNpv:        r.totalContractNpv,
-          contractPayback:         r.contractPayback
+          payback:       r.paybackFromSigning != null ? r.paybackFromSigning : null
         };
         /* Detect drift vs. what the client sent (>$1 or >0.5% considered drift) */
         const clientBenefit = Number(data.annualBenefit) || 0;
@@ -570,15 +563,7 @@ router.post('/', async (req, res) => {
           roi:           Number(data.roi)           || 0,
           npv3:          Number(data.npv3)          || 0,
           npv5:          Number(data.npv5)          || 0,
-          payback:       data.paybackFromSigning || data.payback || null,
-          contractMonths:          Number.isFinite(Number.parseInt(data.contractMonths, 10)) ? Math.max(1, Math.min(60, Number.parseInt(data.contractMonths, 10))) : 36,
-          contractYears:           Array.isArray(data.contractYears) ? data.contractYears : [],
-          totalContractBenefit:    Number(data.totalContractBenefit) || 0,
-          totalContractInvestment: Number(data.totalContractInvestment) || 0,
-          totalContractNetBenefit: Number(data.totalContractNetBenefit) || 0,
-          totalContractRoi:        data.totalContractRoi == null ? null : Number(data.totalContractRoi),
-          totalContractNpv:        Number(data.totalContractNpv) || 0,
-          contractPayback:         data.contractPayback == null ? null : Number(data.contractPayback)
+          payback:       data.paybackFromSigning || data.payback || null
         };
         recomputeDiscrepancy = { recomputeError: e.message };
       }
@@ -617,7 +602,7 @@ router.post('/', async (req, res) => {
             industry, deal_stage, exec_audience, solution, data, version_note,
             outcome,outcome_reason,realized_value,outcome_at)
          VALUES ($1, $2, TRUE, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,$13,$14,$15,$16)
-         RETURNING id, base_id, version, name, company, is_current,
+         RETURNING id, base_id, version, name, company, customer_id, is_current,
                    industry, deal_stage, exec_audience, solution, version_note,
                    created_at, updated_at`,
         [
@@ -771,9 +756,11 @@ router.delete('/:id', async (req, res) => {
     if (sc.is_current) {
       await query(
         `UPDATE scenarios SET is_current = TRUE
-         WHERE base_id = $1 AND deleted_at IS NULL
-           AND id != $2
-         ORDER BY version DESC LIMIT 1`,
+         WHERE id = (
+           SELECT id FROM scenarios
+           WHERE base_id = $1 AND deleted_at IS NULL AND id != $2
+           ORDER BY version DESC LIMIT 1
+         )`,
         [sc.base_id, req.params.id]
       );
     }
@@ -961,3 +948,4 @@ router.get('/resonance/summary/ai', async (req, res) => {
 
 module.exports = router;
 module.exports.loadExecutiveSource = loadExecutiveSource;
+module.exports.normalizeNarrativeMeta = normalizeNarrativeMeta;

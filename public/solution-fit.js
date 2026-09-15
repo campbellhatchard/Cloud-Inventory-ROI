@@ -38,6 +38,7 @@
   let showMissingOnly = false, activeTemplate = 'field', knownStakeholders = [];
   let knownSources = {}, sfKeyboardBound = false, sfActionsDelegated = false;
   let lastEditedByName = '', lastEditedAt = '';
+  let pendingCreate = false, customerSearchTimer = null, customerPickerController = null;
 
   const SOLUTION_TEMPLATES = {
     field: {
@@ -210,7 +211,7 @@
   }
   async function loadKnownStakeholders() {
     knownStakeholders = [];
-    if (!customerName) return;
+    if (!customerName || String(window.currentScenarioCustomerId||'')!==String(customerId||'')) return;
     try {
       const resp = await apiFetch('/api/stakeholders?company=' + encodeURIComponent(customerName));
       if (resp && resp.ok) knownStakeholders = await resp.json();
@@ -221,16 +222,17 @@
     const mutate = options.mutate !== false;
     const save = options.save === true;
     let changed = 0;
+    const sameScenarioCustomer=String(window.currentScenarioCustomerId||'')===String(customerId||'');
     let v = {};
-    try { v = typeof getVals === 'function' ? getVals() : {}; } catch (e) {}
-    const da = typeof discoveryAnswers !== 'undefined' ? discoveryAnswers : {};
+    if(sameScenarioCustomer)try { v = typeof getVals === 'function' ? getVals() : {}; } catch (e) {}
+    const da = sameScenarioCustomer&&typeof discoveryAnswers !== 'undefined' ? discoveryAnswers : {};
     const solution = String(v.solution || '').toLowerCase();
     const product = solution === 'mep' ? 'MEP' : solution === 'cip' ? 'CIP' : '';
-    const whyAct = document.getElementById('why_act')?.value?.trim() || '';
+    const whyAct = sameScenarioCustomer?(document.getElementById('why_act')?.value?.trim() || ''):'';
     const add = (path, value, source) => { if (setKnown(path, value, source, mutate)) changed++; };
     add('opportunity.customer', customerName || v.company, 'Customer');
     add('opportunity.users', v.users > 0 ? String(v.users) : '', 'Calculator');
-    add('opportunity.stage', window.getCurrentBuyCycleStageLabel?.() || 'Stage 2 — Define Economic Consequences', 'Buyer Evidence');
+    if(sameScenarioCustomer)add('opportunity.stage', window.getCurrentBuyCycleStageLabel?.() || 'Stage 2 — Define Economic Consequences', 'Buyer Evidence');
     add('opportunity.locations', v.fieldLocations > 0 ? `${v.fieldLocations} field location${v.fieldLocations===1?'':'s'}` : '', 'Calculator');
     add('opportunity.problem', whyAct, 'Executive narrative');
     add('opportunity.outcome', da.ve13 || '', 'Discovery');
@@ -239,7 +241,7 @@
       S.opportunity.products = [product]; knownSources['opportunity.products'] = 'Calculator'; changed++;
     } else if (product && S.opportunity.products.includes(product)) knownSources['opportunity.products'] = 'Calculator';
 
-    if (!knownStakeholders.length) await loadKnownStakeholders();
+    if (sameScenarioCustomer&&!knownStakeholders.length) await loadKnownStakeholders();
     const business = knownStakeholders.find(x=>x.role==='economic_buyer') || knownStakeholders.find(x=>x.role==='champion');
     const technical = knownStakeholders.find(x=>x.role==='technical_buyer');
     if (business) {
@@ -317,21 +319,22 @@
     saveTimer = setTimeout(saveHandoff, 800);
   }
   async function saveHandoff() {
-    if (!canWrite || !customerId) return;
+    if (!canWrite) return true;
+    if (!customerId) return false;
     try {
       const resp = await apiFetch('/api/handoffs/' + encodeURIComponent(customerId), {
         method: 'PUT', body: JSON.stringify({ data: S })
       });
-      if (!resp || !resp.ok) { setSaveState('error'); return; }
+      if (!resp || !resp.ok) { setSaveState('error'); return false; }
       const r = await resp.json();
-      const selected = _seList.find(x => x.name === S.opportunity.solutionEngineer);
-      if (selected) await apiFetch('/api/handoffs/' + encodeURIComponent(customerId) + '/assignment', { method:'PUT', body:JSON.stringify({ primarySeId:selected.id, additionalSeIds:[] }) });
       exists = true; dirty = false;
       setSaveState('saved');
       /* Reflect the server's authoritative readiness. */
       renderReadinessBar(r.readiness, r.status);
-    } catch (e) { console.error('saveHandoff error:', e.message); setSaveState('error'); }
+      return true;
+    } catch (e) { console.error('saveHandoff error:', e.message); setSaveState('error'); return false; }
   }
+  async function flushSolutionFitSave(){clearTimeout(saveTimer);if(!canWrite)return true;if(!dirty)return true;const ok=await saveHandoff();if(!ok&&typeof showToast==='function')showToast('Solution Fit changes could not be saved. Resolve the save issue before creating customer output.');return ok;}
   function setSaveState(state) {
     const el = $('sfSaveState');
     if (!el) return;
@@ -349,15 +352,17 @@
     $('sfApp').style.display = 'none';
     const ok = await loadHandoff(custId);
     if (ok) {$('sfGate').style.display='none';$('sfApp').style.display='block';renderApp();}
+    else if(pendingCreate&&loadState==='not-created'&&capabilities.canCreate){pendingCreate=false;openScopeWizard('create');}
   }
 
   /* Resolve the customer to work on: the scenario currently loaded on the
      calculator (its customer_id), else prompt to pick from the customer list. */
   function resolveCurrentCustomerId() {
+    /* An explicit Solution Fit selection takes precedence within this workspace. */
+    if (window._sfSelectedCustomerId) return window._sfSelectedCustomerId;
     /* If a scenario is loaded, use its customer_id. */
     if (typeof currentScenarioCustomerId !== 'undefined' && currentScenarioCustomerId) return currentScenarioCustomerId;
-    /* Else, try to match the calculator's company to a known customer. */
-    return window._sfSelectedCustomerId || null;
+    return null;
   }
 
   function renderGate(errMsg) {
@@ -365,14 +370,17 @@
     const gate = $('sfGate');
     gate.style.display = 'block';
     if (errMsg) { gate.innerHTML = `<div class="sf-gate-card"><p>${esc(errMsg)}</p></div>`; return; }
-    /* Show a customer picker so an SE can choose any customer. */
+    /* Dedicated Solution Fit discovery: never widens the global customer switcher. */
     gate.innerHTML = `<div class="sf-gate-card">
-      <h3>Select a customer</h3>
-      <p>Solution Fit is tied to a customer. Pick one to begin, or open a scenario on the Calculator first.</p>
-      <select id="sfCustomerPick"><option value="">Loading customers…</option></select>
-      <button class="btn btn-primary btn-sm" id="sfCustomerGo" disabled>Open handoff</button>
+      <div class="sf-gate-kicker">Solution Fit workspace</div>
+      <h3>Find a customer</h3>
+      <p>Search any active customer to create or continue a Solution Fit.</p>
+      <label class="sf-customer-search-label" for="sfCustomerSearch">Customer or sales rep</label>
+      <input id="sfCustomerSearch" class="sf-customer-search" type="search" placeholder="Search customer or sales rep" autocomplete="off" aria-controls="sfCustomerResults">
+      <div id="sfCustomerResults" class="sf-customer-results" role="listbox" aria-live="polite"><div class="sf-customer-loading">Loading active customers…</div></div>
+      <button class="btn btn-ghost btn-sm sf-load-more" id="sfCustomerMore" hidden>Load more</button>
     </div>`;
-    loadCustomerPicker();
+    bindCustomerSearch();
   }
 
   function gateActions(primary=''){
@@ -380,7 +388,7 @@
   }
   function bindGateActions(){
     document.querySelector('[data-sfgate="retry"]')?.addEventListener('click',()=>initSolutionFit());
-    document.querySelector('[data-sfgate="switch"]')?.addEventListener('click',()=>window.openCustomerSwitcher?.({targetTab:'solfit'}));
+    document.querySelector('[data-sfgate="switch"]')?.addEventListener('click',()=>{window._sfSelectedCustomerId=null;customerId=null;renderGate();});
     document.querySelector('[data-sfgate="return"]')?.addEventListener('click',()=>window.switchTab?.('calc'));
     document.querySelector('[data-sfgate="create"]')?.addEventListener('click',()=>openScopeWizard('create'));
     document.querySelector('[data-sfgate="restore"]')?.addEventListener('click',()=>restoreSolutionFit());
@@ -395,19 +403,40 @@
     bindGateActions();
   }
   async function restoreSolutionFit(){const r=await apiFetch('/api/handoffs/'+encodeURIComponent(customerId)+'/restore',{method:'POST',body:'{}'});if(r&&r.ok){window.showToast?.('Solution Fit restored.');initSolutionFit();}else window.showToast?.((await safeError(r))||'Solution Fit could not be restored.');}
-  async function loadCustomerPicker() {
-    try {
-      const resp = await apiFetch('/api/customers');
-      const customers = (resp && resp.ok) ? await resp.json() : [];
-      const sel = $('sfCustomerPick');
-      if (!sel) return;
-      if (!customers.length) { sel.innerHTML = '<option value="">No customers yet — save a scenario first</option>'; return; }
-      sel.innerHTML = '<option value="">— Select a customer —</option>' +
-        customers.map(c => `<option value="${esc(c.id)}">${esc(c.name)}${c.ownerUsername?` · ${esc(c.ownerUsername)}`:''}</option>`).join('');
-      const go = $('sfCustomerGo');
-      sel.onchange = () => { go.disabled = !sel.value; };
-      go.onclick = () => { if (sel.value) { window._sfSelectedCustomerId = sel.value; initSolutionFit(); } };
-    } catch (e) { console.error('customer picker error:', e.message); }
+  function bindCustomerSearch(){
+    const input=$('sfCustomerSearch');
+    input?.addEventListener('input',()=>{clearTimeout(customerSearchTimer);customerSearchTimer=setTimeout(()=>loadCustomerPicker(input.value,false),250);});
+    input?.addEventListener('keydown',e=>{if(e.key==='Escape'){input.value='';loadCustomerPicker('',false);}});
+    $('sfCustomerMore')?.addEventListener('click',()=>loadCustomerPicker(input?.value||'',true));
+    customerPickerController=SolutionFitCustomerPicker.createController({
+      request:async({search,limit,offset})=>{
+        const resp=await apiFetch('/api/solution-fit/customers?search='+encodeURIComponent(search)+'&limit='+limit+'&offset='+offset);
+        if(!resp||!resp.ok)throw new Error((await safeError(resp))||'Solution Fit customers could not be searched.');
+        return resp.json();
+      },
+      view:{
+        loading:({append})=>{const results=$('sfCustomerResults'),more=$('sfCustomerMore');if(!append&&results)results.innerHTML='<div class="sf-customer-loading">Loading active customers…</div>';if(more){more.disabled=!!append;more.textContent=append?'Loading…':'Load more';}},
+        results:({html,append})=>{const results=$('sfCustomerResults');if(!results)return;if(append)results.insertAdjacentHTML('beforeend',html);else results.innerHTML=html;bindCustomerResultActions();},
+        empty:({kind})=>{const results=$('sfCustomerResults');if(results)results.innerHTML=`<div class="sf-customer-empty">${kind==='search'?'No active customers match this search.':'No active customers are currently available.'}</div>`;},
+        error:({retry})=>{const results=$('sfCustomerResults');if(!results)return;results.innerHTML='<div class="sf-customer-error" role="alert"><strong>Customers could not be loaded</strong><span>We couldn\'t load the Solution Fit customer list.</span><button class="btn btn-primary btn-sm" id="sfCustomerRetry">Retry</button></div>';$('sfCustomerRetry')?.addEventListener('click',retry);},
+        pagination:({visible})=>{const more=$('sfCustomerMore');if(more){more.hidden=!visible;more.disabled=false;more.textContent='Load more';}}
+      }
+    });
+    loadCustomerPicker('',false);
+  }
+  function bindCustomerResultActions(){
+    const results=$('sfCustomerResults');
+    results?.querySelectorAll('[data-sfcustomer-open]').forEach(x=>x.onclick=()=>chooseSolutionFitCustomer(x.dataset.sfcustomerOpen,'open'));
+    results?.querySelectorAll('[data-sfcustomer-create]').forEach(x=>x.onclick=()=>chooseSolutionFitCustomer(x.dataset.sfcustomerCreate,'create'));
+  }
+  async function chooseSolutionFitCustomer(id,intent) {
+    window._sfSelectedCustomerId=id;
+    customerId=id;
+    pendingCreate=intent==='create';
+    await initSolutionFit();
+  }
+  async function loadCustomerPicker(search,append) {
+    return customerPickerController?.load(search||'',!!append);
   }
 
   let scopeDraft=null;
@@ -488,7 +517,7 @@
     const templateOptions = Object.entries(SOLUTION_TEMPLATES).map(([key,t])=>`<option value="${key}" ${key===activeTemplate?'selected':''}>${esc(t.label)}</option>`).join('');
     const productsSummary = scopeSummary();
     const legacyMep=currentScope().primaryProduct==='MEP'&&!currentScope().catalogVersion;
-    const user=window.ciAuth?.getUser?.()||{},roleKeys=[user.role,...(user.roles||[]),...(user.roleKeys||[])].map(x=>String(x||'').toLowerCase()),canUseSeChristie=roleKeys.some(x=>['admin','se','solution_engineer','solution engineer','value_engineering','value engineering'].includes(x));
+    const user=window.ciAuth?.getUser?.()||{},roleKeys=[user.role,...(user.roles||[]),...(user.roleKeys||[])].map(x=>String(x||'').toLowerCase()),canUseSeChristie=String(window.currentScenarioCustomerId||'')===String(customerId||'')&&roleKeys.some(x=>['admin','se','solution_engineer','solution engineer','value_engineering','value engineering'].includes(x));
     const tabs = [
       { k:'context',     l:'Context' },
       { k:'checklist',   l:'Demo &amp; Fit', badge:demoMissing || null, badgeCls:demoMissing?'sf-tab-badge-warn':'' },
@@ -507,6 +536,7 @@
           ${lastEditedByName ? `<span class="sf-last-edit">Last updated by ${esc(lastEditedByName)}${lastEditedAt?' · '+new Date(lastEditedAt).toLocaleString():''}</span>` : ''}
         </div>
         <div class="sf-topbar-actions">
+          <button class="btn btn-ghost btn-sm sf-topbar-btn" data-sfaction="findCustomer">Find customer</button>
           ${canUseSeChristie?'<button class="btn btn-ghost btn-sm sf-topbar-btn" data-sfaction="askChristie">Ask Christie</button>':''}
           ${canWrite?'<button class="btn btn-ghost btn-sm sf-topbar-btn" data-sfaction="editScope">Edit Scope</button>':''}
           ${canWrite ? '<button class="btn btn-ghost btn-sm sf-topbar-btn" data-sfaction="refreshKnown">Refresh known data</button>' : ''}
@@ -617,7 +647,8 @@
     const sel = (label, path, opts) => `<div class="sf-field" data-sfmissing="${isBlank(val(S,path))}"><label>${esc(label)}${sourceTag(path)}</label><select data-sfbind="${path}">${opts.map(x=>`<option ${val(S,path)===x?'selected':''}>${esc(x)}</option>`).join('')}</select></div>`;
 
     /* Solution Engineer dropdown from SE + Admin users. */
-    const seOpts = ['<option value="">— Select —</option>'].concat(
+    const currentSeMissing=o.solutionEngineer&&!_seList.some(u=>u.name===o.solutionEngineer);
+    const seOpts = ['<option value="">— Select —</option>',...(currentSeMissing?[`<option value="${esc(o.solutionEngineer)}" selected>${esc(o.solutionEngineer)} (current)</option>`]:[])].concat(
       _seList.map(u => `<option value="${esc(u.name)}" ${o.solutionEngineer===u.name?'selected':''}>${esc(u.name)}${u.role==='admin'?' (Admin)':''}</option>`)
     ).join('');
     const seField = `<div class="sf-field" data-sfmissing="${isBlank(o.solutionEngineer)}"><label>Solution Engineer${sourceTag('opportunity.solutionEngineer')}</label><select data-sfbind="opportunity.solutionEngineer">${seOpts}</select></div>`;
@@ -953,7 +984,11 @@
   }
 
   /* Branded print window — self-contained so it renders identically to PDF. */
-  function printHandoffDoc(){
+  async function printHandoffDoc(){
+    if(!await flushSolutionFitSave())return;
+    if(!window.CISolutionFitOutputBuilders)throw new Error('Solution Fit output builder is unavailable.');
+    const governedHtml=S.handoffType==='customer'?window.CISolutionFitOutputBuilders.buildSummaryHtml(S,window.CIBrand):window.CISolutionFitOutputBuilders.buildHandoffHtml(S,window.CIBrand);
+    const governedWindow=window.open('','_blank');if(!governedWindow){showToast?.('Pop-up blocked — allow pop-ups to print.');return;}governedWindow.document.write(governedHtml);governedWindow.document.close();setTimeout(()=>{try{governedWindow.print();}catch(_){}},250);return;
     const isCustomer = S.handoffType==='customer';
     const body = isCustomer ? customerDoc() : internalDoc();
     const title = isCustomer ? 'Cloud Inventory — Discovery Summary' : 'Cloud Inventory — Solution Handoff';
@@ -1132,8 +1167,9 @@
 
   async function handleAction(a,sourceEl){
     /* Print and copy are allowed for everyone with read access (AEs included). */
-    if(a==='printDoc'){ printHandoffDoc(); return; }
+    if(a==='printDoc'){ await printHandoffDoc(); return; }
     if(a==='copyDoc'){ copyDocText(); return; }
+    if(a==='findCustomer'){window._sfSelectedCustomerId=null;customerId=null;$('sfApp').style.display='none';renderGate();return;}
     /* All other actions mutate state → require write access. */
     if(!canWrite){ if(typeof showToast==='function') showToast('Read-only — a Solution Engineer completes the handoff.'); return; }
     if(a==='editScope'){await openScopeWizard('edit');return;}
@@ -1182,7 +1218,10 @@
      An honest "here's what you need to know before you commit" document.
      Shows gaps with their mitigations — volunteering limitations before
      procurement finds them builds credibility. */
-  function printRiskLedger() {
+  async function printRiskLedger() {
+    if(!await flushSolutionFitSave())return;
+    if(!window.CISolutionFitOutputBuilders)throw new Error('Solution Fit output builder is unavailable.');
+    const governedHtml=window.CISolutionFitOutputBuilders.buildRiskHtml(S,window.CIBrand),governedWindow=window.open('','_blank');if(!governedWindow){showToast?.('Pop-up blocked — allow pop-ups to print.');return;}governedWindow.document.write(governedHtml);governedWindow.document.close();setTimeout(()=>{try{governedWindow.print();}catch(_){}},400);return;
     const company = S.company || 'Prospect';
     const gaps = S.gaps || [];
     const today = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
@@ -1236,6 +1275,7 @@
   }
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('sfScopeWizard')){e.preventDefault();closeScopeWizard();}});
   window.printRiskLedger = printRiskLedger;
+  window.flushSolutionFitSave = flushSolutionFitSave;
 
   /* Expose entry point for the tab switch. */
   window.initSolutionFit = initSolutionFit;

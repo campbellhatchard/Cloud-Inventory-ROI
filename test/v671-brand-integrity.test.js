@@ -20,8 +20,8 @@ test('v6.7.1+ extends Brand System v1.0 without changing ROI Model v2.8',()=>{
 });
 
 test('Word battlecard and proposal routes use shared document roles',()=>{
-  const src=read('server.js');
-  for(const marker of ["brand.documentTheme('internal')","brand.documentTheme('customer')",'ImageRun','wordBrand.footer','wordBrand.logoAspect']) assert.match(src,new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
+  const src=read('server.js')+read('src/exports/proposal-docx.js')+read('src/exports/competitive-docx.js');
+  for(const marker of ["brand.documentTheme('internal')","brand.documentTheme(audience)",'ImageRun','theme.footer','theme.logoAspect']) assert.match(src,new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
   const relevant=src.slice(src.indexOf("'/api/competitive/export-word'"),src.indexOf("'/api/proposals/:scenarioId/export/docx'"));
   assert.doesNotMatch(relevant,/Calibri|Aptos|#00A9CC|#00AECF|#1E2931/);
 });

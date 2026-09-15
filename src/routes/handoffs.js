@@ -5,9 +5,8 @@
    list views stay consistent.
 
    Access (phase 1b): owner-scoped — the AE who owns the customer.
-   Phase 2 will widen this: SE = cross-customer read/write; AE = read+print
-   on their own customers. The scoping helper below has a single marked
-   seam (canAccessCustomer) for that change.
+   v6.9.2: active SEs have cross-account read/write only through the
+   dedicated Solution Fit capability. AE/customer/scenario scope is unchanged.
    ═══════════════════════════════════════════════════════════════════ */
 
 const express = require('express');
@@ -28,7 +27,7 @@ router.use(requireAuth);
 async function loadAccessibleCustomer(customerId, user, mode /* 'read' | 'write' */) {
   const access=await solutionFitAccess(user,customerId,mode==='write'?'edit':'view');
   if(!access.exists)return {ok:false,code:404,error:'Customer not found.'};
-  if(!access.allowed)return {ok:false,code:403,error:'You do not have team, assignment, ownership, sharing, or global permission for this Solution Fit.'};
+  if(!access.allowed)return {ok:false,code:403,error:'You do not have permission for this Solution Fit.'};
   const c=access.customer;return {ok:true,reasons:access.reasons,customer:{id:c.id,name:c.name,ownerId:c.owner_id}};
 }
 
@@ -94,7 +93,7 @@ router.post('/:customerId',async(req,res)=>{
     });
     if(result.conflict==='active')return res.status(409).json({error:'An active Solution Fit already exists.',code:'SOLUTION_FIT_EXISTS'});
     if(result.conflict==='removed')return res.status(409).json({error:'A previously removed Solution Fit exists. An Admin can restore it.',code:'SOLUTION_FIT_REMOVED'});
-    await log({userId:req.user.id,action:'handoff.created',entityType:'handoff',entityId:result.row.id,detail:{customerId:req.params.customerId,catalogVersion:data.catalogVersion||null},ipAddress:req.ip});
+    await log({userId:req.user.id,action:'handoff.created',entityType:'handoff',entityId:result.row.id,detail:{customerId:req.params.customerId,customerOwner:access.customer.ownerId,primarySeId:result.row.primary_se_id,catalogVersion:data.catalogVersion||data.solutionScope?.catalogVersion||null},ipAddress:req.ip});
     res.status(201).json({ok:true,...result.row});
   }catch(err){
     if(err.code==='23505')return res.status(409).json({error:'A Solution Fit already exists.',code:'SOLUTION_FIT_EXISTS'});
@@ -107,7 +106,7 @@ router.post('/:customerId/restore',async(req,res)=>{
   try{const access=await loadAccessibleCustomer(req.params.customerId,req.user,'write');if(!access.ok)return res.status(access.code).json({error:access.error});const {rows}=await query(`UPDATE handoffs SET deleted_at=NULL,cleanup_removed_by=NULL,cleanup_reason=NULL,cleanup_note=NULL,last_edited_by=$2,updated_at=NOW() WHERE customer_id=$1 AND deleted_at IS NOT NULL RETURNING id,readiness,status`,[req.params.customerId,req.user.id]);if(!rows.length)return res.status(404).json({error:'No removed Solution Fit was found.'});await log({userId:req.user.id,action:'handoff.restored',entityType:'handoff',entityId:rows[0].id,detail:{customerId:req.params.customerId},ipAddress:req.ip});res.json({ok:true,...rows[0]});}catch(err){console.error('Restore handoff error:',err.message);res.status(500).json({error:'Solution Fit could not be restored.'});}
 });
 
-/* PUT /api/handoffs/:customerId — create or update the handoff (upsert).
+/* PUT /api/handoffs/:customerId — update an explicitly-created handoff.
    Readiness is recomputed server-side from the submitted data. */
 router.put('/:customerId', async (req, res) => {
   try {
@@ -118,19 +117,19 @@ router.put('/:customerId', async (req, res) => {
     const { readiness: score, status } = scoreOf(data);
 
     const prior=await query('SELECT id,data,deleted_at FROM handoffs WHERE customer_id=$1',[req.params.customerId]);
-    if(prior.rows[0]?.deleted_at)return res.status(409).json({error:'This Solution Fit was removed and must be restored before editing.',code:'SOLUTION_FIT_REMOVED'});
+    if(!prior.rows.length)return res.status(404).json({error:'Create the Solution Fit before saving changes.',code:'SOLUTION_FIT_NOT_CREATED'});
+    if(prior.rows[0].deleted_at)return res.status(409).json({error:'This Solution Fit was removed and must be restored before editing.',code:'SOLUTION_FIT_REMOVED'});
     const rows = await transaction(async client=>{
       const saved=await client.query(
-      `INSERT INTO handoffs (customer_id, owner_id, data, readiness, status, last_edited_by,created_by)
-       VALUES ($1, $2, $3, $4, $5, $6,$6)
-       ON CONFLICT (customer_id) DO UPDATE
-         SET data = EXCLUDED.data,
-             readiness = EXCLUDED.readiness,
-             status = EXCLUDED.status,
-             last_edited_by = EXCLUDED.last_edited_by,
+      `UPDATE handoffs
+         SET data = $2,
+             readiness = $3,
+             status = $4,
+             last_edited_by = $5,
              updated_at = NOW()
+       WHERE customer_id=$1 AND deleted_at IS NULL
        RETURNING id, customer_id, data, readiness, status, updated_at`,
-      [req.params.customerId, access.customer.ownerId, JSON.stringify(data), score, status, req.user.id]
+      [req.params.customerId, JSON.stringify(data), score, status, req.user.id]
       );
       for(const c of changes(prior.rows[0]?.data||{},data).slice(0,250))await client.query(`INSERT INTO handoff_change_history(handoff_id,customer_id,changed_by,field_path,previous_value,new_value) VALUES($1,$2,$3,$4,$5,$6)`,[saved.rows[0].id,req.params.customerId,req.user.id,c.path,JSON.stringify(c.before),JSON.stringify(c.after)]);
       return saved.rows;

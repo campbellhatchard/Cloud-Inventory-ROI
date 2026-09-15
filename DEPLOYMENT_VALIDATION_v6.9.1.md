@@ -1,42 +1,24 @@
 # Deployment validation — v6.9.1
+No deployment or production-system mutation was performed.
+GitHub push: NOT TESTED. Render build/start/health/migration: NOT TESTED. SendGrid delivery/events: NOT TESTED.
 
-No v6.9.1 deployment or production-system mutation has been performed by this release-validation workspace.
+## Local preparation
+Existing render.yaml preserved: npm ci production build, node server.js start, /health probe and Node 22.22.0.
+Local clean install and release gates run under the matching Node version. Windows test results do not prove Linux deployment.
 
-## Verified production baseline before release preparation
+## Required controlled-environment checks
+1. Back up PostgreSQL. Apply migrations through 035. Verify rerun safety and immutable publication fields while view tracking/revocation still work.
+2. Sign in using Admin, Rep, SE, Sales Manager and Sales Leader roles. Check allowed and denied customer/scenario access without changing existing grants.
+3. Load customers, switch customers, open an existing exact scenario, verify saved Three Whys and Solution Fit creation/recovery/MEP scope.
+4. Open Executive View; verify value graphs and PDF/PPT/Word.
+5. Test Proposal preview/PDF/Word, both JPP audiences PDF/PPT, Stakeholder PDF/PPT, all Solution Fit PDFs, Methodology PDF/PPT, approved Battlecard PDF/Word, Impact Map and Role One-Pager.
+6. Confirm Champion Pack stays unavailable. Confirm old scenario/print links never expose raw data.
+7. Publish Ready and explicitly acknowledged Review business cases; reject Draft Only and unauthorized scenario/customer requests.
+8. Open the public link logged out. Inspect network response for allowlisted fields only. Create/edit a later scenario version and confirm the existing publication is unchanged.
+9. Verify USD and GBP output, correct internal/customer footers, long names, long narratives and large workstream tables.
+10. Test configured SendGrid events. Record actual outcomes without treating absent configuration as success.
 
-- GitHub `main`: `19c9d9b537f8eedf593110360c876817eb107297` (`Deploy Cloud Inventory ROI v6.9.0`).
-- Production Git tree: `b050db4e2fdf89fb4d47361e0218a9d739da4b79`.
-- Render production was independently observed live on that same v6.9.0 commit before the v6.9.1 candidate was prepared.
-
-## Release deployment contract
-
-The guarded PowerShell deployment must refuse to proceed unless `origin/main` remains the exact baseline commit above. Before commit/push it must require:
-
-1. exact sealed ZIP SHA-256 and file count;
-2. clean local repository and pre-release safety branch;
-3. Render configuration unchanged (`npm ci --omit=dev --no-audit --no-fund`, Node 22.22.0, `/health`);
-4. migrations exactly 001–035 with only migration 035 new relative to production;
-5. fresh `npm ci`;
-6. JavaScript syntax validation;
-7. complete cumulative `npm test`;
-8. `npm run test:production-locks`;
-9. `npm run test:routes`;
-10. explicit v6.9.1 frozen-publication and permanent financial/auth safety guards;
-11. `git diff --check`;
-12. canonical staged delta and exact `git write-tree` match;
-13. zero unstaged changes.
-
-Only after those gates pass may the script commit `Deploy Cloud Inventory ROI v6.9.1` and push `main`. Render autoDeploy is then allowed to deploy the new commit; no manual Render trigger should be used.
-
-## Required post-push verification
-
-- GitHub `main` equals the pushed v6.9.1 SHA and its tree equals the validated target tree.
-- GitHub CI completes its Postgres-backed migration and cumulative tests.
-- Render auto-deploys that exact SHA and reaches `live`.
-- Startup/migration logs show migration 035 completed without rollback/error.
-- `/health` responds successfully.
-- Controlled smoke test verifies creation of Ready and acknowledged Review publications, rejection of Draft Only/unauthorized publication, logged-out frozen payload, later scenario changes not mutating an existing published link, legacy links unavailable, and approved-revision Battlecard export behavior.
-
-## Rollback / retention caution
-
-Legacy Business Case rows intentionally require republishing rather than silently following newer scenarios. Migration 035 is additive but installs an immutability trigger; rollback must not re-enable legacy publishing against rows created under the frozen-publication contract. Hard-delete retention behavior should be validated against existing foreign keys before destructive administrative operations.
+## Rollback/retention caution
+Legacy Business Case rows intentionally return an updated-link notice. Publishing a new link is required; old links do not silently follow a newer version.
+Migration 035 is additive but installs an immutability trigger. Do not blindly roll back to legacy publishing code after new snapshots exist.
+Existing scenario/user foreign-key deletion behavior has not been integration-tested with the trigger. Validate retention/deletion policy before production use.

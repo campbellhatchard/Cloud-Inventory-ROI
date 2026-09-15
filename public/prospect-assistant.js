@@ -25,3 +25,4 @@
   function clear(){if(!state.activeField)return;state.fields[state.activeField]={history:[],lastResponse:'',contextFingerprint:'',stale:false};save();render();}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',build);else build();
 }());
+

@@ -1,10 +1,10 @@
 # v6.8.3 Production Customer & Executive Export Recovery
 
-Release date: 2026-09-01
-Application: 6.8.3
-ROI Model: v2.8 / modelVersion 28
-Brand System: 1.0
-Application Knowledge: 1.0
+Release date: 2026-09-01  
+Application: 6.8.3  
+ROI Model: v2.8 / modelVersion 28  
+Brand System: 1.0  
+Application Knowledge: 1.0  
 Christie Persona: 1.0
 
 ## Customer loading

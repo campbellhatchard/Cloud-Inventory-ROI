@@ -97,7 +97,7 @@ async function sendPasswordReset(toEmail, username, resetToken) {
         <p>This link expires in <strong>1 hour</strong>. If you didn't request a password reset, you can safely ignore this email — your password hasn't changed.</p>
         <p class="note">If the button doesn't work, copy and paste this URL into your browser:<br/><span style="word-break:break-all;font-size:12px;color:${emailBrand.muted};">${resetUrl}</span></p>
       </div>
-      <div class="footer">Cloud Inventory · Nextworld Company · Internal tool</div>
+      <div class="footer">${emailBrand.internalFooter}</div>
     </div>
   </body></html>`;
 
@@ -151,7 +151,7 @@ async function sendWelcomeWithTempPassword(toEmail, username, tempPassword, crea
         <p>For security, your temporary password expires on first use. You will be required to set a new password (at least 12 characters with upper, lower, number, and special character).</p>
         <p class="note">Keep this email safe. If you have trouble logging in, contact your administrator.</p>
       </div>
-      <div class="footer">Cloud Inventory · Nextworld Company · Internal tool</div>
+      <div class="footer">${emailBrand.internalFooter}</div>
     </div>
   </body></html>`;
 
@@ -224,7 +224,7 @@ async function sendPurgeConfirmation(toEmail, adminUsername, summary) {
         </div>
         <p class="note">This email was sent to all Admin users. Only one confirmation is needed. All Admins will receive a confirmation once the purge is completed or cancelled.</p>
       </div>
-      <div class="footer">Cloud Inventory · Nextworld Company · Internal tool</div>
+      <div class="footer">${emailBrand.internalFooter}</div>
     </div>
   </body></html>`;
 
@@ -283,7 +283,7 @@ async function sendDiscoverySubmitted(toEmail, repName, company, answerCount, di
         </div>
         <p class="note">This notification was sent because you generated the discovery link for ${escapeHtml(company)}. The answers are applied to the calculator from the Discovery tab.</p>
       </div>
-      <div class="footer">Cloud Inventory &middot; Nextworld Company &middot; Internal tool</div>
+      <div class="footer">${emailBrand.internalFooter}</div>
     </div>
   </body></html>`;
 

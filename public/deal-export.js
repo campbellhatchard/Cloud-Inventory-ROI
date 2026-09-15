@@ -113,7 +113,7 @@ function dePrintWindow(title, innerHtml, extraCss, audience = 'customer') {
    variant: 'internal' | 'customer'
    ═══════════════════════════════════════════════════════════════════ */
 async function printActionPlan(variant) {
-  const m = _mapCurrent;
+  const m = window.getSavedMapForOutput?.();
   if (!m) { showToast('Open a plan first.'); return; }
   const ms = m.milestones || [];
   const done = ms.filter(x => x.status === 'done').length;
@@ -156,88 +156,6 @@ async function printActionPlan(variant) {
     <div class="prog-wrap"><div class="prog-fill" style="width:${pct}%;"></div></div>
     ${rowsHtml || '<p style="font-size:13px;color:#6B7A8D;">No milestones yet.</p>'}`;
   dePrintWindow(m.title, html, '', variant === 'internal' ? 'internal' : 'customer');
-}
-
-/* ═══════════════════════════════════════════════════════════════════
-   JOINT PROJECT PLAN — POWERPOINT
-   ═══════════════════════════════════════════════════════════════════ */
-async function pptActionPlan(variant) {
-  if (!(await deChk())) return;
-  const m = _mapCurrent;
-  if (!m) { showToast('Open a plan first.'); return; }
-  const btnId = variant === 'customer' ? 'mapPptCustBtn' : 'mapPptIntBtn';
-  const btn = document.getElementById(btnId);
-  const orig = btn ? btn.innerHTML : '';
-  if (btn) { btn.disabled = true; btn.textContent = 'Building…'; }
-
-  try {
-    const ms = m.milestones || [];
-    const done = ms.filter(x => x.status === 'done').length;
-    const pct = ms.length ? Math.round(done / ms.length * 100) : 0;
-    const ownerLabels = variant === 'customer'
-      ? { rep: 'Cloud Inventory', prospect: 'Your team', joint: 'Joint' }
-      : { rep: 'Cloud Inventory', prospect: 'Customer', joint: 'Joint' };
-    const phases = deMapGroups(m, ms);
-
-    const pptx = new pptxgen();
-    pptx.defineLayout({ name: 'CI', width: PPT.W, height: PPT.H });
-    pptx.layout = 'CI';
-    pptx.title = m.title;
-
-    /* Title slide */
-    const s0 = pptx.addSlide();
-    s0.background = { color: PPT.GRAY_BG };
-    pptConfidentialFooter(s0);
-    s0.addShape('rect', { x: 0, y: 2.3, w: PPT.W, h: 1.0, fill: { color: PPT.NAVY } });
-    s0.addImage({ path: PPT.LOGO, x: 0.4, y: 0.4, w: 1.15, h: 1.15 * 349/1000 });
-    s0.addText('Joint Project Plan', { x: 0.5, y: 2.45, w: 9, h: 0.5, fontSize: 30, bold: true, color: PPT.WHITE, fontFace: PPT.FONT });
-    s0.addText(m.title, { x: 0.5, y: 3.5, w: 9, h: 0.4, fontSize: 16, bold: true, color: PPT.NAVY, fontFace: PPT.FONT });
-    s0.addText([
-      { text: m.company || '', options: { fontSize: 13, color: PPT.GRAY_TXT } },
-      { text: m.target_close_date ? '   ·   Target close: ' + deDate(m.target_close_date, {month:'long',day:'numeric',year:'numeric'}) : '', options: { fontSize: 13, color: PPT.GRAY_TXT } }
-    ], { x: 0.5, y: 3.95, w: 9, h: 0.35, fontFace: PPT.FONT });
-    s0.addText(`${done} of ${ms.length} milestones complete (${pct}%)`, { x: 0.5, y: 4.35, w: 9, h: 0.35, fontSize: 12, italic: true, color: PPT.CYAN, fontFace: PPT.FONT });
-    if (variant === 'customer') {
-      s0.addText('This jointly-owned plan aligns decisions, owners, and timing so we can validate the value case, reduce evaluation risk, and move confidently toward measurable operational improvement.', { x: 0.5, y: 4.85, w: 8.8, h: 0.55, fontSize: 11, color: PPT.GRAY_TXT, fontFace: PPT.FONT });
-    }
-
-    /* Keep the deck compact: workstreams remain a column, not separate slide sections. */
-    const planRows = ms.map(x => {
-      const group = phases.find(p => p.id === x.groupId) || phases.find(p => p.name === x.phase) || { name: 'Plan' };
-      const overdue = x.status !== 'done' && x.dueDate && new Date(x.dueDate) < new Date();
-      return [
-        { text: group.name, options: { fontSize: 8.5, color: PPT.CYAN, bold: true } },
-        { text: x.title, options: { fontSize: 9.5, color: PPT.DARK_TXT } },
-        { text: ownerLabels[x.owner] || x.owner, options: { fontSize: 9, color: PPT.GRAY_TXT } },
-        { text: (x.dueDate ? deDate(x.dueDate) : '—') + (overdue ? ' ⚠' : ''), options: { fontSize: 9, color: overdue ? PPT.RED : PPT.GRAY_TXT } },
-        { text: x.status === 'done' ? 'Complete' : x.status === 'in_progress' ? 'In progress' : 'Pending', options: { fontSize: 9, color: x.status === 'done' ? PPT.GREEN : PPT.GRAY_TXT } }
-      ];
-    });
-    const rowsPerSlide = 11;
-    for (let start = 0; start < planRows.length || (start === 0 && !planRows.length); start += rowsPerSlide) {
-      const rows = [[
-        { text: 'Workstream', options: { bold: true, color: PPT.WHITE, fill: { color: PPT.NAVY }, fontSize: 9 } },
-        { text: 'Milestone', options: { bold: true, color: PPT.WHITE, fill: { color: PPT.NAVY }, fontSize: 9 } },
-        { text: 'Owner', options: { bold: true, color: PPT.WHITE, fill: { color: PPT.NAVY }, fontSize: 9 } },
-        { text: 'Due', options: { bold: true, color: PPT.WHITE, fill: { color: PPT.NAVY }, fontSize: 9 } },
-        { text: 'Status', options: { bold: true, color: PPT.WHITE, fill: { color: PPT.NAVY }, fontSize: 9 } }
-      ], ...planRows.slice(start, start + rowsPerSlide)];
-      if (rows.length === 1) rows.push([{ text: 'No milestones yet', options: { fontSize: 10, color: PPT.GRAY_TXT } }, '', '', '', '']);
-      const s = pptx.addSlide();
-      pptChrome(s, null);
-      pptTitle(s, start ? 'Joint Project Plan — continued' : 'Joint Project Plan milestones');
-      s.addTable(rows, { x: 0.35, y: 1.55, w: 9.3, colW: [1.35, 4.15, 1.25, 1.2, 1.35], border: { pt: 0.5, color: 'E0E4E8' } });
-    }
-
-    const safe = (m.company || 'Plan').replace(/[^a-zA-Z0-9 \-_]/g, '').trim().replace(/\s+/g, '-') || 'Plan';
-    await pptx.writeFile({ fileName: `Action-Plan-${safe}${variant === 'customer' ? '-Customer' : ''}-${new Date().toISOString().split('T')[0]}.pptx` });
-    showToast('PowerPoint downloaded!');
-  } catch (e) {
-    console.error('pptActionPlan:', e);
-    showToast('Export failed: ' + (e.message || 'unknown error'));
-  } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = orig; }
-  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -319,7 +237,7 @@ async function pptStakeholderMap() {
 
     /* Slide 1: quadrant */
     const s1 = pptx.addSlide();
-    pptChrome(s1, 1);
+    pptChrome(s1,{page:1,audience:'internal'});
     pptTitle(s1, 'Stakeholder Map');
     s1.addText(company, { x: 0.45, y: 1.35, w: 9, h: 0.3, fontSize: 13, color: PPT.GRAY_TXT, fontFace: PPT.FONT });
 
@@ -356,7 +274,7 @@ async function pptStakeholderMap() {
 
     /* Slide 2: roster table */
     const s2 = pptx.addSlide();
-    pptChrome(s2, 2);
+    pptChrome(s2,{page:2,audience:'internal'});
     pptTitle(s2, 'Stakeholder Roster');
     const rows = [[
       { text: 'Name', options: { bold: true, color: PPT.WHITE, fill: { color: PPT.NAVY }, fontSize: 11 } },
@@ -465,7 +383,7 @@ async function roiMethodologyPDF() {
     return `<tr><td>${esc(k)}${mark}</td><td class="${val==='Not Provided'?'np-cell':''}">${esc(val)}</td></tr>`;
   }).join('');
 
-  const rampNote = `Year-1 benefit is ramp-adjusted (${Math.round((v.ramp1 ?? 0.4)*100)}% / ${Math.round((v.ramp2 ?? 0.75)*100)}% / ${Math.round((v.ramp3 ?? 1)*100)}% over the first three periods), so it is lower than the full annual benefit.`;
+  const rampNote = `Year-1 benefit is ramp-adjusted (${Math.round((v.ramp1||0.4)*100)}% / ${Math.round((v.ramp2||0.75)*100)}% / ${Math.round((v.ramp3||1)*100)}% over the first three periods), so it is lower than the full annual benefit.`;
 
   /* Prospect-verification headline (value-engineering credibility signal) */
   const p = m.provenance || { prospectVerified:0, totalTracked:0 };
@@ -511,8 +429,8 @@ async function roiMethodologyPDF() {
       <tr><td>Total ${r.contractMonths}-month benefit</td><td>${M(r.totalContractBenefit)}</td></tr>
       <tr><td>Total contract investment</td><td>${M(r.totalContractInvestment)}</td></tr>
       <tr><td>Total contract net benefit</td><td>${M(r.totalContractNetBenefit)}</td></tr>
-      <tr><td><strong>Total contract ROI</strong></td><td><strong>${m.PC(r.totalContractRoi/100)}</strong></td></tr>
-      <tr><td>Payback period</td><td>${r.contractPayback? r.contractPayback.toFixed(1)+' months':'Not achieved during contract term'}</td></tr>
+      <tr><td><strong>Total contract ROI</strong></td><td><strong>${window.CIEconomicAvailability.percent(r.totalContractRoi,{missing:'Not yet established'})}</strong></td></tr>
+      <tr><td>Payback period</td><td>${window.CIEconomicAvailability.paybackLabel({totalContractInvestment:r.totalContractInvestment,payback:r.contractPayback})}</td></tr>
       <tr><td>Contract NPV @ ${m.PC(v.discRate)}</td><td>${M(r.totalContractNpv)}</td></tr>
     </tbody></table>
 
@@ -554,13 +472,13 @@ async function roiMethodologyPDF() {
 }
 
 /* ── PowerPoint variant ── */
-async function roiMethodologyPPT() {
+async function roiMethodologyPPT(methodologyFixture) {
   if (!(await deChk())) return;
   const btn = document.getElementById('roiMethodPptBtn');
   const orig = btn ? btn.innerHTML : '';
   if (btn) { btn.disabled = true; btn.textContent = 'Building…'; }
   try {
-    const m = buildRoiMethodology();
+    const m = methodologyFixture || buildRoiMethodology();
     const v = m.v, r = m.r, M = m.M;
     const company = (v.company && v.company !== 'Prospect') ? v.company : 'Your Company';
 
@@ -570,7 +488,7 @@ async function roiMethodologyPPT() {
 
     /* Title slide */
     const s0 = pptx.addSlide(); s0.background = { color: PPT.GRAY_BG };
-    pptConfidentialFooter(s0);
+    pptFooter(s0,{audience:'internal'});
     s0.addShape('rect',{x:0,y:2.3,w:PPT.W,h:1.0,fill:{color:PPT.NAVY}});
     s0.addImage({path:PPT.LOGO,x:0.4,y:0.4,w:1.15,h:1.15*349/1000});
     s0.addText('ROI Methodology & Calculation Detail',{x:0.5,y:2.42,w:9,h:0.55,fontSize:26,bold:true,color:PPT.WHITE,fontFace:PPT.FONT});
@@ -578,7 +496,7 @@ async function roiMethodologyPPT() {
     s0.addText('How the business-case ROI was calculated, using your figures.',{x:0.5,y:3.9,w:9,h:0.3,fontSize:12,color:PPT.GRAY_TXT,fontFace:PPT.FONT});
 
     /* Benefit breakdown slide */
-    const s1 = pptx.addSlide(); pptChrome(s1,2); pptTitle(s1,'Benefit Breakdown');
+    const s1 = pptx.addSlide(); pptChrome(s1,{page:2,audience:'internal'}); pptTitle(s1,'Benefit Breakdown');
     const rows = [[
       {text:'Value driver',options:{bold:true,color:PPT.WHITE,fill:{color:PPT.NAVY},fontSize:10}},
       {text:'Your figures',options:{bold:true,color:PPT.WHITE,fill:{color:PPT.NAVY},fontSize:10}},
@@ -603,13 +521,13 @@ async function roiMethodologyPPT() {
       {x:0.45,y:5.05,w:9.1,h:0.3,fontSize:9,italic:true,color:PPT.GRAY_TXT,fontFace:PPT.FONT});
 
     /* Return + assumptions slide */
-    const s2 = pptx.addSlide(); pptChrome(s2,3); pptTitle(s2,'Return & Assumptions');
+    const s2 = pptx.addSlide(); pptChrome(s2,{page:3,audience:'internal'}); pptTitle(s2,'Return & Assumptions');
     const kv = [
       [`Total ${r.contractMonths}-month benefit`, M(r.totalContractBenefit)],
       ['Total contract investment', M(r.totalContractInvestment)],
       ['Total contract net benefit', M(r.totalContractNetBenefit)],
-      ['Total contract ROI', m.PC(r.totalContractRoi/100)],
-      ['Payback', r.contractPayback? r.contractPayback.toFixed(1)+' months':'Not in term'],
+      ['Total contract ROI', window.CIEconomicAvailability.percent(r.totalContractRoi,{missing:'Not yet established'})],
+      ['Payback', window.CIEconomicAvailability.paybackLabel({totalContractInvestment:r.totalContractInvestment,payback:r.contractPayback})],
       ['Contract NPV', M(r.totalContractNpv)],
     ];
     kv.forEach((row,i)=>{
@@ -717,15 +635,14 @@ async function exportOnePager() {
         focus: ['Total contract ROI', 'Payback period', 'Contract NPV', 'Capital freed by turns improvement'],
         color: '0089A6',
         emphasis: [
-          ['Conservative annual benefit', fmtMoney(r.annualBenefit * 0.7)],
-          ['Base case annual benefit',    fmtMoney(r.annualBenefit)],
+          ['Annual modeled benefit',      fmtMoney(r.annualBenefit)],
           [`Total ${r.contractMonths}-month ROI`, fmtPct(r.totalContractRoi)],
-          ['Payback from signing', r.contractPayback ? r.contractPayback.toFixed(1) + ' months' : 'Not in term'],
+          ['Payback from signing', window.CIEconomicAvailability.paybackLabel({totalContractInvestment:r.totalContractInvestment,payback:r.contractPayback})],
           ['Contract NPV', fmtMoney(r.totalContractNpv)],
           ['Annual subscription',        fmtMoney(v.invest) + '/yr'],
           ['One-time implementation',    fmtMoney(v.otc)],
         ],
-        note: 'Conservative case scales all efficiency recovery assumptions to 70%. Investment cost is fixed in all scenarios.'
+        note: 'Uses the governed ROI Model v2.8 results without output-side scaling.'
       },
       coo: {
         label:'VP Operations', icon:'⚙️',
@@ -751,7 +668,7 @@ async function exportOnePager() {
           ['Annual recurring value',     fmtMoney(r.annualBenefit)],
           ['Contract NPV',               fmtMoney(r.totalContractNpv)],
           ['Speed to go-live',           (v.implMonths || 3) + ' months'],
-          ['Payback from signing',        r.contractPayback ? r.contractPayback.toFixed(1) + ' months' : 'Not in term'],
+          ['Payback from signing',        window.CIEconomicAvailability.paybackLabel({totalContractInvestment:r.totalContractInvestment,payback:r.contractPayback})],
           ['Working capital freed',       fmtMoney(r.capitalFreed || 0)],
           [`Total ${r.contractMonths}-month ROI`, fmtPct(r.totalContractRoi)],
         ],
@@ -780,7 +697,7 @@ async function exportOnePager() {
         emphasis: [
           ['Total contract benefit',     fmtMoney(r.totalContractBenefit)],
           [`Total ${r.contractMonths}-month ROI`, fmtPct(r.totalContractRoi)],
-          ['Payback from signing',        r.contractPayback ? r.contractPayback.toFixed(1) + ' months' : 'Not in term'],
+          ['Payback from signing',        window.CIEconomicAvailability.paybackLabel({totalContractInvestment:r.totalContractInvestment,payback:r.contractPayback})],
           ['Contract NPV',               fmtMoney(r.totalContractNpv)],
           ['Total contract investment',  fmtMoney(r.totalContractInvestment)],
           ['Go-live timeline',           (v.implMonths || 3) + ' months'],
@@ -818,17 +735,6 @@ async function exportOnePager() {
       s.addText('• ' + f, {x:4.7, y:1.35 + i*0.3, w:4.9, h:0.28, fontSize:10.5, color:PPT.GRAY_TXT, fontFace:PPT.FONT});
     });
 
-    /* Cost of inaction box */
-    const ab = r.annualBenefit || 0;
-    if (ab > 0) {
-      const yBox = 2.7;
-      s.addShape('roundRect', {x:4.5, y:yBox, w:5.2, h:1.1, fill:{color:'FFF0EB'}, line:{color:PPT.ORANGE, pt:1}, rectRadius:0.08});
-      s.addText('Cost of delayed decision', {x:4.7, y:yBox+0.08, w:4.8, h:0.3, fontSize:10, bold:true, color:PPT.ORANGE, fontFace:PPT.FONT});
-      s.addText(fmtMoney(ab/12) + ' per month  ·  ' + fmtMoney(ab/2) + ' per 6-month delay', {
-        x:4.7, y:yBox+0.42, w:4.8, h:0.5, fontSize:11, color:PPT.ORANGE, fontFace:PPT.FONT, wrap:true
-      });
-    }
-
     /* Footnote */
     s.addText(aud.note, {x:4.5, y:PPT.H-0.55, w:5.2, h:0.4, fontSize:8, color:PPT.GRAY_TXT, italic:true, fontFace:PPT.FONT, wrap:true});
     s.addText('Cloud Inventory  ·  cloudinventory.com', {x:4.5, y:PPT.H-0.22, w:5.2, h:0.2, fontSize:7.5, color:PPT.GRAY_TXT, fontFace:PPT.FONT});
@@ -857,9 +763,9 @@ async function exportGovernedOnePager(){
     if(!window._calcScenarioId)throw new Error('Save the opportunity before creating the one-pager.');
     const story=await loadExecutiveValueStory(true),e=story.economics,c=story.meta.currency,audience=(typeof getVals==='function'?getVals().execAudience:'mixed')||'mixed',labels={cfo:'CFO',coo:'VP Operations',ceo:'CEO / Executive Sponsor',cio:'CIO / IT',mixed:'Executive'},pptx=new pptxgen();
     pptx.defineLayout({name:'CI',width:PPT.W,height:PPT.H});pptx.layout='CI';pptx.title=`Internal ${labels[audience]||labels.mixed} One-Pager — ${story.meta.customer}`;
-    const s=pptx.addSlide();s.background={color:PPT.GRAY_BG};pptChrome(s,1);s.addShape('rect',{x:4.6,y:PPT.H-.43,w:5.1,h:.3,fill:{color:PPT.GRAY_BG},line:{color:PPT.GRAY_BG}});s.addText(window.CIBrand.audience('internal'),{x:5,y:PPT.H-.4,w:4.4,h:.2,fontSize:7.5,color:PPT.GRAY_TXT,align:'right',fontFace:PPT.FONT});s.addText('CONFIDENTIAL — INTERNAL USE ONLY',{x:.45,y:.35,w:4.4,h:.25,fontSize:9,bold:true,color:PPT.RED,fontFace:PPT.FONT});pptTitle(s,`${labels[audience]||labels.mixed} value-case brief`);
+    const s=pptx.addSlide();s.background={color:PPT.GRAY_BG};pptChrome(s,{page:1,audience:'internal'});s.addShape('rect',{x:4.6,y:PPT.H-.43,w:5.1,h:.3,fill:{color:PPT.GRAY_BG},line:{color:PPT.GRAY_BG}});s.addText(window.CIBrand.audience('internal'),{x:5,y:PPT.H-.4,w:4.4,h:.2,fontSize:7.5,color:PPT.GRAY_TXT,align:'right',fontFace:PPT.FONT});s.addText('CONFIDENTIAL — INTERNAL USE ONLY',{x:.45,y:.35,w:4.4,h:.25,fontSize:9,bold:true,color:PPT.RED,fontFace:PPT.FONT});pptTitle(s,`${labels[audience]||labels.mixed} value-case brief`);
     s.addText(story.meta.customer,{x:.5,y:1.35,w:4.4,h:.35,fontSize:18,bold:true,color:PPT.NAVY,fontFace:PPT.FONT});
-    [['Annual Customer Benefit',pptMoney(e.annualBenefit,c)],['Total Contract Benefit',pptMoney(e.totalContractBenefit,c)],['Modeled Customer Investment',pptMoney(e.totalContractInvestment,c)],['Net Economic Benefit',pptMoney(e.netEconomicBenefit,c)],['Contract ROI',Number.isFinite(Number(e.contractRoi))?Math.round(e.contractRoi)+'%':'—'],['NPV',pptMoney(e.npv,c)],['Payback',e.payback==null?'Not within term':Number(e.payback).toFixed(1)+' months'],['Customer-Supported Value',`${e.customerSupportedValuePct}%`]].forEach(([k,v],i)=>{const x=.5+(i%2)*2.25,y=1.9+Math.floor(i/2)*.68;s.addText(k,{x,y,w:2.05,h:.2,fontSize:8,color:PPT.GRAY_TXT,fontFace:PPT.FONT});s.addText(v,{x,y:y+.2,w:2.05,h:.3,fontSize:13,bold:true,color:PPT.NAVY,fontFace:PPT.FONT});});
+    [['Annual Customer Benefit',pptMoney(e.annualBenefit,c)],['Total Contract Benefit',pptMoney(e.totalContractBenefit,c)],['Modeled Customer Investment',pptMoney(e.totalContractInvestment,c)],['Net Economic Benefit',pptMoney(e.netEconomicBenefit,c)],['Contract ROI',window.CIEconomicAvailability.percent(e.contractRoi,{missing:'Not yet established'})],['NPV',pptMoney(e.npv,c)],['Payback',window.CIEconomicAvailability.paybackLabel(e)],['Customer-Supported Value',`${e.customerSupportedValuePct}%`]].forEach(([k,v],i)=>{const x=.5+(i%2)*2.25,y=1.9+Math.floor(i/2)*.68;s.addText(k,{x,y,w:2.05,h:.2,fontSize:8,color:PPT.GRAY_TXT,fontFace:PPT.FONT});s.addText(v,{x,y:y+.2,w:2.05,h:.3,fontSize:13,bold:true,color:PPT.NAVY,fontFace:PPT.FONT});});
     s.addText('Executive Value Story',{x:5.25,y:1.35,w:4.2,h:.3,fontSize:15,bold:true,color:PPT.CYAN_DARK,fontFace:PPT.FONT});[['Why Change',story.threeWhys.whyChange],['Why Now',story.threeWhys.whyNow],['Why Cloud Inventory',story.threeWhys.whyCloudInventory]].forEach(([k,v],i)=>{const y=1.8+i*1.05;s.addText(k,{x:5.25,y,w:4.2,h:.23,fontSize:10,bold:true,color:PPT.NAVY,fontFace:PPT.FONT});s.addText(v.value,{x:5.25,y:y+.25,w:4.2,h:.55,fontSize:9.5,color:PPT.GRAY_TXT,fontFace:PPT.FONT,fit:'shrink'});});
     s.addText('Uses the authoritative Executive Value Story. No independent ROI, cost-of-delay, benchmark, competitor, or implementation claim is generated.',{x:5.25,y:5.0,w:4.2,h:.3,fontSize:7.5,italic:true,color:PPT.GRAY_TXT,fontFace:PPT.FONT});
     const safe=story.meta.customer.replace(/[^a-z0-9]+/gi,'-');await pptx.writeFile({fileName:`Cloud-Inventory-Internal-${labels[audience]||labels.mixed}-One-Pager-${safe}-${new Date().toISOString().slice(0,10)}.pptx`});showToast?.('Internal one-pager downloaded.');
@@ -986,10 +892,7 @@ async function exportCompDocx() {
 window.exportCompPDF  = exportCompPDF;
 window.exportCompDocx = exportCompDocx;
 
-/* Primary production paths for saved operational PowerPoints. The older
-   builders remain compatibility fallbacks only for unsaved local drafts. */
+/* Primary production paths for saved operational PowerPoints. */
 async function deServerPpt(url,button,fileName,retry){const old=button?.innerHTML;if(button){button.disabled=true;button.textContent='Generating…';}try{const r=await fetch(url,{credentials:'same-origin',headers:{Accept:'application/vnd.openxmlformats-officedocument.presentationml.presentation'}});if(!r.ok)throw new Error((await r.json().catch(()=>({}))).error||`Request failed (${r.status})`);const blob=await r.blob(),a=document.createElement('a'),objectUrl=URL.createObjectURL(blob);a.href=objectUrl;a.download=fileName;a.click();setTimeout(()=>URL.revokeObjectURL(objectUrl),1000);showToast('PowerPoint downloaded.');return true;}catch(e){console.error('operational_pptx.failed',{message:e.message});let n=document.getElementById('operationalPptRetry');if(!n){n=document.createElement('div');n.id='operationalPptRetry';n.className='proposal-review-notice';n.innerHTML='<b>PowerPoint could not be generated.</b> <button class="btn btn-secondary btn-sm">Retry</button>';n.querySelector('button').onclick=retry;(document.querySelector('.pane.active .page-header')||document.querySelector('.pane.active')||document.body).prepend(n);}showToast('PowerPoint could not be generated.');return false;}finally{if(button){button.disabled=false;button.innerHTML=old||'PowerPoint';}}}
-const legacyPptActionPlan=pptActionPlan;
-window.pptActionPlan=pptActionPlan=async function(variant){if(!_mapCurrent?.id)return legacyPptActionPlan(variant);const customer=String(_mapCurrent.company||'Customer').replace(/[^a-z0-9]+/gi,'-'),button=document.getElementById(variant==='customer'?'mapPptCustBtn':'mapPptIntBtn'),name=`Cloud-Inventory-${variant==='internal'?'Internal-':''}Joint-Project-Plan-${customer}-${new Date().toISOString().slice(0,10)}.pptx`;await deServerPpt(`/api/maps/${encodeURIComponent(_mapCurrent.id)}/export-pptx?audience=${variant}`,button,name,()=>window.pptActionPlan(variant));};
-const legacyPptStakeholderMap=pptStakeholderMap;
-window.pptStakeholderMap=pptStakeholderMap=async function(){if(!_stakeCompany)return legacyPptStakeholderMap();const company=String(_stakeCompany).replace(/[^a-z0-9]+/gi,'-'),button=document.getElementById('stakePptBtn');await deServerPpt(`/api/stakeholders/export-pptx?company=${encodeURIComponent(_stakeCompany)}`,button,`Cloud-Inventory-Internal-Stakeholder-Map-${company}-${new Date().toISOString().slice(0,10)}.pptx`,()=>window.pptStakeholderMap());};
+window.pptActionPlan=async function(variant){const saved=window.getSavedMapForOutput?.();if(!saved)return;const customer=String(_mapCurrent.company||'Customer').replace(/[^a-z0-9]+/gi,'-'),button=document.getElementById(variant==='customer'?'mapPptCustBtn':'mapPptIntBtn'),name=`Cloud-Inventory-${variant==='internal'?'Internal-':''}Joint-Project-Plan-${customer}-${new Date().toISOString().slice(0,10)}.pptx`;await deServerPpt(`/api/maps/${encodeURIComponent(_mapCurrent.id)}/export-pptx?audience=${variant}`,button,name,()=>window.pptActionPlan(variant));};
+window.pptStakeholderMap=pptStakeholderMap=async function(){if(!_stakeCompany)return showToast('Select a saved customer stakeholder map before exporting PowerPoint.');const company=String(_stakeCompany).replace(/[^a-z0-9]+/gi,'-'),button=document.getElementById('stakePptBtn');await deServerPpt(`/api/stakeholders/export-pptx?company=${encodeURIComponent(_stakeCompany)}`,button,`Cloud-Inventory-Internal-Stakeholder-Map-${company}-${new Date().toISOString().slice(0,10)}.pptx`,()=>window.pptStakeholderMap());};

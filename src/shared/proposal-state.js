@@ -1,7 +1,7 @@
 'use strict';
 
-const TEXT_FIELDS=['company','preparedBy','proposalDate','validThrough','title','solution','contractTerm','situation','recommendation','outcome','whyAct','whyCloud','whyNow','timeline'];
-const ARRAY_FIELDS=['scope','investment','success','nextSteps'];
+const TEXT_FIELDS=['preparedBy','proposalDate','validThrough','title','situation','recommendation','commercialTerms'];
+const ARRAY_FIELDS=[];
 function cleanText(value,max=8000){return String(value==null?'':value).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,' ').slice(0,max);}
 function normalizeProposalDraft(input){
   if(!input||typeof input!=='object'||Array.isArray(input))throw Object.assign(new Error('A proposal draft object is required.'),{status:400});
