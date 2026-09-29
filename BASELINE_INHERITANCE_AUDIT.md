@@ -1,9 +1,9 @@
-# v6.9.14 Baseline Inheritance Audit
+# v6.9.13 Baseline Inheritance Audit
 
-- Exact parent archive: `cloud-inventory-roi-v6.9.13-render-ready.zip`
-- Verified SHA-256: `4a61dbdb2c64e6968acf240f107079dc58a014c44f382fb56a4fc134999ae562`
-- Parent application version: 6.9.13
-- Target application version: 6.9.14
+- Exact parent archive: `cloud-inventory-roi-v6.9.12-render-ready.zip`
+- Verified SHA-256: `a2559fd052884c1a9f5d866799f8b111fe1b2662060aa65cea73df97707a00b8`
+- Parent application version: 6.9.12
+- Target application version: 6.9.13
 - ROI authority: ROI Model v2.8 / modelVersion 28
 - Brand System: v1.0
 - Application Knowledge: v1.0
@@ -16,6 +16,6 @@
 - Battlecard: approved-revision PDF/Word routes remain active
 - Solution Fit: dedicated customer selector, SE cross-account scope, saved handoff outputs and save-before-output remain active
 
-Correction scope is limited to the PostgreSQL scenario creation contract: the integration request now supplies the required top-level company field, and the create response returns the persisted customer identity. All v6.9.13 permanent tests and controls remain cumulative.
+Correction scope is limited to the Proposal PDF shared production builder and mandatory PostgreSQL release certification. All v6.9.12 permanent tests and controls remain cumulative.
 
 SE Solution Fit Scope: Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.

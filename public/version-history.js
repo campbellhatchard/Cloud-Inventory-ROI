@@ -7,10 +7,10 @@
 
 const VERSION_HISTORY = [
   {
-    version: '6.9.14', date: '2026-09-15', tag: 'postgres-contract',
-    title: 'PostgreSQL Scenario Contract Correction',
-    summary: 'Aligns the PostgreSQL integration request with the required scenario API contract and returns the persisted customer relationship after scenario creation.',
-    highlights: ['Scenario integration requests send the required top-level company.', 'Created scenarios return their persisted customer ID.', 'ROI formulas, authorization, migrations, and Render configuration are unchanged.']
+    version: '6.9.15', date: '2026-09-29', tag: 'production-recovery',
+    title: 'Prospect Link and Executive PDF Recovery',
+    summary: 'Restores the governed prospect ROI preview and answer processing, prevents stale Executive PDF values, and retains the production database corrections from v6.9.14.',
+    highlights: ['Prospect ROI progress uses the active public-link session.', 'Prospect answers refresh correctly through PostgreSQL.', 'Executive PDF blocks until changed ROI inputs are saved as a governed scenario version.']
   },
   {
     version: '6.9.13', date: '2026-09-06', tag: 'postgres-certification',

@@ -1030,7 +1030,9 @@ function renderList() {
   const payStr      = pb => pb===null?'—':pb>=60?'60+mo':pb.toFixed(1)+'mo';
   const me          = window.ciAuth ? window.ciAuth.getUser() : {};
 
-  el.innerHTML = `<ul class="scenario-list">${filtered.map(s => `
+  el.innerHTML = `<ul class="scenario-list">${filtered.map(s => {
+    const isShared = Boolean(s.ownerUsername && s.ownerUsername !== me.username);
+    return `
     <li class="scenario-item">
       <label class="compare-check"><input type="checkbox" ${compareIds.has(s.id)?'checked':''} onchange="toggleCompare('${s.id}')"/></label>
       <div class="scenario-avatar">${initials(s.company||s.name)}</div>
@@ -1052,7 +1054,7 @@ function renderList() {
         ${!isShared ? `<button class="btn btn-ghost btn-sm" onclick="openShareModal('${s.id}','${s.name.replace(/'/g,"\\'")}')" title="Share with team">Share</button>` : ''}
         <button class="btn btn-danger btn-sm" onclick="deleteScenario('${s.id}')">Delete</button>
       </div>
-    </li>`).join('')}
+    </li>`;}).join('')}
   </ul>
   ${compareIds.size>=2?`<div class="compare-cta"><button class="btn btn-primary" onclick="switchTab('compare')">Compare ${compareIds.size} scenarios →</button></div>`:''}`;
   renderStageFilters();

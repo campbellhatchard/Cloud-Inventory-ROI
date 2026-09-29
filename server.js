@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   server.js  —  Cloud Inventory ROI Builder  v6.9.14
+   server.js  —  Cloud Inventory ROI Builder  v6.9.15
    Database-backed multi-user edition — production hardened
 
    Security layers applied (Phase 10):
@@ -25,6 +25,7 @@ const { loadExecutiveSource } = require('./src/shared/executive-source');
 const { buildExecutiveValueStory } = require('./src/shared/executive-value-story');
 const { evaluateExecutiveOutputReadiness } = require('./src/shared/executive-output-readiness');
 const { resolveProposalOutput, proposalFilename } = require('./src/shared/proposal-output');
+const { discoverySessionScope } = require('./src/shared/discovery-session-query');
 const { buildProposalDocx } = require('./src/exports/proposal-docx');
 const { buildCompetitiveDocx } = require('./src/exports/competitive-docx');
 const economicAvailability = require('./public/economic-availability');
@@ -1371,6 +1372,7 @@ app.get('/api/discovery/sessions', requireAuth, async (req, res) => {
     const { scenarioId } = req.query;
     const { query } = db();
     if(scenarioId){const access=await scenarioAccess(req.user,scenarioId,'view');if(!access.exists)return res.status(404).json({error:'Scenario not found.'});if(!access.allowed)return res.status(403).json({error:'Access denied.'});}
+    const scope=discoverySessionScope({scenarioId,userId:req.user.id});
     const { rows } = await query(
       `SELECT ds.id, ds.token, ds.scenario_id, ds.industry, ds.company,
               ds.base_id, ds.source_scenario_version, ds.questionnaire_schema_source,
@@ -1385,9 +1387,9 @@ app.get('/api/discovery/sessions', requireAuth, async (req, res) => {
        FROM discovery_sessions ds
        LEFT JOIN discovery_answers da ON da.session_id = ds.id
        LEFT JOIN LATERAL(SELECT id,submission_number FROM discovery_submissions sub WHERE sub.discovery_session_id=ds.id ORDER BY submission_number DESC LIMIT 1) latest ON TRUE
-       WHERE ${scenarioId ? 'ds.scenario_id = $2' : 'ds.owner_id = $1'} AND ds.is_active = TRUE
+       WHERE ${scope.predicate} AND ds.is_active = TRUE
        GROUP BY ds.id,latest.id,latest.submission_number ORDER BY ds.updated_at DESC LIMIT 20`,
-      scenarioId ? [req.user.id, scenarioId] : [req.user.id]
+      scope.values
     );
     res.json(rows);
   } catch (err) { res.status(500).json({ error: 'Failed to load discovery sessions.' }); }

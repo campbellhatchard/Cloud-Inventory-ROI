@@ -328,6 +328,7 @@ button{cursor:pointer;}
 <script src="/questionnaire-roi-registry.js"></script>
 <script src="discovery.js"></script>
 <script src="native-currency.js"></script>
+<script src="prospect-runtime.js"></script>
 <script>
 /* ════════════════════════════════════════
    PROSPECT VIEW — discovery.js questions
@@ -1119,7 +1120,7 @@ function buildROIInputs() {
 
 async function computeLiveROI() {
   try {
-    const response=await fetch('/api/discovery/sessions/'+encodeURIComponent(token)+'/roi-preview',{credentials:'same-origin'});
+    const response=await fetch(window.CIProspectRuntime.roiPreviewPath(sessionData),{credentials:'same-origin'});
     if(!response.ok)throw new Error('Preview unavailable');
     return await response.json();
   } catch(e) {

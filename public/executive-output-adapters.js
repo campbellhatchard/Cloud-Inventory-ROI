@@ -39,6 +39,7 @@ window.downloadPDF=async function(){
  exportButton('pdf','Preparing PDF…',true);console.info('executive_pdf.started',{savedScenario:Boolean(window._calcScenarioId)});
  try{
   if(!window._calcScenarioId)throw new Error('Save the scenario before creating a customer PDF.');
+  if(typeof hasUnsavedChanges==='function'&&hasUnsavedChanges())throw new Error('Save the updated ROI as a new scenario version before creating the PDF.');
   const gate=await guardExecutiveOutput('pdf',{allowDraft:true});if(!gate.proceed)return;
   const qs=new URLSearchParams({internalDraft:String(Boolean(gate.draft)),reviewAcknowledged:String(gate.result?.status==='review')});
   const res=await fetch(`/api/scenarios/${encodeURIComponent(window._calcScenarioId)}/export-pdf?${qs}`,{credentials:'same-origin',headers:{Accept:'application/pdf'}});

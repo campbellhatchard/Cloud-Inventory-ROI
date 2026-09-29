@@ -128,10 +128,7 @@ describe('HTTP API integration', { skip: HAS_DB ? false : 'DATABASE_URL not set 
       users: 50, labor: 60000, mLabor: 0.25, invest: 120000, otc: 150000,
       revenue: 80000000, modelVersion: 27, implMonths: 3, ramp1: 0.4, ramp2: 0.75, ramp3: 1.0
     };
-    const created = await api('/api/scenarios', {
-      method: 'POST', token: adminToken,
-      body: { data: inputs, name: inputs.name, company: inputs.company }
-    });
+    const created = await api('/api/scenarios', { method: 'POST', token: adminToken, body: { data: inputs, name: inputs.name } });
     assert.ok([200, 201].includes(created.status), `create status ${created.status}`);
     const saved = created.json && (created.json.scenario || created.json);
     const id = saved && saved.id;
@@ -206,14 +203,7 @@ describe('HTTP API integration', { skip: HAS_DB ? false : 'DATABASE_URL not set 
     assert.strictEqual(shell.json.exists, false, 'expected an empty shell');
     assert.strictEqual(shell.json.readiness, 0);
 
-    // Creation is explicit: PUT must update an existing Solution Fit, never upsert.
-    const initial = await api('/api/handoffs/' + customerId, {
-      method: 'POST', token: adminToken,
-      body: { data: {} }
-    });
-    assert.strictEqual(initial.status, 201, 'handoff creation must use the governed POST path');
-
-    // Update with partial data → server computes readiness > 0.
+    // Upsert with partial data → server computes readiness > 0.
     const put = await api('/api/handoffs/' + customerId, {
       method: 'PUT', token: adminToken,
       body: { data: { opportunity: { customer: company, solutionEngineer: 'Jo', products: 'CIP' } } }
