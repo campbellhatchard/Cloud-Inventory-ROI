@@ -7,16 +7,10 @@
 
 const VERSION_HISTORY = [
   {
-    version: '6.9.15', date: '2026-09-29', tag: 'production-recovery',
-    title: 'Prospect Link and Executive PDF Recovery',
-    summary: 'Restores the governed prospect ROI preview and answer processing, prevents stale Executive PDF values, and retains the production database corrections from v6.9.14.',
-    highlights: ['Prospect ROI progress uses the active public-link session.', 'Prospect answers refresh correctly through PostgreSQL.', 'Executive PDF blocks until changed ROI inputs are saved as a governed scenario version.']
-  },
-  {
-    version: '6.9.13', date: '2026-09-06', tag: 'postgres-certification',
-    title: 'PostgreSQL Integration and Proposal PDF Certification',
-    summary: 'Runs the complete PostgreSQL integration boundary in certification mode and proves Proposal PDF uses the shared governed production builder.',
-    highlights: ['Proposal Preview and PDF share one audience-aware production builder.', 'GitHub CI requires all PostgreSQL suites with zero skips.', 'Release artifacts contain sanitized database and per-output machine evidence.']
+    version: '6.9.13', date: '2026-09-29', tag: 'production-recovery',
+    title: 'Synchronized Production Recovery Baseline',
+    summary: 'Certifies Proposal PDF and PostgreSQL behavior, restores governed Prospect Link ROI progress and answer processing, and prevents stale Executive PDF values.',
+    highlights: ['Proposal Preview and PDF share one audience-aware production builder.', 'Prospect ROI progress uses the active public-link session and submitted answers refresh correctly.', 'Executive PDF blocks until changed ROI inputs are saved as a governed scenario version.']
   },
   {
     version: '6.9.12', date: '2026-09-06', tag: 'runtime-certification',

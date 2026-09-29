@@ -183,4 +183,4 @@ Edit `public/scenario-templates.js`, add an entry to `SCENARIO_TEMPLATES`:
 
 ## Version
 
-Current: **v6.9.15** — Production recovery for Prospect Link ROI updates, answer processing, and Executive PDF safeguards. Built from the exact verified v6.9.13 archive. ROI Model remains v2.8, Brand System remains v1.0, Knowledge remains v1.0, and Christie Persona remains v1.0. Deployment requires Product Owner approval.
+Current: **v6.9.13** — Synchronized production baseline with Prospect Link ROI updates, answer processing, and Executive PDF safeguards. This is the fixed production-recovery revision of v6.9.13. ROI Model remains v2.8, Brand System remains v1.0, Knowledge remains v1.0, and Christie Persona remains v1.0.

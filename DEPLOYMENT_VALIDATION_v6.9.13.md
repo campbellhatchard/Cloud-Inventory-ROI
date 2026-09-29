@@ -1,7 +1,7 @@
 # Deployment Validation — v6.9.13
 
-Not yet executed on Render. Deploy only after the GitHub PostgreSQL 16 certification job passes and its three machine evidence artifacts are reviewed. Use a separate staging or pilot database; never run automated tests against production customer data.
+Production recovery revision deployed on 2026-09-29. The release identity was normalized back to v6.9.13 so the next developer iteration can remain v6.9.14. The recovery code is preserved; this is not a rollback to the earlier v6.9.13 archive.
 
-After deployment, complete the Product Owner Release-Readiness Audit across authentication, customer switching, SE Solution Fit, all Executive/Proposal/JPP/Solution Fit/Stakeholder/Methodology/Competitive outputs, customer share and email flows.
+Required production checks: `/health` returns HTTP 200 and reports v6.9.13; a public Prospect Link displays ROI progress; changing a material answer changes the modeled annual benefit; submitted answers refresh for the rep; unsaved ROI changes block Executive PDF; and a saved scenario version produces a PDF with current ROI values.
 
 SE Solution Fit Scope: Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.
