@@ -1,0 +1,26 @@
+{
+  "release": "6.9.14",
+  "generatedAt": "2026-09-29T21:39:16.331Z",
+  "databaseUrlPresent": false,
+  "databaseName": null,
+  "postgresqlVersion": "NOT TESTED",
+  "node": "v22.23.3",
+  "migration": {
+    "executed": false,
+    "exitCode": null,
+    "result": "NOT TESTED"
+  },
+  "command": "npm run test:postgres",
+  "suites": [
+    "test/routes.test.js",
+    "test/v653-postgres-integration.test.js",
+    "test/v663-postgres-authorization.test.js",
+    "test/v664-postgres-product-identity.test.js"
+  ],
+  "passed": 0,
+  "failed": 0,
+  "skipped": 0,
+  "notTested": 4,
+  "durationMs": 0,
+  "result": "NOT TESTED"
+}

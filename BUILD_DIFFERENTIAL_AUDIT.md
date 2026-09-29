@@ -1,19 +1,19 @@
-# v6.9.13 Differential Audit
+# v6.9.14 Differential Audit
 
 ## Intentionally changed
 
-- Added a shared `public/proposal-output-builder.js` used by Proposal Preview and the production Proposal PDF adapter.
-- Registered that shared production builder as the owner of both Proposal HTML outputs.
-- Added sequential `test:postgres`, mandatory database certification mode, sanitized PostgreSQL evidence, and CI artifact upload.
-- Advanced application and evidence manifests to v6.9.13.
+- Both `Review Prospect Answers` controls now invoke the deliberate Prospect Evidence comparison workflow.
+- `Submission History` remains separately labeled and accessible.
+- Prospect submission API failures are distinguished from a valid no-submission result.
+- Added `test/discovery-review-wiring.test.js` and advanced application/evidence manifests to v6.9.14.
 
 ## Intentionally preserved
 
-ROI Model v2.8, Brand System v1.0, Application Knowledge v1.0, Christie Persona v1.0, immutable customer evidence, authorization, native currency, JPP saved-state authority, Solution Fit save-before-output, Executive source/readiness, and every earlier permanent regression test.
+ROI Model v2.8, Brand System v1.0, Application Knowledge v1.0, Christie Persona v1.0, immutable customer evidence, authorization, native currency, JPP saved-state authority, Solution Fit save-before-output, Executive source/readiness, and every earlier permanent regression test. The production-recovery implementation for Prospect Link ROI progress, answer refresh, Proposal PDF and Executive PDF persistence remains unchanged.
 
 ## Removed as obsolete
 
-- Competing Proposal HTML implementations in `public/proposal.js` and `public/executive-output-adapters.js`.
+None.
 
 ## Migrations added
 
@@ -21,9 +21,9 @@ None.
 
 ## Tests added
 
-- Shared Proposal Ready/Review/Draft audience and commercial-note exclusion.
-- Production builder ownership parity.
-- Mandatory PostgreSQL certification workflow and sanitized evidence.
+- Prospect review button routing and separate Submission History behavior.
+- Load failure versus legitimate empty-submission handling.
+- Cumulative v6.9.13 production-recovery regression suite remains a release lock.
 
 ## Unresolved deployment work
 

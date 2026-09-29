@@ -555,6 +555,7 @@ let discoveryDbSessionId  = null; // DB row id (UUID) for the session
 let discoveryScenarioId   = null; // scenario this discovery session belongs to
 let discoveryEngagement   = null; // { openCount, firstOpened, lastOpened } for the active session
 let latestSubmittedEvidence=null; // immutable submission + answer/value-event maps
+let latestSubmittedEvidenceLoadError=null;
 
 /* Called when a scenario is loaded or a new one is started.
    Clears any in-memory discovery state from the PREVIOUS scenario so a
@@ -589,8 +590,8 @@ async function resetDiscoveryForScenario(scenarioId) {
   if (typeof renderDiscoveryTab === 'function') renderDiscoveryTab();
 }
 async function loadLatestSubmittedEvidence(){
-  latestSubmittedEvidence=null;if(!window._calcScenarioId)return null;
-  try{const listRes=await apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/discovery-submissions');if(!listRes.ok)return null;const list=await listRes.json(),submission=list.submissions&&list.submissions[0];if(!submission)return null;const [snapshotRes,historyRes]=await Promise.all([apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/discovery-submissions/'+encodeURIComponent(submission.id)),apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/value-history')]);if(!snapshotRes.ok||!historyRes.ok)return null;const snapshot=await snapshotRes.json(),history=await historyRes.json(),byQuestion={},byInput={};snapshot.answers.forEach(a=>{byQuestion[a.question_id]=a;if(a.canonical_input)byInput[a.canonical_input]=a;});latestSubmittedEvidence={submission:snapshot.submission,byQuestion,byInput,history};return latestSubmittedEvidence;}catch(_){return null;}
+  latestSubmittedEvidence=null;latestSubmittedEvidenceLoadError=null;if(!window._calcScenarioId)return null;
+  try{const listRes=await apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/discovery-submissions');if(!listRes.ok)throw Error('Prospect submission list request failed ('+listRes.status+').');const list=await listRes.json(),submission=list.submissions&&list.submissions[0];if(!submission)return null;const [snapshotRes,historyRes]=await Promise.all([apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/discovery-submissions/'+encodeURIComponent(submission.id)),apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/value-history')]);if(!snapshotRes.ok)throw Error('Prospect submission snapshot request failed ('+snapshotRes.status+').');if(!historyRes.ok)throw Error('Value History request failed ('+historyRes.status+').');const snapshot=await snapshotRes.json(),history=await historyRes.json(),byQuestion={},byInput={};snapshot.answers.forEach(a=>{byQuestion[a.question_id]=a;if(a.canonical_input)byInput[a.canonical_input]=a;});latestSubmittedEvidence={submission:snapshot.submission,byQuestion,byInput,history};return latestSubmittedEvidence;}catch(error){latestSubmittedEvidenceLoadError=error;console.error('loadLatestSubmittedEvidence failed:',error.message);return null;}
 }
 let _answerSaveTimer      = null; // debounce timer for answer writes
 
@@ -908,7 +909,8 @@ function renderDiscoveryTab() {
       + '</div>'
       + '<div class="disc-link-card-actions">'
       + '<button class="btn btn-primary btn-sm" onclick="copyProspectLink()">Copy Link</button>'
-      + '<button class="btn btn-secondary btn-sm" onclick="openSubmissionHistory()">Review Prospect Answers</button>'
+      + '<button class="btn btn-secondary btn-sm" onclick="applyDiscoveryToCalc()">Review Prospect Answers</button>'
+      + '<button class="btn btn-tertiary btn-sm" onclick="openSubmissionHistory()">Submission History</button>'
       + '<button class="btn btn-tertiary btn-sm" onclick="importProspectAnswers()">&#8635; Refresh</button>'
       + '<button class="btn btn-tertiary btn-sm" onclick="rotateProspectToken()">Rotate</button>'
       + '<button class="btn btn-danger btn-sm" onclick="revokeProspectLink()">Revoke</button>'
@@ -1238,6 +1240,7 @@ function dismissExtractSuggestions(questionId) {
 async function applyDiscoveryToCalc() {
   if(!window._calcScenarioId)return showToast?.('Save or select a scenario before reviewing prospect evidence.');
   await loadLatestSubmittedEvidence();
+  if(latestSubmittedEvidenceLoadError)return showToast?.('Prospect evidence could not be loaded. Please try again.');
   if(!latestSubmittedEvidence)return showToast?.('No immutable prospect submission is available yet. Working draft answers cannot be applied as prospect-verified.');
   const submission=latestSubmittedEvidence.submission,history=latestSubmittedEvidence.history;
   const selected=history.selectedScenario||{},canApply=selected.isCurrent&&!selected.isClosed;

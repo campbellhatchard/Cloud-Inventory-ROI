@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "6.9.13",
+  "release": "6.9.14",
   "tests": [
     {"invariant":"Customer Business Case","path":"test/release-integrity.test.js"},
     {"invariant":"customer-safe payload","path":"test/release-integrity.test.js"},
@@ -30,6 +30,7 @@
     {"invariant":"true runtime output certification","path":"test/output-runtime-matrix.test.js"},
     {"invariant":"Proposal PDF shared production builder","path":"test/v6913-proposal-postgres-certification.test.js"},
     {"invariant":"mandatory live PostgreSQL release certification","path":"test/v6913-proposal-postgres-certification.test.js"},
-    {"invariant":"production recovery for prospect ROI, discovery processing, scenario list and stale PDF values","path":"test/v6913-production-recovery.test.js"}
+    {"invariant":"production recovery for prospect ROI, discovery processing, scenario list and stale PDF values","path":"test/v6913-production-recovery.test.js"},
+    {"invariant":"Prospect Evidence review controls and distinct load errors","path":"test/discovery-review-wiring.test.js"}
   ]
 }

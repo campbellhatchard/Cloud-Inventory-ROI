@@ -7,6 +7,12 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.14', date: '2026-09-29', tag: 'prospect-evidence-review',
+    title: 'Prospect Evidence Review Wiring Correction',
+    summary: 'Routes both Review Prospect Answers controls to the deliberate evidence comparison while retaining the synchronized v6.9.13 production-recovery safeguards.',
+    highlights: ['Both review controls open Review Prospect Evidence.', 'Submission History remains separately accessible.', 'API failures are distinguished from a legitimate empty submission.', 'Prospect ROI progress, answer refresh, and governed Executive PDF behavior remain protected.']
+  },
+  {
     version: '6.9.13', date: '2026-09-29', tag: 'production-recovery',
     title: 'Synchronized Production Recovery Baseline',
     summary: 'Certifies Proposal PDF and PostgreSQL behavior, restores governed Prospect Link ROI progress and answer processing, and prevents stale Executive PDF values.',

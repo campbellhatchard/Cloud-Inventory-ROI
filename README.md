@@ -183,4 +183,4 @@ Edit `public/scenario-templates.js`, add an entry to `SCENARIO_TEMPLATES`:
 
 ## Version
 
-Current: **v6.9.13** — Synchronized production baseline with Prospect Link ROI updates, answer processing, and Executive PDF safeguards. This is the fixed production-recovery revision of v6.9.13. ROI Model remains v2.8, Brand System remains v1.0, Knowledge remains v1.0, and Christie Persona remains v1.0.
+Current: **v6.9.14** — Prospect Evidence review wiring correction built on the synchronized v6.9.13 production-recovery baseline. Both review controls open the evidence comparison, Submission History remains separate, and the fixed Prospect Link ROI, answer-processing, and Executive PDF safeguards are retained. ROI Model remains v2.8, Brand System remains v1.0, Knowledge remains v1.0, and Christie Persona remains v1.0.

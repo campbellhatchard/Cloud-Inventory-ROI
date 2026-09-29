@@ -1,9 +1,10 @@
-# v6.9.13 Baseline Inheritance Audit
+# v6.9.14 Baseline Inheritance Audit
 
-- Exact parent archive: `cloud-inventory-roi-v6.9.12-render-ready.zip`
-- Verified SHA-256: `a2559fd052884c1a9f5d866799f8b111fe1b2662060aa65cea73df97707a00b8`
-- Parent application version: 6.9.12
-- Target application version: 6.9.13
+- Exact parent archive: `cloud-inventory-roi-v6.9.13-synchronized-production-baseline.zip`
+- Verified SHA-256: `e0dc27c163ec52cfd50b81d1d73b9986086da5fd2177149efa0c03cbad77a048`
+- Parent Git commit: `00a269fa8d373c1501bf5fc60448add4b365536b`
+- Parent application version: 6.9.13
+- Target application version: 6.9.14
 - ROI authority: ROI Model v2.8 / modelVersion 28
 - Brand System: v1.0
 - Application Knowledge: v1.0
@@ -16,6 +17,6 @@
 - Battlecard: approved-revision PDF/Word routes remain active
 - Solution Fit: dedicated customer selector, SE cross-account scope, saved handoff outputs and save-before-output remain active
 
-Correction scope is limited to the Proposal PDF shared production builder and mandatory PostgreSQL release certification. All v6.9.12 permanent tests and controls remain cumulative.
+Correction scope is limited to Prospect Evidence review-control wiring and explicit submission-load error handling. The synchronized v6.9.13 recovery components are retained, including `public/prospect-runtime.js`, `src/shared/discovery-session-query.js`, and `test/v6913-production-recovery.test.js`. All earlier permanent tests and controls remain cumulative.
 
 SE Solution Fit Scope: Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.
