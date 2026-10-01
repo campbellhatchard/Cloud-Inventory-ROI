@@ -19,6 +19,11 @@ const STAKE_ROLES = {
 async function initStakeTab() {
   if (window._authReady) await window._authReady;
   await loadCompanies();
+  /* A saved, authorized scenario is already an explicit customer selection.
+     Reuse it so the Stakeholder Map does not ask the user to select the same
+     customer again. Cross-account Solution Fit selection alone is excluded. */
+  const activeScenarioCompany=window._calcScenarioId&&String((document.getElementById('companyName')||{}).value||'').trim();
+  if(activeScenarioCompany&&getCompanies().some(c=>String(c.name).toLowerCase()===activeScenarioCompany.toLowerCase()))_stakeCompany=activeScenarioCompany;
   populateStakeCompanySelect();
   await loadStakeholders();
 }
@@ -48,13 +53,13 @@ function stakeCompanySearch(q) {
   if (!matches.length && !term) { results.style.display = 'none'; return; }
 
   const items = matches.slice(0, 12).map(c =>
-    `<div class="cs-result" onmousedown="setStakeCompanyFromSearch('${escapeHtml(c.name).replace(/'/g,"\\'")}')">
+    `<button type="button" class="cs-result" onclick="setStakeCompanyFromSearch('${escapeHtml(c.name).replace(/'/g,"\\'")}')">
       ${escapeHtml(c.name)}
       ${c.stakeholders ? `<span style="font-size:11px;color:var(--gray-400);"> (${c.stakeholders} stakeholder${c.stakeholders!==1?'s':''})</span>` : ''}
-    </div>`
+    </button>`
   );
   if (term) {
-    items.push(`<div class="cs-result cs-result-new" onmousedown="setStakeCompanyFromSearch('${escapeHtml(q).replace(/'/g,"\\'")}',true)">+ Use "${escapeHtml(q)}" as new company</div>`);
+    items.push(`<button type="button" class="cs-result cs-result-new" onclick="setStakeCompanyFromSearch('${escapeHtml(q).replace(/'/g,"\\'")}',true)">+ Use "${escapeHtml(q)}" as new company</button>`);
   }
   results.innerHTML = items.join('');
   results.style.display = 'block';

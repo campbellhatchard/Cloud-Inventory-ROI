@@ -383,10 +383,25 @@ function maybeShowOnboarding() {
   const noScenarios = Array.isArray(savedScenarios) && savedScenarios.length === 0;
   if (!noScenarios) return;
   if (document.getElementById('onboardCoach')) return;
+  const roleKeys=[user.role,...(user.roles||[]),...(user.roleKeys||[])]
+    .map(x=>String(typeof x==='object'?(x.key||x.name||''):x||'').trim().toLowerCase().replace(/\s+/g,'_'))
+    .map(x=>x==='solution_engineer'?'se':x);
+  const solutionFitOnly=roleKeys.includes('se')&&!roleKeys.some(x=>['rep','admin','sales_manager','sales_leader'].includes(x));
   const coach = document.createElement('div');
   coach.id = 'onboardCoach';
   coach.className = 'onboard-coach';
-  coach.innerHTML = `
+  coach.innerHTML = solutionFitOnly ? `
+    <button class="onboard-close" aria-label="Dismiss"><span aria-hidden="true">×</span></button>
+    <div class="onboard-title">👋 Welcome — start with Solution Fit</div>
+    <ol class="onboard-steps">
+      <li><strong>Find an existing customer</strong> — open Solution Fit and search any active customer or sales rep.</li>
+      <li><strong>Create or continue the assessment</strong> — select the customer and review its product, ERP, applications, and gaps.</li>
+      <li><strong>Save the governed Solution Fit</strong> — the customer owner remains unchanged and your work stays scoped to Solution Fit.</li>
+    </ol>
+    <div class="onboard-actions">
+      <button class="btn btn-primary btn-sm" id="onboardStart">Create or Continue Solution Fit</button>
+      <button class="btn btn-ghost btn-sm" id="onboardSkip">Skip for now</button>
+    </div>` : `
     <button class="onboard-close" aria-label="Dismiss"><span aria-hidden="true">×</span></button>
     <div class="onboard-title">👋 Welcome — let's build your first business case</div>
     <ol class="onboard-steps">
@@ -406,8 +421,9 @@ function maybeShowOnboarding() {
   coach.querySelector('#onboardSkip').addEventListener('click', done);
   coach.querySelector('#onboardStart').addEventListener('click', () => {
     done();
-    if (typeof switchTab === 'function') switchTab('calc');
-    if (typeof showCustomerGate === 'function') showCustomerGate();
+    if (typeof switchTab === 'function') switchTab(solutionFitOnly?'solfit':'calc');
+    if (!solutionFitOnly&&typeof showCustomerGate === 'function') showCustomerGate();
+    if (solutionFitOnly)setTimeout(()=>document.getElementById('sfCustomerSearch')?.focus(),0);
   });
   document.addEventListener('keydown',onEscape);
 }
