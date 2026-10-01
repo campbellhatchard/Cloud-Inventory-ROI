@@ -659,9 +659,10 @@ function setDiscoveryAnswer(id, value, enteredBy = 'rep') {
 async function generateProspectLink() {
   const industry  = document.getElementById('industry')?.value   || 'default';
   const company   = (document.getElementById('companyName')?.value || '').trim();
+  const scenarioId = discoveryScenarioId || window._calcScenarioId || null;
 
   /* Hard gate: never generate a link without an active customer. */
-  if (!company || !(discoveryScenarioId || window._calcScenarioId)) {
+  if (!company || !scenarioId) {
     if (typeof showToast === 'function') showToast('Save or select this customer scenario first — prospect links require an authorized saved opportunity.');
     if (typeof switchTab === 'function') switchTab('calc');
     return;
@@ -670,7 +671,7 @@ async function generateProspectLink() {
   try {
     const resp = await apiFetch('/api/discovery/sessions', {
       method: 'POST',
-      body: JSON.stringify({ industry, company, scenarioId: discoveryScenarioId || undefined })
+        body: JSON.stringify({ industry, company, scenarioId })
     });
     if (!resp || !resp.ok) {
       const err = resp ? await resp.json() : {};
@@ -1262,7 +1263,7 @@ async function applyDiscoveryToCalc() {
     const event=(h.events||[]).find(function(e){return e.event_type==='prospect_submitted'&&String(e.discovery_submission_id)===String(submission.id);});
     const el=document.getElementById(input),current=el?el.value:(h.valueUsed&&h.valueUsed.value_text)||'Not captured';
     const working=discoveryAnswers[answer.question_id]||'',draftDiff=String(working).trim()!==String(answer.answer_text||'').trim();
-    rows.push('<article class="disc-sync-review"><div><small>'+escapeHtml(answer.question_text||input)+'</small><strong>'+escapeHtml(input)+'</strong></div><div><small>Current working value</small><b>'+escapeHtml(current||'Not captured')+'</b></div><div><small>Latest submitted value</small><b>'+escapeHtml(answer.answer_text||'—')+'</b><span>Submission '+submission.submission_number+' · '+new Date(submission.submitted_at).toLocaleDateString()+'</span>'+(draftDiff?'<em>Working draft has changed since submission.</em>':'')+'</div><div>'+(event&&canApply?'<button class="btn btn-primary btn-sm" onclick="applySubmittedEvidence(\''+input+'\',\''+event.id+'\')">Use Prospect Value</button>':event?'<span class="history-immutable">Read only for this scenario</span>':'<span class="disc-no-event">No verified value event</span>')+'<button class="btn btn-ghost btn-sm" onclick="openValueHistory(\''+input+'\')">View History</button></div></article>');
+    rows.push('<article class="disc-sync-review"><div><small>'+escapeHtml(answer.question_text||input)+'</small><strong>'+escapeHtml(input)+'</strong></div><div><small>Current working value</small><b>'+escapeHtml(current||'Not captured')+'</b></div><div><small>Latest submitted value</small><b>'+escapeHtml(answer.answer_text||'—')+'</b><span>Submission '+submission.submission_number+' · '+new Date(submission.submitted_at).toLocaleDateString()+'</span>'+(draftDiff?'<em>Working draft has changed since submission. This refers to the Prospect Link draft, not the applied Calculator value.</em>':'')+'</div><div>'+(event&&canApply?'<button class="btn btn-primary btn-sm" onclick="applySubmittedEvidence(\''+input+'\',\''+event.id+'\')">Use Prospect Value</button>':event?'<span class="history-immutable">Read only for this scenario</span>':'<span class="disc-no-event">No verified value event</span>')+'<button class="btn btn-ghost btn-sm" onclick="openValueHistory(\''+input+'\')">View History</button></div></article>');
   });
   const old=document.getElementById('prospectSyncModal');if(old)old.remove();
   const modal=document.createElement('div');modal.id='prospectSyncModal';modal.className='modal-overlay open';modal.innerHTML='<div class="modal-card modal-wide"><div class="modal-header"><div><h2>Review Prospect Evidence</h2><p>Latest immutable Submission '+submission.submission_number+'. Values are applied individually and never overwrite the business case automatically.</p></div><button class="modal-close" onclick="this.closest(\'.modal-overlay\').remove()">&times;</button></div><div class="modal-body">'+(canApply?'':'<div class="history-immutable">Historical or closed scenario — evidence is viewable but cannot be applied.</div>')+(rows.join('')||'<div class="empty-state"><p>This submission contains no mapped financial values.</p></div>')+'</div></div>';document.body.appendChild(modal);

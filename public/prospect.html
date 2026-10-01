@@ -758,8 +758,7 @@ function toggleNotSure(id) {
   updateSectionCounts();
   updateProgress();
   updateSaveButton();
-  clearTimeout(autoSaveTimer);
-  autoSaveTimer = setTimeout(() => pushAnswer(id, val, 'prospect'), 400);
+  scheduleAnswerSave(id, val, 400);
 }
 
 function handleAnswer(id, value) {
@@ -802,8 +801,7 @@ function handleAnswer(id, value) {
   updateSaveButton();
 
   /* Push this specific answer to DB immediately (debounced 800ms) */
-  clearTimeout(autoSaveTimer);
-  autoSaveTimer = setTimeout(() => pushAnswer(id, value, 'prospect'), 800);
+  scheduleAnswerSave(id, value, 800);
 }
 
 function updateSectionCounts() {
@@ -1279,6 +1277,34 @@ async function pushAnswer(questionId, answer, enteredBy) {
   }
 }
 
+/* Keep one timer per question so editing a later question cannot cancel a
+   pending save for an earlier one. Before immutable submission, flush the
+   complete in-memory answer buffer and require every save to succeed. */
+const pendingAnswerTimers = new Map();
+function scheduleAnswerSave(questionId, answer, delay) {
+  clearTimeout(pendingAnswerTimers.get(questionId));
+  const timer = setTimeout(async function() {
+    pendingAnswerTimers.delete(questionId);
+    await pushAnswer(questionId, answer, 'prospect');
+  }, delay);
+  pendingAnswerTimers.set(questionId, timer);
+}
+async function flushProspectAnswers() {
+  for (const timer of pendingAnswerTimers.values()) clearTimeout(timer);
+  pendingAnswerTimers.clear();
+  const entries = Object.entries(prospectAnswers).filter(([questionId]) => !questionId.endsWith('_by'));
+  const responses = await Promise.all(entries.map(([questionId, answer]) =>
+    fetch('/api/discovery/sessions/' + encodeURIComponent(sessionData.token) + '/answers', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questionId, answer: answer || '' })
+    })
+  ));
+  if (responses.some(response => !response.ok)) throw new Error('One or more answers could not be saved.');
+  setAutosaveState('saved');
+}
+window.flushProspectAnswers = flushProspectAnswers;
+
 /* Retry all answers currently in memory after a connection error */
 async function retryPendingAnswers() {
   setAutosaveState('saving');
@@ -1432,6 +1458,7 @@ async function confirmSubmit() {
      wording and classification are sent as context; the server reads the
      authoritative answer rows and validates financial canonical inputs. */
   try {
+    await flushProspectAnswers();
     const response=await fetch('/api/discovery/sessions/' + encodeURIComponent(sessionData.token) + '/submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

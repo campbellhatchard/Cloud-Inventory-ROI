@@ -12,6 +12,11 @@
 let _calcDirty = false;           // unsaved-changes flag
 let _gateInitialized = false;
 
+function canCreateRoiCustomer() {
+  const user = window.ciAuth ? window.ciAuth.getUser() : null;
+  return !!user && (clientHasRole(user,'rep','Sales Rep') || clientHasRole(user,'admin','Admin'));
+}
+
 function markCalcDirty() { _calcDirty = true; updateCompletenessMeter(); _updateDirtyIndicator(); }
 function clearCalcDirty() { _calcDirty = false; _updateDirtyIndicator(); }
 
@@ -98,7 +103,9 @@ async function showCustomerGate() {
   requestAnimationFrame(clearGateFields);
   setTimeout(clearGateFields, 120);
   const focusEl = document.getElementById('cgNewCompany');
-  if (focusEl) focusEl.focus();
+  const newCard = focusEl?.closest('.cg-card');
+  if (newCard) newCard.hidden = !canCreateRoiCustomer();
+  if (focusEl && canCreateRoiCustomer()) focusEl.focus();
 }
 function showCalcBody() {
   const gate = document.getElementById('customerGate');
@@ -114,6 +121,10 @@ function skipCustomerGate() { showCalcBody(); }
 
 /* ── New customer ── */
 function cgCreateNew() {
+  if (!canCreateRoiCustomer()) {
+    showToast('ROI customer creation requires the Sales Rep or Admin role. Use Solution Fit to work with existing customers.');
+    return;
+  }
   const input = document.getElementById('cgNewCompany');
   const typed = input ? input.value.trim() : '';
   if (!typed) { if (input) input.focus(); return; }

@@ -552,7 +552,9 @@ function recalc() {
   if (implHint) {
     if (v.implMonths > 0) {
       const goLiveMonth = v.implMonths + 1;
-      implHint.textContent = `Go-live month ${goLiveMonth}. Months 1–${v.implMonths}: $0 benefit. Payback from signing: ${r.paybackFromSigning ? r.paybackFromSigning.toFixed(1)+' mo' : '—'} (${r.paybackFromGoLive ? r.paybackFromGoLive.toFixed(1)+' mo from go-live' : '—'}).`;
+      const governedPayback = r.contractPayback;
+      const fromGoLive = governedPayback == null ? null : Math.max(0, governedPayback - Number(v.implMonths || 0));
+      implHint.textContent = `Go-live month ${goLiveMonth}. Months 1–${v.implMonths}: $0 benefit. Payback from signing: ${governedPayback == null ? '—' : governedPayback.toFixed(1)+' mo'} (${fromGoLive == null ? '—' : fromGoLive.toFixed(1)+' mo from go-live'}).`;
       implHint.style.color = 'var(--blue)';
     } else {
       implHint.textContent = 'Set delivery months above 0 to account for implementation time before ROI begins.';
@@ -835,9 +837,9 @@ async function saveScenario() {
     /* Three Whys are edited on the Exec view but aren't part of getVals(), so
        capture them here — otherwise Save (incl. the Exec view's Save button)
        would silently drop exec-view narrative edits. */
-    threeWhysAct: document.getElementById('why_act')?.value || '',
-    threeWhysCi:  document.getElementById('why_ci')?.value  || '',
-    threeWhysNow: document.getElementById('why_now')?.value || '',
+    threeWhysAct: document.getElementById('why_act')?.value || (typeof threeWhys !== 'undefined' ? threeWhys.act : ''),
+    threeWhysCi:  document.getElementById('why_ci')?.value  || (typeof threeWhys !== 'undefined' ? threeWhys.ci : ''),
+    threeWhysNow: document.getElementById('why_now')?.value || (typeof threeWhys !== 'undefined' ? threeWhys.now : ''),
     threeWhysMeta: typeof threeWhysMeta !== 'undefined' ? threeWhysMeta : {},
     fieldStates:        typeof fieldStates !== 'undefined' ? { ...fieldStates } : {},
     fieldProvenance:    typeof fieldProvenance !== 'undefined' ? { ...fieldProvenance } : {},
@@ -868,6 +870,10 @@ async function saveScenario() {
 }
 
 async function _doSave(v, dataBlob, baseId, note) {
+  if (window._scenarioSaveInFlight) { showToast('Save already in progress.'); return null; }
+  window._scenarioSaveInFlight = true;
+  const saveButtons = document.querySelectorAll('#calcSaveBtn, #saveVersionModal button.btn-primary');
+  saveButtons.forEach(button => { button.disabled = true; });
   try {
     const resp = await apiFetch('/api/scenarios', {
       method: 'POST',
@@ -887,7 +893,7 @@ async function _doSave(v, dataBlob, baseId, note) {
     if (!resp || !resp.ok) {
       const err = resp ? await resp.json() : { error: 'Network error' };
       showToast('Save failed: ' + (err.error || 'Unknown error'));
-      return;
+      return null;
     }
     const saved = await resp.json();
     window._opportunityValueOriginal=saved.opportunityProfile?.estimatedOpportunityValue??v.opportunityValue??null;
@@ -896,15 +902,21 @@ async function _doSave(v, dataBlob, baseId, note) {
        autosaves must target that new current row, not the version just left. */
     window._calcScenarioId = saved.id;
     window._scenarioLoaded = true;
+    window.invalidateExecutiveValueStory?.();
     showToast(`Saved v${saved.version} — "${saved.name}"`);
     /* Only now — after a confirmed successful save — is the form clean. */
     if (typeof clearCalcDirty === 'function') clearCalcDirty();
     trackEvent('scenario_saved', { company: v.company, version: saved.version });
     await fetchScenarios();
     if (typeof refreshCalcScenarioPicker === 'function') refreshCalcScenarioPicker();
+    return saved;
   } catch(e) {
     console.error('_doSave error:', e.message);
     showToast('Save failed — check your connection.');
+    return null;
+  } finally {
+    window._scenarioSaveInFlight = false;
+    saveButtons.forEach(button => { button.disabled = false; });
   }
 }
 

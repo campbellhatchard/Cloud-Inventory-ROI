@@ -7,6 +7,12 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.18', date: '2026-10-01', tag: 'role-regression-corrections',
+    title: 'Role-Based Regression Corrections',
+    summary: 'Corrects the production defects confirmed during role-based regression testing without changing ROI Model v2.8 or governed evidence semantics.',
+    highlights: ['Prospect submission flushes every answer before immutable submission.', 'Prospect Link generation always sends the active saved scenario.', 'SE-only users cannot create ROI scenarios.', 'Contract ROI, NPV, and payback are consistent across saved cards and manager views.', 'Scenario save prevents double activation.', 'Sales Manager search resists credential autofill.', 'Executive PDF requests recover from a stalled response.']
+  },
+  {
     version: '6.9.17', date: '2026-10-01', tag: 'se-interactive-regression-corrections',
     title: 'SE Interactive Workflow Corrections',
     summary: 'Corrects the production issues found during the complete Sales Engineer interactive regression.',

@@ -1,38 +1,31 @@
-# v6.9.17 Differential Audit
+# v6.9.18 Differential Audit
 
 ## Intentionally changed
 
-- Competitive AI Research preserves the explicitly selected CIP or MEP product in its governed source.
-- Discovery progress refreshes immediately after answer entry.
-- Stakeholder Map inherits the saved authorized scenario customer and exposes keyboard-accessible search-result controls.
-- Sensitivity uses the authoritative selected-contract NPV and contract term instead of a fixed five-year label.
-- AI Help maps active panes to canonical Application Knowledge workspace identifiers, including Solution Fit.
-- Risk Ledger opens its output window before asynchronous save validation so the initiating browser gesture is preserved.
-- Added `test/v6917-se-interactive-regression.test.js` and registered it in both the full suite and production locks.
+- Prospect Link generation uses one resolved active scenario ID for validation and API submission.
+- Prospect questionnaire autosave uses one timer per question and flushes every buffered answer before immutable submission.
+- ROI customer/scenario creation requires an independent Sales Rep or Admin role in both UI and server authorization.
+- Sales Manager and saved-scenario surfaces prefer governed contract ROI, NPV, and payback fields.
+- Implementation timeline uses the same interpolated contract payback as Summary and Executive outputs.
+- Scenario save prevents duplicate client activation and serializes same-opportunity creation on PostgreSQL.
+- Three Whys fall back to in-memory editor state and invalidate cached Executive Value Story after version save.
+- Sales Manager search resists login credential autofill.
+- Executive PDF requests time out safely, restore controls, show Retry, and report failure to Admin Error Log.
+- Prospect draft-difference text identifies the Prospect Link draft rather than implying the calculator value is stale.
 
 ## Intentionally preserved
 
-ROI Model v2.8, Brand System v1.0, Application Knowledge v1.0, Christie Persona v1.0, database schema, migrations, authorization boundaries, immutable evidence, server-authoritative customer outputs, saved-state output controls, and all earlier permanent regression protections.
-
-## Removed as obsolete
-
-None identified by the supplied release manifest.
+ROI Model v2.8, formulas, overlap rules, Brand System v1.0, Application Knowledge v1.0, Christie Persona v1.0, immutable Prospect evidence, deliberate per-value application, Value History, Rep Confirmed provenance, BuyCycle governance, output authority, migrations, and SE cross-account Solution Fit scope.
 
 ## Migrations added
 
-None. The migration ceiling remains `037_rep_confirmed_value_provenance.sql`.
+None.
 
 ## Tests added
 
-- Six v6.9.17 SE interactive workflow regression tests.
-- The four v6.9.16 SE Solution Fit discoverability tests remain cumulative.
+- `test/v6918-role-regression-corrections.test.js`
+- Registered permanently in the full suite and production locks.
 
-## Validation limitation
+## Unresolved external validation
 
-The declared v6.9.16 parent archive was not supplied, so this audit cannot independently reproduce a file-by-file archive comparison. The statements above are supported by the v6.9.17 manifest, active source inspection and executed regression tests. The production script provides an additional exact Git diff against live `main` before deployment.
-
-## Unresolved deployment work
-
-PostgreSQL migrations and integration suites require a safe non-production PostgreSQL database and remain NOT TESTED locally. GitHub PostgreSQL 16 certification and Render post-deployment validation remain external gates.
-
-SE Solution Fit Scope: Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.
+Live PostgreSQL certification and Render post-deployment role regression remain external gates. The original live Executive PDF server failure could not be reproduced without the deployed authenticated runtime; v6.9.18 guarantees fail-recovery and diagnostic capture while existing server PDF runtime coverage remains in force.

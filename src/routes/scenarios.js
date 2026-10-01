@@ -142,10 +142,10 @@ const LIST_COLS = `
   s.outcome, s.outcome_reason, s.realized_value, s.outcome_at,
   s.customer_id,
   (s.data->>'annualBenefit')::numeric AS annual_benefit,
-  (s.data->>'roi')::numeric           AS roi,
+  COALESCE((s.data->>'totalContractRoi')::numeric,(s.data->>'roi')::numeric) AS roi,
   (s.data->>'npv3')::numeric          AS npv3,
-  (s.data->>'npv5')::numeric          AS npv5,
-  (s.data->>'payback')::numeric       AS payback,
+  COALESCE((s.data->>'totalContractNpv')::numeric,(s.data->>'npv5')::numeric) AS npv5,
+  COALESCE((s.data->>'contractPayback')::numeric,(s.data->>'paybackFromSigning')::numeric,(s.data->>'payback')::numeric) AS payback,
   u.username AS owner_username
   ,COALESCE(g.current_stage, 2) AS current_buy_cycle_stage
   ,COALESCE(g.rep_assessed_stage, COALESCE(g.current_stage, 2)) AS rep_assessed_stage
@@ -450,6 +450,12 @@ router.patch('/:id/narrative', async (req, res) => {
 router.post('/', async (req, res) => {
   const { name, company, data, industry, execAudience, solution, versionNote, baseId, opportunityValue, opportunityValueCurrency } = req.body || {};
 
+  /* Solution Engineer access is deliberately limited to Solution Fit. A user
+     needs an independent Sales Rep or Admin role to create/version ROI work. */
+  if (!hasRole(req.user,'rep') && !hasRole(req.user,'admin')) {
+    return res.status(403).json({ error: 'Sales Rep or Admin role required to save an ROI scenario.' });
+  }
+
   /* Server-side required field validation (mirrors client-side) */
   if (!name || !name.trim() || name.trim() === 'Unnamed scenario') {
     return res.status(400).json({ error: 'Scenario name is required.' });
@@ -467,6 +473,9 @@ router.post('/', async (req, res) => {
     const parsedOpportunityValue=parseOpportunityValue(opportunityValue);
     const scenarioCurrency=validateOpportunityCurrency(opportunityValueCurrency||data.currency||'USD');
     const result = await transaction(async (client) => {
+      await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+        `${req.user.id}:${String(company).trim().toLowerCase()}:${String(name).trim().toLowerCase()}`
+      ]);
       let resolvedBaseId = baseId;
       let nextVersion    = 1;
       let adminOnBehalfOwner = null;   // set if an admin edits another user's scenario

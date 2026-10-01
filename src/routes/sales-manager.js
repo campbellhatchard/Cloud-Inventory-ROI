@@ -117,7 +117,7 @@ router.get('/dashboard', async (req, res) => {
         solution:s.solution || data.solution || 'Not set', updatedAt:s.updated_at,
         closeDate:plan && plan.target_close_date || null,
         commercial:{opportunityValue:num(s.opportunity_profile?.estimatedOpportunityValue),currency:s.opportunity_profile?.currency||data.currency||'USD'},
-        roi:{ annualBenefit:num(data.annualBenefit), totalContractBenefit:num(data.totalContractBenefit), totalContractInvestment:num(data.totalContractInvestment), contractNetBenefit:num(data.totalContractNetBenefit), contractRoi:num(data.totalContractRoi), contractNpv:num(data.totalContractNpv), payback:num(data.payback), contractMonths:num(data.contractMonths), investment:num(data.totalContractInvestment) /* deprecated compatibility alias */ },
+        roi:{ annualBenefit:num(data.annualBenefit), totalContractBenefit:num(data.totalContractBenefit), totalContractInvestment:num(data.totalContractInvestment), contractNetBenefit:num(data.totalContractNetBenefit), contractRoi:num(data.totalContractRoi), contractNpv:num(data.totalContractNpv), payback:num(data.contractPayback ?? data.paybackFromSigning ?? data.payback), contractMonths:num(data.contractMonths), investment:num(data.totalContractInvestment) /* deprecated compatibility alias */ },
         solutionFit:solutionFit(s.customer_id ? handoffByCustomer.get(String(s.customer_id)) : null),
         plan:planHealth(plan), planRecord:plan || null, stakeholders:stakeholderHealth(people), stakeholderRecords:people,
         actions:actionsByScenario.get(String(s.id)) || [],
