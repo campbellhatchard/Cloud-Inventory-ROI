@@ -128,7 +128,10 @@ describe('HTTP API integration', { skip: HAS_DB ? false : 'DATABASE_URL not set 
       users: 50, labor: 60000, mLabor: 0.25, invest: 120000, otc: 150000,
       revenue: 80000000, modelVersion: 27, implMonths: 3, ramp1: 0.4, ramp2: 0.75, ramp3: 1.0
     };
-    const created = await api('/api/scenarios', { method: 'POST', token: adminToken, body: { data: inputs, name: inputs.name } });
+    const created = await api('/api/scenarios', {
+      method: 'POST', token: adminToken,
+      body: { data: inputs, name: inputs.name, company: inputs.company }
+    });
     assert.ok([200, 201].includes(created.status), `create status ${created.status}`);
     const saved = created.json && (created.json.scenario || created.json);
     const id = saved && saved.id;
@@ -182,7 +185,7 @@ describe('HTTP API integration', { skip: HAS_DB ? false : 'DATABASE_URL not set 
     if (saved.id) await api('/api/scenarios/' + saved.id, { method: 'DELETE', token: adminToken });
   });
 
-  test('handoff endpoints: auth-gated, upsert, server-computed readiness', async () => {
+  test('handoff endpoints: auth-gated, explicit creation, update, server-computed readiness', async () => {
     // Need a customer to attach to — create a scenario to get one.
     const company = 'Handoff Test ' + Date.now();
     const created = await api('/api/scenarios', {
@@ -203,7 +206,14 @@ describe('HTTP API integration', { skip: HAS_DB ? false : 'DATABASE_URL not set 
     assert.strictEqual(shell.json.exists, false, 'expected an empty shell');
     assert.strictEqual(shell.json.readiness, 0);
 
-    // Upsert with partial data → server computes readiness > 0.
+    // Solution Fit creation is an explicit governed action. PUT must not
+    // implicitly create one, so create it before exercising updates.
+    const create = await api('/api/handoffs/' + customerId, {
+      method: 'POST', token: adminToken, body: { data: {} }
+    });
+    assert.strictEqual(create.status, 201);
+
+    // Update with partial data → server computes readiness > 0.
     const put = await api('/api/handoffs/' + customerId, {
       method: 'PUT', token: adminToken,
       body: { data: { opportunity: { customer: company, solutionEngineer: 'Jo', products: 'CIP' } } }

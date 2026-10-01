@@ -82,9 +82,14 @@ function _curatedProductSource(ctx) {
 }
 
 function _syncBattlecardResearchContext() {
-  /* First-party comparison authority comes from the approved product-specific
-     server source. Static Battlecard language is never promoted to canonical. */
-  if (_cr.ciSource && _cr.ciSource.type === 'battlecard') _cr.ciSource = null;
+  var ctx = _battlecardResearchContext();
+  /* Keep an explicit, product-specific first-party source available while the
+     server checks for a newer governed canonical source. Switching CIP/MEP
+     replaces only the prior curated fallback; a user-selected URL/file stays. */
+  if (_cr.ciSource && _cr.ciSource.type === 'canonical' && _cr.ciSource.solutionKey !== ctx.solutionKey) _cr.ciSource = null;
+  if (!_cr.ciSource || _cr.ciSource.type === 'battlecard') {
+    _cr.ciSource = _curatedProductSource(ctx);
+  }
 }
 
 function _researchCompetitorOptions() {
@@ -226,8 +231,9 @@ function _bindResearchEvents() {
 
 /* ── Load canonical CI source from server ── */
 async function _loadCISourceInfo() {
+  var ctx = _battlecardResearchContext();
   try {
-    var resp = await apiFetch('/api/competitive/ci-source?ciProduct=' + encodeURIComponent(((document.getElementById('compSolutionFilter')||{}).value||'cip')));
+    var resp = await apiFetch('/api/competitive/ci-source?ciProduct=' + encodeURIComponent(ctx.solutionKey));
     if (!resp || !resp.ok) {
       if (_cr.ciSource) {
         _renderCIActive(_cr.ciSource.name, 'doc', 'Selected on Battlecard · approved product positioning');
@@ -239,8 +245,8 @@ async function _loadCISourceInfo() {
       return;
     }
     var data = await resp.json();
-    if (data && (!_cr.ciSource || _cr.ciSource.type !== 'battlecard')) {
-      _cr.ciSource = { type: 'canonical', name: data.source_name, url: data.source_url || null };
+    if (data && data.source_name) {
+      _cr.ciSource = { type: 'canonical', name: data.source_name, url: data.source_url || null, solutionKey:ctx.solutionKey };
       _renderCIActive(data.source_name, data.source_type === 'url' ? 'web' : 'pdf',
         'Canonical source \u00b7 set by admin \u00b7 ' + new Date(data.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}));
       _setStatus('crCiStatus', 'Ready', 'cr-status-ready');
