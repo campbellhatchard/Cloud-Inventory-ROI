@@ -7,6 +7,24 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.17', date: '2026-10-01', tag: 'se-interactive-regression-corrections',
+    title: 'SE Interactive Workflow Corrections',
+    summary: 'Corrects the production issues found during the complete Sales Engineer interactive regression.',
+    highlights: ['Competitive AI Research retains the selected CIP or MEP context.', 'Discovery progress updates as answers are entered.', 'Stakeholders inherit the saved scenario customer and search results are keyboard accessible.', 'Sensitivity follows selected contract-term NPV.', 'AI Help receives the canonical Solution Fit workspace context.', 'Risk Ledger preserves browser user activation while saving before output.']
+  },
+  {
+    version: '6.9.16', date: '2026-10-01', tag: 'se-solution-fit-discoverability',
+    title: 'SE Solution Fit Workflow Correction',
+    summary: 'Makes the existing-customer Solution Fit workflow clear and usable for Sales Engineers without expanding ROI customer permissions.',
+    highlights: ['The empty Calculator state offers Create or Continue Solution Fit to SE-only users.', 'SE onboarding opens the dedicated active-customer Solution Fit search.', 'Solution Fit customer actions remain visible at narrower workspace widths.']
+  },
+  {
+    version: '6.9.15', date: '2026-10-01', tag: 'prospect-evidence-modal-visibility',
+    title: 'Prospect Evidence Modal Visibility Correction',
+    summary: 'Makes Review Prospect Evidence and Submission History visibly open after their governed evidence data loads.',
+    highlights: ['Review Prospect Evidence opens visibly for immutable submissions.', 'Submission History opens through its separately labeled control.', 'No evidence, authorization, provenance, ROI, or value-application behavior changed.']
+  },
+  {
     version: '6.9.14', date: '2026-09-29', tag: 'prospect-evidence-review',
     title: 'Prospect Evidence Review Wiring Correction',
     summary: 'Routes both Review Prospect Answers controls to the deliberate evidence comparison while retaining the synchronized v6.9.13 production-recovery safeguards.',

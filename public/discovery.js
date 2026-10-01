@@ -985,14 +985,14 @@ function renderDiscoveryTab() {
     + '<div class="disc-progress-bar">'
     + '<div class="disc-progress-inner">'
     + '<div class="disc-prog-stats">'
-    + '<div class="disc-prog-stat"><span class="disc-prog-n">' + answered + '</span><span class="disc-prog-l">Answered</span></div>'
-    + '<div class="disc-prog-stat"><span class="disc-prog-n">' + (total - answered) + '</span><span class="disc-prog-l">Remaining</span></div>'
-    + '<div class="disc-prog-stat"><span class="disc-prog-n disc-prog-n-sync">' + synced + '</span><span class="disc-prog-l">In calculator</span></div>'
+    + '<div class="disc-prog-stat"><span class="disc-prog-n" id="discAnsweredCount">' + answered + '</span><span class="disc-prog-l">Answered</span></div>'
+    + '<div class="disc-prog-stat"><span class="disc-prog-n" id="discRemainingCount">' + (total - answered) + '</span><span class="disc-prog-l">Remaining</span></div>'
+    + '<div class="disc-prog-stat"><span class="disc-prog-n disc-prog-n-sync" id="discSyncedCount">' + synced + '</span><span class="disc-prog-l">In calculator</span></div>'
     + (fromProspect ? '<div class="disc-prog-stat"><span class="disc-prog-n disc-prog-n-pros">' + fromProspect + '</span><span class="disc-prog-l">From prospect</span></div>' : '')
     + '</div>'
     + '<div class="disc-prog-track-wrap">'
-    + '<div class="disc-prog-track"><div class="disc-prog-fill" style="width:' + pct + '%"></div></div>'
-    + '<div class="disc-prog-pct">' + pct + '%</div>'
+    + '<div class="disc-prog-track"><div class="disc-prog-fill" id="discProgressFill" style="width:' + pct + '%"></div></div>'
+    + '<div class="disc-prog-pct" id="discProgressPct">' + pct + '%</div>'
     + '</div>'
     + '</div>'
     + '<div class="disc-prog-actions">'
@@ -1118,6 +1118,18 @@ function handleDiscInput(id, value, enteredBy) {
   /* setDiscoveryAnswer handles DB write (debounced), calc sync, and confidence */
   setDiscoveryAnswer(id, value, enteredBy || 'rep');
   if (typeof autoFlagConfidence === 'function') autoFlagConfidence();
+  updateDiscoveryProgress();
+}
+
+function updateDiscoveryProgress() {
+  var industry=(document.getElementById('industry')||{}).value||'default';
+  var qs=getDiscoveryQuestions(industry,{hasFieldInventory:!!window._hasFieldInventory}).flatMap(function(s){return s.questions;});
+  var answered=qs.filter(function(q){return discoveryAnswers[q.id]&&String(discoveryAnswers[q.id]).trim();}).length;
+  var synced=qs.filter(function(q){return q.sync&&discoveryAnswers[q.id]&&String(discoveryAnswers[q.id]).trim();}).length;
+  var total=qs.length,pct=total?Math.round(answered/total*100):0;
+  var set=function(id,value){var el=document.getElementById(id);if(el)el.textContent=value;};
+  set('discAnsweredCount',answered);set('discRemainingCount',total-answered);set('discSyncedCount',synced);set('discProgressPct',pct+'%');
+  var fill=document.getElementById('discProgressFill');if(fill)fill.style.width=pct+'%';
 }
 
 /* Field labels for the suggestion UI — human-readable names for the
@@ -1253,7 +1265,7 @@ async function applyDiscoveryToCalc() {
     rows.push('<article class="disc-sync-review"><div><small>'+escapeHtml(answer.question_text||input)+'</small><strong>'+escapeHtml(input)+'</strong></div><div><small>Current working value</small><b>'+escapeHtml(current||'Not captured')+'</b></div><div><small>Latest submitted value</small><b>'+escapeHtml(answer.answer_text||'—')+'</b><span>Submission '+submission.submission_number+' · '+new Date(submission.submitted_at).toLocaleDateString()+'</span>'+(draftDiff?'<em>Working draft has changed since submission.</em>':'')+'</div><div>'+(event&&canApply?'<button class="btn btn-primary btn-sm" onclick="applySubmittedEvidence(\''+input+'\',\''+event.id+'\')">Use Prospect Value</button>':event?'<span class="history-immutable">Read only for this scenario</span>':'<span class="disc-no-event">No verified value event</span>')+'<button class="btn btn-ghost btn-sm" onclick="openValueHistory(\''+input+'\')">View History</button></div></article>');
   });
   const old=document.getElementById('prospectSyncModal');if(old)old.remove();
-  const modal=document.createElement('div');modal.id='prospectSyncModal';modal.className='modal-overlay';modal.innerHTML='<div class="modal-card modal-wide"><div class="modal-header"><div><h2>Review Prospect Evidence</h2><p>Latest immutable Submission '+submission.submission_number+'. Values are applied individually and never overwrite the business case automatically.</p></div><button class="modal-close" onclick="this.closest(\'.modal-overlay\').remove()">&times;</button></div><div class="modal-body">'+(canApply?'':'<div class="history-immutable">Historical or closed scenario — evidence is viewable but cannot be applied.</div>')+(rows.join('')||'<div class="empty-state"><p>This submission contains no mapped financial values.</p></div>')+'</div></div>';document.body.appendChild(modal);
+  const modal=document.createElement('div');modal.id='prospectSyncModal';modal.className='modal-overlay open';modal.innerHTML='<div class="modal-card modal-wide"><div class="modal-header"><div><h2>Review Prospect Evidence</h2><p>Latest immutable Submission '+submission.submission_number+'. Values are applied individually and never overwrite the business case automatically.</p></div><button class="modal-close" onclick="this.closest(\'.modal-overlay\').remove()">&times;</button></div><div class="modal-body">'+(canApply?'':'<div class="history-immutable">Historical or closed scenario — evidence is viewable but cannot be applied.</div>')+(rows.join('')||'<div class="empty-state"><p>This submission contains no mapped financial values.</p></div>')+'</div></div>';document.body.appendChild(modal);
 }
 
 async function applySubmittedEvidence(input,eventId){
@@ -1273,7 +1285,7 @@ function clearDiscoveryAnswers() {
 async function openSubmissionHistory(){
   if(!window._calcScenarioId)return showToast?.('Save or select a scenario first.');
   const old=document.getElementById('submissionHistoryModal');if(old)old.remove();
-  const modal=document.createElement('div');modal.id='submissionHistoryModal';modal.className='modal-overlay';modal.innerHTML='<div class="modal-card modal-wide"><div class="modal-header"><div><h2>Prospect Submission History</h2><p>Immutable questionnaire evidence across every scenario version in this opportunity.</p></div><button class="modal-close" onclick="this.closest(\'.modal-overlay\').remove()">&times;</button></div><div id="submissionHistoryBody" class="modal-body">Loading…</div></div>';document.body.appendChild(modal);
+  const modal=document.createElement('div');modal.id='submissionHistoryModal';modal.className='modal-overlay open';modal.innerHTML='<div class="modal-card modal-wide"><div class="modal-header"><div><h2>Prospect Submission History</h2><p>Immutable questionnaire evidence across every scenario version in this opportunity.</p></div><button class="modal-close" onclick="this.closest(\'.modal-overlay\').remove()">&times;</button></div><div id="submissionHistoryBody" class="modal-body">Loading…</div></div>';document.body.appendChild(modal);
   try{const r=await apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/discovery-submissions');if(!r.ok)throw Error();const x=await r.json(),body=document.getElementById('submissionHistoryBody');body.innerHTML=x.submissions.length?x.submissions.map(s=>`<button class="history-row" onclick="viewSubmissionSnapshot('${s.id}')"><span><b>Submission ${s.submission_number}</b><small>${new Date(s.submitted_at).toLocaleString()} · Scenario v${s.source_scenario_version||'?'} · ${s.answer_count} answers</small></span><span>${s.selected_scenario_source?'This scenario':'Historical source'} ›</span></button>`).join(''):'<div class="empty-state"><p>No immutable submissions yet. The next Confirm and Send will create Submission 1.</p></div>';}catch(_){document.getElementById('submissionHistoryBody').innerHTML='<p>Submission History could not be loaded.</p>';}
 }
 async function viewSubmissionSnapshot(id){const body=document.getElementById('submissionHistoryBody');body.innerHTML='Loading snapshot…';try{const r=await apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/discovery-submissions/'+encodeURIComponent(id));if(!r.ok)throw Error();const x=await r.json(),groups={};x.answers.forEach(a=>(groups[a.section||'Other']||(groups[a.section||'Other']=[])).push(a));body.innerHTML=`<button class="btn btn-ghost btn-sm" onclick="openSubmissionHistory()">← All submissions</button><div class="history-immutable">🔒 Read-only evidence · Submission ${x.submission.submission_number} · Scenario v${x.submission.source_scenario_version||'?'}</div>`+Object.entries(groups).map(([name,items])=>`<section class="history-section"><h3>${escapeHtml(name)}</h3>${items.map(a=>`<article><b>${escapeHtml(a.question_text)}</b><p>${escapeHtml(a.answer_text||'—')}</p><small>${escapeHtml(a.classification.replace(/_/g,' '))}${a.canonical_input?' · '+escapeHtml(a.canonical_input):''}</small></article>`).join('')}</section>`).join('');}catch(_){body.innerHTML='<p>Submission snapshot could not be loaded.</p>';}}

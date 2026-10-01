@@ -218,13 +218,16 @@ function renderComparison() {
 /* ─────────────────────────────────────────
    3. SENSITIVITY ANALYSIS
    Varies each assumption ±30% and shows
-   how the 5-yr NPV changes.
+   how the selected contract-term NPV changes.
    ───────────────────────────────────────── */
 function renderSensitivity() {
   const el = document.getElementById('sensitivityChart');
   if (!el) return;
   const v = getVals();
   const base = calcROI(v);
+  const contractNpv = r => Number.isFinite(r.totalContractNpv) ? r.totalContractNpv : r.npv5;
+  const contractMonths = Number(base.contractMonths || v.contractMonths || 36);
+  const contractLabel = contractMonths % 12 === 0 ? (contractMonths/12) + '-year contract NPV' : contractMonths + '-month contract NPV';
 
   const axes = [
     { key: 'mLabor',     label: 'Labor productivity gain',      delta: 0.30 },
@@ -239,22 +242,23 @@ function renderSensitivity() {
   const results = axes.map(a => {
     const vLow  = { ...v, [a.key]: v[a.key] * (a.invert ? 1.3 : 0.7) };
     const vHigh = { ...v, [a.key]: v[a.key] * (a.invert ? 0.7 : 1.3) };
-    const rLow  = calcROI(vLow).npv5;
-    const rHigh = calcROI(vHigh).npv5;
+    const rLow  = contractNpv(calcROI(vLow));
+    const rHigh = contractNpv(calcROI(vHigh));
     return { label: a.label, low: rLow, high: rHigh, spread: rHigh - rLow };
   }).sort((a, b) => b.spread - a.spread);
 
-  const maxAbs = Math.max(...results.map(r => Math.max(Math.abs(r.low - base.npv5), Math.abs(r.high - base.npv5))), 1);
+  const baseNpv=contractNpv(base);
+  const maxAbs = Math.max(...results.map(r => Math.max(Math.abs(r.low - baseNpv), Math.abs(r.high - baseNpv))), 1);
 
   el.innerHTML = `
     <div class="sens-header">
-      <div class="sens-title">Sensitivity analysis — impact on 5-yr NPV</div>
-      <div class="sens-sub">Bars show NPV impact if each assumption changes ±20–30%. Base NPV: <strong>${fmtFull(base.npv5)}</strong></div>
+      <div class="sens-title">Sensitivity analysis — impact on ${contractLabel}</div>
+      <div class="sens-sub">Bars show contract NPV impact if each assumption changes ±20–30%. Base NPV: <strong>${fmtFull(baseNpv)}</strong></div>
     </div>
     <div class="sens-chart">
       ${results.map(r => {
-        const lowDelta  = r.low  - base.npv5;
-        const highDelta = r.high - base.npv5;
+        const lowDelta  = r.low  - baseNpv;
+        const highDelta = r.high - baseNpv;
         const lowPct  = Math.round((Math.abs(lowDelta)  / maxAbs) * 45);
         const highPct = Math.round((Math.abs(highDelta) / maxAbs) * 45);
         return `

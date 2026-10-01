@@ -985,10 +985,11 @@
 
   /* Branded print window — self-contained so it renders identically to PDF. */
   async function printHandoffDoc(){
-    if(!await flushSolutionFitSave())return;
-    if(!window.CISolutionFitOutputBuilders)throw new Error('Solution Fit output builder is unavailable.');
+    const governedWindow=window.open('','_blank');if(!governedWindow){showToast?.('Pop-up blocked — allow pop-ups to print.');return;}
+    if(!await flushSolutionFitSave()){try{governedWindow.close();}catch(_){}return;}
+    if(!window.CISolutionFitOutputBuilders){try{governedWindow.close();}catch(_){}showToast?.('Solution Fit output builder is unavailable.');return;}
     const governedHtml=S.handoffType==='customer'?window.CISolutionFitOutputBuilders.buildSummaryHtml(S,window.CIBrand):window.CISolutionFitOutputBuilders.buildHandoffHtml(S,window.CIBrand);
-    const governedWindow=window.open('','_blank');if(!governedWindow){showToast?.('Pop-up blocked — allow pop-ups to print.');return;}governedWindow.document.write(governedHtml);governedWindow.document.close();setTimeout(()=>{try{governedWindow.print();}catch(_){}},250);return;
+    governedWindow.document.write(governedHtml);governedWindow.document.close();setTimeout(()=>{try{governedWindow.print();}catch(_){}},250);return;
     const isCustomer = S.handoffType==='customer';
     const body = isCustomer ? customerDoc() : internalDoc();
     const title = isCustomer ? 'Cloud Inventory — Discovery Summary' : 'Cloud Inventory — Solution Handoff';
@@ -1219,9 +1220,13 @@
      Shows gaps with their mitigations — volunteering limitations before
      procurement finds them builds credibility. */
   async function printRiskLedger() {
-    if(!await flushSolutionFitSave())return;
-    if(!window.CISolutionFitOutputBuilders)throw new Error('Solution Fit output builder is unavailable.');
-    const governedHtml=window.CISolutionFitOutputBuilders.buildRiskHtml(S,window.CIBrand),governedWindow=window.open('','_blank');if(!governedWindow){showToast?.('Pop-up blocked — allow pop-ups to print.');return;}governedWindow.document.write(governedHtml);governedWindow.document.close();setTimeout(()=>{try{governedWindow.print();}catch(_){}},400);return;
+    /* Open synchronously while the click still carries browser user activation;
+       awaiting autosave first caused otherwise-valid browsers to block it. */
+    const governedWindow=window.open('','_blank');
+    if(!governedWindow){showToast?.('Pop-up blocked — allow pop-ups to print.');return;}
+    if(!await flushSolutionFitSave()){try{governedWindow.close();}catch(_){}return;}
+    if(!window.CISolutionFitOutputBuilders){try{governedWindow.close();}catch(_){}showToast?.('Solution Fit output builder is unavailable.');return;}
+    const governedHtml=window.CISolutionFitOutputBuilders.buildRiskHtml(S,window.CIBrand);governedWindow.document.write(governedHtml);governedWindow.document.close();setTimeout(()=>{try{governedWindow.print();}catch(_){}},400);return;
     const company = S.company || 'Prospect';
     const gaps = S.gaps || [];
     const today = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});

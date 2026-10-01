@@ -413,3 +413,9 @@ Any registered customer-facing Web or Preview output in Draft Only state must vi
 A controlled production pilot cannot be classified GREEN when a registered PostgreSQL integration suite is skipped or NOT TESTED. Release certification requires a clean non-production PostgreSQL database, all migrations, all database integration suites, zero database test failures, and zero database skips. Automated tests must never use the production customer database.
 
 ---
+## SE SOLUTION FIT DISCOVERABILITY INVARIANT
+
+An SE-only user with no general ROI customer workspaces must receive a clear path to the dedicated Solution Fit customer selector. That path may use the independently authorized cross-account Solution Fit capability, but it must never imply or confer general customer, scenario, calculator, or opportunity access. Solution Fit create/open actions must remain visible without horizontal clipping at supported workspace widths.
+## SE INTERACTIVE WORKFLOW INTEGRITY INVARIANT
+
+SE-facing workspaces must retain the selected product and saved customer context across adjacent workflows. Discovery progress must reflect entered answers immediately. Sensitivity must use the selected contract-term NPV rather than a fixed horizon. AI Help must send canonical Application Knowledge workspace identifiers. Output actions that save before opening a browser document must preserve the initiating user gesture so the document is not silently blocked.
