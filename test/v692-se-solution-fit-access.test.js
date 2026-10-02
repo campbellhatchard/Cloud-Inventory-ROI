@@ -68,7 +68,7 @@ test('active/inactive/deleted lifecycle and scenario independence are migration-
 
 test('Help and permanent governance state the isolated SE Solution Fit scope',()=>{
   const k=require('../config/application-knowledge.json'),contract=read('BUILD_GOVERNANCE_CONTRACT.md');
-  assert.equal(k.knowledgeVersion,'1.0');assert.equal(k.applicationVersion,'6.9.22');
+  assert.equal(k.knowledgeVersion,'1.0');assert.equal(k.applicationVersion,'6.9.23');
   assert.ok(k.solutionFitKnowledge.some(x=>x.includes('search across all active customers')));
   assert.ok(k.solutionFitKnowledge.some(x=>x.includes('does not automatically grant access')));
   assert.match(contract,/SE CROSS-ACCOUNT SOLUTION FIT INVARIANT/);assert.match(contract,/This does not confer general/);

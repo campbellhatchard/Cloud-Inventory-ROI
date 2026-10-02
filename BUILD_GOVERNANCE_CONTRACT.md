@@ -419,3 +419,7 @@ An SE-only user with no general ROI customer workspaces must receive a clear pat
 ## SE INTERACTIVE WORKFLOW INTEGRITY INVARIANT
 
 SE-facing workspaces must retain the selected product and saved customer context across adjacent workflows. Discovery progress must reflect entered answers immediately. Sensitivity must use the selected contract-term NPV rather than a fixed horizon. AI Help must send canonical Application Knowledge workspace identifiers. Output actions that save before opening a browser document must preserve the initiating user gesture so the document is not silently blocked.
+
+## SAVED WORKING-STATE INTEGRITY INVARIANT
+
+A successful scenario save must persist every active ROI input, seller-authored Three Why narrative and its evidence metadata, and the authoritative customer-level field-inventory state. Navigation must not silently discard an explicitly applied Prospect value. Customer-level configuration persistence must complete successfully before the scenario save can report success.

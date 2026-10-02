@@ -85,7 +85,7 @@ function loadFromObject(i) {
    'currentAccuracy','ordersPerYr','costPerOrder','costPerError',
    'downtimeEventsYr','downtimeHrsPerEvent','downtimeCostPerHr',
    'expediteSpendYr','countDaysYr','countPeople',
-   'fieldInvValue','fieldLeakageRate','fieldLocations','fieldReconcileCost','fieldReconcilePerYr'].forEach(id => {
+   'fieldInvValue','fieldLeakageRate','fieldLocations','fieldReconcileCost','fieldReconcilePerYr','fieldReconcilePersonHours'].forEach(id => {
     const el = document.getElementById(id);
     if (el && i[id] !== undefined) el.value = i[id] ?? '';
   });
@@ -460,7 +460,7 @@ async function openValueHistory(fieldId){
 function valueEventLabel(type){return ({prospect_submitted:'Prospect submitted',customer_revalidated:'Customer revalidated',customer_provided:'Customer provided',rep_confirmed:'Rep Confirmed',rep_updated:'Rep Updated — needs reconfirmation/customer validation',legacy_scenario_snapshot:'Legacy scenario value',legacy_prospect_recovered:'Recovered legacy Prospect Link'})[type]||String(type||'Value event').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());}
 async function openRevalidateValue(fieldId){if(!window._calcScenarioId)return showToast?.('Save this scenario first.');document.getElementById('dataSourceModal')?.remove();const company=(document.getElementById('companyName')||{}).value||'';let people=[];try{const r=await apiFetch('/api/stakeholders?company='+encodeURIComponent(company));if(r.ok)people=await r.json();}catch(_){}const current=(document.getElementById(fieldId)||{}).value||'';const wrap=document.createElement('div');wrap.id='valueHistoryModal';wrap.className='modal-overlay open';wrap.innerHTML=`<div class="modal-card"><div class="modal-header"><div><h2>Revalidate Value</h2><p>Confirm unchanged or record the customer’s updated value. This adds evidence; it does not rewrite a saved scenario.</p></div><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button></div><form class="modal-body" onsubmit="submitRevalidation(event,'${fieldId}')"><label>Validated value<input id="revalidateValue" value="${String(current).replace(/"/g,'&quot;')}" required></label><label>Validating stakeholder<select id="revalidateStakeholder" required><option value="">Select stakeholder…</option>${people.map(p=>`<option value="${p.id}">${p.name} — ${p.title||p.role}</option>`).join('')}</select></label><label>Evidence date<input id="revalidateDate" type="date" max="${new Date().toISOString().slice(0,10)}" value="${new Date().toISOString().slice(0,10)}" required></label><label>Source<select id="revalidateSource" required><option>Value review meeting</option><option>Customer email</option><option>Customer spreadsheet</option><option>Executive business-case review</option></select></label><label>Evidence note (optional)<textarea id="revalidateNote"></textarea></label><label><input id="revalidateApply" type="checkbox"> Apply to the current working business case after recording</label><footer><button type="button" class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Cancel</button><button class="btn btn-primary">Record customer revalidation</button></footer></form></div>`;document.body.appendChild(wrap);}
 async function submitRevalidation(event,fieldId){event.preventDefault();const body={value:document.getElementById('revalidateValue').value,stakeholderId:document.getElementById('revalidateStakeholder').value,evidenceDate:document.getElementById('revalidateDate').value,source:document.getElementById('revalidateSource').value,note:document.getElementById('revalidateNote').value};const r=await apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/value-history/'+encodeURIComponent(fieldId)+'/revalidate',{method:'POST',body:JSON.stringify(body)});if(!r.ok){const x=await r.json().catch(()=>({}));return showToast?.(x.error||'Revalidation could not be recorded.');}const created=await r.json();if(document.getElementById('revalidateApply').checked)await applyValueEvent(fieldId,created.id);document.getElementById('valueHistoryModal')?.remove();showToast?.('Customer revalidation added to Value History.');}
-async function applyValueEvent(fieldId,eventId){const r=await apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/value-history/'+encodeURIComponent(fieldId)+'/apply',{method:'POST',body:JSON.stringify({eventId})});if(!r.ok)return showToast?.('This value cannot be applied here.');const x=await r.json(),a=x.apply,el=document.getElementById(fieldId);if(el)el.value=a.value;fieldStates[fieldId]=a.fieldState;fieldProvenance[fieldId]={...a.provenance,value:a.value};confirmedFields.add(fieldId);recalc?.();renderConfidence();markCalcDirty?.();document.getElementById('valueHistoryModal')?.remove();showToast?.('Validated value applied. Save a new scenario version when ready.');}
+async function applyValueEvent(fieldId,eventId){const r=await apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/value-history/'+encodeURIComponent(fieldId)+'/apply',{method:'POST',body:JSON.stringify({eventId})});if(!r.ok)return showToast?.('This value cannot be applied here.');const x=await r.json(),a=x.apply,el=document.getElementById(fieldId);if(el)el.value=a.value;window._appliedValueDrafts=window._appliedValueDrafts||{};window._appliedValueDrafts[fieldId]=a.value;fieldStates[fieldId]=a.fieldState;fieldProvenance[fieldId]={...a.provenance,value:a.value};confirmedFields.add(fieldId);recalc?.();renderConfidence();markCalcDirty?.();document.getElementById('valueHistoryModal')?.remove();showToast?.('Validated value applied. Save a new scenario version when ready.');}
 
 function renderConfidence() {
   const el = document.getElementById('confidencePanel');
@@ -935,8 +935,8 @@ async function renderAnalytics() {
 
   const total = savedScenarios.length;
   const avgBenefit = total ? savedScenarios.reduce((s,sc) => s + sc.annualBenefit, 0) / total : 0;
-  const avgRoi     = total ? savedScenarios.reduce((s,sc) => s + sc.roi, 0) / total : 0;
-  const avgNpv5    = total ? savedScenarios.reduce((s,sc) => s + sc.npv5, 0) / total : 0;
+  const avgRoi     = total ? savedScenarios.reduce((s,sc) => s + Number(sc.totalContractRoi ?? sc.roi ?? 0), 0) / total : 0;
+  const avgContractNpv = total ? savedScenarios.reduce((s,sc) => s + Number(sc.totalContractNpv ?? sc.npv3 ?? sc.npv5 ?? 0), 0) / total : 0;
 
   // industry breakdown
   const byInd = {};
@@ -963,12 +963,12 @@ async function renderAnalytics() {
         <div class="a-value pos">${fmtFull(avgBenefit)}</div>
       </div>
       <div class="analytics-card">
-        <div class="a-label">Avg. year 1 ROI</div>
+        <div class="a-label">Avg. contract ROI</div>
         <div class="a-value blue">${fmtPct(avgRoi)}</div>
       </div>
       <div class="analytics-card">
-        <div class="a-label">Avg. 5-yr NPV</div>
-        <div class="a-value pos">${fmtFull(avgNpv5)}</div>
+        <div class="a-label">Avg. contract NPV</div>
+        <div class="a-value pos">${fmtFull(avgContractNpv)}</div>
       </div>
     </div>
 

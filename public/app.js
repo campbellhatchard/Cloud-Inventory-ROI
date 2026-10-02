@@ -136,6 +136,11 @@ function switchTab(name) {
   if (name === 'coach')       renderDealCoach();
   if (name === 'readiness' && typeof renderBuyerReadiness === 'function') renderBuyerReadiness();
   if (name === 'disc' && typeof clearDiscNotif === 'function') clearDiscNotif();
+  if (name === 'calc' && window._appliedValueDrafts) {
+    Object.entries(window._appliedValueDrafts).forEach(([id,value]) => { const el=document.getElementById(id); if(el)el.value=value; });
+    recalc?.();
+    renderConfidence?.();
+  }
   if (window.innerWidth <= 900) closeSidebar();
   trackEvent('tab_view', { tab: name });
 }
@@ -910,6 +915,7 @@ async function _doSave(v, dataBlob, baseId, note) {
     /* Saving creates a new immutable version. Subsequent Executive View
        autosaves must target that new current row, not the version just left. */
     window._calcScenarioId = saved.id;
+    window._appliedValueDrafts = {};
     window._scenarioLoaded = true;
     window.invalidateExecutiveValueStory?.();
     showToast(`Saved v${saved.version} — "${saved.name}"`);
@@ -931,6 +937,7 @@ async function _doSave(v, dataBlob, baseId, note) {
 
 async function loadScenario(id, options = {}) {
   try {
+    window._appliedValueDrafts = {};
     /* Finish any pending narrative write against the scenario being left
        before changing the active scenario id. */
     if (window._calcScenarioId && typeof persistThreeWhys === 'function') {
@@ -1066,8 +1073,8 @@ function renderList() {
         <span class="stage-pill">${scenarioStageDisplay(s)}</span>
       </div>
       <div class="scenario-kpis">
-        <div class="sk-main">${fmtFull(s.annualBenefit)}/yr · ${fmtPct(s.roi)} ROI</div>
-        <div class="sk-sub">NPV3: ${fmtFull(s.npv3)} · NPV5: ${fmtFull(s.npv5)}</div>
+        <div class="sk-main">${fmtFull(s.annualBenefit)}/yr</div>
+        <div class="sk-sub">${fmtPct(s.totalContractRoi ?? s.roi)} contract ROI · Contract NPV: ${fmtFull(s.totalContractNpv ?? s.npv3 ?? s.npv5)}</div>
       </div>
       <div class="scenario-actions">
         <button class="btn btn-ghost btn-sm" onclick="loadScenario('${s.id}')">Load</button>

@@ -757,7 +757,7 @@
 </div>
 <!-- ═══ SENSITIVITY ═══ -->
 <div id="tab-sensitivity" class="pane">
-  <div class="page-header"><div><div class="page-title">Sensitivity analysis</div><div class="page-subtitle">See how much each assumption impacts the 5-yr NPV. Bars show the range if each input changes ±20–30%.</div></div>
+  <div class="page-header"><div><div class="page-title">Sensitivity analysis</div><div class="page-subtitle">See how much each assumption impacts contract-term NPV. Bars show the range if each input changes ±20–30%.</div></div>
     <button class="btn btn-secondary btn-sm" onclick="renderSensitivity()">Refresh</button>
   </div>
   <div class="card"><div id="sensitivityChart"><div class="empty-state"><p>Fill in the Calculator to see sensitivity analysis.</p></div></div></div>
@@ -1550,7 +1550,7 @@
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="6.9.22";</script>
+<script>const APP_VERSION="6.9.23";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
 <script src="ai-session.js"></script>
@@ -1756,10 +1756,19 @@ function toggleFieldInventory() {
   }
   /* Persist to customer record if we have one */
   if (window._currentCustomerId) {
-    apiFetch('/api/customers/' + window._currentCustomerId + '/field-inventory', {
+    window._fieldInventorySavePromise = apiFetch('/api/customers/' + window._currentCustomerId + '/field-inventory', {
       method: 'PATCH',
       body: JSON.stringify({ hasFieldInventory: newVal })
-    }).catch(e => console.warn('field-inventory flag save failed:', e.message));
+    }).then(function(response) {
+      if (!response || !response.ok) throw new Error('HTTP ' + (response ? response.status : 'unavailable'));
+      window._fieldInventorySaveFailed = false;
+      return true;
+    }).catch(function(e) {
+      console.warn('field-inventory flag save failed:', e.message);
+      window._fieldInventorySaveFailed = true;
+      showToast('Field inventory setting could not be saved. Try again before saving the scenario.');
+      return false;
+    });
   }
 }
 
@@ -1778,7 +1787,9 @@ async function loadFieldInventoryFlag(customerId) {
     if (r && r.ok) {
       const d = await r.json();
       window._hasFieldInventory = !!d.hasFieldInventory;
+      window._fieldInventorySaveFailed = false;
       applyFieldInventoryState(window._hasFieldInventory);
+      if (window._scenarioLoaded && typeof recalc === 'function') recalc();
     }
   } catch(e) { /* silently leave as false */ }
 }

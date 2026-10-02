@@ -42,6 +42,10 @@ function saveScenarioWithVersion(skipDialog) {
   /* Build data blob with calc results */
   const dataBlob = {
     ...v,
+    threeWhysAct: document.getElementById('why_act')?.value || (typeof threeWhys !== 'undefined' ? threeWhys.act : ''),
+    threeWhysCi: document.getElementById('why_ci')?.value || (typeof threeWhys !== 'undefined' ? threeWhys.ci : ''),
+    threeWhysNow: document.getElementById('why_now')?.value || (typeof threeWhys !== 'undefined' ? threeWhys.now : ''),
+    threeWhysMeta: typeof threeWhysMeta !== 'undefined' ? { ...threeWhysMeta } : {},
     fieldStates:        typeof fieldStates !== 'undefined' ? { ...fieldStates } : {},
     fieldProvenance:    typeof fieldProvenance !== 'undefined' ? { ...fieldProvenance } : {},
     annualBenefit:      r.annualBenefit,
@@ -78,6 +82,18 @@ function saveScenarioWithVersion(skipDialog) {
    commitSave  — actually posts to the API
    ───────────────────────────────────────── */
 async function commitSave(v, dataBlob, baseId, note) {
+  if (window._fieldInventorySavePromise) {
+    const fieldInventorySaved = await window._fieldInventorySavePromise;
+    window._fieldInventorySavePromise = null;
+    if (!fieldInventorySaved) {
+      showToast('Field inventory setting was not saved. Check your connection and try again before saving the scenario.');
+      return null;
+    }
+  }
+  if (window._fieldInventorySaveFailed) {
+    showToast('Field inventory setting is not synchronized. Set it again before saving the scenario.');
+    return null;
+  }
   return _doSave(v, dataBlob, baseId, note);
 }
 
@@ -99,13 +115,13 @@ function showSaveVersionDialog(v, r, dataBlob, existing) {
         <div class="vd-current">
           <div class="vd-label">Current saved version</div>
           <div class="vd-version">v${existing.version||1}</div>
-          <div class="vd-meta">${existing.date} · ${fmtFull(existing.annualBenefit)}/yr · ${fmtPct(existing.roi)} ROI</div>
+          <div class="vd-meta">${existing.date} · ${fmtFull(existing.annualBenefit)}/yr · ${fmtPct(existing.totalContractRoi ?? existing.roi)} contract ROI</div>
         </div>
         <div class="vd-arrow">→</div>
         <div class="vd-new">
           <div class="vd-label">New version to save</div>
           <div class="vd-version" style="color:var(--cyan-dark);">v${nextVersion}</div>
-          <div class="vd-meta">${new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'})} · ${fmtFull(r.annualBenefit)}/yr · ${fmtPct(r.roi)} ROI</div>
+          <div class="vd-meta">${new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'})} · ${fmtFull(r.annualBenefit)}/yr · ${fmtPct(r.totalContractRoi)} contract ROI</div>
         </div>
       </div>
       <div class="field" style="margin-top:1rem;">
@@ -176,8 +192,8 @@ function renderVersionHistoryModal(rows) {
       + '<td>' + verBadge + '</td>'
       + '<td style="font-size:12px;">' + s.date + '</td>'
       + '<td class="pos">' + fmtFull(s.annualBenefit) + '</td>'
-      + '<td style="color:var(--blue);font-weight:600;">' + fmtPct(s.roi) + '</td>'
-      + '<td class="' + (s.npv5 >= 0 ? 'pos' : 'neg') + '">' + fmtFull(s.npv5) + '</td>'
+      + '<td style="color:var(--blue);font-weight:600;">' + fmtPct(s.totalContractRoi ?? s.roi) + '</td>'
+      + '<td class="' + ((s.totalContractNpv ?? s.npv3 ?? s.npv5) >= 0 ? 'pos' : 'neg') + '">' + fmtFull(s.totalContractNpv ?? s.npv3 ?? s.npv5) + '</td>'
       + '<td style="color:var(--gray-500);font-size:11px;">' + (s.versionNote || '\u2014') + '</td>'
       + '<td>' + actions + '</td>'
       + '</tr>';
@@ -190,7 +206,7 @@ function renderVersionHistoryModal(rows) {
     + (hasMulti ? '<div class="vh-diff-hint" id="vhDiffHint">Select two versions to compare</div>' : '')
     + '<div class="vh-table-wrap"><table class="vh-table"><thead><tr>'
     + (hasMulti ? '<th style="width:28px;"></th>' : '')
-    + '<th>Version</th><th>Saved</th><th>Annual benefit</th><th>ROI</th><th>NPV 5yr</th><th>Note</th><th>Actions</th>'
+    + '<th>Version</th><th>Saved</th><th>Annual benefit</th><th>Contract ROI</th><th>Contract NPV</th><th>Note</th><th>Actions</th>'
     + '</tr></thead><tbody>' + tableRows + '</tbody></table></div>'
     + '<div class="btn-row" style="margin-top:1rem;">'
     + (hasMulti ? '<button class="btn btn-primary" id="vhDiffBtn" disabled onclick="vhStartDiff()">Compare selected</button>' : '')
@@ -257,9 +273,9 @@ function showVersionDiff(older, newer, verOld, verNew, scenName, allRows) {
   var GROUPS = [
     { label:'ROI outputs', icon:'\ud83d\udcca', fields:[
       { label:'Annual benefit',    key:'annualBenefit', fmt:fmt$,  higher:true },
-      { label:'Year 1 ROI',        key:'roi',           fmt:fmtP,  higher:true },
-      { label:'5-yr NPV',          key:'npv5',          fmt:fmt$,  higher:true },
-      { label:'Payback',           key:'payback',       fmt:fmtM,  higher:false }
+      { label:'Contract ROI',      key:'totalContractRoi', fmt:fmtP,  higher:true },
+      { label:'Contract NPV',      key:'totalContractNpv', fmt:fmt$,  higher:true },
+      { label:'Payback from signing', key:'contractPayback', fmt:fmtM, higher:false }
     ]},
     { label:'Core inputs', icon:'\ud83c\udfe2', fields:[
       { label:'Annual revenue',    key:'revenue',       fmt:fmt$, higher:true },
@@ -470,7 +486,7 @@ function renderListVersioned() {
       </div>
       <div class="scenario-kpis">
         <div class="sk-main" style="color:${kpiColor}">${fmtFull(s.annualBenefit)}/yr</div>
-        <div class="sk-sub">${fmtPct(s.roi)} ROI · NPV5: ${fmtFull(s.npv5)}</div>
+        <div class="sk-sub">${fmtPct(s.totalContractRoi ?? s.roi)} contract ROI · Contract NPV: ${fmtFull(s.totalContractNpv ?? s.npv3 ?? s.npv5)}</div>
         <div class="sk-sub">Payback: ${payStr(s.payback)}</div>
       </div>
       <div class="scenario-actions">

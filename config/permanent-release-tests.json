@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "6.9.22",
+  "release": "6.9.23",
   "tests": [
     {"invariant":"Customer Business Case","path":"test/release-integrity.test.js"},
     {"invariant":"customer-safe payload","path":"test/release-integrity.test.js"},
@@ -37,5 +37,6 @@
     ,{"invariant":"v6.9.20 role-based regression corrections","path":"test/v6918-role-regression-corrections.test.js"}
     ,{"invariant":"v6.9.21 live regression corrections","path":"test/v6921-live-regression-corrections.test.js"}
     ,{"invariant":"v6.9.22 Executive readiness dialog visibility and uniqueness","path":"test/v6922-executive-readiness-modal.test.js"}
+    ,{"invariant":"v6.9.23 saved-state, field-inventory, and contract-display integrity","path":"test/v6923-regression-integrity.test.js"}
   ]
 }

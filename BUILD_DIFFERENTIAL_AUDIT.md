@@ -1,13 +1,22 @@
-# v6.9.22 Differential Audit
+# v6.9.23 Differential Audit
 
-v6.9.22 is a focused correction to the Executive Output Readiness modal after deploying v6.9.21. It introduces no ROI, evidence, authorization, database, or sales-methodology changes.
+v6.9.23 corrects saved-state completeness, Prospect-value continuity, field-inventory synchronization, Value History canonical mapping, contract-period labels, and AI service failure clarity. It changes no ROI formula, evidence boundary, schema, migration, or permission.
+
+Permanent coverage is provided by `test/v6923-regression-integrity.test.js` in the full and production-lock suites.
+
+Deployment preparation corrected the developer-local v6.9.22 parent reference to the exact production commit `f5e9aa6459f5cb08871d7f8f2bcaa0c78846e71a` and preserved prior GitHub certification records. This is provenance maintenance and does not change application behavior.
+
+## Prior v6.9.21 differential record
+
+v6.9.21 is a focused correction for defects reproduced after deploying v6.9.20. It introduces no ROI, evidence, authorization, database, or sales-methodology changes.
 
 ## Intentionally changed
 
-- The shared Executive Output Readiness modal now receives the required `open` class so it is visible when invoked.
-- Any existing readiness workflow is closed before a new one opens, preventing duplicate hidden dialogs and unresolved export actions.
-- Release metadata advances to v6.9.22 and records the exact deployed v6.9.21 production parent commit.
-- Deployment preparation preserves prior GitHub certification evidence instead of deleting or rewriting v6.9.18-v6.9.21 history.
+- Executive PDF and PowerPoint deadlines now start after the user completes the governed Ready/Review/Draft decision. User review time is no longer misclassified as file-generation time.
+- Stakeholder Map accepts the currently selected authorized scenario as customer authority instead of requiring a second match in a narrower company list.
+- Christie converts unmet checklist states into explicit next actions and corrects the visible criteria pluralization.
+- Default legacy `Mutual Action Plan` titles are presented as `Joint Project Plan` in the portfolio, editor, Deal Coach, printable plan, and generated JPP PowerPoint. Stored plan evidence and milestone history are not rewritten.
+- Release metadata advances to v6.9.21 and retains exact v6.9.20 parent lineage.
 
 ## Intentionally preserved
 
@@ -19,10 +28,10 @@ None.
 
 ## Tests added
 
-- `test/v6922-executive-readiness-modal.test.js`
+- `test/v6921-live-regression-corrections.test.js`
 - Registered in permanent release tests and production locks.
 
 ## External validation remaining
 
 - PostgreSQL integration requires the disposable PostgreSQL 16 GitHub Actions service.
-- Render validation must exercise the visible, single readiness-dialog/export sequence and validate downloaded PDF/PPTX files.
+- Render validation must exercise the corrected readiness-dialog/export sequence and validate downloaded PDF/PPTX files.

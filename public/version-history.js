@@ -7,6 +7,12 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.23', date: '2026-10-02', tag: 'saved-state-integrity-corrections',
+    title: 'Saved-State and ROI Display Integrity Corrections',
+    summary: 'Corrects defects confirmed during production role-based regression without changing ROI Model v2.8 or governed evidence rules.',
+    highlights: ['Prospect-applied values remain in the working calculator until saved or deliberately discarded.', 'Field-inventory reconciliation hours, Three Whys, and canonical Value History inputs persist correctly.', 'Field-inventory changes recalculate immediately and saves wait for the authoritative customer setting.', 'Scenario and analytics displays use contract-term ROI and NPV labels consistently.']
+  },
+  {
     version: '6.9.22', date: '2026-10-02', tag: 'executive-readiness-recovery',
     title: 'Executive Readiness Dialog Recovery',
     summary: 'Restores the governed readiness decision required before Executive PDF and PowerPoint generation.',
