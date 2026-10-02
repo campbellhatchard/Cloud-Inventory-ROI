@@ -1,6 +1,6 @@
 {
-  "release": "6.9.18",
-  "generatedAt": "2026-10-02T12:28:35.334Z",
+  "release": "6.9.19",
+  "generatedAt": "2026-10-02T12:29:09.171Z",
   "results": [
     {
       "outputId": "competitive-docx",
@@ -11,7 +11,7 @@
       "passed": true,
       "audience": "internal",
       "artifactValidated": true,
-      "durationMs": 83,
+      "durationMs": 56,
       "error": null
     },
     {
@@ -35,7 +35,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 6,
+      "durationMs": 7,
       "error": null
     },
     {
@@ -47,7 +47,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 17,
+      "durationMs": 24,
       "error": null
     },
     {
@@ -59,7 +59,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 61,
+      "durationMs": 68,
       "error": null
     },
     {
@@ -71,7 +71,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 25,
+      "durationMs": 38,
       "error": null
     },
     {
@@ -83,7 +83,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 36,
+      "durationMs": 38,
       "error": null
     },
     {
@@ -131,7 +131,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 13,
+      "durationMs": 16,
       "error": null
     },
     {
@@ -155,7 +155,7 @@
       "passed": true,
       "audience": "internal",
       "artifactValidated": true,
-      "durationMs": 12,
+      "durationMs": 10,
       "error": null
     },
     {
@@ -179,7 +179,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 3,
+      "durationMs": 7,
       "error": null
     },
     {
@@ -191,7 +191,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 1,
+      "durationMs": 0,
       "error": null
     },
     {
@@ -203,7 +203,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 1,
+      "durationMs": 2,
       "error": null
     },
     {
@@ -215,7 +215,7 @@
       "passed": true,
       "audience": "internal",
       "artifactValidated": true,
-      "durationMs": 2,
+      "durationMs": 1,
       "error": null
     },
     {
@@ -227,7 +227,7 @@
       "passed": true,
       "audience": "internal",
       "artifactValidated": true,
-      "durationMs": 16,
+      "durationMs": 15,
       "error": null
     },
     {
@@ -239,7 +239,7 @@
       "passed": true,
       "audience": "internal",
       "artifactValidated": true,
-      "durationMs": 17,
+      "durationMs": 9,
       "error": null
     },
     {
@@ -299,7 +299,7 @@
       "passed": true,
       "audience": "internal",
       "artifactValidated": true,
-      "durationMs": 7,
+      "durationMs": 6,
       "error": null
     }
   ]

@@ -1,4 +1,6 @@
-# v6.9.18 Differential Audit
+# v6.9.19 Differential Audit
+
+v6.9.19 is a corrective release applied to the exact Git commit currently deployed as v6.9.18. It retains the v6.9.18 fixes and adds the explicitly listed reliability, persistence, context, accessibility, and output corrections below. It does not change the authoritative ROI formulas or database schema.
 
 ## Intentionally changed
 
@@ -12,6 +14,13 @@
 - Sales Manager search resists login credential autofill.
 - Executive PDF requests time out safely, restore controls, show Retry, and report failure to Admin Error Log.
 - Prospect draft-difference text identifies the Prospect Link draft rather than implying the calculator value is stale.
+- Customer switching clears dependent scenario/prospect state and restores the selected active context.
+- Prospect value application is constrained to the matching opportunity and customer.
+- Admin customer/scenario payloads are normalized before rendering and switching.
+- JPP milestone inputs persist through save and reload.
+- Buyer Evidence uses local-date formatting and exposes evidence strength consistently.
+- CRM contract metrics and published business-case link actions provide explicit success/failure feedback.
+- Modal visibility and downloadable output handling fail safely for inaccessible or empty artifacts.
 
 ## Intentionally preserved
 
@@ -28,4 +37,4 @@ None.
 
 ## Unresolved external validation
 
-Live PostgreSQL certification and Render post-deployment role regression remain external gates. The original live Executive PDF server failure could not be reproduced without the deployed authenticated runtime; v6.9.18 guarantees fail-recovery and diagnostic capture while existing server PDF runtime coverage remains in force.
+GitHub Actions PostgreSQL 16 certification and Render post-deployment verification remain mandatory external gates. The original live Executive PDF server failure cannot be fully reproduced without an authenticated deployed runtime; v6.9.19 preserves fail-recovery and diagnostic capture while existing server PDF runtime coverage remains in force.
