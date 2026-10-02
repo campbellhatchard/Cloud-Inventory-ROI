@@ -23,7 +23,11 @@ async function initStakeTab() {
      Reuse it so the Stakeholder Map does not ask the user to select the same
      customer again. Cross-account Solution Fit selection alone is excluded. */
   const activeScenarioCompany=window._calcScenarioId&&String((document.getElementById('companyName')||{}).value||'').trim();
-  if(activeScenarioCompany&&getCompanies().some(c=>String(c.name).toLowerCase()===activeScenarioCompany.toLowerCase()))_stakeCompany=activeScenarioCompany;
+  /* The selected, authorized scenario is the customer authority. Admin/SE
+     cross-account company lists may be intentionally narrower than scenario
+     access, so requiring a second name-list match incorrectly unscoped the
+     map and disabled the first stakeholder action. */
+  if(activeScenarioCompany)_stakeCompany=activeScenarioCompany;
   populateStakeCompanySelect();
   await loadStakeholders();
 }

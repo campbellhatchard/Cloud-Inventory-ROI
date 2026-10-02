@@ -7,6 +7,12 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.21', date: '2026-10-02', tag: 'live-regression-corrections',
+    title: 'Live Regression Corrections',
+    summary: 'Corrects the remaining defects reproduced after the v6.9.20 deployment without changing ROI Model v2.8 or evidence governance.',
+    highlights: ['Executive export timing now begins after the user completes readiness review.', 'Stakeholder Map inherits the selected authorized customer.', 'Christie recommends an explicit next action and uses correct criteria copy.', 'Legacy default Mutual Action Plan labels render consistently as Joint Project Plan.']
+  },
+  {
     version: '6.9.20', date: '2026-10-02', tag: 'production-export-recovery',
     title: 'Production Export Recovery',
     summary: 'Prevents Executive PDF and PowerPoint actions from remaining stuck and normalizes duplicate Sales Engineer role labels.',

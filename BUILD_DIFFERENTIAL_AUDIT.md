@@ -1,16 +1,20 @@
-# v6.9.20 Differential Audit
+# v6.9.21 Differential Audit
 
-v6.9.20 is a focused correction applied to the exact Git commit currently deployed as v6.9.19. It adds bounded Executive PDF/PowerPoint recovery and canonical multi-role display without changing ROI, evidence, authorization, or database methodology.
+v6.9.21 is a focused correction for defects reproduced after deploying v6.9.20. It introduces no ROI, evidence, authorization, database, or sales-methodology changes.
 
 ## Intentionally changed
 
-- Executive PDF and PowerPoint client requests share a 30-second deadline, abort stalled requests, restore their controls, and expose actionable retry messages.
-- Executive PDF and PowerPoint server generation is bounded by a 25-second timeout and returns an explicit HTTP 504 response when generation stalls.
-- Sales Engineer role aliases collapse into one canonical `SE` badge in the profile display.
+- Executive PDF and PowerPoint deadlines now start after the user completes the governed Ready/Review/Draft decision. User review time is no longer misclassified as file-generation time.
+- Stakeholder Map accepts the currently selected authorized scenario as customer authority instead of requiring a second match in a narrower company list.
+- Christie converts unmet checklist states into explicit next actions and corrects the visible criteria pluralization.
+- Default legacy `Mutual Action Plan` titles are presented as `Joint Project Plan` in the portfolio, editor, Deal Coach, printable plan, and generated JPP PowerPoint. Stored plan evidence and milestone history are not rewritten.
+- Release metadata advances to v6.9.21 and retains exact v6.9.20 parent lineage.
+
+Deployment preparation corrected the package's developer-local parent commit reference to the exact v6.9.20 commit deployed by GitHub and Render: `9b7500133df9494204d17a0647587a62b51836c5`. This is a provenance correction only and does not alter application behavior.
 
 ## Intentionally preserved
 
-ROI Model v2.8, formulas, overlap rules, Brand System v1.0, Application Knowledge v1.0, Christie Persona v1.0, immutable Prospect evidence, deliberate per-value application, Value History, Rep Confirmed provenance, BuyCycle governance, output authority, migrations, SE cross-account Solution Fit scope, and all v6.9.19 persistence/context/output corrections.
+ROI Model v2.8, formulas, overlap rules, Brand System v1.0, Application Knowledge v1.0, Christie Persona v1.0, immutable Prospect evidence, deliberate per-value application, Value History, Rep Confirmed provenance, BuyCycle governance, native currency, output readiness, saved-state requirements, role permissions, and SE cross-account Solution Fit scope.
 
 ## Migrations added
 
@@ -18,9 +22,10 @@ None.
 
 ## Tests added
 
-- `test/v6918-role-regression-corrections.test.js`
-- Registered permanently in the full suite and production locks.
+- `test/v6921-live-regression-corrections.test.js`
+- Registered in permanent release tests and production locks.
 
-## Unresolved external validation
+## External validation remaining
 
-GitHub Actions PostgreSQL 16 certification and Render post-deployment verification remain mandatory external gates. The original live Executive export failure cannot be fully reproduced without an authenticated deployed runtime; the release adds bounded client/server recovery while existing output runtime coverage remains in force.
+- PostgreSQL integration requires the disposable PostgreSQL 16 GitHub Actions service.
+- Render validation must exercise the corrected readiness-dialog/export sequence and validate downloaded PDF/PPTX files.

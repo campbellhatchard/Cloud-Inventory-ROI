@@ -8,6 +8,11 @@ let _maps = [];            // list cache
 let _mapCurrent = null;    // plan being edited
 let _mapDirty = false;     // customer outputs require an exact saved record
 
+function mapDisplayTitle(value) {
+  const title = String(value || '').trim() || 'Joint Project Plan';
+  return title.replace(/^Mutual Action Plan\b/i, 'Joint Project Plan');
+}
+
 function mapOutputReady(){return !!(_mapCurrent&&_mapCurrent.id&&!_mapDirty);}
 function mapUpdateOutputControls(){for(const id of ['mapPdfIntBtn','mapPdfCustBtn','mapPptIntBtn','mapPptCustBtn','mapShareBtn']){const b=document.getElementById(id);if(b){b.disabled=!mapOutputReady();b.setAttribute('aria-disabled',String(!mapOutputReady()));}}}
 function mapMarkDirty(){_mapDirty=true;mapUpdateOutputControls();}
@@ -176,7 +181,7 @@ function renderMapList() {
       +     repBadge
       +     statusPill
       +   '</div>'
-      +   '<div class="map-card-title">' + escapeHtml(m.title || 'Untitled plan') + '</div>'
+      +   '<div class="map-card-title">' + escapeHtml(mapDisplayTitle(m.title)) + '</div>'
       +   '<div class="map-card-meta">'
       +     '<span class="map-share-info">' + shareIndicator + '</span>'
       +     (closeDate ? '<span>\xb7 Close: ' + closeDate + '</span>' : '<span class="map-no-date">\xb7 No target date</span>')
@@ -324,7 +329,7 @@ function renderMapEditor() {
             <div id="mapCompanyResults" class="cs-results" style="display:none;"></div>
           </div></div>
         <div class="field" style="margin:0;"><label>Plan title</label>
-          <input type="text" id="mapTitle" value="${escapeHtml(m.title)}"/></div>
+          <input type="text" id="mapTitle" value="${escapeHtml(mapDisplayTitle(m.title))}"/></div>
         <div class="field" style="margin:0;"><label>Target close date</label>
           <input type="date" id="mapCloseDate" value="${m.target_close_date ? String(m.target_close_date).split('T')[0] : ''}"/></div>
       </div>

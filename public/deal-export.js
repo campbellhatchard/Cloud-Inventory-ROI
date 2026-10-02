@@ -150,13 +150,13 @@ async function printActionPlan(variant) {
       <img src="${window.location.origin}/${window.CIBrand.logo('logoColor')}" onerror="this.style.display='none'"/>
       <div class="ht">${headTag}</div>
     </div>
-    <h1>${deEsc(m.title)}</h1>
+    <h1>${deEsc(String(m.title||'Joint Project Plan').replace(/^Mutual Action Plan\b/i,'Joint Project Plan'))}</h1>
     <div class="sub">${deEsc(m.company || '')}${m.target_close_date ? ' · Target close: ' + deDate(m.target_close_date, {month:'long',day:'numeric',year:'numeric'}) : ''}</div>
     ${customerPurpose}
     <div class="meta-line"><strong>Progress:</strong> ${done} of ${ms.length} complete (${pct}%)</div>
     <div class="prog-wrap"><div class="prog-fill" style="width:${pct}%;"></div></div>
     ${rowsHtml || '<p style="font-size:13px;color:#6B7A8D;">No milestones yet.</p>'}`;
-  dePrintWindow(m.title, html, '', variant === 'internal' ? 'internal' : 'customer');
+  dePrintWindow(String(m.title||'Joint Project Plan').replace(/^Mutual Action Plan\b/i,'Joint Project Plan'), html, '', variant === 'internal' ? 'internal' : 'customer');
 }
 
 /* ═══════════════════════════════════════════════════════════════════

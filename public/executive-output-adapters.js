@@ -31,9 +31,11 @@ function showPptRetry(){let box=document.getElementById('pptxRetryNotice');if(!b
 window.exportToPowerPoint=async function(){
  console.info('executive_pptx.client_started',{savedScenario:Boolean(window._calcScenarioId)});exportButton('pptx','Creating PowerPoint…',true);
  try{
+  if(!window._calcScenarioId)throw new Error('Save the scenario before creating an Executive PowerPoint.');
+  /* Readiness is an intentional user decision and must not consume the file
+     generation deadline. Start the deadline only after the user continues. */
+  const gate=await guardExecutiveOutput('pptx',{allowDraft:true});if(!gate.proceed)return;
   await withExecutiveExportDeadline('PowerPoint',async signal=>{
-   if(!window._calcScenarioId)throw new Error('Save the scenario before creating an Executive PowerPoint.');
-   const gate=await guardExecutiveOutput('pptx',{allowDraft:true});if(!gate.proceed)return;
    const qs=new URLSearchParams({internalDraft:String(Boolean(gate.draft)),reviewAcknowledged:String(gate.result?.status==='review')});
    const res=await fetch(`/api/scenarios/${encodeURIComponent(window._calcScenarioId)}/export-pptx?${qs}`,{credentials:'same-origin',headers:{Accept:'application/vnd.openxmlformats-officedocument.presentationml.presentation'},...(signal?{signal}:{})});
    if(!res.ok){let detail={};try{detail=await res.json();}catch(_){}throw new Error(detail.error||`PowerPoint request failed (${res.status}).`);}
@@ -47,10 +49,12 @@ const authoritativePptButton=document.getElementById('pptxExportBtn');if(authori
 window.downloadPDF=async function(){
  exportButton('pdf','Preparing PDF…',true);console.info('executive_pdf.started',{savedScenario:Boolean(window._calcScenarioId)});
  try{
+  if(!window._calcScenarioId)throw new Error('Save the scenario before creating a customer PDF.');
+  if(typeof hasUnsavedChanges==='function'&&hasUnsavedChanges())throw new Error('Save the updated ROI as a new scenario version before creating the PDF.');
+  /* The user may take as long as needed to review governed readiness. The
+     bounded deadline protects only the actual network generation request. */
+  const gate=await guardExecutiveOutput('pdf',{allowDraft:true});if(!gate.proceed)return;
   await withExecutiveExportDeadline('PDF',async signal=>{
-   if(!window._calcScenarioId)throw new Error('Save the scenario before creating a customer PDF.');
-   if(typeof hasUnsavedChanges==='function'&&hasUnsavedChanges())throw new Error('Save the updated ROI as a new scenario version before creating the PDF.');
-   const gate=await guardExecutiveOutput('pdf',{allowDraft:true});if(!gate.proceed)return;
    const qs=new URLSearchParams({internalDraft:String(Boolean(gate.draft)),reviewAcknowledged:String(gate.result?.status==='review')});
    const res=await fetch(`/api/scenarios/${encodeURIComponent(window._calcScenarioId)}/export-pdf?${qs}`,{credentials:'same-origin',headers:{Accept:'application/pdf'},...(signal?{signal}:{})});
    if(!res.ok){let detail={};try{detail=await res.json();}catch(_){}throw new Error(detail.error||`PDF request failed (${res.status}).`);}
