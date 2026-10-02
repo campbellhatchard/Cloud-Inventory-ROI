@@ -1614,9 +1614,9 @@ document.addEventListener('DOMContentLoaded', init);
 
 /* Prospect assistant: bottom-left (back-to-top is bottom-right) */
 .asst-context{display:flex;flex-direction:column;gap:3px;padding:9px 12px;border-bottom:1px solid #E7EDF2;background:#fff;font-size:11px;color:#6B7A8D}.asst-context strong{color:var(--ci-dark)}.ai-stale{margin:8px 10px;padding:9px 10px;border:1px solid #F5C66A;border-radius:8px;background:#FFF8E6;color:#8A4B08;font-size:12px;line-height:1.4}
-.passt-fab{bottom:22px;left:22px;}
+.passt-fab{bottom:88px;left:22px;}
 .passt-panel{bottom:22px;left:22px;right:auto;transform-origin:bottom left;}
-@media(max-width:600px){.passt-panel{left:0;right:0;border-radius:0;transform-origin:bottom center;}}
+@media(max-width:600px){.passt-fab{bottom:calc(92px + env(safe-area-inset-bottom));left:14px}.passt-panel{left:0;right:0;bottom:0;border-radius:0;transform-origin:bottom center;max-height:calc(100dvh - 12px);}}
 </style>
 <script src="ai-session.js"></script>
 <script src="prospect-assistant.js"></script>

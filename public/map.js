@@ -446,7 +446,7 @@ function renderMilestones() {
         <select class="map-ms-status" onchange="msField('${x.id}','status',this.value)">
           ${['pending','in_progress','done'].map(st => `<option value="${st}" ${x.status===st?'selected':''}>${st==='pending'?'○ Pending':st==='in_progress'?'◐ In progress':'● Done'}</option>`).join('')}
         </select>
-        <input type="text" class="map-ms-title" value="${escapeHtml(x.title)}" onchange="msField('${x.id}','title',this.value)"/>
+        <input type="text" class="map-ms-title" value="${escapeHtml(x.title)}" oninput="msField('${x.id}','title',this.value)"/>
         <select class="map-ms-group" aria-label="Milestone grouping" onchange="moveMilestoneToGroup('${x.id}',this.value)">
           ${groups.map(g => `<option value="${escapeHtml(g.id)}" ${x.groupId===g.id?'selected':''}>${escapeHtml(g.name)}</option>`).join('')}
         </select>
@@ -463,7 +463,7 @@ function renderMilestones() {
 
 function msField(id, field, value) {
   const x = (_mapCurrent.milestones || []).find(m => m.id === id);
-  if (x) { x[field] = value; if (field === 'status') renderMapEditor(); }
+  if (x) { x[field] = value; mapMarkDirty(); if (field === 'status') renderMapEditor(); }
 }
 function addMilestone(groupId, position) { mapMarkDirty();
   captureMapHeaderFields();

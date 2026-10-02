@@ -55,8 +55,11 @@
     try {
       const resp = await apiFetch('/api/scenarios?all=true');
       const list = (resp && resp.ok) ? await resp.json() : [];
-      const rows = (Array.isArray(list)?list:(list.scenarios||[])).filter(s => s.customerId === customerId && s.isCurrent);
-      rows.sort((a,b)=> new Date(b.updatedAt||0) - new Date(a.updatedAt||0));
+      const rows = (Array.isArray(list)?list:(list.scenarios||[])).filter(s =>
+        String(s.customer_id || s.customerId || '') === String(customerId) &&
+        Boolean(s.is_current ?? s.isCurrent)
+      );
+      rows.sort((a,b)=> new Date(b.updated_at||b.updatedAt||0) - new Date(a.updated_at||a.updatedAt||0));
       renderDetail(rows);
     } catch (e) { app().querySelector('.ac-loading').textContent = 'Could not load scenarios.'; }
   }
@@ -76,11 +79,12 @@
                     : '<div class="empty-state"><p>No saved scenarios yet. Start a new one above.</p></div>'}`;
   }
   function scenHtml(s) {
-    const when = s.updatedAt ? new Date(s.updatedAt).toLocaleDateString() : '';
+    const updated = s.updated_at || s.updatedAt;
+    const when = updated ? new Date(updated).toLocaleDateString() : '';
     const outcome = s.outcome ? `<span class="ac-outcome ac-${s.outcome}">${esc(s.outcome)}</span>` : '';
     return `<button class="ac-scen" onclick="acLoadScenario('${esc(s.id)}')">
       <div class="ac-scen-name">${esc(s.name||'Untitled')} ${outcome}</div>
-      <div class="ac-scen-meta">${esc(s.company||'')}${when?` · updated ${esc(when)}`:''}${s.rep?` · ${esc(s.rep)}`:''}</div>
+      <div class="ac-scen-meta">${esc(s.company||'')}${when?` · updated ${esc(when)}`:''}${(s.owner_username||s.rep)?` · ${esc(s.owner_username||s.rep)}`:''}</div>
     </button>`;
   }
 
@@ -90,17 +94,23 @@
     if (typeof showToast === 'function') showToast('Scenario loaded. Admin edits are recorded in the audit log.');
   }
   function acNewScenario() {
-    /* Prefill the calculator with this customer, blank scenario. */
+    /* Start from an intentionally blank, ID-bound customer context. */
+    window.clearForm?.();
+    window._calcScenarioId = null;
+    window._activeCustomerMeta = { id:_selected.id, name:_selected.name, owner:_selected.ownerUsername, canEditCustomer:true };
     if (typeof switchTab === 'function') switchTab('calc');
     const cn = document.getElementById('companyName'); if (cn) cn.value = _selected.name;
     window.currentScenarioCustomerId = _selected.id;
     window._sfSelectedCustomerId = _selected.id;
     if (typeof showToast === 'function') showToast(`New scenario for ${_selected.name} — enter values and save.`);
   }
-  function acOpenSolutionFit() {
-    window._sfSelectedCustomerId = _selected.id;
-    window.currentScenarioCustomerId = _selected.id;
-    if (typeof switchTab === 'function') switchTab('solfit');
+  async function acOpenSolutionFit() {
+    /* Use the canonical switcher path so customer and scenario identity change atomically. */
+    if (typeof window.selectCustomerContextById === 'function') {
+      await window.selectCustomerContextById(_selected.id,{targetTab:'solfit'});
+      return;
+    }
+    window.showToast?.('Customer context could not be verified. Please use Switch customer.');
   }
   function acBack() { renderList(''); }
   function acSearch(v) { renderList(v); }

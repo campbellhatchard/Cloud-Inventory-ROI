@@ -12,6 +12,8 @@ const ROI_MATURITY_LEVELS=Object.freeze({
 const ROI_VALUE_CASE_VALIDATION='roi_value_case_validation';
 const ROI_EXECUTIVE_APPROVAL='roi_executive_approval';
 const LEGACY_VALIDATION_IDS=Object.freeze(['roi_customer','business_case']);
+const SCENARIO_FIELD_KEYS=Object.freeze({userCount:'users',laborCost:'labor',inventoryValue:'inventory',m_shrinkRate:'shrinkRate'});
+const DECIMAL_PERCENT_FIELDS=new Set(['laborWastePct','pickRateGainPct','orderErrorPct','contributionMarginPct','discRate']);
 
 const VALUE_DRIVER_PROVENANCE_MAP=Object.freeze({
   laborSav:{label:'Labor productivity',baselineFields:d=>d.modelVersion>=25&&Number(d.laborWastePct)>0?['userCount','laborCost','laborWastePct']:['userCount','laborCost']},
@@ -42,14 +44,17 @@ const present=v=>v!==undefined&&v!==null&&String(v).trim()!=='';
 function customerFieldSupport(field,scenarioData){
   const state=(scenarioData.fieldStates||{})[field];
   const provenance=(scenarioData.fieldProvenance||{})[field]||{},hasLineage=!!provenance.eventId;
+  const scenarioValue=scenarioData[SCENARIO_FIELD_KEYS[field]||field];
+  const provenanceValue=provenance.value??scenarioValue;
+  const valueMatches=sameValue(scenarioValue,provenanceValue)||(DECIMAL_PERCENT_FIELDS.has(field)&&sameValue(Number(scenarioValue)*100,provenanceValue));
   if(state==='confirmed_prospect'){
     if(!hasLineage)return {supported:true,state,label:'Prospect Verified',legacy:true,reason:'Legacy scenario provenance; original immutable submission may be unavailable'};
-    const f=roiValueFreshness(provenance.date),matches=sameValue(scenarioData[field],provenance.value??scenarioData[field]),supported=matches&&f.customerSupported;
+    const f=roiValueFreshness(provenance.date),matches=valueMatches,supported=matches&&f.customerSupported;
     return {supported,state,label:'Prospect Verified',provenance,freshness:f,reason:!matches?'Current value differs from its prospect event':f.status==='Stale'?'Prospect evidence is stale — revalidate':'Customer-supported lineage is current'};
   }
   if(state==='confirmed_customer'){
     if(!hasLineage){const supported=present(provenance.source)&&present(provenance.date);return {supported,state,label:'Customer Provided',provenance,legacy:true,reason:supported?'Legacy customer provenance':'Source and date are required'};}
-    const f=roiValueFreshness(provenance.date),matches=sameValue(scenarioData[field],provenance.value??scenarioData[field]),supported=matches&&f.customerSupported;
+    const f=roiValueFreshness(provenance.date),matches=valueMatches,supported=matches&&f.customerSupported;
     return {supported,state,label:'Customer Revalidated',provenance,freshness:f,reason:!matches?'Current value differs from its customer event':f.status==='Stale'?'Customer evidence is stale — revalidate':f.status==='Aging'?'Revalidation recommended':'Customer-supported lineage is current'};
   }
   return {supported:false,state:state||((scenarioData.confidence||[]).includes(field)?'confirmed':''),label:state==='confirmed'?'Rep Confirmed':'Rep Estimate'};
@@ -115,4 +120,4 @@ function evaluateRoiMaturity({scenarioData={},evidence={},stakeholders=[],now=ne
     nextLevel:next[0],nextRequirement:next[1],provenanceNeedsReview:annualBenefit>0&&!Object.keys(scenarioData.fieldStates||{}).length};
 }
 
-module.exports={CUSTOMER_DATA_VALUE_COVERAGE_THRESHOLD,ROI_MATURITY_LEVELS,ROI_VALUE_CASE_VALIDATION,ROI_EXECUTIVE_APPROVAL,LEGACY_VALIDATION_IDS,VALUE_DRIVER_PROVENANCE_MAP,customerFieldSupport,evaluateRoiMaturity};
+module.exports={CUSTOMER_DATA_VALUE_COVERAGE_THRESHOLD,ROI_MATURITY_LEVELS,ROI_VALUE_CASE_VALIDATION,ROI_EXECUTIVE_APPROVAL,LEGACY_VALIDATION_IDS,VALUE_DRIVER_PROVENANCE_MAP,SCENARIO_FIELD_KEYS,DECIMAL_PERCENT_FIELDS,customerFieldSupport,evaluateRoiMaturity};

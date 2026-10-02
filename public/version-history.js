@@ -7,6 +7,12 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.19', date: '2026-10-02', tag: 'consolidated-regression-repairs',
+    title: 'Consolidated Regression Repairs',
+    summary: 'Packages the verified regression repairs under a distinct release number for deployment tracking.',
+    highlights: ['Customer switching clears stale workspace state.', 'Prospect evidence remains explicit and customer-bound.', 'ROI maturity recognizes governed saved values.', 'Contract economics remain consistent across views.', 'Document downloads use verified browser-safe handling.', 'Modal readability, dates, profiles, and customer deep links are corrected.']
+  },
+  {
     version: '6.9.18', date: '2026-10-01', tag: 'role-regression-corrections',
     title: 'Role-Based Regression Corrections',
     summary: 'Corrects the production defects confirmed during role-based regression testing without changing ROI Model v2.8 or governed evidence semantics.',

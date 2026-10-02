@@ -446,7 +446,7 @@ function renderListVersioned() {
     return `
     <li class="scenario-item scenario-item-v2" data-scenario-id="${s.id}">
       <label class="compare-check" title="Add to comparison">
-        <input type="checkbox" ${compareIds.has(s.id)?'checked':''} onchange="toggleCompare('${s.id}')"/>
+        <input type="checkbox" ${compareIds.has(String(s.id))?'checked':''} onchange="toggleCompare('${s.id}')"/>
       </label>
       <div class="scenario-avatar">${initials(s.company||s.name)}</div>
       <div class="scenario-info">
@@ -673,4 +673,3 @@ async function saveRealizedValue(baseId){
 function escapeOutcomeHtml(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-

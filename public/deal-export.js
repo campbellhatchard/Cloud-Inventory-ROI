@@ -39,6 +39,7 @@ function deMapGroups(map, milestones) {
 function deMilestonesInGroup(milestones, group) {
   return milestones.filter(m => m.groupId === group.id || (!m.groupId && m.phase === group.name));
 }
+function deDownloadBlob(blob,fileName){if(!(blob instanceof Blob)||blob.size===0)throw new Error('The generated file was empty.');const a=document.createElement('a'),url=URL.createObjectURL(blob);a.href=url;a.download=fileName;a.rel='noopener';a.style.display='none';document.body.appendChild(a);a.click();setTimeout(()=>{a.remove();URL.revokeObjectURL(url);},30000);}
 /* Open a clean print window with branded HTML and trigger print */
 function dePrintWindow(title, innerHtml, extraCss, audience = 'customer') {
   const theme = window.CIBrand.documentTheme(audience);
@@ -565,8 +566,7 @@ async function shareBusinessCase(savedScenarioId) {
   const scenarioId=savedScenarioId||window._calcScenarioId;
   let reviewAcknowledged=false;
   for(let attempt=0;attempt<2;attempt++){
-    const response=await apiFetch('/api/business-case-shares',{method:'POST',body:JSON.stringify({scenarioId,reviewAcknowledged})});
-    const data=await response.json();
+    let response,data;try{response=await apiFetch('/api/business-case-shares',{method:'POST',body:JSON.stringify({scenarioId,reviewAcknowledged})});if(!response)throw new Error();data=await response.json();}catch(_){showToast('The share link could not be created. Check your connection and retry.');return;}
     if(response.ok){showBusinessCaseShareModal(new URL(data.shareUrl,location.origin).href,window.executiveValueStory?.meta?.customer||'Customer');return;}
     if(data.readiness?.status==='review'&&!reviewAcknowledged){reviewAcknowledged=confirm('Review Before Sharing: '+data.readiness.warnings.map(x=>x.title).join('; ')+'. I have reviewed these limitations and acknowledge them before publishing.');if(reviewAcknowledged)continue;}
     showToast(data.error||'Publication failed.');return;
@@ -575,7 +575,7 @@ async function shareBusinessCase(savedScenarioId) {
 
 function showBusinessCaseShareModal(url, company) {
   const modal = document.createElement('div');
-  modal.className = 'modal-overlay'; modal.id = 'bcShareModal';
+  modal.className = 'modal-overlay open'; modal.id = 'bcShareModal';
   modal.innerHTML = `<div class="modal" style="max-width:520px;">
     <div class="modal-title">Trackable business-case link</div>
     <p style="font-size:12px;color:var(--gray-500);margin-bottom:12px;">
@@ -893,6 +893,6 @@ window.exportCompPDF  = exportCompPDF;
 window.exportCompDocx = exportCompDocx;
 
 /* Primary production paths for saved operational PowerPoints. */
-async function deServerPpt(url,button,fileName,retry){const old=button?.innerHTML;if(button){button.disabled=true;button.textContent='Generating…';}try{const r=await fetch(url,{credentials:'same-origin',headers:{Accept:'application/vnd.openxmlformats-officedocument.presentationml.presentation'}});if(!r.ok)throw new Error((await r.json().catch(()=>({}))).error||`Request failed (${r.status})`);const blob=await r.blob(),a=document.createElement('a'),objectUrl=URL.createObjectURL(blob);a.href=objectUrl;a.download=fileName;a.click();setTimeout(()=>URL.revokeObjectURL(objectUrl),1000);showToast('PowerPoint downloaded.');return true;}catch(e){console.error('operational_pptx.failed',{message:e.message});let n=document.getElementById('operationalPptRetry');if(!n){n=document.createElement('div');n.id='operationalPptRetry';n.className='proposal-review-notice';n.innerHTML='<b>PowerPoint could not be generated.</b> <button class="btn btn-secondary btn-sm">Retry</button>';n.querySelector('button').onclick=retry;(document.querySelector('.pane.active .page-header')||document.querySelector('.pane.active')||document.body).prepend(n);}showToast('PowerPoint could not be generated.');return false;}finally{if(button){button.disabled=false;button.innerHTML=old||'PowerPoint';}}}
+async function deServerPpt(url,button,fileName,retry){const old=button?.innerHTML;if(button){button.disabled=true;button.textContent='Generating…';}try{const r=await fetch(url,{credentials:'same-origin',headers:{Accept:'application/vnd.openxmlformats-officedocument.presentationml.presentation'}});if(!r.ok)throw new Error((await r.json().catch(()=>({}))).error||`Request failed (${r.status})`);const blob=await r.blob();deDownloadBlob(blob,fileName);document.getElementById('operationalPptRetry')?.remove();showToast('PowerPoint downloaded.');return true;}catch(e){console.error('operational_pptx.failed',{message:e.message});let n=document.getElementById('operationalPptRetry');if(!n){n=document.createElement('div');n.id='operationalPptRetry';n.className='proposal-review-notice';n.innerHTML='<b>PowerPoint could not be generated.</b> <button class="btn btn-secondary btn-sm">Retry</button>';n.querySelector('button').onclick=retry;(document.querySelector('.pane.active .page-header')||document.querySelector('.pane.active')||document.body).prepend(n);}showToast('PowerPoint could not be generated.');return false;}finally{if(button){button.disabled=false;button.innerHTML=old||'PowerPoint';}}}
 window.pptActionPlan=async function(variant){const saved=window.getSavedMapForOutput?.();if(!saved)return;const customer=String(_mapCurrent.company||'Customer').replace(/[^a-z0-9]+/gi,'-'),button=document.getElementById(variant==='customer'?'mapPptCustBtn':'mapPptIntBtn'),name=`Cloud-Inventory-${variant==='internal'?'Internal-':''}Joint-Project-Plan-${customer}-${new Date().toISOString().slice(0,10)}.pptx`;await deServerPpt(`/api/maps/${encodeURIComponent(_mapCurrent.id)}/export-pptx?audience=${variant}`,button,name,()=>window.pptActionPlan(variant));};
 window.pptStakeholderMap=pptStakeholderMap=async function(){if(!_stakeCompany)return showToast('Select a saved customer stakeholder map before exporting PowerPoint.');const company=String(_stakeCompany).replace(/[^a-z0-9]+/gi,'-'),button=document.getElementById('stakePptBtn');await deServerPpt(`/api/stakeholders/export-pptx?company=${encodeURIComponent(_stakeCompany)}`,button,`Cloud-Inventory-Internal-Stakeholder-Map-${company}-${new Date().toISOString().slice(0,10)}.pptx`,()=>window.pptStakeholderMap());};

@@ -868,7 +868,8 @@ function renderDiscoveryTab() {
   /* ── Progress counts ── */
   var allQs      = qs.flatMap(function(s){ return s.questions; });
   var answered   = allQs.filter(function(q){ return discoveryAnswers[q.id] && discoveryAnswers[q.id].trim(); }).length;
-  var synced     = allQs.filter(function(q){ return q.sync && discoveryAnswers[q.id] && discoveryAnswers[q.id].trim(); }).length;
+  var activeProvenance=typeof fieldProvenance!=='undefined'?fieldProvenance:{};
+  var synced     = allQs.filter(function(q){ return q.sync && (activeProvenance[q.sync]?.eventId || (discoveryAnswers[q.id] && discoveryAnswers[q.id].trim())); }).length;
   var fromProspect = allQs.filter(function(q){ return discoveryAnswers[q.id+'_by'] === 'prospect'; }).length;
   var total      = allQs.length;
   var pct        = total ? Math.round(answered / total * 100) : 0;
@@ -892,6 +893,17 @@ function renderDiscoveryTab() {
       engHtml = '&#9203; Not yet opened by the prospect';
     }
   }
+
+  var unappliedProspectInputs=[];
+  if(latestSubmittedEvidence&&latestSubmittedEvidence.submission){
+    Object.keys(latestSubmittedEvidence.byInput||{}).forEach(function(input){
+      var h=latestSubmittedEvidence.history?.inputs?.[input]||{};
+      var event=(h.events||[]).find(function(e){return e.event_type==='prospect_submitted'&&String(e.discovery_submission_id)===String(latestSubmittedEvidence.submission.id);});
+      var appliedEvent=activeProvenance[input]?.eventId || h.valueUsed?.origin_event_id;
+      if(event&&String(appliedEvent||'')!==String(event.id))unappliedProspectInputs.push(input);
+    });
+  }
+  var unappliedHtml=unappliedProspectInputs.length?'<div class="disc-unapplied-warning" role="status"><div><strong>Customer-submitted values are waiting for review</strong><span>'+unappliedProspectInputs.length+' mapped value'+(unappliedProspectInputs.length===1?' has':'s have')+' not been applied to the current business case.</span></div><button class="btn btn-primary btn-sm" onclick="applyDiscoveryToCalc()">Review Prospect Evidence</button></div>':'';
 
   var linkHtml;
   if (!activeCompany) {
@@ -982,7 +994,7 @@ function renderDiscoveryTab() {
   el.innerHTML = '<div class="page-header"><div>'
     + '<div class="page-title">Discovery guide</div>'
     + '<div class="page-subtitle">Industry-specific questions for ' + escapeHtml(ind) + '. Answers save automatically as you type.</div>'
-    + '</div>' + linkHtml + '</div>'
+    + '</div>' + linkHtml + '</div>' + unappliedHtml
     + '<div class="disc-progress-bar">'
     + '<div class="disc-progress-inner">'
     + '<div class="disc-prog-stats">'

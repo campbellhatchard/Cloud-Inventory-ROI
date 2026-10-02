@@ -142,23 +142,27 @@ function loadFromObject(i) {
    Select up to 3 saved scenarios and render
    a comparison table.
    ───────────────────────────────────────── */
-let compareIds = new Set();
+let compareIds = new Set(JSON.parse(sessionStorage.getItem('ciCompareScenarioIds')||'[]').map(String));
+
+function persistCompareIds(){sessionStorage.setItem('ciCompareScenarioIds',JSON.stringify([...compareIds]));}
 
 function toggleCompare(id) {
+  id=String(id);
   if (compareIds.has(id)) {
     compareIds.delete(id);
   } else {
     if (compareIds.size >= 3) { showToast('Max 3 scenarios to compare'); return; }
     compareIds.add(id);
   }
-  renderList();
+  persistCompareIds();
+  if(typeof renderListVersioned==='function')renderListVersioned();else renderList();
   renderComparison();
 }
 
 function renderComparison() {
   const el = document.getElementById('comparisonTable');
   if (!el) return;
-  const selected = savedScenarios.filter(s => compareIds.has(s.id));
+  const selected = savedScenarios.filter(s => compareIds.has(String(s.id)));
   if (selected.length < 2) {
     el.innerHTML = '<p style="color:#6B7A8D;font-size:13px;padding:1rem 0;">Select 2 or 3 scenarios from the list above to compare them side-by-side.</p>';
     return;
@@ -167,14 +171,15 @@ function renderComparison() {
     { label: 'Company',            fn: s => s.company },
     { label: 'Industry',           fn: s => IND[s.industry] ? IND[s.industry].label : '—' },
     { label: 'Annual benefit',     fn: s => fmtFull(s.annualBenefit), cls: 'pos' },
-    { label: 'Year 1 ROI',         fn: s => fmtPct(s.roi), cls: 'blue' },
-    { label: '3-yr NPV',           fn: s => fmtFull(s.npv3), cls: s => s.npv3 >= 0 ? 'pos' : 'neg' },
-    { label: '5-yr NPV',           fn: s => fmtFull(s.npv5), cls: s => s.npv5 >= 0 ? 'pos' : 'neg' },
-    { label: 'Payback period',     fn: s => s.payback === null ? '—' : s.payback >= 60 ? '60+ mo' : s.payback.toFixed(1)+' mo' },
-    { label: 'Annual subscription',fn: s => fmtFull(s.inputs.invest) },
-    { label: 'One-time costs',     fn: s => fmtFull(s.inputs.otc) },
-    { label: 'Revenue',            fn: s => fmtFull(s.inputs.revenue) },
-    { label: 'Users',              fn: s => Math.round(s.inputs.users).toLocaleString() },
+    { label: 'Contract term',      fn: s => s.contractMonths==null?'Not yet established':`${s.contractMonths} months` },
+    { label: 'Contract ROI',       fn: s => s.totalContractRoi==null?'Not yet established':fmtPct(s.totalContractRoi), cls: 'blue' },
+    { label: 'Contract NPV',       fn: s => s.totalContractNpv==null?'Not yet established':fmtFull(s.totalContractNpv), cls: s => s.totalContractNpv==null?'':(s.totalContractNpv >= 0 ? 'pos' : 'neg') },
+    { label: 'Net contract benefit', fn: s => s.totalContractNetBenefit==null?'Not yet established':fmtFull(s.totalContractNetBenefit), cls: s => s.totalContractNetBenefit==null?'':(s.totalContractNetBenefit >= 0 ? 'pos' : 'neg') },
+    { label: 'Payback from signing', fn: s => s.contractPayback === null ? 'Not achieved in term' : s.contractPayback === undefined ? 'Not yet established' : Number(s.contractPayback).toFixed(1)+' mo' },
+    { label: 'Annual subscription',fn: s => fmtFull(s.inputs?.invest) },
+    { label: 'One-time costs',     fn: s => fmtFull(s.inputs?.otc) },
+    { label: 'Revenue',            fn: s => fmtFull(s.inputs?.revenue) },
+    { label: 'Users',              fn: s => Number.isFinite(Number(s.inputs?.users)) ? Math.round(Number(s.inputs.users)).toLocaleString() : 'Not yet established' },
     { label: 'Current BuyCycle Stage', fn: s => typeof scenarioStageDisplay==='function'?scenarioStageDisplay(s):(s.dealStage||'Stage 2') },
   ];
 
@@ -185,8 +190,8 @@ function renderComparison() {
   };
 
   const bestBenefit = best('annualBenefit');
-  const bestRoi = best('roi');
-  const bestNpv5 = best('npv5');
+  const bestRoi = best('totalContractRoi');
+  const bestNpv = best('totalContractNpv');
 
   el.innerHTML = `
     <div class="compare-table-wrap">
@@ -205,8 +210,8 @@ function renderComparison() {
                 const val = row.fn(s);
                 const cls = typeof row.cls === 'function' ? row.cls(s) : (row.cls || '');
                 const isBest = row.label === 'Annual benefit' && s.annualBenefit === bestBenefit
-                  || row.label === 'Year 1 ROI' && s.roi === bestRoi
-                  || row.label === '5-yr NPV' && s.npv5 === bestNpv5;
+                  || row.label === 'Contract ROI' && s.totalContractRoi === bestRoi
+                  || row.label === 'Contract NPV' && s.totalContractNpv === bestNpv;
                 return `<td class="${cls}">${val}${isBest ? ' <span class="best-badge">★ Best</span>' : ''}</td>`;
               }).join('')}
             </tr>`).join('')}
@@ -449,11 +454,11 @@ document.addEventListener('input',function(e){const id=e.target&&e.target.id;if(
 
 async function openValueHistory(fieldId){
   if(!window._calcScenarioId)return showToast?.('Save this scenario before viewing Value History.');document.getElementById('dataSourceModal')?.remove();
-  const old=document.getElementById('valueHistoryModal');if(old)old.remove();const wrap=document.createElement('div');wrap.id='valueHistoryModal';wrap.className='modal-overlay';wrap.innerHTML=`<div class="modal-card modal-wide"><div class="modal-header"><div><h2>Financial Value History</h2><p>${(CONFIDENCE_FIELDS.find(x=>x.id===fieldId)||{label:fieldId}).label} · opportunity-wide evidence</p></div><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button></div><div id="valueHistoryBody" class="modal-body">Loading…</div></div>`;document.body.appendChild(wrap);
+  const old=document.getElementById('valueHistoryModal');if(old)old.remove();const wrap=document.createElement('div');wrap.id='valueHistoryModal';wrap.className='modal-overlay open';wrap.innerHTML=`<div class="modal-card modal-wide"><div class="modal-header"><div><h2>Financial Value History</h2><p>${(CONFIDENCE_FIELDS.find(x=>x.id===fieldId)||{label:fieldId}).label} · opportunity-wide evidence</p></div><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button></div><div id="valueHistoryBody" class="modal-body">Loading…</div></div>`;document.body.appendChild(wrap);
   try{const r=await apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/value-history?input='+encodeURIComponent(fieldId));if(!r.ok)throw Error();const x=await r.json(),h=x.inputs[fieldId]||{},used=h.valueUsed,supported=h.latestCustomerSupported,canApply=x.selectedScenario.isCurrent&&!x.selectedScenario.isClosed,body=document.getElementById('valueHistoryBody');body.innerHTML=`<div class="history-comparison"><div><small>Value used in Scenario v${x.selectedScenario.version}</small><b>${used?used.value_text:'Not captured'}</b></div><div><small>Latest customer-supported value</small><b>${supported?supported.value_text:'None'}</b><span>${h.supportedFreshness?.status||'Needs Review'}</span></div></div>${canApply?'':'<div class="history-immutable">🔒 Historical or closed scenario — values remain viewable but cannot be applied.</div>'}`+(h.events||[]).map(e=>`<article class="value-event"><div><b>${escapeHtml(e.value_text||e.normalized_value)}</b><small>${valueEventLabel(e.event_type)} · ${new Date(e.created_at).toLocaleString()}${e.source_scenario_version?' · Scenario v'+e.source_scenario_version:''}</small>${e.event_type==='rep_confirmed'?`<small>Confirmed by ${escapeHtml(e.actor_username||'authorized internal user')} · Internal review</small>${e.evidence_note?`<small>${escapeHtml(e.evidence_note)}</small>`:''}`:''}${e.occurredAfterScenario?'<em>Occurred after this scenario</em>':''}</div>${canApply?`<button class="btn btn-ghost btn-sm" onclick="applyValueEvent('${fieldId}','${e.id}')">Apply to Current Business Case</button>`:''}</article>`).join('')||'<p>No value events have been recorded yet.</p>'; }catch(_){document.getElementById('valueHistoryBody').innerHTML='<p>Value History could not be loaded.</p>';}
 }
 function valueEventLabel(type){return ({prospect_submitted:'Prospect submitted',customer_revalidated:'Customer revalidated',customer_provided:'Customer provided',rep_confirmed:'Rep Confirmed',rep_updated:'Rep Updated — needs reconfirmation/customer validation',legacy_scenario_snapshot:'Legacy scenario value',legacy_prospect_recovered:'Recovered legacy Prospect Link'})[type]||String(type||'Value event').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());}
-async function openRevalidateValue(fieldId){if(!window._calcScenarioId)return showToast?.('Save this scenario first.');document.getElementById('dataSourceModal')?.remove();const company=(document.getElementById('companyName')||{}).value||'';let people=[];try{const r=await apiFetch('/api/stakeholders?company='+encodeURIComponent(company));if(r.ok)people=await r.json();}catch(_){}const current=(document.getElementById(fieldId)||{}).value||'';const wrap=document.createElement('div');wrap.id='valueHistoryModal';wrap.className='modal-overlay';wrap.innerHTML=`<div class="modal-card"><div class="modal-header"><div><h2>Revalidate Value</h2><p>Confirm unchanged or record the customer’s updated value. This adds evidence; it does not rewrite a saved scenario.</p></div><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button></div><form class="modal-body" onsubmit="submitRevalidation(event,'${fieldId}')"><label>Validated value<input id="revalidateValue" value="${String(current).replace(/"/g,'&quot;')}" required></label><label>Validating stakeholder<select id="revalidateStakeholder" required><option value="">Select stakeholder…</option>${people.map(p=>`<option value="${p.id}">${p.name} — ${p.title||p.role}</option>`).join('')}</select></label><label>Evidence date<input id="revalidateDate" type="date" max="${new Date().toISOString().slice(0,10)}" value="${new Date().toISOString().slice(0,10)}" required></label><label>Source<select id="revalidateSource" required><option>Value review meeting</option><option>Customer email</option><option>Customer spreadsheet</option><option>Executive business-case review</option></select></label><label>Evidence note (optional)<textarea id="revalidateNote"></textarea></label><label><input id="revalidateApply" type="checkbox"> Apply to the current working business case after recording</label><footer><button type="button" class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Cancel</button><button class="btn btn-primary">Record customer revalidation</button></footer></form></div>`;document.body.appendChild(wrap);}
+async function openRevalidateValue(fieldId){if(!window._calcScenarioId)return showToast?.('Save this scenario first.');document.getElementById('dataSourceModal')?.remove();const company=(document.getElementById('companyName')||{}).value||'';let people=[];try{const r=await apiFetch('/api/stakeholders?company='+encodeURIComponent(company));if(r.ok)people=await r.json();}catch(_){}const current=(document.getElementById(fieldId)||{}).value||'';const wrap=document.createElement('div');wrap.id='valueHistoryModal';wrap.className='modal-overlay open';wrap.innerHTML=`<div class="modal-card"><div class="modal-header"><div><h2>Revalidate Value</h2><p>Confirm unchanged or record the customer’s updated value. This adds evidence; it does not rewrite a saved scenario.</p></div><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button></div><form class="modal-body" onsubmit="submitRevalidation(event,'${fieldId}')"><label>Validated value<input id="revalidateValue" value="${String(current).replace(/"/g,'&quot;')}" required></label><label>Validating stakeholder<select id="revalidateStakeholder" required><option value="">Select stakeholder…</option>${people.map(p=>`<option value="${p.id}">${p.name} — ${p.title||p.role}</option>`).join('')}</select></label><label>Evidence date<input id="revalidateDate" type="date" max="${new Date().toISOString().slice(0,10)}" value="${new Date().toISOString().slice(0,10)}" required></label><label>Source<select id="revalidateSource" required><option>Value review meeting</option><option>Customer email</option><option>Customer spreadsheet</option><option>Executive business-case review</option></select></label><label>Evidence note (optional)<textarea id="revalidateNote"></textarea></label><label><input id="revalidateApply" type="checkbox"> Apply to the current working business case after recording</label><footer><button type="button" class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Cancel</button><button class="btn btn-primary">Record customer revalidation</button></footer></form></div>`;document.body.appendChild(wrap);}
 async function submitRevalidation(event,fieldId){event.preventDefault();const body={value:document.getElementById('revalidateValue').value,stakeholderId:document.getElementById('revalidateStakeholder').value,evidenceDate:document.getElementById('revalidateDate').value,source:document.getElementById('revalidateSource').value,note:document.getElementById('revalidateNote').value};const r=await apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/value-history/'+encodeURIComponent(fieldId)+'/revalidate',{method:'POST',body:JSON.stringify(body)});if(!r.ok){const x=await r.json().catch(()=>({}));return showToast?.(x.error||'Revalidation could not be recorded.');}const created=await r.json();if(document.getElementById('revalidateApply').checked)await applyValueEvent(fieldId,created.id);document.getElementById('valueHistoryModal')?.remove();showToast?.('Customer revalidation added to Value History.');}
 async function applyValueEvent(fieldId,eventId){const r=await apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/value-history/'+encodeURIComponent(fieldId)+'/apply',{method:'POST',body:JSON.stringify({eventId})});if(!r.ok)return showToast?.('This value cannot be applied here.');const x=await r.json(),a=x.apply,el=document.getElementById(fieldId);if(el)el.value=a.value;fieldStates[fieldId]=a.fieldState;fieldProvenance[fieldId]={...a.provenance,value:a.value};confirmedFields.add(fieldId);recalc?.();renderConfidence();markCalcDirty?.();document.getElementById('valueHistoryModal')?.remove();showToast?.('Validated value applied. Save a new scenario version when ready.');}
 
@@ -603,24 +608,25 @@ async function openMailto() {try{const email=await composeCurrentGovernedEmail()
    Generates a pre-formatted note + opens
    the CRM URL in a new tab with data
    ───────────────────────────────────────── */
-function pushToCRM(crmType) {
+async function pushToCRM(crmType) {
   const v = getVals();
   const r = calcROI(v);
+  if (!r) { showToast('ROI economics are not yet established. Complete and save the value case before copying it.'); return; }
   const note = `Cloud Inventory ROI Analysis — ${v.company}
-Annual Benefit: ${fmtFull(r.annualBenefit)} | Year 1 ROI: ${fmtPct(r.roi)} | Payback: ${r.payback ? r.payback.toFixed(1)+' mo' : '—'}
-3-yr NPV: ${fmtFull(r.npv3)} | 5-yr NPV: ${fmtFull(r.npv5)}
-Investment: ${fmtFull(r.totalInvestY1)} (Y1) | ${fmtFull(v.invest)}/yr recurring
+Annual Benefit: ${fmtFull(r.annualBenefit)} | Contract ROI: ${r.totalContractRoi==null?'Not yet established':fmtPct(r.totalContractRoi)} | Payback from signing: ${r.contractPayback==null?'Not achieved in term':r.contractPayback.toFixed(1)+' mo'}
+Contract NPV: ${fmtFull(r.totalContractNpv)} | Net Contract Benefit: ${fmtFull(r.totalContractNetBenefit)}
+Modeled Customer Investment: ${fmtFull(r.totalContractInvestment)} over ${r.contractMonths} months
 Industry: ${IND[v.industry] ? IND[v.industry].label : '—'} | Users: ${Math.round(v.users)} | Revenue: ${fmtFull(v.revenue)}`;
-
-  navigator.clipboard.writeText(note).then(() => {
+  try{
+    await navigator.clipboard.writeText(note);
     if (crmType === 'salesforce') {
       window.open('https://login.salesforce.com', '_blank');
       showToast('CRM note copied! Paste into your Salesforce opportunity.');
     } else if (crmType === 'hubspot') {
       window.open('https://app.hubspot.com', '_blank');
       showToast('CRM note copied! Paste into your HubSpot deal.');
-    }
-  });
+    } else showToast('CRM note copied to clipboard.');
+  }catch(_){showToast('Clipboard access was blocked. Allow clipboard access and try again.');return;}
   trackEvent('crm_push', { crm: crmType, company: v.company });
 }
 

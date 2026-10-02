@@ -1067,7 +1067,7 @@
         <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;flex-wrap:wrap;">
           <div class="field" style="margin:0;">
             <label>Username</label>
-            <input type="text" id="newUsername" placeholder="e.g. jsmith" autocomplete="off"/>
+            <input type="text" id="newUsername" name="ci-new-user-account" placeholder="e.g. jsmith" autocomplete="one-time-code" readonly onfocus="this.removeAttribute('readonly')"/>
           </div>
           <div class="field" style="margin:0;">
             <label>Email address</label>
@@ -1504,7 +1504,6 @@
   <div class="modal">
     <button class="modal-close" aria-label="Close" onclick="closeModal('crmModal')">✕</button>
     <div class="modal-title">📋 Copy ROI summary for CRM</div>
-    <p style="font-size:13px;color:var(--gray-600);margin-bottom:16px;">Copies a formatted ROI summary to your clipboard. Paste it into your CRM opportunity note.</p>
     <p style="font-size:13px;color:var(--gray-600);margin-bottom:16px;">The ROI summary will be copied to your clipboard. Paste it as a note on your opportunity or deal record.</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       <button class="btn btn-primary" style="padding:14px;flex-direction:column;gap:4px;height:auto;" onclick="pushToCRM('salesforce');closeModal('crmModal')">
@@ -1518,7 +1517,7 @@
         <span style="font-size:11px;opacity:.7;font-weight:400;">Opens app → paste note</span>
       </button>
     </div>
-    <div class="btn-row" style="margin-top:1rem;"><button class="btn btn-ghost" onclick="closeModal('crmModal')">Cancel</button></div>
+    <div class="btn-row" style="margin-top:1rem;"><button class="btn btn-secondary" onclick="pushToCRM('copy')">Copy only</button><button class="btn btn-ghost" onclick="closeModal('crmModal')">Close</button></div>
   </div>
 </div>
 
@@ -1551,7 +1550,7 @@
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="6.9.18";</script>
+<script>const APP_VERSION="6.9.19";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
 <script src="ai-session.js"></script>
@@ -2816,13 +2815,15 @@ async function loadProfileInfo() {
     const resp = await apiFetch('/api/auth/me');
     if (!resp || !resp.ok) { wrap.innerHTML = '<p style="color:var(--red)">Could not load profile.</p>'; return; }
     const user = await resp.json();
-    const roleColors = { admin: 'var(--purple)', se: 'var(--cyan-dark)', rep: 'var(--navy)' };
-    const roleLabels = { admin: 'Admin', se: 'Solution Engineer', rep: 'Account Executive' };
+    const roleColors = { admin: 'var(--purple)', se: 'var(--cyan-dark)', rep: 'var(--navy)', sales_manager:'var(--orange)', value_engineering:'var(--green)' };
+    const roleLabels = { admin: 'Admin', se: 'Solution Engineer', rep: 'Account Executive', sales_manager:'Sales Leader', value_engineering:'Value Engineering' };
+    const assignedRoles=[...new Set([...(user.roleKeys||[]),...(user.roles||[]),user.role].filter(Boolean).map(r=>String(r).toLowerCase().replace(/\s+/g,'_')).map(r=>r==='sales_leader'?'sales_manager':r==='solution_engineer'?'se':r==='sales_rep'||r==='account_executive'?'rep':r))];
+    const roleBadges=assignedRoles.map(role=>`<span class="role-badge" style="background:${(roleColors[role]||'#1E2931')}20;color:${roleColors[role]||'#1E2931'}">${escapeHtml(roleLabels[role]||role.replace(/_/g,' '))}</span>`).join(' ');
     wrap.innerHTML = `
       <div class="profile-info-grid">
         <span class="pil">Username</span><span class="piv"><strong>${escapeHtml(user.username)}</strong></span>
         <span class="pil">Email</span><span class="piv">${escapeHtml(user.email||'—')}</span>
-        <span class="pil">Role</span><span class="piv"><span class="role-badge" style="background:${(roleColors[user.role]||'#1E2931')}20;color:${roleColors[user.role]||'#1E2931'}">${roleLabels[user.role]||user.role}</span></span>
+        <span class="pil">Assigned roles</span><span class="piv">${roleBadges||'None assigned'}</span>
         <span class="pil">Member since</span><span class="piv">${new Date(user.created_at).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</span>
         <span class="pil">Last login</span><span class="piv">${user.last_login_at ? new Date(user.last_login_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : 'First login'}</span>
       </div>`;

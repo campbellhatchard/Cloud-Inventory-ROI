@@ -51,6 +51,7 @@ async function fetchScenarios() {
     else renderList();
     if (typeof refreshCalcScenarioPicker === 'function') refreshCalcScenarioPicker();
     window.maybeShowOnboarding?.();
+    if(!window._activeCustomerRestoreAttempted&&!window._calcScenarioId)window.restoreLastCustomerContext?.();
   } catch(e) {
     console.error('fetchScenarios error:', e.message);
   } finally {
@@ -60,6 +61,7 @@ async function fetchScenarios() {
 
 /* Map DB column_case → camelCase used by the rest of the app */
 function normaliseRow(r) {
+  const data = r.data || {};
   return {
     id:            r.id,
     baseId:        r.base_id,
@@ -93,6 +95,13 @@ function normaliseRow(r) {
     outcomeAt:     r.outcome_at || null,
     customerId:    r.customer_id || null,
     /* inputs come from GET /api/scenarios/:id — not included in list */
+    totalContractBenefit: data.totalContractBenefit ?? null,
+    totalContractInvestment: data.totalContractInvestment ?? null,
+    totalContractNetBenefit: data.totalContractNetBenefit ?? null,
+    totalContractRoi: data.totalContractRoi ?? null,
+    totalContractNpv: data.totalContractNpv ?? null,
+    contractPayback: data.contractPayback ?? null,
+    contractMonths: data.contractMonths ?? null,
     inputs:        r.data || null
   };
 }
@@ -1046,7 +1055,7 @@ function renderList() {
     const isShared = Boolean(s.ownerUsername && s.ownerUsername !== me.username);
     return `
     <li class="scenario-item">
-      <label class="compare-check"><input type="checkbox" ${compareIds.has(s.id)?'checked':''} onchange="toggleCompare('${s.id}')"/></label>
+      <label class="compare-check"><input type="checkbox" ${compareIds.has(String(s.id))?'checked':''} onchange="toggleCompare('${s.id}')"/></label>
       <div class="scenario-avatar">${initials(s.company||s.name)}</div>
       <div class="scenario-info">
         <div class="scenario-name">${s.name}
