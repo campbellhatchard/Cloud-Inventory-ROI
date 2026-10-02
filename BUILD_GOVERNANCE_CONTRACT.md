@@ -423,3 +423,7 @@ SE-facing workspaces must retain the selected product and saved customer context
 ## SAVED WORKING-STATE INTEGRITY INVARIANT
 
 A successful scenario save must persist every active ROI input, seller-authored Three Why narrative and its evidence metadata, and the authoritative customer-level field-inventory state. Navigation must not silently discard an explicitly applied Prospect value. Customer-level configuration persistence must complete successfully before the scenario save can report success.
+
+## GOVERNED FILE EXPORT LIFECYCLE INVARIANT
+
+Proposal PDF and Word must resolve from the same server-owned saved Proposal, canonical Executive Value Story, readiness, and audience decision. Customer PDF generation must produce an actual PDF response and may not depend on a browser print window. Every client export operation must have a bounded execution time, restore its controls on failure, and provide an explicit retry path. ROI Methodology PDF must report the canonical saved ROI result and may not implement independent economic calculations.

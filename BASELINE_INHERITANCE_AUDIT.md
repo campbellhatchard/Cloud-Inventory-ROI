@@ -4,8 +4,7 @@
 - Verified parent SHA-256: `f6cbd19c59981faab2ee7267333fb9768aa3c2113f39c960a54109233fc10542`
 - Parent application version: 6.9.22
 - Target application version: 6.9.23
-- Production baseline Git commit: `f5e9aa6459f5cb08871d7f8f2bcaa0c78846e71a`
-- Developer source snapshot: `211befa7be6aa32a4c476784b3bb418905d2a2d7`
+- Baseline Git snapshot: `211befa7be6aa32a4c476784b3bb418905d2a2d7`
 - ROI authority: ROI Model v2.8 / modelVersion 28
 - Brand System, Application Knowledge, and Christie Persona: v1.0
 - Database migrations added: none
@@ -29,6 +28,9 @@ The release preserves immutable Prospect evidence, deliberate per-value applicat
 - Customer Business Case, Executive outputs, approved Battlecards, JPP, Proposal, Stakeholders, and saved Solution Fit output authority preserved
 - Champion Pack remains intentionally inactive pending governed conversion
 
-The supplied v6.9.23 archive was compared with the exact v6.9.22 commit deployed by GitHub and Render. Historical certification evidence from the production repository is retained unchanged.
+The exact deployed archive was used without substituting an earlier package or reconstructed source.
 
 SE Solution Fit Scope: Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.
+# v6.9.24 baseline inheritance
+
+The corrective release inherits from `cloud-inventory-roi-v6.9.23-render-ready.zip` with SHA-256 `94c9e4d0ba60ca9b5480d1ca360f4d946d7f06ae8b195a015d73df6b2a836dcc`. The exact GitHub and Render production parent is `31d751942402fe7bec30598da5979529ad2c7ebc`; the developer source snapshot is `932c159a9da181c041a3b8df28b8867b1b2caddf`. ROI Model v2.8, Brand System v1.0, Application Knowledge v1.0, Christie Persona v1.0, evidence provenance, authorization, and saved-state protections remain unchanged.

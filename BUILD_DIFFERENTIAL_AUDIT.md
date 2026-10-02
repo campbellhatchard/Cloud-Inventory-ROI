@@ -4,8 +4,6 @@ v6.9.23 corrects saved-state completeness, Prospect-value continuity, field-inve
 
 Permanent coverage is provided by `test/v6923-regression-integrity.test.js` in the full and production-lock suites.
 
-Deployment preparation corrected the developer-local v6.9.22 parent reference to the exact production commit `f5e9aa6459f5cb08871d7f8f2bcaa0c78846e71a` and preserved prior GitHub certification records. This is provenance maintenance and does not change application behavior.
-
 ## Prior v6.9.21 differential record
 
 v6.9.21 is a focused correction for defects reproduced after deploying v6.9.20. It introduces no ROI, evidence, authorization, database, or sales-methodology changes.
@@ -35,3 +33,11 @@ None.
 
 - PostgreSQL integration requires the disposable PostgreSQL 16 GitHub Actions service.
 - Render validation must exercise the corrected readiness-dialog/export sequence and validate downloaded PDF/PPTX files.
+# v6.9.24 corrective differential
+
+- Added one shared server-side Proposal export preparation service.
+- Added real server-generated Proposal PDF and ROI Methodology PDF builders.
+- Replaced the active Proposal and Methodology browser-print calls with authenticated file downloads.
+- Added a bounded 30-second export lifecycle, UI restoration, safe errors, and retry controls.
+- Updated runtime ownership and tests to execute the actual production builders.
+- No ROI formula, evidence, authorization, database schema, migration, or role change was introduced.

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   server.js  —  Cloud Inventory ROI Builder  v6.9.23
+   server.js  —  Cloud Inventory ROI Builder  v6.9.24
    Database-backed multi-user edition — production hardened
 
    Security layers applied (Phase 10):
@@ -27,6 +27,9 @@ const { evaluateExecutiveOutputReadiness } = require('./src/shared/executive-out
 const { resolveProposalOutput, proposalFilename } = require('./src/shared/proposal-output');
 const { discoverySessionScope } = require('./src/shared/discovery-session-query');
 const { buildProposalDocx } = require('./src/exports/proposal-docx');
+const { buildProposalPdf } = require('./src/exports/proposal-pdf');
+const { buildRoiMethodologyPdf } = require('./src/exports/roi-methodology-pdf');
+const { prepareProposalExport } = require('./src/exports/proposal-export-service');
 const { buildCompetitiveDocx } = require('./src/exports/competitive-docx');
 const economicAvailability = require('./public/economic-availability');
 const brand = require('./src/shared/brand-system');
@@ -1248,17 +1251,28 @@ app.post('/api/export/battlecard-docx', requireAuth, async (req, res) => {
 app.post('/api/export/proposal-docx', requireAuth, async (req, res) => {
  try {
   const scenarioId=String(req.body?.scenarioId||'');
-  if(!scenarioId)return res.status(400).json({error:'A scenario is required for proposal export.'});
-  const source=await loadExecutiveSource(req.user,scenarioId);
-  if(source.error)return res.status(source.status).json({error:source.error});
-  if(!source.proposal)return res.status(409).json({error:'Save the proposal before exporting.'});
-  const story=buildExecutiveValueStory(source),readiness=evaluateExecutiveOutputReadiness(story,{outputType:'proposal'});
-  let output;try{output=resolveProposalOutput(readiness,{internalDraft:req.body?.internalDraft,reviewAcknowledged:req.body?.reviewAcknowledged});}catch(error){return res.status(error.status||500).json({error:error.message,readiness});}
-  const company=String(story.meta.customer||'Prospect'),buffer=await buildProposalDocx({story,proposal:source.proposal,audience:output.audience,draft:output.draft,logoData:fs.readFileSync(path.join(PUBLIC_DIR,brand.documentTheme(output.audience).logo))});
+  const prepared=await prepareProposalExport({user:req.user,scenarioId,internalDraft:req.body?.internalDraft,reviewAcknowledged:req.body?.reviewAcknowledged});
+  const {story,proposal,readiness,output}=prepared,company=String(story.meta.customer||'Prospect'),buffer=await buildProposalDocx({story,proposal,audience:output.audience,draft:output.draft,logoData:fs.readFileSync(path.join(PUBLIC_DIR,brand.documentTheme(output.audience).logo))});
   res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.wordprocessingml.document');
   res.setHeader('X-Executive-Readiness',readiness.status);res.setHeader('X-Output-Audience',output.audience);
   res.setHeader('Content-Disposition',`attachment; filename="${proposalFilename(company,{draft:output.draft})}"`);res.send(buffer);
- } catch (error) { console.error('proposal-docx error:',error.message);res.status(500).json({error:'Word export failed.'}); }
+ } catch (error) { console.error('proposal-docx error:',error.message);res.status(error.status||500).json({error:error.status?error.message:'Word export failed.',readiness:error.readiness}); }
+});
+app.post('/api/export/proposal-pdf', requireAuth, async (req, res) => {
+ try {
+  const scenarioId=String(req.body?.scenarioId||''),prepared=await prepareProposalExport({user:req.user,scenarioId,internalDraft:req.body?.internalDraft,reviewAcknowledged:req.body?.reviewAcknowledged});
+  const {story,proposal,readiness,output}=prepared,company=String(story.meta.customer||'Prospect'),buffer=buildProposalPdf({story,proposal,audience:output.audience,draft:output.draft,review:readiness.status==='review'});
+  res.setHeader('Content-Type','application/pdf');res.setHeader('X-Executive-Readiness',readiness.status);res.setHeader('X-Output-Audience',output.audience);
+  res.setHeader('Content-Disposition',`attachment; filename="${proposalFilename(company,{draft:output.draft,extension:'pdf'})}"`);res.send(buffer);
+ } catch(error){console.error('proposal-pdf error:',error.message);res.status(error.status||500).json({error:error.status?error.message:'PDF export failed.',readiness:error.readiness});}
+});
+app.post('/api/export/roi-methodology-pdf', requireAuth, async (req,res)=>{
+ try{
+  const scenarioId=String(req.body?.scenarioId||'');if(!scenarioId)return res.status(400).json({error:'Save or select a scenario before exporting ROI methodology.'});
+  const source=await loadExecutiveSource(req.user,scenarioId);if(source.error)return res.status(source.status).json({error:source.error});
+  const report=require('./src/shared/customer-roi-report').buildCustomerROIReportData(source),buffer=buildRoiMethodologyPdf(report),safe=String(report.customer.name||'Customer').replace(/[^a-z0-9]+/gi,'-');
+  res.setHeader('Content-Type','application/pdf');res.setHeader('X-Output-Audience','internal');res.setHeader('Content-Disposition',`attachment; filename="Cloud-Inventory-ROI-Methodology-${safe}-${new Date().toISOString().slice(0,10)}.pdf"`);res.send(buffer);
+ }catch(error){console.error('roi-methodology-pdf error:',error.message);res.status(500).json({error:'ROI Methodology PDF export failed.'});}
 });
 /* Natural-language question over aggregate deal data (Admin Analytics).
    Two-step: (1) AI picks which pre-written query/queries answer the

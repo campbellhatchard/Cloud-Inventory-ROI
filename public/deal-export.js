@@ -352,6 +352,23 @@ function buildRoiMethodology() {
 
 /* ── PDF variant ── */
 async function roiMethodologyPDF() {
+  const scenarioId=savedScenarioId||window._calcScenarioId;
+  if(!scenarioId){showToast('Save or select a scenario before exporting ROI methodology.');return;}
+  const btn=document.getElementById('roiMethodPdfBtn'),original=btn?.innerHTML;
+  if(btn){btn.disabled=true;btn.textContent='Building PDF…';}
+  try{
+    const runtime=window.CIOutputRuntime;
+    if(!runtime)throw new Error('The export service is still loading. Please retry.');
+    await runtime.withDeadline('ROI Methodology PDF',async signal=>{
+      const response=await fetch('/api/export/roi-methodology-pdf',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json',Accept:'application/pdf'},body:JSON.stringify({scenarioId}),...(signal?{signal}:{})});
+      if(!response.ok){let detail={};try{detail=await response.json();}catch(_){}throw new Error(detail.error||`PDF request failed (${response.status}).`);}
+      const blob=await response.blob(),company=String((typeof client==='object'&&client?.company)||'Customer').replace(/[^a-z0-9]+/gi,'-');
+      runtime.downloadBlob(blob,`Cloud-Inventory-ROI-Methodology-${company}-${new Date().toISOString().slice(0,10)}.pdf`);
+      showToast('ROI methodology PDF downloaded!');
+    });
+  }catch(error){const message=error.name==='AbortError'||error.name==='ExportTimeoutError'?'ROI Methodology PDF timed out. You can continue working and retry.':(error.message||'ROI Methodology PDF could not be generated.');console.error('roi_methodology_pdf.failed',{message});showToast(message);}
+  finally{if(btn){btn.disabled=false;btn.innerHTML=original||'Download PDF';}}
+  return;
   const m = buildRoiMethodology();
   const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const v = m.v, r = m.r, M = m.M;

@@ -7,7 +7,7 @@ const OUTPUTS=[
  ['executive-docx','Executive Business Case — Word','customer',['docx'],'Executive Value Story','server','src/exports/executive-docx.js',true,true],
  ['executive-pptx','Executive Business Case — PowerPoint','customer',['pptx'],'Executive Value Story','server','src/exports/executive-pptx.js',true,true],
  ['proposal-preview','Executive Proposal — Preview','customer',['html'],'Saved Proposal + Executive Value Story','browser-print','public/proposal-output-builder.js',true,true],
- ['proposal-pdf','Executive Proposal — PDF','customer',['pdf'],'Saved Proposal + Executive Value Story','browser-print','public/proposal-output-builder.js',true,true],
+ ['proposal-pdf','Executive Proposal — PDF','customer',['pdf'],'Saved Proposal + Executive Value Story','server','src/exports/proposal-pdf.js',true,true],
  ['proposal-docx','Executive Proposal — Word','customer',['docx'],'Saved Proposal + Executive Value Story','server','src/exports/proposal-docx.js',true,true],
  ['jpp-customer-pdf','Joint Project Plan — Customer PDF','customer',['pdf'],'Saved Joint Project Plan','browser-print','public/deal-export.js',false,true],
  ['jpp-customer-pptx','Joint Project Plan — Customer PowerPoint','customer',['pptx'],'Saved Joint Project Plan','server','src/exports/operational-pptx.js',false,true],
@@ -20,7 +20,7 @@ const OUTPUTS=[
  ['solution-handoff-pdf','Solution Fit Internal Handoff — PDF','internal',['pdf'],'Saved Solution Fit Handoff','browser-print','public/solution-fit-output-builders.js',false,false],
  ['competitive-pdf','Competitive Battlecard — PDF','internal',['pdf'],'Governed Battlecard Revision','browser-print','public/deal-export.js',false,false],
  ['competitive-docx','Competitive Battlecard — Word','internal',['docx'],'Governed Battlecard Revision','server','src/exports/competitive-docx.js',false,false],
- ['roi-methodology-pdf','ROI Methodology — PDF','internal',['pdf'],'ROI Model v2.8 Registry','browser-print','public/deal-export.js',false,false],
+ ['roi-methodology-pdf','ROI Methodology — PDF','internal',['pdf'],'Canonical saved ROI report / ROI Model v2.8','server','src/exports/roi-methodology-pdf.js',false,false],
  ['roi-methodology-pptx','ROI Methodology — PowerPoint','internal',['pptx'],'ROI Model v2.8 Registry','browser','public/deal-export.js',false,false],
  ['impact-map-pdf','Discovery Impact Map — PDF','internal',['pdf'],'Questionnaire + ROI Model v2.8 Registries','browser-print','public/impact-map.js',false,false],
  ['champion-pack-pptx','Champion Pack — PowerPoint','internal',['pptx'],'Executive Value Story + Internal Objection Guidance','browser','public/deal-export.js',false,false],
@@ -53,7 +53,7 @@ function validateRegistry(){
  const routes=fs.readFileSync(path.join(root,'src/routes/scenarios.js'),'utf8');
  for(const route of ['/:id/export-pdf','/:id/export-pptx','/:id/export-docx'])if(!routes.includes(route))throw new Error(`Missing executive route: ${route}`);
  const server=fs.readFileSync(path.join(root,'server.js'),'utf8');
- for(const route of ['/api/business-case-shares','/api/export/battlecard/:id','/api/export/battlecard-docx','/api/export/proposal-docx'])if(!server.includes(route))throw new Error(`Missing output route: ${route}`);
+ for(const route of ['/api/business-case-shares','/api/export/battlecard/:id','/api/export/battlecard-docx','/api/export/proposal-docx','/api/export/proposal-pdf','/api/export/roi-methodology-pdf'])if(!server.includes(route))throw new Error(`Missing output route: ${route}`);
  const browser=fs.readFileSync(path.join(root,'public/deal-export.js'),'utf8');
  for(const control of ['shareBusinessCase','exportCompPDF','exportCompDocx','exportGovernedOnePager','roiMethodologyPDF','roiMethodologyPPT'])if(!browser.includes('function '+control+'('))throw new Error(`Missing output control: ${control}`);
  return true;

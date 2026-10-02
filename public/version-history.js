@@ -7,6 +7,16 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.24', date: '2026-10-02', tag: 'governed-export-pipeline',
+    title: 'Reliable governed Proposal and ROI Methodology exports',
+    changes: [
+      'Proposal PDF is now a server-generated file using the same canonical saved Proposal, Executive Value Story, readiness, and audience authority as Proposal Word.',
+      'Proposal PDF and Word now share a bounded export lifecycle with clear timeout recovery and retry, so a failed export cannot trap navigation.',
+      'ROI Methodology PDF is now generated on the server from the saved canonical ROI report instead of relying on a browser print window.',
+      'Runtime certification executes the actual Proposal PDF and ROI Methodology PDF production builders.'
+    ]
+  },
+  {
     version: '6.9.23', date: '2026-10-02', tag: 'saved-state-integrity-corrections',
     title: 'Saved-State and ROI Display Integrity Corrections',
     summary: 'Corrects defects confirmed during production role-based regression without changing ROI Model v2.8 or governed evidence rules.',
