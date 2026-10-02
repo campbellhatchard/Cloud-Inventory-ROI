@@ -183,3 +183,24 @@ test('Buyer Evidence uses the local calendar date and requires an explicit evide
   assert.match(readiness,/quality\.required=true/);
   assert.match(readiness,/date\.max=localDate\(\)/);
 });
+
+test('Executive PDF and PowerPoint have bounded client and server recovery paths',()=>{
+  const client=read('public/executive-output-adapters.js'),routes=read('src/routes/scenarios.js');
+  assert.match(client,/const EXECUTIVE_EXPORT_TIMEOUT_MS=30000/);
+  assert.match(client,/withExecutiveExportDeadline\('PDF',async signal=>/);
+  assert.match(client,/withExecutiveExportDeadline\('PowerPoint',async signal=>/);
+  assert.match(client,/guardExecutiveOutput\('pdf',\{allowDraft:true\}\)/);
+  assert.match(client,/guardExecutiveOutput\('pptx',\{allowDraft:true\}\)/);
+  assert.match(client,/\.\.\.\(signal\?\{signal\}:\{\}\)/);
+  assert.match(client,/finally\{exportButton\('pdf','Preparing PDF…',false\);\}/);
+  assert.match(client,/finally\{exportButton\('pptx','Creating PowerPoint…',false\);\}/);
+  assert.match(routes,/const EXECUTIVE_EXPORT_SERVER_TIMEOUT_MS=25000/);
+  assert.match(routes,/withExecutiveExportTimeout\('PowerPoint'/);
+  assert.match(routes,/err\.status===504\?'PowerPoint generation timed out/);
+  assert.match(routes,/err\.status===504\?`\$\{kind\.toUpperCase\(\)\} generation timed out/);
+});
+
+test('Profile role aliases collapse Sales Engineer into the canonical SE badge',()=>{
+  const index=read('public/index.html');
+  assert.match(index,/r==='solution_engineer'\|\|r==='sales_engineer'\?'se'/);
+});

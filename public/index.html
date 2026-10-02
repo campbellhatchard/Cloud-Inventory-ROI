@@ -1550,7 +1550,7 @@
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="6.9.19";</script>
+<script>const APP_VERSION="6.9.20";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
 <script src="ai-session.js"></script>
@@ -2817,7 +2817,7 @@ async function loadProfileInfo() {
     const user = await resp.json();
     const roleColors = { admin: 'var(--purple)', se: 'var(--cyan-dark)', rep: 'var(--navy)', sales_manager:'var(--orange)', value_engineering:'var(--green)' };
     const roleLabels = { admin: 'Admin', se: 'Solution Engineer', rep: 'Account Executive', sales_manager:'Sales Leader', value_engineering:'Value Engineering' };
-    const assignedRoles=[...new Set([...(user.roleKeys||[]),...(user.roles||[]),user.role].filter(Boolean).map(r=>String(r).toLowerCase().replace(/\s+/g,'_')).map(r=>r==='sales_leader'?'sales_manager':r==='solution_engineer'?'se':r==='sales_rep'||r==='account_executive'?'rep':r))];
+    const assignedRoles=[...new Set([...(user.roleKeys||[]),...(user.roles||[]),user.role].filter(Boolean).map(r=>String(r).toLowerCase().replace(/\s+/g,'_')).map(r=>r==='sales_leader'?'sales_manager':r==='solution_engineer'||r==='sales_engineer'?'se':r==='sales_rep'||r==='account_executive'?'rep':r))];
     const roleBadges=assignedRoles.map(role=>`<span class="role-badge" style="background:${(roleColors[role]||'#1E2931')}20;color:${roleColors[role]||'#1E2931'}">${escapeHtml(roleLabels[role]||role.replace(/_/g,' '))}</span>`).join(' ');
     wrap.innerHTML = `
       <div class="profile-info-grid">

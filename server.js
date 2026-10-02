@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   server.js  —  Cloud Inventory ROI Builder  v6.9.19
+   server.js  —  Cloud Inventory ROI Builder  v6.9.20
    Database-backed multi-user edition — production hardened
 
    Security layers applied (Phase 10):

@@ -18,37 +18,47 @@ function renderStory(story,readiness){const status=readiness?.status;if(!['ready
 function renderStoryError(){showExecutiveValueStoryUnavailable();}
 window.renderExec=async function(){if(!window._calcScenarioId){renderStoryError();return;}const el=document.getElementById('execDoc');if(el)el.innerHTML='<div class="card">Executive Value Story loading…</div>';try{const [story,readiness]=await Promise.all([window.loadExecutiveValueStory(true),window.getExecutiveOutputReadiness('executive_view')]);renderStory(story,readiness);}catch(error){console.error('executive_web.failed_closed',{message:error?.message});renderStoryError();}};
 function exportButton(kind,label,disabled){const btn=document.getElementById(kind==='pptx'?'pptxExportBtn':'pdfDownloadBtn');if(btn){btn.disabled=disabled;btn.dataset.originalLabel=btn.dataset.originalLabel||btn.innerHTML;if(disabled)btn.textContent=label;else btn.innerHTML=btn.dataset.originalLabel;}}
+const EXECUTIVE_EXPORT_TIMEOUT_MS=30000;
+function withExecutiveExportDeadline(label,task){
+ const controller=typeof AbortController==='function'?new AbortController():null;
+ let timer;
+ const timeout=new Promise((_,reject)=>{timer=setTimeout(()=>{controller?.abort();const error=new Error(`${label} generation timed out. Please retry.`);error.name='ExportTimeoutError';reject(error);},EXECUTIVE_EXPORT_TIMEOUT_MS);});
+ return Promise.race([Promise.resolve().then(()=>task(controller?.signal)),timeout]).finally(()=>clearTimeout(timer));
+}
 function downloadBlob(blob,name){if(!(blob instanceof Blob)||blob.size===0)throw new Error('The generated file was empty. Please retry.');const a=document.createElement('a'),url=URL.createObjectURL(blob);a.href=url;a.download=name;a.rel='noopener';a.style.display='none';document.body.appendChild(a);a.click();setTimeout(()=>{a.remove();URL.revokeObjectURL(url);},30000);}
 function showPdfBlocked(){console.warn('executive_pdf.popup_blocked');let box=document.getElementById('pdfPopupFallback');if(!box){box=document.createElement('div');box.id='pdfPopupFallback';box.className='proposal-review-notice';box.innerHTML='<b>Your browser blocked the PDF window.</b> <button class="btn btn-primary btn-sm" type="button" onclick="downloadPDF()">Open PDF</button>';const host=document.getElementById('executiveReadinessBanner')||document.getElementById('execDoc');host?.prepend(box);}showToast?.('Your browser blocked the PDF window. Use Open PDF to retry.');}
 function showPptRetry(){let box=document.getElementById('pptxRetryNotice');if(!box){box=document.createElement('div');box.id='pptxRetryNotice';box.className='proposal-review-notice';box.innerHTML='<b>PowerPoint could not be generated.</b> <button class="btn btn-secondary btn-sm" type="button" onclick="exportToPowerPoint()">Retry</button>';const host=document.getElementById('executiveReadinessBanner')||document.getElementById('execDoc');host?.prepend(box);}}
 window.exportToPowerPoint=async function(){
  console.info('executive_pptx.client_started',{savedScenario:Boolean(window._calcScenarioId)});exportButton('pptx','Creating PowerPoint…',true);
  try{
-  if(!window._calcScenarioId)throw new Error('Save the scenario before creating an Executive PowerPoint.');
-  const gate=await guardExecutiveOutput('pptx',{allowDraft:true});if(!gate.proceed)return;
-  const qs=new URLSearchParams({internalDraft:String(Boolean(gate.draft)),reviewAcknowledged:String(gate.result?.status==='review')});
-  const res=await fetch(`/api/scenarios/${encodeURIComponent(window._calcScenarioId)}/export-pptx?${qs}`,{credentials:'same-origin',headers:{Accept:'application/vnd.openxmlformats-officedocument.presentationml.presentation'}});
-  if(!res.ok){let detail={};try{detail=await res.json();}catch(_){}throw new Error(detail.error||`PowerPoint request failed (${res.status}).`);}
-  const blob=await res.blob(),customer=(window.executiveValueStory?.meta?.customer||'Prospect').replace(/[^a-z0-9]+/gi,'-');
-  downloadBlob(blob,`Cloud-Inventory-ROI-${customer}-Executive-Review-${new Date().toISOString().slice(0,10)}.pptx`);document.getElementById('pptxRetryNotice')?.remove();console.info('executive_pptx.client_completed',{bytes:blob.size});showToast?.('PowerPoint created.');
- }catch(err){console.error('executive_pptx.client_failed',{message:err.message});showPptRetry();showToast?.('PowerPoint could not be generated. Please retry.');}
+  await withExecutiveExportDeadline('PowerPoint',async signal=>{
+   if(!window._calcScenarioId)throw new Error('Save the scenario before creating an Executive PowerPoint.');
+   const gate=await guardExecutiveOutput('pptx',{allowDraft:true});if(!gate.proceed)return;
+   const qs=new URLSearchParams({internalDraft:String(Boolean(gate.draft)),reviewAcknowledged:String(gate.result?.status==='review')});
+   const res=await fetch(`/api/scenarios/${encodeURIComponent(window._calcScenarioId)}/export-pptx?${qs}`,{credentials:'same-origin',headers:{Accept:'application/vnd.openxmlformats-officedocument.presentationml.presentation'},...(signal?{signal}:{})});
+   if(!res.ok){let detail={};try{detail=await res.json();}catch(_){}throw new Error(detail.error||`PowerPoint request failed (${res.status}).`);}
+   const blob=await res.blob(),customer=(window.executiveValueStory?.meta?.customer||'Prospect').replace(/[^a-z0-9]+/gi,'-');
+   downloadBlob(blob,`Cloud-Inventory-ROI-${customer}-Executive-Review-${new Date().toISOString().slice(0,10)}.pptx`);document.getElementById('pptxRetryNotice')?.remove();console.info('executive_pptx.client_completed',{bytes:blob.size});showToast?.('PowerPoint created.');
+  });
+ }catch(err){const message=err.name==='AbortError'||err.name==='ExportTimeoutError'?'PowerPoint generation timed out. Please retry.':(err.message||'PowerPoint could not be generated. Please retry.');console.error('executive_pptx.client_failed',{message});showPptRetry();showToast?.(message);}
  finally{exportButton('pptx','Creating PowerPoint…',false);}
 };
 const authoritativePptButton=document.getElementById('pptxExportBtn');if(authoritativePptButton){authoritativePptButton.disabled=false;authoritativePptButton.removeAttribute('aria-disabled');authoritativePptButton.dataset.authoritativeAdapter='ready';}
 window.downloadPDF=async function(){
  exportButton('pdf','Preparing PDF…',true);console.info('executive_pdf.started',{savedScenario:Boolean(window._calcScenarioId)});
- const controller=typeof AbortController==='function'?new AbortController():null,timeout=controller?setTimeout(()=>controller.abort(),45000):null;
  try{
-  if(!window._calcScenarioId)throw new Error('Save the scenario before creating a customer PDF.');
-  if(typeof hasUnsavedChanges==='function'&&hasUnsavedChanges())throw new Error('Save the updated ROI as a new scenario version before creating the PDF.');
-  const gate=await guardExecutiveOutput('pdf',{allowDraft:true});if(!gate.proceed)return;
-  const qs=new URLSearchParams({internalDraft:String(Boolean(gate.draft)),reviewAcknowledged:String(gate.result?.status==='review')});
-  const res=await fetch(`/api/scenarios/${encodeURIComponent(window._calcScenarioId)}/export-pdf?${qs}`,{credentials:'same-origin',headers:{Accept:'application/pdf'},...(controller?{signal:controller.signal}:{})});
-  if(!res.ok){let detail={};try{detail=await res.json();}catch(_){}throw new Error(detail.error||`PDF request failed (${res.status}).`);}
-  const blob=await res.blob(),customer=(window.executiveValueStory?.meta?.customer||'Prospect').replace(/[^a-z0-9]+/gi,'-');
-  downloadBlob(blob,`Cloud-Inventory-ROI-${customer}-${new Date().toISOString().slice(0,10)}.pdf`);document.getElementById('pdfPopupFallback')?.remove();console.info('executive_pdf.completed',{bytes:blob.size});showToast?.('PDF created.');
- }catch(err){const message=err.name==='AbortError'?'PDF generation timed out. Please retry.':(err.message||'PDF could not be generated.');console.error('executive_pdf.failed',{message});window.logClientError?.(message,'executive_pdf','error');showOutputRetry('executivePdfRetry',message,'Retry',window.downloadPDF);showToast?.(message);}
- finally{clearTimeout(timeout);exportButton('pdf','Preparing PDF…',false);}
+  await withExecutiveExportDeadline('PDF',async signal=>{
+   if(!window._calcScenarioId)throw new Error('Save the scenario before creating a customer PDF.');
+   if(typeof hasUnsavedChanges==='function'&&hasUnsavedChanges())throw new Error('Save the updated ROI as a new scenario version before creating the PDF.');
+   const gate=await guardExecutiveOutput('pdf',{allowDraft:true});if(!gate.proceed)return;
+   const qs=new URLSearchParams({internalDraft:String(Boolean(gate.draft)),reviewAcknowledged:String(gate.result?.status==='review')});
+   const res=await fetch(`/api/scenarios/${encodeURIComponent(window._calcScenarioId)}/export-pdf?${qs}`,{credentials:'same-origin',headers:{Accept:'application/pdf'},...(signal?{signal}:{})});
+   if(!res.ok){let detail={};try{detail=await res.json();}catch(_){}throw new Error(detail.error||`PDF request failed (${res.status}).`);}
+   const blob=await res.blob(),customer=(window.executiveValueStory?.meta?.customer||'Prospect').replace(/[^a-z0-9]+/gi,'-');
+   downloadBlob(blob,`Cloud-Inventory-ROI-${customer}-${new Date().toISOString().slice(0,10)}.pdf`);document.getElementById('pdfPopupFallback')?.remove();console.info('executive_pdf.completed',{bytes:blob.size});showToast?.('PDF created.');
+  });
+ }catch(err){const message=err.name==='AbortError'||err.name==='ExportTimeoutError'?'PDF generation timed out. Please retry.':(err.message||'PDF could not be generated.');console.error('executive_pdf.failed',{message});window.logClientError?.(message,'executive_pdf','error');showOutputRetry('executivePdfRetry',message,'Retry',window.downloadPDF);showToast?.(message);}
+ finally{exportButton('pdf','Preparing PDF…',false);}
 };
 window.exportExecutiveWord=async function(){const btn=document.getElementById('executiveWordBtn'),old=btn?.innerHTML;if(btn){btn.disabled=true;btn.textContent='Building Word…';}try{if(!window._calcScenarioId)throw new Error('Save the scenario before creating a Word document.');const gate=await guardExecutiveOutput('docx',{allowDraft:true});if(!gate.proceed)return;const qs=new URLSearchParams({internalDraft:String(Boolean(gate.draft)),reviewAcknowledged:String(gate.result?.status==='review')});const res=await fetch(`/api/scenarios/${encodeURIComponent(window._calcScenarioId)}/export-docx?${qs}`,{credentials:'same-origin',headers:{Accept:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}});if(!res.ok){let detail={};try{detail=await res.json();}catch(_){}throw new Error(detail.error||`Word request failed (${res.status}).`);}const blob=await res.blob(),customer=(window.executiveValueStory?.meta?.customer||'Prospect').replace(/[^a-z0-9]+/gi,'-');downloadBlob(blob,`Cloud-Inventory-ROI-${customer}-Business-Case-${new Date().toISOString().slice(0,10)}.docx`);document.getElementById('executiveWordRetry')?.remove();showToast?.('Word document created.');}catch(err){console.error('executive_docx.failed',{message:err.message});showOutputRetry('executiveWordRetry',err.message||'Word document could not be generated.','Retry',window.exportExecutiveWord);showToast?.(err.message||'Word document could not be generated.');}finally{if(btn){btn.disabled=false;btn.innerHTML=old||'Executive business case';}}};
 function showOutputRetry(id,message,label,handler){let box=document.getElementById(id);if(!box){box=document.createElement('div');box.id=id;box.className='proposal-review-notice';box.innerHTML=`<b>${esc(message)}</b> <button class="btn btn-secondary btn-sm" type="button">${esc(label)}</button>`;box.querySelector('button').onclick=handler;(document.getElementById('executiveReadinessBanner')||document.getElementById('proposalEditorWrap')||document.body).prepend(box);}}

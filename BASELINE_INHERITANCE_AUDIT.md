@@ -1,10 +1,10 @@
-# v6.9.19 Baseline Inheritance Audit
+# v6.9.20 Baseline Inheritance Audit
 
-- Parent archive: `Cloud-Inventory-ROI-v6.9.18-Exact-Deployed-Source-c260ed78.zip`
-- Verified parent SHA-256: `1eb24399e2dffe46036991fa0b9eb2c3dd29551749193566714791beccc1a7fb`
-- Parent application version: 6.9.18
-- Target application version: 6.9.19
-- Baseline Git snapshot: `c260ed78bd1b791d5926f971e05445e90c84097c`
+- Parent archive: `Cloud-Inventory-ROI-v6.9.19-Exact-Deployed-Source-1c42d3c.zip`
+- Verified parent SHA-256: `80f1efb7552f01071c987809b313409059fa8476fde5a55c4fb5b22df98074f5`
+- Parent application version: 6.9.19
+- Target application version: 6.9.20
+- Baseline Git snapshot: `1c42d3c1e150c9318eebc11dd45b11bb5c493c72`
 - ROI authority: ROI Model v2.8 / modelVersion 28
 - Brand System: v1.0
 - Application Knowledge: v1.0

@@ -1,30 +1,16 @@
-# v6.9.19 Differential Audit
+# v6.9.20 Differential Audit
 
-v6.9.19 is a corrective release applied to the exact Git commit currently deployed as v6.9.18. It retains the v6.9.18 fixes and adds the explicitly listed reliability, persistence, context, accessibility, and output corrections below. It does not change the authoritative ROI formulas or database schema.
+v6.9.20 is a focused correction applied to the exact Git commit currently deployed as v6.9.19. It adds bounded Executive PDF/PowerPoint recovery and canonical multi-role display without changing ROI, evidence, authorization, or database methodology.
 
 ## Intentionally changed
 
-- Prospect Link generation uses one resolved active scenario ID for validation and API submission.
-- Prospect questionnaire autosave uses one timer per question and flushes every buffered answer before immutable submission.
-- ROI customer/scenario creation requires an independent Sales Rep or Admin role in both UI and server authorization.
-- Sales Manager and saved-scenario surfaces prefer governed contract ROI, NPV, and payback fields.
-- Implementation timeline uses the same interpolated contract payback as Summary and Executive outputs.
-- Scenario save prevents duplicate client activation and serializes same-opportunity creation on PostgreSQL.
-- Three Whys fall back to in-memory editor state and invalidate cached Executive Value Story after version save.
-- Sales Manager search resists login credential autofill.
-- Executive PDF requests time out safely, restore controls, show Retry, and report failure to Admin Error Log.
-- Prospect draft-difference text identifies the Prospect Link draft rather than implying the calculator value is stale.
-- Customer switching clears dependent scenario/prospect state and restores the selected active context.
-- Prospect value application is constrained to the matching opportunity and customer.
-- Admin customer/scenario payloads are normalized before rendering and switching.
-- JPP milestone inputs persist through save and reload.
-- Buyer Evidence uses local-date formatting and exposes evidence strength consistently.
-- CRM contract metrics and published business-case link actions provide explicit success/failure feedback.
-- Modal visibility and downloadable output handling fail safely for inaccessible or empty artifacts.
+- Executive PDF and PowerPoint client requests share a 30-second deadline, abort stalled requests, restore their controls, and expose actionable retry messages.
+- Executive PDF and PowerPoint server generation is bounded by a 25-second timeout and returns an explicit HTTP 504 response when generation stalls.
+- Sales Engineer role aliases collapse into one canonical `SE` badge in the profile display.
 
 ## Intentionally preserved
 
-ROI Model v2.8, formulas, overlap rules, Brand System v1.0, Application Knowledge v1.0, Christie Persona v1.0, immutable Prospect evidence, deliberate per-value application, Value History, Rep Confirmed provenance, BuyCycle governance, output authority, migrations, and SE cross-account Solution Fit scope.
+ROI Model v2.8, formulas, overlap rules, Brand System v1.0, Application Knowledge v1.0, Christie Persona v1.0, immutable Prospect evidence, deliberate per-value application, Value History, Rep Confirmed provenance, BuyCycle governance, output authority, migrations, SE cross-account Solution Fit scope, and all v6.9.19 persistence/context/output corrections.
 
 ## Migrations added
 
@@ -37,4 +23,4 @@ None.
 
 ## Unresolved external validation
 
-GitHub Actions PostgreSQL 16 certification and Render post-deployment verification remain mandatory external gates. The original live Executive PDF server failure cannot be fully reproduced without an authenticated deployed runtime; v6.9.19 preserves fail-recovery and diagnostic capture while existing server PDF runtime coverage remains in force.
+GitHub Actions PostgreSQL 16 certification and Render post-deployment verification remain mandatory external gates. The original live Executive export failure cannot be fully reproduced without an authenticated deployed runtime; the release adds bounded client/server recovery while existing output runtime coverage remains in force.

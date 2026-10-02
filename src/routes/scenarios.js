@@ -82,17 +82,24 @@ router.get('/:id/executive-value-story',async(req,res)=>{try{const story=await e
 router.get('/:id/executive-output-readiness',async(req,res)=>{try{const story=await executiveStoryFor(req.user,req.params.id);if(story.error)return res.status(story.status).json({error:story.error});res.json(evaluateExecutiveOutputReadiness(story,{outputType:String(req.query.output||'executive_view')}));}catch(err){res.status(err.status||500).json({error:err.message||'Failed to evaluate executive output readiness.'});}});
 router.post('/:id/executive-output-readiness/acknowledge',async(req,res)=>{try{const story=await executiveStoryFor(req.user,req.params.id);if(story.error)return res.status(story.status).json({error:story.error});const outputType=String(req.body?.outputType||'pptx'),readiness=evaluateExecutiveOutputReadiness(story,{outputType});if(readiness.status!=='review')return res.status(409).json({error:'Acknowledgement is only available for Review Before Sharing outputs.',readiness});await log({userId:req.user.id,action:'executive_output.review_acknowledged',entityType:'scenario',entityId:req.params.id,detail:{outputType,storyRevision:story.storyRevision,warningIds:readiness.warnings.map(x=>x.id)},ipAddress:req.ip});res.json({acknowledged:true,storyRevision:story.storyRevision});}catch(err){res.status(500).json({error:'Failed to record review acknowledgement.'});}});
 
+const EXECUTIVE_EXPORT_SERVER_TIMEOUT_MS=25000;
+function withExecutiveExportTimeout(label,task){
+  let timer;
+  const timeout=new Promise((_,reject)=>{timer=setTimeout(()=>{const error=new Error(`${label} generation timed out.`);error.status=504;reject(error);},EXECUTIVE_EXPORT_SERVER_TIMEOUT_MS);});
+  return Promise.race([Promise.resolve().then(task),timeout]).finally(()=>clearTimeout(timer));
+}
+
 router.get('/:id/export-pptx',async(req,res)=>{
   const started=Date.now(),scenarioId=String(req.params.id),internalDraft=req.query.internalDraft==='true',reviewAcknowledged=req.query.reviewAcknowledged==='true';
   console.info('executive_pptx.started',{scenarioId,internalDraft});
   try{
-    const report=await executiveReportFor(req.user,scenarioId);
+    const report=await withExecutiveExportTimeout('PowerPoint',()=>executiveReportFor(req.user,scenarioId));
     if(report.error)return res.status(report.status).json({error:report.error});
     const story=report.story;
     const readiness=evaluateExecutiveOutputReadiness(story,{outputType:'pptx'});
     if(readiness.status==='draft_only'&&!internalDraft)return res.status(409).json({error:'This output is available only as an internal draft.',readiness});
     if(readiness.status==='review'&&!reviewAcknowledged)return res.status(409).json({error:'Review acknowledgement is required before export.',readiness});
-    const buffer=await buildExecutivePptx(report,{internalDraft:readiness.status==='draft_only'||internalDraft});
+    const buffer=await withExecutiveExportTimeout('PowerPoint',()=>buildExecutivePptx(report,{internalDraft:readiness.status==='draft_only'||internalDraft}));
     const customer=String(story.meta.customer||'Prospect').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').slice(0,80)||'Prospect';
     res.set('Content-Type','application/vnd.openxmlformats-officedocument.presentationml.presentation');
     res.set('Content-Disposition',`attachment; filename="Cloud-Inventory-ROI-${customer}-Executive-Review-${new Date().toISOString().slice(0,10)}.pptx"`);
@@ -102,7 +109,7 @@ router.get('/:id/export-pptx',async(req,res)=>{
   }catch(err){
     const errorId=`pptx-${Date.now().toString(36)}`;
     console.error('executive_pptx.failed',{scenarioId,errorId,elapsedMs:Date.now()-started,message:err.message});
-    return res.status(500).json({error:'PowerPoint could not be generated. Please retry.',errorId});
+    return res.status(err.status||500).json({error:err.status===504?'PowerPoint generation timed out. Please retry.':'PowerPoint could not be generated. Please retry.',errorId});
   }
 });
 
@@ -110,7 +117,7 @@ async function exportReport(req,res,kind){
   const started=Date.now(),scenarioId=String(req.params.id),internalDraft=req.query.internalDraft==='true',reviewAcknowledged=req.query.reviewAcknowledged==='true';
   console.info(`executive_${kind}.started`,{scenarioId,userId:req.user.id,internalDraft});
   try{
-    const report=await executiveReportFor(req.user,scenarioId);
+    const report=await withExecutiveExportTimeout(kind.toUpperCase(),()=>executiveReportFor(req.user,scenarioId));
     if(report.error){console.warn(`executive_${kind}.denied`,{scenarioId,userId:req.user.id,status:report.status});return res.status(report.status).json({error:report.error});}
     const readiness=evaluateExecutiveOutputReadiness(report.story,{outputType:kind});
     if(readiness.status==='draft_only'&&!internalDraft)return res.status(409).json({error:'This output is available only as an internal draft.',readiness});
@@ -129,7 +136,7 @@ async function exportReport(req,res,kind){
     res.set('Cache-Control','private, no-store');res.set('X-Executive-Readiness',readiness.status);
     console.info(`executive_${kind}.completed`,{scenarioId,userId:req.user.id,status:readiness.status,bytes:buffer.length,elapsedMs:Date.now()-started});
     return res.send(buffer);
-  }catch(err){const errorId=`${kind}-${Date.now().toString(36)}`;console.error(`executive_${kind}.failed`,{scenarioId,userId:req.user.id,errorId,elapsedMs:Date.now()-started,message:err.message});return res.status(500).json({error:`${kind.toUpperCase()} could not be generated. Please retry.`,errorId});}
+  }catch(err){const errorId=`${kind}-${Date.now().toString(36)}`;console.error(`executive_${kind}.failed`,{scenarioId,userId:req.user.id,errorId,elapsedMs:Date.now()-started,message:err.message});return res.status(err.status||500).json({error:err.status===504?`${kind.toUpperCase()} generation timed out. Please retry.`:`${kind.toUpperCase()} could not be generated. Please retry.`,errorId});}
 }
 router.get('/:id/export-pdf',(req,res)=>exportReport(req,res,'pdf'));
 router.get('/:id/export-docx',(req,res)=>exportReport(req,res,'docx'));

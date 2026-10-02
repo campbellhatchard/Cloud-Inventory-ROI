@@ -7,6 +7,12 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.20', date: '2026-10-02', tag: 'production-export-recovery',
+    title: 'Production Export Recovery',
+    summary: 'Prevents Executive PDF and PowerPoint actions from remaining stuck and normalizes duplicate Sales Engineer role labels.',
+    highlights: ['PDF and PowerPoint now bound readiness and download work to a 30-second client deadline.', 'Server export preparation returns a clear timeout instead of hanging indefinitely.', 'Export buttons always recover and expose a retry action.', 'My Profile collapses legacy Sales Engineer aliases into one Solution Engineer badge.']
+  },
+  {
     version: '6.9.19', date: '2026-10-02', tag: 'consolidated-regression-repairs',
     title: 'Consolidated Regression Repairs',
     summary: 'Packages the verified regression repairs under a distinct release number for deployment tracking.',
