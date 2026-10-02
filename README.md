@@ -183,4 +183,4 @@ Edit `public/scenario-templates.js`, add an entry to `SCENARIO_TEMPLATES`:
 
 ## Version
 
-Current: **v6.9.14** — Prospect Evidence review wiring correction built on the synchronized v6.9.13 production-recovery baseline. Both review controls open the evidence comparison, Submission History remains separate, and the fixed Prospect Link ROI, answer-processing, and Executive PDF safeguards are retained. ROI Model remains v2.8, Brand System remains v1.0, Knowledge remains v1.0, and Christie Persona remains v1.0.
+Current: **v6.9.25** — Regression-backlog correction built from the exact v6.9.24 release. It repairs customer/scenario identity continuity, replaces repeated browser-print PDF failures with governed server files, restores Proposal initial-save reachability, and corrects confirmed coaching, comparison, stage, evidence-review, and UI defects. ROI Model remains v2.8, Brand System remains v1.0, Knowledge remains v1.0, and Christie Persona remains v1.0.

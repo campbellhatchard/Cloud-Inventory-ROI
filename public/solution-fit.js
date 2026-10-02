@@ -232,7 +232,11 @@
     const add = (path, value, source) => { if (setKnown(path, value, source, mutate)) changed++; };
     add('opportunity.customer', customerName || v.company, 'Customer');
     add('opportunity.users', v.users > 0 ? String(v.users) : '', 'Calculator');
-    if(sameScenarioCustomer)add('opportunity.stage', window.getCurrentBuyCycleStageLabel?.() || 'Stage 2 — Define Economic Consequences', 'Buyer Evidence');
+    if(sameScenarioCustomer){
+      const governedStage=window.getCurrentBuyCycleStageLabel?.() || 'Stage 2 — Define Economic Consequences';
+      if(mutate&&String(S.opportunity.stage||'')!==String(governedStage)){setVal(S,'opportunity.stage',governedStage);changed++;}
+      knownSources['opportunity.stage']='Buyer Evidence';
+    }
     add('opportunity.locations', v.fieldLocations > 0 ? `${v.fieldLocations} field location${v.fieldLocations===1?'':'s'}` : '', 'Calculator');
     add('opportunity.problem', whyAct, 'Executive narrative');
     add('opportunity.outcome', da.ve13 || '', 'Discovery');
@@ -985,11 +989,10 @@
 
   /* Branded print window — self-contained so it renders identically to PDF. */
   async function printHandoffDoc(){
-    const governedWindow=window.open('','_blank');if(!governedWindow){showToast?.('Pop-up blocked — allow pop-ups to print.');return;}
-    if(!await flushSolutionFitSave()){try{governedWindow.close();}catch(_){}return;}
-    if(!window.CISolutionFitOutputBuilders){try{governedWindow.close();}catch(_){}showToast?.('Solution Fit output builder is unavailable.');return;}
-    const governedHtml=S.handoffType==='customer'?window.CISolutionFitOutputBuilders.buildSummaryHtml(S,window.CIBrand):window.CISolutionFitOutputBuilders.buildHandoffHtml(S,window.CIBrand);
-    governedWindow.document.write(governedHtml);governedWindow.document.close();setTimeout(()=>{try{governedWindow.print();}catch(_){}},250);return;
+    if(!await flushSolutionFitSave())return;
+    if(!customerId||!window.deServerDownload){showToast?.('Solution Fit PDF service is unavailable.');return;}
+    const kind=S.handoffType==='customer'?'summary':'handoff';
+    return window.deServerDownload(`/api/handoffs/${encodeURIComponent(customerId)}/export-pdf?kind=${kind}`,`Cloud-Inventory-${kind==='summary'?'Solution-Discovery-Summary':'Internal-Solution-Handoff'}.pdf`,kind==='summary'?'Solution Discovery Summary':'Internal Solution Handoff');
     const isCustomer = S.handoffType==='customer';
     const body = isCustomer ? customerDoc() : internalDoc();
     const title = isCustomer ? 'Cloud Inventory — Discovery Summary' : 'Cloud Inventory — Solution Handoff';
@@ -1220,13 +1223,9 @@
      Shows gaps with their mitigations — volunteering limitations before
      procurement finds them builds credibility. */
   async function printRiskLedger() {
-    /* Open synchronously while the click still carries browser user activation;
-       awaiting autosave first caused otherwise-valid browsers to block it. */
-    const governedWindow=window.open('','_blank');
-    if(!governedWindow){showToast?.('Pop-up blocked — allow pop-ups to print.');return;}
-    if(!await flushSolutionFitSave()){try{governedWindow.close();}catch(_){}return;}
-    if(!window.CISolutionFitOutputBuilders){try{governedWindow.close();}catch(_){}showToast?.('Solution Fit output builder is unavailable.');return;}
-    const governedHtml=window.CISolutionFitOutputBuilders.buildRiskHtml(S,window.CIBrand);governedWindow.document.write(governedHtml);governedWindow.document.close();setTimeout(()=>{try{governedWindow.print();}catch(_){}},400);return;
+    if(!await flushSolutionFitSave())return;
+    if(!customerId||!window.deServerDownload){showToast?.('Solution Fit PDF service is unavailable.');return;}
+    return window.deServerDownload(`/api/handoffs/${encodeURIComponent(customerId)}/export-pdf?kind=risk`,'Cloud-Inventory-Solution-Fit-Risk-Ledger.pdf','Solution Fit Risk Ledger');
     const company = S.company || 'Prospect';
     const gaps = S.gaps || [];
     const today = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});

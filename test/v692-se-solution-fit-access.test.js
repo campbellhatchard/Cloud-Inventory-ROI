@@ -68,7 +68,7 @@ test('active/inactive/deleted lifecycle and scenario independence are migration-
 
 test('Help and permanent governance state the isolated SE Solution Fit scope',()=>{
   const k=require('../config/application-knowledge.json'),contract=read('BUILD_GOVERNANCE_CONTRACT.md');
-  assert.equal(k.knowledgeVersion,'1.0');assert.equal(k.applicationVersion,'6.9.24');
+  assert.equal(k.knowledgeVersion,'1.0');assert.equal(k.applicationVersion,'6.9.25');
   assert.ok(k.solutionFitKnowledge.some(x=>x.includes('search across all active customers')));
   assert.ok(k.solutionFitKnowledge.some(x=>x.includes('does not automatically grant access')));
   assert.match(contract,/SE CROSS-ACCOUNT SOLUTION FIT INVARIANT/);assert.match(contract,/This does not confer general/);
@@ -77,7 +77,7 @@ test('Help and permanent governance state the isolated SE Solution Fit scope',()
 test('cross-account Solution Fit never reuses a different customer scenario context',()=>{
   const ui=read('public/solution-fit.js');
   assert.match(ui,/sameScenarioCustomer=String\(window\.currentScenarioCustomerId/);
-  assert.match(ui,/if\(sameScenarioCustomer\)add\('opportunity\.stage'/);
+  assert.match(ui,/if\(sameScenarioCustomer\)\{[\s\S]{0,300}getCurrentBuyCycleStageLabel[\s\S]{0,300}setVal\(S,'opportunity\.stage'/);
   assert.match(ui,/sameScenarioCustomer\?\(document\.getElementById\('why_act'\)/);
   assert.match(ui,/canUseSeChristie=String\(window\.currentScenarioCustomerId/);
 });

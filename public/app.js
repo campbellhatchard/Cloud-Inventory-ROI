@@ -61,7 +61,6 @@ async function fetchScenarios() {
 
 /* Map DB column_case → camelCase used by the rest of the app */
 function normaliseRow(r) {
-  const data = r.data || {};
   return {
     id:            r.id,
     baseId:        r.base_id,
@@ -94,15 +93,22 @@ function normaliseRow(r) {
     realizedValue: r.realized_value !== null && r.realized_value !== undefined ? parseFloat(r.realized_value) : null,
     outcomeAt:     r.outcome_at || null,
     customerId:    r.customer_id || null,
-    /* inputs come from GET /api/scenarios/:id — not included in list */
-    totalContractBenefit: data.totalContractBenefit ?? null,
-    totalContractInvestment: data.totalContractInvestment ?? null,
-    totalContractNetBenefit: data.totalContractNetBenefit ?? null,
-    totalContractRoi: data.totalContractRoi ?? null,
-    totalContractNpv: data.totalContractNpv ?? null,
-    contractPayback: data.contractPayback ?? null,
-    contractMonths: data.contractMonths ?? null,
-    inputs:        r.data || null
+    /* Compare receives explicit governed projections rather than the full
+       scenario JSON. This keeps the list response small without losing the
+       contract metrics and inputs the comparison UI needs. */
+    totalContractBenefit: r.total_contract_benefit == null ? null : Number(r.total_contract_benefit),
+    totalContractInvestment: r.total_contract_investment == null ? null : Number(r.total_contract_investment),
+    totalContractNetBenefit: r.total_contract_net_benefit == null ? null : Number(r.total_contract_net_benefit),
+    totalContractRoi: r.total_contract_roi == null ? null : Number(r.total_contract_roi),
+    totalContractNpv: r.total_contract_npv == null ? null : Number(r.total_contract_npv),
+    contractPayback: r.contract_payback == null ? null : Number(r.contract_payback),
+    contractMonths: r.contract_months == null ? null : Number(r.contract_months),
+    inputs: {
+      invest: r.annual_subscription == null ? null : Number(r.annual_subscription),
+      otc: r.one_time_costs == null ? null : Number(r.one_time_costs),
+      revenue: r.revenue == null ? null : Number(r.revenue),
+      users: r.users == null ? null : Number(r.users)
+    }
   };
 }
 function scenarioMatchesStageFilter(s,key){return !key||(key==='won'||key==='lost'?s.currentBuyCycleStage===7&&s.outcome===key:String(s.currentBuyCycleStage)===String(key));}
@@ -967,8 +973,8 @@ async function loadScenario(id, options = {}) {
        could be used for that first calculation; a later product selection then
        exposed the corrected number and looked like the product changed ROI. */
     window._calcScenarioId = id;
-    const cid = (scenario && scenario.customerId)
-             || (fullData && fullData.customer_id)
+    const cid = (fullData && fullData.customer_id)
+             || (scenario && scenario.customerId)
              || (inputs && inputs.customerId)
              || null;
     if (typeof loadFieldInventoryFlag === 'function') {
@@ -994,6 +1000,7 @@ async function loadScenario(id, options = {}) {
        tab can attach to it. */
     window.currentScenarioCustomerId = cid;
     window._sfSelectedCustomerId = cid;
+    window.persistActiveCustomerContext?.({id:cid,name:fullData.company||inputs.company||scenario?.company||''},id);
     if(cid&&(!window._activeCustomerMeta||window._activeCustomerMeta.id!==cid)){
       try{const mr=await apiFetch('/api/customer-switcher?customerId='+encodeURIComponent(cid)+'&state=all&limit=1');if(mr&&mr.ok){const md=await mr.json();window._activeCustomerMeta=(md.items||[])[0]||null;window.applyCustomerPermissionMode?.(window._activeCustomerMeta);}}catch(_){}
     }

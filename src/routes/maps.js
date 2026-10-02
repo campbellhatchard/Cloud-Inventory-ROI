@@ -9,6 +9,7 @@ const { log }   = require('../audit');
 const { requireAuth, hasRole } = require('../middleware/auth');
 const {hasPermission}=require('../authorization');
 const {buildJppPptx}=require('../exports/operational-pptx');
+const {buildJppPdf}=require('../exports/operational-pdf');
 const {safeFile}=require('../shared/output-brand');
 
 const router = express.Router();
@@ -89,6 +90,7 @@ router.get('/', async (req, res) => {
 });
 
 router.get('/:id/export-pptx',async(req,res)=>{try{const audience=req.query.audience==='internal'?'internal':'customer',all=hasPermission(req.user,'view_all_customers'),team=hasPermission(req.user,'view_team_customers'),{rows}=await query(`SELECT m.* FROM mutual_action_plans m WHERE m.id=$1 AND ($3 OR m.owner_id=$2 OR ($4 AND EXISTS(SELECT 1 FROM sales_team_memberships me JOIN sales_team_memberships om ON om.team_id=me.team_id AND om.user_id=m.owner_id AND om.is_active=TRUE WHERE me.user_id=$2 AND me.is_active=TRUE)))`,[req.params.id,req.user.id,all,team]);if(!rows.length)return res.status(404).json({error:'Plan not found or access denied.'});const buf=await buildJppPptx(rows[0],{audience});res.set('Content-Type','application/vnd.openxmlformats-officedocument.presentationml.presentation');res.set('Content-Disposition',`attachment; filename="Cloud-Inventory-${audience==='internal'?'Internal-':''}Joint-Project-Plan-${safeFile(rows[0].company)}-${new Date().toISOString().slice(0,10)}.pptx"`);res.send(buf);}catch(e){console.error('jpp_pptx.failed',{errorId:`jpp-${Date.now().toString(36)}`,message:e.message});res.status(500).json({error:'Joint Project Plan PowerPoint could not be generated.'});}});
+router.get('/:id/export-pdf',async(req,res)=>{try{const audience=req.query.audience==='internal'?'internal':'customer',all=hasPermission(req.user,'view_all_customers'),team=hasPermission(req.user,'view_team_customers'),{rows}=await query(`SELECT m.* FROM mutual_action_plans m WHERE m.id=$1 AND ($3 OR m.owner_id=$2 OR ($4 AND EXISTS(SELECT 1 FROM sales_team_memberships me JOIN sales_team_memberships om ON om.team_id=me.team_id AND om.user_id=m.owner_id AND om.is_active=TRUE WHERE me.user_id=$2 AND me.is_active=TRUE)))`,[req.params.id,req.user.id,all,team]);if(!rows.length)return res.status(404).json({error:'Plan not found or access denied.'});const buf=buildJppPdf(rows[0],{audience});res.set('Content-Type','application/pdf');res.set('Cache-Control','private, no-store');res.set('Content-Disposition',`attachment; filename="Cloud-Inventory-${audience==='internal'?'Internal-':''}Joint-Project-Plan-${safeFile(rows[0].company)}-${new Date().toISOString().slice(0,10)}.pdf"`);res.send(buf);}catch(e){console.error('jpp_pdf.failed',{errorId:`jpp-pdf-${Date.now().toString(36)}`,message:e.message});res.status(500).json({error:'Joint Project Plan PDF could not be generated.'});}});
 
 /* Create */
 router.post('/', async (req, res) => {

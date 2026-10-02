@@ -175,8 +175,11 @@
       .trim().split(/\s+/)
       .map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
-    const roleLabels = { admin: 'Admin', rep: 'Rep/SE' };
-    const roleClass = user.role === 'admin' ? 'ud-role--admin' : 'ud-role--rep';
+    const roleLabels = { admin:'Admin', rep:'Account Executive', se:'Solution Engineer', sales_manager:'Sales Manager', sales_leader:'Sales Leader', value_engineering:'Value Engineering' };
+    const rawRoles = [user.role, ...(user.roleKeys || []), ...(user.roles || [])];
+    const normalizedRoles = [...new Set(rawRoles.map(role => String(typeof role==='object' ? (role.key||role.name||'') : role||'').trim().toLowerCase().replace(/\s+/g,'_')).map(role => role==='solution_engineer'?'se':role).filter(Boolean))];
+    const roleText = normalizedRoles.map(role => roleLabels[role] || role.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())).join(' · ') || 'User';
+    const roleClass = normalizedRoles.includes('admin') ? 'ud-role--admin' : 'ud-role--rep';
 
     right.innerHTML = `
       <span class="topbar-date" id="todayDate"></span>
@@ -187,7 +190,7 @@
         <div class="user-dropdown" id="userDropdown" style="display:none;">
           <div class="ud-header">
             <div class="ud-name">${user.username}</div>
-            <div class="ud-role ${roleClass}">${roleLabels[user.role]||user.role}</div>
+            <div class="ud-role ${roleClass}">${roleText.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</div>
             <div class="ud-email">${user.email || ''}</div>
           </div>
           <div class="ud-items">

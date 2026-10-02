@@ -105,7 +105,7 @@ test('comparison selections survive navigation and use governed contract economi
   assert.match(features,/sessionStorage\.setItem\('ciCompareScenarioIds'/);
   for(const label of ['Contract ROI','Contract NPV','Net contract benefit','Payback from signing'])assert.ok(features.includes(label),label);
   assert.doesNotMatch(features,/label: 'Year 1 ROI'/);
-  assert.match(app,/totalContractRoi: data\.totalContractRoi/);
+  assert.match(app,/totalContractRoi: r\.total_contract_roi/);
 });
 
 test('admin user creation resists credential-manager autofill and Prospect Help clears core actions',()=>{

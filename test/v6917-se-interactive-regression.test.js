@@ -39,10 +39,11 @@ test('AI Help maps active panes to Application Knowledge workspace identifiers',
   assert.match(src,/screen:WORKSPACE_IDS\[pane\]|WORKSPACE_IDS\[paneId\]/);
 });
 
-test('Risk Ledger opens its output window before awaiting autosave so user activation is preserved',()=>{
+test('Risk Ledger saves first and then uses the governed server PDF download',()=>{
   const src=read('public/solution-fit.js'),start=src.indexOf('async function printRiskLedger()'),fn=src.slice(start,src.indexOf("document.addEventListener('keydown'",start));
-  const opened=fn.indexOf("window.open('','_blank')"),saved=fn.indexOf('await flushSolutionFitSave()');
-  assert.ok(opened>=0&&saved>=0&&opened<saved,{opened,saved});
-  assert.match(fn,/if\(!await flushSolutionFitSave\(\)\)\{try\{governedWindow\.close\(\)/);
-  assert.match(fn,/CISolutionFitOutputBuilders\.buildRiskHtml/);
+  const saved=fn.indexOf('await flushSolutionFitSave()'),download=fn.indexOf('return window.deServerDownload');
+  assert.ok(saved>=0&&download>saved,{saved,download});
+  const active=fn.slice(0,fn.indexOf('    const company',download));
+  assert.match(active,/\/api\/handoffs\/\$\{encodeURIComponent\(customerId\)\}\/export-pdf\?kind=risk/);
+  assert.doesNotMatch(active,/window\.open|CISolutionFitOutputBuilders\.buildRiskHtml/);
 });

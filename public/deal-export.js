@@ -40,6 +40,16 @@ function deMilestonesInGroup(milestones, group) {
   return milestones.filter(m => m.groupId === group.id || (!m.groupId && m.phase === group.name));
 }
 function deDownloadBlob(blob,fileName){if(!(blob instanceof Blob)||blob.size===0)throw new Error('The generated file was empty.');const a=document.createElement('a'),url=URL.createObjectURL(blob);a.href=url;a.download=fileName;a.rel='noopener';a.style.display='none';document.body.appendChild(a);a.click();setTimeout(()=>{a.remove();URL.revokeObjectURL(url);},30000);}
+async function deServerDownload(url,fallbackName,label){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);
+  try{
+    const response=await fetch(url,{credentials:'same-origin',headers:{Accept:'application/pdf'},signal:controller.signal});
+    if(!response.ok){let detail='';try{detail=(await response.json()).error||'';}catch(_){}throw new Error(detail||`${label} could not be generated.`);}
+    const blob=await response.blob();if(blob.type&&!blob.type.includes('pdf'))throw new Error(`${label} returned an unexpected file type.`);
+    const disposition=response.headers.get('Content-Disposition')||'',match=disposition.match(/filename="?([^";]+)"?/i);
+    deDownloadBlob(blob,match?.[1]||fallbackName);showToast?.(`${label} downloaded.`);return true;
+  }catch(error){console.error('server_pdf.failed',{label,message:error.message});showToast?.(error.name==='AbortError'?`${label} timed out. Please retry.`:error.message);return false;}finally{clearTimeout(timer);}
+}
 /* Open a clean print window with branded HTML and trigger print */
 function dePrintWindow(title, innerHtml, extraCss, audience = 'customer') {
   const theme = window.CIBrand.documentTheme(audience);
@@ -116,6 +126,7 @@ function dePrintWindow(title, innerHtml, extraCss, audience = 'customer') {
 async function printActionPlan(variant) {
   const m = window.getSavedMapForOutput?.();
   if (!m) { showToast('Open a plan first.'); return; }
+  return deServerDownload(`/api/maps/${encodeURIComponent(m.id)}/export-pdf?audience=${variant==='internal'?'internal':'customer'}`,`Cloud-Inventory-${variant==='internal'?'Internal-':''}Joint-Project-Plan.pdf`,'Joint Project Plan PDF');
   const ms = m.milestones || [];
   const done = ms.filter(x => x.status === 'done').length;
   const pct = ms.length ? Math.round(done / ms.length * 100) : 0;
@@ -165,6 +176,7 @@ async function printActionPlan(variant) {
 async function printStakeholderMap() {
   if (!_stakeholders.length) { showToast('Add stakeholders first.'); return; }
   const company = _stakeCompany || 'All companies';
+  return deServerDownload('/api/stakeholders/export-pdf?company='+encodeURIComponent(company),'Cloud-Inventory-Internal-Stakeholder-Map.pdf','Stakeholder Map PDF');
 
   /* Quadrant dots as absolutely-positioned HTML */
   const dots = _stakeholders.map(s => {
@@ -351,8 +363,8 @@ function buildRoiMethodology() {
 }
 
 /* ── PDF variant ── */
-async function roiMethodologyPDF() {
-  const scenarioId=savedScenarioId||window._calcScenarioId;
+async function roiMethodologyPDF(requestedScenarioId) {
+  const scenarioId=requestedScenarioId||window._calcScenarioId;
   if(!scenarioId){showToast('Save or select a scenario before exporting ROI methodology.');return;}
   const btn=document.getElementById('roiMethodPdfBtn'),original=btn?.innerHTML;
   if(btn){btn.disabled=true;btn.textContent='Building PDF…';}
@@ -827,10 +839,7 @@ function _getCompData() {
 async function exportCompPDF() {
   const id=window._ciCurrentIntelligence?.battlecard?.current_revision_id;
   if(!id)return showToast('Formal export requires an approved Battlecard revision. Research remains available internally.');
-  const response=await apiFetch('/api/export/battlecard/'+encodeURIComponent(id));
-  if(!response.ok)return showToast('An approved active Battlecard revision is required.');
-  const data=await response.json();
-  dePrintWindow('Competitive Battlecard', '<p>INTERNAL COMPETITIVE INTELLIGENCE · CONFIDENTIAL</p><h1>'+deEsc(data.product)+'</h1><p>Approved revision '+deEsc(data.version)+'</p>'+data.findings.map(x=>'<section><h2>'+deEsc(x.category)+'</h2><p>'+deEsc(x.claim)+'</p></section>').join(''),'','internal');
+  try{const response=await fetch('/api/export/battlecard-pdf',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json',Accept:'application/pdf'},body:JSON.stringify({battlecardRevisionId:id})});if(!response.ok){const body=await response.json().catch(()=>({}));throw new Error(body.error||'Battlecard PDF export failed.');}const blob=await response.blob(),disp=response.headers.get('Content-Disposition')||'',name=disp.match(/filename="?([^";]+)"?/i)?.[1]||'Cloud-Inventory-Internal-Battlecard.pdf';deDownloadBlob(blob,name);showToast('Battlecard PDF downloaded.');}catch(error){showToast(error.message||'Battlecard PDF export failed.');}
 }
 
 /* ── Word Export (.docx): server-side via /api/export/battlecard-docx ──
@@ -908,6 +917,7 @@ async function exportCompDocx() {
 
 window.exportCompPDF  = exportCompPDF;
 window.exportCompDocx = exportCompDocx;
+window.deServerDownload = deServerDownload;
 
 /* Primary production paths for saved operational PowerPoints. */
 async function deServerPpt(url,button,fileName,retry){const old=button?.innerHTML;if(button){button.disabled=true;button.textContent='Generating…';}try{const r=await fetch(url,{credentials:'same-origin',headers:{Accept:'application/vnd.openxmlformats-officedocument.presentationml.presentation'}});if(!r.ok)throw new Error((await r.json().catch(()=>({}))).error||`Request failed (${r.status})`);const blob=await r.blob();deDownloadBlob(blob,fileName);document.getElementById('operationalPptRetry')?.remove();showToast('PowerPoint downloaded.');return true;}catch(e){console.error('operational_pptx.failed',{message:e.message});let n=document.getElementById('operationalPptRetry');if(!n){n=document.createElement('div');n.id='operationalPptRetry';n.className='proposal-review-notice';n.innerHTML='<b>PowerPoint could not be generated.</b> <button class="btn btn-secondary btn-sm">Retry</button>';n.querySelector('button').onclick=retry;(document.querySelector('.pane.active .page-header')||document.querySelector('.pane.active')||document.body).prepend(n);}showToast('PowerPoint could not be generated.');return false;}finally{if(button){button.disabled=false;button.innerHTML=old||'PowerPoint';}}}

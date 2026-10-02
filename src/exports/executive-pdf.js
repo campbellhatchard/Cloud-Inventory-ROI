@@ -57,7 +57,7 @@ function makePdf(pageStreams){const objects=[];const add=s=>{objects.push(s);ret
 /* Shared, dependency-free PDF primitive for governed exports. Callers supply
    already-authoritative content; this function performs presentation only. */
 function buildTextPdf({title,subtitle='',sections=[],audience='customer',draft=false,review=false}){
-  if(!['customer','internal'].includes(audience)||draft!==(audience==='internal'))throw new Error('PDF audience does not match governed draft state.');
+  if(!['customer','internal'].includes(audience)||draft&&audience!=='internal')throw new Error('PDF audience does not match governed draft state.');
   const docTheme=brand.documentTheme(audience),pages=[];let ops=[],y=PAGE.h-PAGE.top,pageNo=0;
   const footer=()=>{ops.push(`${color(docTheme.border)} RG .5 w ${PAGE.left} 35 m ${PAGE.right} 35 l S`);ops.push(`BT /F1 7 Tf ${color(docTheme.muted)} rg ${PAGE.left} 22 Td (${esc(brand.audience(audience))}) Tj ET`);ops.push(`BT /F1 7 Tf ${color(docTheme.muted)} rg 520 22 Td (Page ${pageNo}) Tj ET`);};
   const page=()=>{if(ops.length){footer();pages.push(ops.join('\n'));}ops=[];pageNo++;y=PAGE.h-PAGE.top;ops.push(`${color(docTheme.accent)} RG 2 w ${PAGE.left} ${PAGE.h-35} m ${PAGE.right} ${PAGE.h-35} l S`);ops.push(`q 72 0 0 25 ${PAGE.left} ${PAGE.h-30} cm /Im1 Do Q`);if(draft){ops.push(`BT /F2 8 Tf ${color(docTheme.danger)} rg 315 ${PAGE.h-27} Td (CONFIDENTIAL - INTERNAL USE ONLY) Tj ET`);ops.push(`BT /F2 8 Tf ${color(docTheme.danger)} rg 315 ${PAGE.h-39} Td (DRAFT - NOT READY FOR CUSTOMER SHARING) Tj ET`);}else if(review)ops.push(`BT /F2 8 Tf ${color(docTheme.warning)} rg 400 ${PAGE.h-28} Td (REVIEW BEFORE SHARING) Tj ET`);};

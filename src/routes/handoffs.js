@@ -15,9 +15,26 @@ const { log, ACTIONS } = require('../audit');
 const { requireAuth } = require('../middleware/auth');
 const { readiness } = require('../shared/handoff-readiness');
 const { solutionFitAccess, hasPermission, rolesOf } = require('../authorization');
+const {buildSolutionFitPdf}=require('../exports/operational-pdf');
+const {safeFile}=require('../shared/output-brand');
 
 const router = express.Router();
 router.use(requireAuth);
+
+router.get('/:customerId/export-pdf',async(req,res)=>{
+  try{
+    const access=await loadAccessibleCustomer(req.params.customerId,req.user,'read');
+    if(!access.ok)return res.status(access.code).json({error:access.error});
+    const kind=['summary','risk','handoff'].includes(req.query.kind)?req.query.kind:'summary';
+    const {rows}=await query(`SELECT data FROM handoffs WHERE customer_id=$1 AND deleted_at IS NULL`,[req.params.customerId]);
+    if(!rows.length)return res.status(409).json({error:'Save the Solution Fit before creating an output.'});
+    const buf=buildSolutionFitPdf(rows[0].data||{},{kind,customer:access.customer.name});
+    const label=kind==='risk'?'Solution-Fit-Risk-Ledger':kind==='handoff'?'Internal-Solution-Handoff':'Solution-Discovery-Summary';
+    res.set('Content-Type','application/pdf');res.set('Cache-Control','private, no-store');
+    res.set('Content-Disposition',`attachment; filename="Cloud-Inventory-${label}-${safeFile(access.customer.name)}-${new Date().toISOString().slice(0,10)}.pdf"`);
+    res.send(buf);
+  }catch(error){console.error('solution_fit_pdf.failed',{errorId:`solution-pdf-${Date.now().toString(36)}`,message:error.message});res.status(500).json({error:'Solution Fit PDF could not be generated.'});}
+});
 
 /* ── Access control ─────────────────────────────────────────────────
    Loads the customer and applies the handoff access policy per verb:

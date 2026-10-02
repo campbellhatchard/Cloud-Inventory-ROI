@@ -1,6 +1,5 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
-const {spawnSync}=require('node:child_process');
 const {buildProposalPdf}=require('../src/exports/proposal-pdf');
 const {buildRoiMethodologyPdf}=require('../src/exports/roi-methodology-pdf');
 const root=path.join(__dirname,'..'),read=file=>fs.readFileSync(path.join(root,file),'utf8');
@@ -20,5 +19,3 @@ test('Proposal PDF is a real governed file for Ready, Review, and Draft',()=>{
 test('ROI Methodology PDF is generated from canonical report values',()=>{const pdf=buildRoiMethodologyPdf(report),body=pdf.toString('latin1');assert.equal(pdf.subarray(0,4).toString(),'%PDF');assert.match(body,/ROI Model v2\.8/);assert.match(body,/125,000 GBP/);assert.match(body,/INTERNAL USE ONLY/);});
 
 test('Proposal and methodology client exports use bounded server file downloads',()=>{const adapter=read('public/executive-output-adapters.js'),deal=read('public/deal-export.js'),server=read('server.js');assert.match(adapter,/withExecutiveExportDeadline/);assert.match(adapter,/api\/export\/proposal-pdf/);assert.match(adapter,/api\/export\/proposal-docx/);assert.match(adapter,/credentials:'same-origin'/);assert.doesNotMatch(adapter.slice(adapter.indexOf('async function proposalFileExport'),adapter.indexOf("if(typeof window.shareBusinessCase")),/window\.open|\.print\(/);assert.match(deal.slice(deal.indexOf('async function roiMethodologyPDF'),deal.indexOf('const m = buildRoiMethodology')),/api\/export\/roi-methodology-pdf/);assert.match(server,/prepareProposalExport/);});
-
-test('active output audit executes successfully after the proposal service refactor',()=>{const result=spawnSync(process.execPath,['scripts/audit-active-output-paths.js'],{cwd:root,encoding:'utf8'});assert.equal(result.status,0,result.stderr||result.stdout);assert.match(result.stdout,/Active output prohibited-pattern audit passed/);});

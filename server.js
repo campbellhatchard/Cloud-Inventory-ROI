@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   server.js  —  Cloud Inventory ROI Builder  v6.9.24
+   server.js  —  Cloud Inventory ROI Builder  v6.9.25
    Database-backed multi-user edition — production hardened
 
    Security layers applied (Phase 10):
@@ -29,6 +29,8 @@ const { discoverySessionScope } = require('./src/shared/discovery-session-query'
 const { buildProposalDocx } = require('./src/exports/proposal-docx');
 const { buildProposalPdf } = require('./src/exports/proposal-pdf');
 const { buildRoiMethodologyPdf } = require('./src/exports/roi-methodology-pdf');
+const { buildImpactMapPdf, buildCompetitivePdf } = require('./src/exports/operational-pdf');
+const { getQuestionnaire } = require('./src/shared/questionnaire-definitions');
 const { prepareProposalExport } = require('./src/exports/proposal-export-service');
 const { buildCompetitiveDocx } = require('./src/exports/competitive-docx');
 const economicAvailability = require('./public/economic-availability');
@@ -1246,6 +1248,15 @@ app.post('/api/export/battlecard-docx', requireAuth, async (req, res) => {
   res.send(buffer);
  } catch (error) { console.error('battlecard-docx error:',error.message);res.status(500).json({error:'Word export failed.'}); }
 });
+app.post('/api/export/battlecard-pdf',requireAuth,async(req,res)=>{
+ try{
+  const id=req.body?.battlecardRevisionId;if(!id)return res.status(409).json({error:'Formal export requires an approved Battlecard revision.'});
+  const governed=await db().query(`SELECT r.version,r.content_json,p.product_name FROM competitive_battlecard_revisions r JOIN competitive_battlecards b ON b.id=r.battlecard_id JOIN competitive_products p ON p.id=b.product_id WHERE r.id=$1 AND b.current_revision_id=r.id AND b.status IN ('current','refresh_recommended') AND p.status='active' AND r.published_at IS NOT NULL`,[id]);
+  if(!governed.rows.length)return res.status(404).json({error:'Authoritative Battlecard revision not found.'});
+  const g=governed.rows[0],buffer=buildCompetitivePdf({product:g.product_name,version:g.version,findings:g.content_json?.findings||[]}),safe=String(g.product_name).replace(/[^a-z0-9]+/gi,'-');
+  res.setHeader('Content-Type','application/pdf');res.setHeader('X-Output-Audience','internal');res.setHeader('Cache-Control','private, no-store');res.setHeader('Content-Disposition',`attachment; filename="Cloud-Inventory-Internal-Battlecard-${safe}-${new Date().toISOString().slice(0,10)}.pdf"`);res.send(buffer);
+ }catch(error){console.error('battlecard-pdf error:',error.message);res.status(500).json({error:'Battlecard PDF export failed.'});}
+});
 /* Customer-ready executive proposal. The scenario id is the only proposal
    authority accepted from the browser; content is loaded from the server. */
 app.post('/api/export/proposal-docx', requireAuth, async (req, res) => {
@@ -1273,6 +1284,13 @@ app.post('/api/export/roi-methodology-pdf', requireAuth, async (req,res)=>{
   const report=require('./src/shared/customer-roi-report').buildCustomerROIReportData(source),buffer=buildRoiMethodologyPdf(report),safe=String(report.customer.name||'Customer').replace(/[^a-z0-9]+/gi,'-');
   res.setHeader('Content-Type','application/pdf');res.setHeader('X-Output-Audience','internal');res.setHeader('Content-Disposition',`attachment; filename="Cloud-Inventory-ROI-Methodology-${safe}-${new Date().toISOString().slice(0,10)}.pdf"`);res.send(buffer);
  }catch(error){console.error('roi-methodology-pdf error:',error.message);res.status(500).json({error:'ROI Methodology PDF export failed.'});}
+});
+app.get('/api/export/impact-map-pdf',requireAuth,async(req,res)=>{
+ try{
+  const labels={default:'Default / Generic',telecom:'Telecommunications',mfg:'Manufacturing',construction:'Engineering & Construction',oil:'Oil & Gas',distribution:'Wholesale Distribution',food:'Food & Beverage',retail:'Medical Devices / Life Sciences',mining:'Minerals & Mining'};
+  const groups=Object.keys(labels).map(industry=>({industry,label:labels[industry],rows:getQuestionnaire(industry,{hasFieldInventory:true}).flatMap(section=>section.questions).map(question=>({question:question.text,classification:question.classification,canonicalInput:question.canonicalInput,impact:question.classification==='financial_input'?'Governed ROI Model v2.8 input':'No direct ROI impact'}))}));
+  const buffer=buildImpactMapPdf(groups);res.setHeader('Content-Type','application/pdf');res.setHeader('X-Output-Audience','internal');res.setHeader('Cache-Control','private, no-store');res.setHeader('Content-Disposition',`attachment; filename="Cloud-Inventory-Internal-ROI-Impact-Map-${new Date().toISOString().slice(0,10)}.pdf"`);res.send(buffer);
+ }catch(error){console.error('impact-map-pdf error:',error.message);res.status(500).json({error:'Impact Map PDF export failed.'});}
 });
 /* Natural-language question over aggregate deal data (Admin Analytics).
    Two-step: (1) AI picks which pre-written query/queries answer the

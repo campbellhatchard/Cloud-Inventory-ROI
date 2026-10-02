@@ -41,3 +41,13 @@ None.
 - Added a bounded 30-second export lifecycle, UI restoration, safe errors, and retry controls.
 - Updated runtime ownership and tests to execute the actual production builders.
 - No ROI formula, evidence, authorization, database schema, migration, or role change was introduced.
+
+# v6.9.25 corrective differential
+
+- Corrected scenario versioning so every version retains the source scenario's canonical customer ID; administrator on-behalf saves remain owned by the intended rep/customer.
+- Added a deterministic migration to repair historical scenario/customer identity mismatches without changing evidence or ROI values.
+- Replaced the repeatedly failing browser-print paths for JPP, Stakeholder, Solution Fit, Competitive, and Impact Map PDFs with authenticated server-generated files from saved authoritative records.
+- Removed the Proposal initial-save deadlock and retained explicit seller control over save and export.
+- Exposed contract-value projections needed by Compare/portfolio views without returning full scenario JSON in list responses.
+- Corrected saved-stage propagation, JPP blank-milestone validation, Prospect-evidence modal contrast, stale-draft warnings, role labels, analytics credential autofill, payback precision, and Christie’s saved Stakeholder/JPP context.
+- No ROI formula, overlap rule, immutable evidence boundary, authorization scope, native-currency rule, Rep Confirmed behavior, or SE cross-account Solution Fit capability changed.

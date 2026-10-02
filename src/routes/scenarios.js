@@ -153,6 +153,17 @@ const LIST_COLS = `
   (s.data->>'npv3')::numeric          AS npv3,
   COALESCE((s.data->>'totalContractNpv')::numeric,(s.data->>'npv5')::numeric) AS npv5,
   COALESCE((s.data->>'contractPayback')::numeric,(s.data->>'paybackFromSigning')::numeric,(s.data->>'payback')::numeric) AS payback,
+  (s.data->>'totalContractBenefit')::numeric AS total_contract_benefit,
+  (s.data->>'totalContractInvestment')::numeric AS total_contract_investment,
+  (s.data->>'totalContractNetBenefit')::numeric AS total_contract_net_benefit,
+  (s.data->>'totalContractRoi')::numeric AS total_contract_roi,
+  (s.data->>'totalContractNpv')::numeric AS total_contract_npv,
+  (s.data->>'contractPayback')::numeric AS contract_payback,
+  (s.data->>'contractMonths')::numeric AS contract_months,
+  (s.data->>'invest')::numeric AS annual_subscription,
+  (s.data->>'otc')::numeric AS one_time_costs,
+  (s.data->>'revenue')::numeric AS revenue,
+  (s.data->>'users')::numeric AS users,
   u.username AS owner_username
   ,COALESCE(g.current_stage, 2) AS current_buy_cycle_stage
   ,COALESCE(g.rep_assessed_stage, COALESCE(g.current_stage, 2)) AS rep_assessed_stage
@@ -487,11 +498,12 @@ router.post('/', async (req, res) => {
       let nextVersion    = 1;
       let adminOnBehalfOwner = null;   // set if an admin edits another user's scenario
       let sourceScenarioId = null;
+      let sourceCustomerId = null;
 
       if (resolvedBaseId) {
         /* Versioning an existing scenario — verify ownership */
         const { rows: existing } = await client.query(
-          `SELECT id, version, owner_id, shared_with FROM scenarios
+          `SELECT id, version, owner_id, customer_id, shared_with FROM scenarios
            WHERE base_id = $1 AND deleted_at IS NULL
            ORDER BY version DESC LIMIT 1`,
           [resolvedBaseId]
@@ -504,6 +516,7 @@ router.post('/', async (req, res) => {
           }
           nextVersion = (existing[0].version || 1) + 1;
           sourceScenarioId = existing[0].id;
+          sourceCustomerId = existing[0].customer_id || null;
           /* Admin editing another user's scenario: keep the original owner
              (don't let admin silently take over the deal) and flag it. */
           if (existing[0].owner_id !== req.user.id && hasRole(req.user,'admin')) {
@@ -518,7 +531,7 @@ router.post('/', async (req, res) => {
       if (!resolvedBaseId) {
         /* New scenario — check if same name+company already exists for this user */
         const { rows: dupe } = await client.query(
-          `SELECT id, base_id FROM scenarios
+          `SELECT id, base_id, customer_id FROM scenarios
            WHERE owner_id = $1 AND LOWER(name) = LOWER($2) AND LOWER(company) = LOWER($3)
              AND is_current = TRUE AND deleted_at IS NULL
            LIMIT 1`,
@@ -528,6 +541,7 @@ router.post('/', async (req, res) => {
           /* Auto-version against existing group */
           resolvedBaseId = dupe[0].base_id;
           sourceScenarioId = dupe[0].id;
+          sourceCustomerId = dupe[0].customer_id || null;
           const { rows: maxVer } = await client.query(
             'SELECT MAX(version) AS mv FROM scenarios WHERE base_id = $1',
             [resolvedBaseId]
@@ -610,7 +624,11 @@ router.post('/', async (req, res) => {
       const opportunityProfile=buildOpportunityProfile({existing:sourceProfile,value:parsedOpportunityValue,currency:scenarioCurrency,userId:req.user.id});
 
       /* Link to a first-class customer (create if new), atomic with the save. */
-      const customerId = await ensureCustomer(req.user.id, company, client.query.bind(client));
+      const effectiveOwnerId = adminOnBehalfOwner || req.user.id;
+      /* A new immutable version remains attached to the same first-class
+         customer. This prevents an admin edit from creating an admin-owned
+         customer with the same display name as the seller-owned account. */
+      const customerId = sourceCustomerId || await ensureCustomer(effectiveOwnerId, company, client.query.bind(client));
 
       const { rows } = await client.query(
         `INSERT INTO scenarios
@@ -622,7 +640,7 @@ router.post('/', async (req, res) => {
                    industry, deal_stage, exec_audience, solution, version_note,
                    created_at, updated_at`,
         [
-          resolvedBaseId, nextVersion, name.trim(), company.trim(), (adminOnBehalfOwner || req.user.id), customerId,
+          resolvedBaseId, nextVersion, name.trim(), company.trim(), effectiveOwnerId, customerId,
           industry || null, officialLabel, execAudience || 'mixed',
           solution || null, JSON.stringify(dataWithMetrics), versionNote || null,
           sourceGovernance?.outcome||null,sourceGovernance?.outcome?sourceCompatibility?.outcome_reason||null:null,

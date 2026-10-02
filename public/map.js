@@ -578,6 +578,12 @@ async function saveMap() {
     mapUpdateGate();
     return;
   }
+  const blankMilestone = (_mapCurrent.milestones || []).find(m => !String(m.title || m.task || '').trim());
+  if (blankMilestone) {
+    showToast('Name each milestone before saving the Joint Project Plan.');
+    document.querySelector(`.map-ms-title[oninput*="${blankMilestone.id}"]`)?.focus();
+    return;
+  }
   const body = {
     title:           document.getElementById('mapTitle').value.trim() || 'Joint Project Plan',
     company:         _mapCurrent.company.trim(),

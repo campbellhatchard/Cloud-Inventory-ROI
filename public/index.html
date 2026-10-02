@@ -1011,7 +1011,7 @@
     <div class="card-title">✨ Ask about your deals</div>
     <p style="font-size:12.5px;color:var(--gray-500);margin-bottom:10px;">e.g. "Which reps have the highest win rate?" or "Does prospect-supplied data correlate with winning?"</p>
     <div style="display:flex;gap:8px;">
-      <input type="text" id="dealQueryInput" placeholder="Ask a question about deal performance…" style="flex:1;"
+      <input type="text" id="dealQueryInput" name="analytics-deal-question-x7" placeholder="Ask a question about deal performance…" style="flex:1;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly')"
         onkeydown="if(event.key==='Enter') askDealQuestion()"/>
       <button class="btn btn-primary" onclick="askDealQuestion()">Ask</button>
     </div>
@@ -1550,7 +1550,7 @@
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="6.9.24";</script>
+<script>const APP_VERSION="6.9.25";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
 <script src="ai-session.js"></script>

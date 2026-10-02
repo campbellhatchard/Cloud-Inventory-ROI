@@ -7,6 +7,17 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.25', date: '2026-10-02', tag: 'regression-backlog-correction',
+    title: 'Customer identity, export, and saved-state reliability',
+    summary: 'Corrects the confirmed production-regression backlog by resolving shared root causes instead of layering more browser-side patches.',
+    highlights: [
+      'Scenario versions retain the canonical customer identity, including administrator on-behalf workflows and historical repair.',
+      'Joint Project Plan, Stakeholder, Solution Fit, Competitive, and Impact Map PDFs now download as governed server-generated files.',
+      'Proposal first-save, ROI comparison metrics, Solution Fit stage context, Christie workspace context, and evidence-review UX are corrected.',
+      'ROI Model v2.8, immutable Prospect evidence, authorization, native currency, and deliberate Prospect-value application remain unchanged.'
+    ]
+  },
+  {
     version: '6.9.24', date: '2026-10-02', tag: 'governed-export-pipeline',
     title: 'Reliable governed Proposal and ROI Methodology exports',
     changes: [

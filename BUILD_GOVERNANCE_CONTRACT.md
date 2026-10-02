@@ -427,3 +427,11 @@ A successful scenario save must persist every active ROI input, seller-authored 
 ## GOVERNED FILE EXPORT LIFECYCLE INVARIANT
 
 Proposal PDF and Word must resolve from the same server-owned saved Proposal, canonical Executive Value Story, readiness, and audience decision. Customer PDF generation must produce an actual PDF response and may not depend on a browser print window. Every client export operation must have a bounded execution time, restore its controls on failure, and provide an explicit retry path. ROI Methodology PDF must report the canonical saved ROI result and may not implement independent economic calculations.
+
+## SCENARIO / CUSTOMER IDENTITY INVARIANT
+
+Every new scenario version must retain the canonical customer identifier of its source opportunity. An administrator saving on behalf of another user must not silently bind that scenario to an administrator-owned customer with the same display name. Historical repair may reconcile identity from scenario owner plus normalized company name, but may not alter ROI values, evidence, or authorization scope.
+
+## GOVERNED OPERATIONAL PDF INVARIANT
+
+Joint Project Plan, Stakeholder Map, Solution Fit, Competitive Battlecard, and Impact Map PDF controls must download an actual server-generated PDF from the registered authoritative source. They may not depend on popup timing, browser print dialogs, or an unrelated compatibility generator. Missing saved authority must fail closed with an actionable message.
