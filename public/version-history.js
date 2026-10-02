@@ -7,6 +7,12 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.22', date: '2026-10-02', tag: 'executive-readiness-recovery',
+    title: 'Executive Readiness Dialog Recovery',
+    summary: 'Restores the governed readiness decision required before Executive PDF and PowerPoint generation.',
+    highlights: ['Executive readiness dialogs open visibly for Ready, Review, and Draft Only outputs.', 'Only one readiness dialog can remain active, preventing duplicate hidden export workflows.', 'The file-generation deadline still begins only after the user completes readiness.']
+  },
+  {
     version: '6.9.21', date: '2026-10-02', tag: 'live-regression-corrections',
     title: 'Live Regression Corrections',
     summary: 'Corrects the remaining defects reproduced after the v6.9.20 deployment without changing ROI Model v2.8 or evidence governance.',
