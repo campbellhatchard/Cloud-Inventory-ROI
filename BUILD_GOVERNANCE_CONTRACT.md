@@ -443,3 +443,15 @@ Changing customer or scenario must enter a loading state, clear the prior scenar
 ## ROI PRODUCT-NEUTRALITY INVARIANT
 
 Cloud Inventory product selection controls solution guidance and scope; it does not independently change ROI. With identical economic inputs, CIP, MEP, and EPP must produce identical ROI Model v2.8 results. Field Inventory contributes only when its customer-level flag is explicitly enabled and may change only the governed Field Inventory value drivers and their resulting economic rollups.
+
+## SERVER-AUTHORITATIVE ROI PERSISTENCE INVARIANT
+
+Scenario persistence must accept only governed raw inputs and approved presentation/provenance state. Every derived ROI value must be recomputed by the canonical server engine in the save transaction. Client-supplied totals may be compared for diagnostics but may never be stored as authority or used as a fallback when authoritative calculation fails.
+
+## DESTRUCTIVE CONFIRMATION METHOD INVARIANT
+
+An HTTP GET may display and validate a destructive-operation confirmation, but it may not perform the destructive mutation. Execution requires a separate POST, a freshly validated single-use token, row locking, and one transaction containing the mutation, token consumption, and audit record.
+
+## JPP SCENARIO ATTACHMENT INVARIANT
+
+A Joint Project Plan attached to a scenario must derive its customer/company and owner scope from that authorized scenario. The relationship must be database constrained, and blank milestones may not be saved or counted in governed outputs.

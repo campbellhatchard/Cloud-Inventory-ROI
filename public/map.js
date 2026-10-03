@@ -606,7 +606,8 @@ async function saveMap() {
     company:         _mapCurrent.company.trim(),
     targetCloseDate: document.getElementById('mapCloseDate').value || null,
     milestones:      _mapCurrent.milestones || [],
-    groups:          _mapCurrent.groups || []
+    groups:          _mapCurrent.groups || [],
+    scenarioId:      _mapCurrent.id ? undefined : (window._calcScenarioId || null)
   };
   const url    = _mapCurrent.id ? '/api/maps/' + _mapCurrent.id : '/api/maps';
   const method = _mapCurrent.id ? 'PUT' : 'POST';

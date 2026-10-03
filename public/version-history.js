@@ -7,6 +7,17 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.27', date: '2026-10-03', tag: 'reliability-correction',
+    title: 'Server-authoritative ROI and workflow integrity',
+    summary: 'Consolidates confirmed reliability corrections while preserving ROI Model v2.8, evidence boundaries, and existing role capabilities.',
+    highlights: [
+      'Saved scenarios now retain only allow-listed inputs and complete server-calculated ROI results; client-supplied totals cannot become authoritative.',
+      'Prospect-applied values restore correctly after save/reload, evidence review remains readable, and customer values are still applied only by explicit rep action.',
+      'Solution Fit stage and Christie stakeholder context now use governed workspace data without requiring a manual refresh.',
+      'Joint Project Plan attachments, Driver Resonance writes, production JWT configuration, audit purge confirmation, and competitive product reuse are fail-closed.'
+    ]
+  },
+  {
     version: '6.9.26', date: '2026-10-02', tag: 'regression-hardening',
     title: 'ROI, saved-state, AI, and workspace reliability',
     summary: 'Resolves the remaining confirmed regression backlog while preserving the governed ROI Model v2.8 and existing authorization and evidence boundaries.',

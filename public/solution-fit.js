@@ -129,8 +129,9 @@
       /* Permission: can this user write? (server is authoritative; we mirror for UI). */
       await loadKnownStakeholders();
       if(!exists){renderGateState(data.removedRecoverable?'removed':'not-created',data);return false;}
-      await applyKnownData({ mutate:false, save:false });
+      const governedChanges=await applyKnownData({ mutate:false, save:false });
       loadState='ready';
+      if(governedChanges&&canWrite)scheduleSave();
       return true;
     } catch (e) { console.error('loadHandoff error:', e.message); renderGateState('error','Check your connection and try again.'); return false; }
   }
@@ -234,7 +235,8 @@
     add('opportunity.users', v.users > 0 ? String(v.users) : '', 'Calculator');
     if(sameScenarioCustomer){
       const governedStage=window.getCurrentBuyCycleStageLabel?.() || 'Stage 2 — Define Economic Consequences';
-      if(mutate&&String(S.opportunity.stage||'')!==String(governedStage)){setVal(S,'opportunity.stage',governedStage);changed++;}
+      /* The BuyCycle stage is governed application state, not optional prefill. */
+      if(String(S.opportunity.stage||'')!==String(governedStage)){setVal(S,'opportunity.stage',governedStage);changed++;}
       knownSources['opportunity.stage']='Buyer Evidence';
     }
     add('opportunity.locations', v.fieldLocations > 0 ? `${v.fieldLocations} field location${v.fieldLocations===1?'':'s'}` : '', 'Calculator');

@@ -17,7 +17,7 @@ const express   = require('express');
 const { query, transaction } = require('../db');
 const { log, ACTIONS } = require('../audit');
 const { requireAuth, hasRole } = require('../middleware/auth');
-const { calcROI } = require('../shared/roi-engine');
+const { projectScenarioData } = require('../shared/scenario-roi-projection');
 const { ensureCustomer } = require('../customers');
 const { hasPermission, scenarioAccess, customerScopeSql } = require('../authorization');
 const { BUYCYCLE_MIN_STAGE, parseBuyCycleStage, getBuyCycleStageLabel } = require('../shared/buycycle-stage');
@@ -569,36 +569,20 @@ router.post('/', async (req, res) => {
          engine the browser uses. The stored figures are the server's, never
          the client's. If the client's numbers differ (stale tab, client bug,
          tampering), we still store ours and log the discrepancy for visibility. */
-      let metrics;
+      let authoritativeRoiData;
       let recomputeDiscrepancy = null;
       try {
-        const r = calcROI(data);
-        metrics = {
-          annualBenefit: r.annualBenefit || 0,
-          roi:           r.roi           || 0,
-          npv3:          r.npv3          || 0,
-          npv5:          r.npv5          || 0,
-          payback:       r.paybackFromSigning != null ? r.paybackFromSigning : null
-        };
+        authoritativeRoiData=projectScenarioData(data);
         /* Detect drift vs. what the client sent (>$1 or >0.5% considered drift) */
         const clientBenefit = Number(data.annualBenefit) || 0;
-        if (clientBenefit > 0 && Math.abs(clientBenefit - metrics.annualBenefit) > Math.max(1, clientBenefit * 0.005)) {
+        if (clientBenefit > 0 && Math.abs(clientBenefit - authoritativeRoiData.annualBenefit) > Math.max(1, clientBenefit * 0.005)) {
           recomputeDiscrepancy = {
             clientAnnualBenefit: Math.round(clientBenefit),
-            serverAnnualBenefit: Math.round(metrics.annualBenefit)
+            serverAnnualBenefit: Math.round(authoritativeRoiData.annualBenefit)
           };
         }
       } catch (e) {
-        /* If recompute fails for any reason, fall back to client values so a
-           save is never lost — but flag it. */
-        metrics = {
-          annualBenefit: Number(data.annualBenefit) || 0,
-          roi:           Number(data.roi)           || 0,
-          npv3:          Number(data.npv3)          || 0,
-          npv5:          Number(data.npv5)          || 0,
-          payback:       data.paybackFromSigning || data.payback || null
-        };
-        recomputeDiscrepancy = { recomputeError: e.message };
+        throw Object.assign(new Error('The authoritative ROI calculation failed. No scenario version was saved.'),{status:422,cause:e});
       }
 
       /* Official stage is server-owned. A stale/tampered client dealStage is
@@ -612,7 +596,7 @@ router.post('/', async (req, res) => {
       }
       const officialStage=parseBuyCycleStage(sourceGovernance?.current_stage,BUYCYCLE_MIN_STAGE);
       const officialLabel=getBuyCycleStageLabel(officialStage);
-      const { opportunityValue:_clientOpportunityValue, proposalDraft:_clientProposal, proposalMeta:_clientProposalMeta, ...roiData } = data;
+      const { opportunityValue:_clientOpportunityValue, proposalDraft:_clientProposal, proposalMeta:_clientProposalMeta } = data;
       let carriedProposal={};
       if(sourceScenarioId){
         const source=await client.query(`SELECT version,data->'proposalDraft' proposal,data->'proposalMeta' metadata,data->'customerProofSelection' proof_selection FROM scenarios WHERE id=$1`,[sourceScenarioId]);
@@ -622,7 +606,7 @@ router.post('/', async (req, res) => {
         }
         if(Array.isArray(source.rows[0]?.proof_selection))carriedProposal.customerProofSelection=source.rows[0].proof_selection;
       }
-      const dataWithMetrics = { ...roiData, ...metrics, ...carriedProposal, dealStage:officialLabel };
+      const dataWithMetrics = { ...authoritativeRoiData, ...carriedProposal, dealStage:officialLabel };
       const sourceProfile=sourceGovernance?.opportunity_profile||{};
       const opportunityProfile=buildOpportunityProfile({existing:sourceProfile,value:parsedOpportunityValue,currency:scenarioCurrency,userId:req.user.id});
 
@@ -719,7 +703,7 @@ router.post('/', async (req, res) => {
     res.status(201).json(savedRow);
 
   } catch (err) {
-    if (err.status === 400 || err.status === 403) return res.status(err.status).json({ error: err.message });
+    if ([400,403,422].includes(err.status)) return res.status(err.status).json({ error: err.message });
     console.error('Save scenario error:', err.message);
     res.status(500).json({ error: 'Failed to save scenario.' });
   }
@@ -908,6 +892,8 @@ router.get('/:id/resonance', async (req, res) => {
 
 router.put('/:id/resonance', async (req, res) => {
   try {
+    const scenario=await authorizedScenario(req.user,req.params.id,'edit');
+    if(scenario.error)return res.status(scenario.status).json({error:scenario.error});
     const { driversResonated, driversQuestioned, meetingNotes, meetingOutcome } = req.body || {};
     const VALID_OUTCOMES = ['progressed','stalled','lost','no_decision','closed_won',null,''];
     if (meetingOutcome !== undefined && !VALID_OUTCOMES.includes(meetingOutcome)) {
@@ -927,7 +913,7 @@ router.put('/:id/resonance', async (req, res) => {
          updated_at         = NOW()
        RETURNING *`,
       [
-        req.params.id, req.user.id,
+        req.params.id, scenario.owner_id,
         JSON.stringify(driversResonated || []),
         JSON.stringify(driversQuestioned || []),
         meetingNotes || null,

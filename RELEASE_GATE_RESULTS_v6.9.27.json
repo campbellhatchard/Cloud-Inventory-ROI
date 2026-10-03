@@ -1,0 +1,98 @@
+{
+  "release": "6.9.27",
+  "baseline": {
+    "archive": "cloud-inventory-roi-v6.9.26-render-ready.zip",
+    "sha256": "1b6ffd73e9c7210abad8defc0fb1f8460a314eb1823bdb38a44442d247e3ed0a"
+  },
+  "generatedAt": "2026-10-03T17:15:12.103Z",
+  "environment": {
+    "node": "v24.19.0",
+    "npm": "NOT TESTED — unavailable in local runtime",
+    "platform": "win32-x64",
+    "databaseAvailable": false,
+    "databaseIntegrationRequired": false,
+    "nodeEnv": "test"
+  },
+  "gates": [
+    {
+      "name": "full-test-suite",
+      "command": "package test script executed directly from package.json",
+      "executed": true,
+      "exitCode": 0,
+      "passed": 632,
+      "failed": 0,
+      "skipped": 2,
+      "notTested": 0,
+      "durationMs": 7200,
+      "result": "PASS_WITH_DATABASE_EXCLUSIONS"
+    },
+    {
+      "name": "production-locks",
+      "command": "package test:production-locks script executed directly from package.json",
+      "executed": true,
+      "exitCode": 0,
+      "passed": 249,
+      "failed": 0,
+      "skipped": 0,
+      "notTested": 0,
+      "durationMs": 5400,
+      "result": "PASS"
+    },
+    {
+      "name": "brand-tests",
+      "command": "node --test test/v670-brand-system.test.js test/v671-brand-integrity.test.js test/v672-brand-final-enforcement.test.js",
+      "executed": true,
+      "exitCode": 0,
+      "passed": 19,
+      "failed": 0,
+      "skipped": 0,
+      "notTested": 0,
+      "durationMs": 236,
+      "result": "PASS"
+    },
+    {
+      "name": "active-output-runtime-matrix",
+      "command": "node --test test/output-runtime-matrix.test.js",
+      "executed": true,
+      "exitCode": 0,
+      "passed": 26,
+      "failed": 0,
+      "skipped": 0,
+      "notTested": 0,
+      "durationMs": 943,
+      "result": "PASS",
+      "outputResultsFile": "OUTPUT_RUNTIME_RESULTS_v6.9.27.json"
+    },
+    {
+      "name": "postgres-integration",
+      "command": "npm run test:postgres",
+      "executed": false,
+      "exitCode": null,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "notTested": 4,
+      "durationMs": 0,
+      "result": "NOT TESTED"
+    },
+    {
+      "name": "production-dependencies",
+      "command": "npm ci --omit=dev --no-audit --no-fund",
+      "executed": false,
+      "exitCode": null,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "notTested": 1,
+      "durationMs": 0,
+      "result": "NOT TESTED — npm unavailable in local runtime"
+    }
+  ],
+  "summary": {
+    "executedCodeTestsPassed": true,
+    "failedGates": [],
+    "databaseDependentTests": "NOT TESTED",
+    "dependencyInstall": "NOT TESTED",
+    "productionClassification": "Product Owner decision after CI and Render validation"
+  }
+}

@@ -7,12 +7,15 @@ const crypto    = require('crypto');
 const { query } = require('../db');
 const { log }   = require('../audit');
 const { requireAuth, hasRole } = require('../middleware/auth');
-const {hasPermission}=require('../authorization');
+const {hasPermission,scenarioAccess}=require('../authorization');
 const {buildJppPptx}=require('../exports/operational-pptx');
 const {buildJppPdf}=require('../exports/operational-pdf');
 const {safeFile}=require('../shared/output-brand');
 
 const router = express.Router();
+const namedMilestones=value=>(Array.isArray(value)?value:[]).filter(m=>String(m?.title||m?.task||'').trim());
+const presentPlan=plan=>plan?{...plan,milestones:namedMilestones(plan.milestones)}:plan;
+function validateMilestones(value){if(value===undefined)return; if(!Array.isArray(value))throw Object.assign(new Error('Milestones must be an array.'),{status:400});if(value.some(m=>!String(m?.title||m?.task||'').trim()))throw Object.assign(new Error('Name each milestone before saving the Joint Project Plan.'),{status:400});}
 
 /* ── PUBLIC: prospect fetches the plan by token ── */
 router.get('/public/:token', async (req, res) => {
@@ -26,7 +29,7 @@ router.get('/public/:token', async (req, res) => {
     );
     if (!rows.length) return res.status(404).json({ error: 'Plan not found.' });
     if (!rows[0].is_active) return res.status(410).json({ error: 'This Joint Project Plan link is no longer active.' });
-    res.json(rows[0]);
+    res.json(presentPlan(rows[0]));
   } catch (e) { res.status(500).json({ error: 'Failed to load plan.' }); }
 });
 
@@ -85,7 +88,7 @@ router.get('/', async (req, res) => {
       params = [req.user.id];
     }
     const { rows } = await query(sql, params);
-    res.json(rows);
+    res.json(rows.map(presentPlan));
   } catch (e) { res.status(500).json({ error: 'Failed to load plans.' }); }
 });
 
@@ -96,26 +99,35 @@ router.get('/:id/export-pdf',async(req,res)=>{try{const audience=req.query.audie
 router.post('/', async (req, res) => {
   try {
     const { company, title, targetCloseDate, milestones, groups, scenarioId } = req.body || {};
-    if (!company || !company.trim()) {
-      return res.status(400).json({ error: 'A company must be selected before saving a Joint Project Plan.' });
+    validateMilestones(milestones);
+    let authoritativeCompany=String(company||'').trim(),authoritativeOwner=req.user.id;
+    if(scenarioId){
+      const access=await scenarioAccess(req.user,scenarioId,'edit');
+      if(!access.exists)return res.status(404).json({error:'Scenario not found.'});
+      if(!access.allowed)return res.status(403).json({error:'You cannot attach a Joint Project Plan to this scenario.'});
+      const scoped=await query('SELECT company,owner_id FROM scenarios WHERE id=$1 AND deleted_at IS NULL',[scenarioId]);
+      if(!scoped.rows.length)return res.status(404).json({error:'Scenario not found.'});
+      authoritativeCompany=String(scoped.rows[0].company||'').trim();authoritativeOwner=scoped.rows[0].owner_id;
     }
+    if (!authoritativeCompany) return res.status(400).json({ error: 'A company must be selected before saving a Joint Project Plan.' });
     const { rows } = await query(
       `INSERT INTO mutual_action_plans (owner_id, scenario_id, company, title, target_close_date, milestones, groups)
        VALUES ($1,$2,$3,$4,$5,$6,$7)
        RETURNING id, company, title, target_close_date, token, is_active, milestones, groups, created_at, updated_at`,
-      [req.user.id, scenarioId || null, (company||'').trim(), (title||'Joint Project Plan').trim(),
+      [authoritativeOwner, scenarioId || null, authoritativeCompany, (title||'Joint Project Plan').trim(),
        targetCloseDate || null, JSON.stringify(milestones || []), JSON.stringify(groups || [])]
     );
     await log({ userId: req.user.id, action: 'map.created', entityType: 'mutual_action_plan',
-                entityId: rows[0].id, detail: { company }, ipAddress: req.ip });
-    res.status(201).json(rows[0]);
-  } catch (e) { console.error('MAP create:', e.message); res.status(500).json({ error: 'Failed to create plan.' }); }
+                entityId: rows[0].id, detail: { company:authoritativeCompany, scenarioId:scenarioId||null }, ipAddress: req.ip });
+    res.status(201).json(presentPlan(rows[0]));
+  } catch (e) { console.error('MAP create:', e.message); res.status(e.status||500).json({ error: e.status?e.message:'Failed to create plan.' }); }
 });
 
 /* Update (title, date, milestones) */
 router.put('/:id', async (req, res) => {
   try {
     const { company, title, targetCloseDate, milestones, groups } = req.body || {};
+    validateMilestones(milestones);
     if (company !== undefined && !String(company).trim()) {
       return res.status(400).json({ error: 'Company cannot be blank.' });
     }
@@ -134,8 +146,8 @@ router.put('/:id', async (req, res) => {
        req.params.id, req.user.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'Plan not found.' });
-    res.json(rows[0]);
-  } catch (e) { console.error('MAP update:', e.message); res.status(500).json({ error: 'Failed to update plan.' }); }
+    res.json(presentPlan(rows[0]));
+  } catch (e) { console.error('MAP update:', e.message); res.status(e.status||500).json({ error: e.status?e.message:'Failed to update plan.' }); }
 });
 
 /* Generate / rotate share token */

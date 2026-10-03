@@ -349,7 +349,7 @@ function initGuidedToggle() {
   const wrap = document.createElement('div');
   wrap.className = 'guided-toggle-wrap';
   wrap.innerHTML = `
-    <label class="guided-toggle" id="guidedToggle" role="switch" aria-checked="false" title="Walk through the calculator one step at a time">
+    <label class="guided-toggle" id="guidedToggle" data-calc-presentation="true" role="switch" aria-checked="false" title="Walk through the calculator one step at a time">
       <input type="checkbox" id="guidedToggleChk" onchange="toggleGuidedMode(this.checked)"/>
       <span class="gt-track"><span class="gt-thumb"></span></span>
       <span class="gt-label">Guided mode</span>

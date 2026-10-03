@@ -267,6 +267,7 @@ function bindCalcDirtyTracking() {
   if (!body) return;
   body.addEventListener('input', (e) => {
     const t = e.target && e.target.tagName;
+    if (e.target?.closest?.('[data-calc-presentation]') || e.target?.id === 'guidedToggleChk') return;
     if (t === 'INPUT' || t === 'SELECT' || t === 'TEXTAREA') markCalcDirty();
   });
   /* Three Whys autosave independently. Keeping their dirty scope separate

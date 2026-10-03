@@ -7,7 +7,7 @@ const line=(label,value)=>`${label}: ${clean(value)||'Not yet established'}`;
 const list=value=>Array.isArray(value)?value:[];
 
 function buildJppPdf(plan,{audience='customer'}={}){
-  const milestones=list(plan.milestones);
+  const milestones=list(plan.milestones).filter(m=>clean(m.title||m.task));
   return buildTextPdf({
     title:clean(plan.title)||'Joint Project Plan',
     subtitle:line('Customer',plan.company),audience,

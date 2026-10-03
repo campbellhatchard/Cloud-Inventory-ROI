@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   server.js  —  Cloud Inventory ROI Builder  v6.9.26
+   server.js  —  Cloud Inventory ROI Builder  v6.9.27
    Database-backed multi-user edition — production hardened
 
    Security layers applied (Phase 10):
@@ -687,6 +687,7 @@ app.post('/api/admin/cleanup/restore', requireAuth, async (req, res) => {
 
 app.get('/api/admin/purge/confirm', async (req, res) => {
   try {
+    const token = await validatePurgeToken(req.query.token);
     if (!token || token.action !== 'confirm') {
       return res.status(400).send(purgeHtmlPage(
         '❌ Invalid or expired link',
@@ -695,19 +696,27 @@ app.get('/api/admin/purge/confirm', async (req, res) => {
       ));
     }
 
+    res.send(purgeConfirmationPage(req.query.token,token.purge_count));
+  } catch (err) {
+    console.error('Purge confirm display error:', err.message);
+    res.status(500).send(purgeHtmlPage('❌ Error', 'An error occurred. Contact your system administrator.', false));
+  }
+});
+
+app.post('/api/admin/purge/confirm', async (req, res) => {
+  try {
+    const rawToken=String(req.body.token||'');
+    const hash=crypto.createHash('sha256').update(rawToken).digest('hex');
     const cutoff = new Date(Date.now() - 2 * 365.25 * 24 * 60 * 60 * 1000);
-    const { rowCount } = await db().query(
-      'DELETE FROM audit_log WHERE created_at < $1',
-      [cutoff.toISOString()]
-    );
-
-    await db().query('UPDATE purge_tokens SET used_at = NOW() WHERE id = $1', [token.id]);
-
-    await require('./src/audit').log({
-      action:     require('./src/audit').ACTIONS.PURGE_CONFIRMED,
-      entityType: 'audit_log',
-      detail:     { deleted: rowCount, cutoff: cutoff.toISOString() }
+    const result=await db().transaction(async client=>{
+      const locked=await client.query(`SELECT * FROM purge_tokens WHERE token_hash=$1 AND action='confirm' AND used_at IS NULL AND expires_at>NOW() FOR UPDATE`,[hash]);
+      if(!locked.rows.length)throw Object.assign(new Error('Invalid or expired purge confirmation token.'),{status:400});
+      const deleted=await client.query('DELETE FROM audit_log WHERE created_at < $1',[cutoff.toISOString()]);
+      await client.query('UPDATE purge_tokens SET used_at=NOW() WHERE id=$1',[locked.rows[0].id]);
+      await client.query(`INSERT INTO audit_log(action,entity_type,detail,ip_address) VALUES($1,'audit_log',$2,$3)`,[require('./src/audit').ACTIONS.PURGE_CONFIRMED,JSON.stringify({deleted:deleted.rowCount,cutoff:cutoff.toISOString()}),req.ip||null]);
+      return {rowCount:deleted.rowCount};
     });
+    const rowCount=result.rowCount;
 
     const { rows: admins } = await db().query(
       "SELECT email, username FROM users WHERE role = 'admin' AND is_active = TRUE"
@@ -731,9 +740,14 @@ app.get('/api/admin/purge/confirm', async (req, res) => {
     ));
   } catch (err) {
     console.error('Purge confirm error:', err.message);
-    res.status(500).send(purgeHtmlPage('❌ Error', 'An error occurred. Contact your system administrator.', false));
+    res.status(err.status||500).send(purgeHtmlPage(err.status===400?'❌ Invalid or expired link':'❌ Error', err.status===400?err.message:'An error occurred. Contact your system administrator.', false));
   }
 });
+
+function purgeConfirmationPage(rawToken,count){
+  const pageBrand=brand.documentTheme('internal'),emailBrand=brand.emailTheme(),safeToken=String(rawToken||'').replace(/[^A-Za-z0-9_-]/g,'');
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Confirm audit purge</title><style>body{font-family:${pageBrand.font};background:${emailBrand.background};color:${pageBrand.body};display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}.card{background:${pageBrand.background};border:1px solid ${pageBrand.border};border-radius:10px;padding:2.5rem;max-width:520px;text-align:center}button{padding:12px 24px;border:0;border-radius:8px;background:${pageBrand.danger};color:#fff;font-weight:700;cursor:pointer}p{color:${pageBrand.muted};line-height:1.6}</style></head><body><main class="card"><h1>Confirm permanent audit purge</h1><p>This will permanently delete up to ${Number(count||0).toLocaleString()} audit records older than two years. This action cannot be undone.</p><form method="post" action="/api/admin/purge/confirm"><input type="hidden" name="token" value="${safeToken}"/><button type="submit">Permanently delete eligible records</button></form></main></body></html>`;
+}
 
 app.get('/api/admin/purge/cancel', async (req, res) => {
   try {

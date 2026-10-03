@@ -9,7 +9,12 @@ const jwt     = require('jsonwebtoken');
 const bcrypt  = require('bcrypt');
 const { query } = require('../db');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
+const DEVELOPMENT_JWT_SECRET = 'dev-secret-change-in-production';
+const configuredJwtSecret = String(process.env.JWT_SECRET || '');
+if (process.env.NODE_ENV === 'production' && (!configuredJwtSecret || configuredJwtSecret === DEVELOPMENT_JWT_SECRET || configuredJwtSecret.length < 32)) {
+  throw new Error('JWT_SECRET must be configured with at least 32 non-default characters in production.');
+}
+const JWT_SECRET = configuredJwtSecret || DEVELOPMENT_JWT_SECRET;
 
 /**
  * Extract raw token from Authorization header or httpOnly cookie.

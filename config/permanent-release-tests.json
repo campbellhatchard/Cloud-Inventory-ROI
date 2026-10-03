@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "6.9.26",
+  "release": "6.9.27",
   "tests": [
     {"invariant":"Customer Business Case","path":"test/release-integrity.test.js"},
     {"invariant":"customer-safe payload","path":"test/release-integrity.test.js"},
@@ -41,5 +41,6 @@
     ,{"invariant":"v6.9.24 governed server export pipeline and bounded client recovery","path":"test/v6924-governed-export-pipeline.test.js"}
     ,{"invariant":"v6.9.25 customer identity, saved-state, operational exports, AI context, and UI backlog corrections","path":"test/v6925-backlog-corrections.test.js"}
     ,{"invariant":"v6.9.26 ROI, workspace-state, Three Whys, AI, and role UI hardening","path":"test/v6926-regression-hardening.test.js"}
+    ,{"invariant":"v6.9.27 server ROI, evidence workflow, authorization, and workspace integrity","path":"test/v6927-consolidated-corrections.test.js"}
   ]
 }

@@ -22,8 +22,9 @@ async function findIdentity(name,url){
 }
 async function findDuplicate(name,url){return (await findIdentity(name,url)).exactProductMatches}
 async function ensureProduct({productId,name,url,userId,credible,ciProductKey}){
-  if(productId){const r=await query(`SELECT * FROM competitive_products WHERE id=$1 AND merged_into_id IS NULL`,[productId]);if(!r.rows.length)throw Object.assign(new Error('Competitive product not found.'),{status:404});return r.rows[0]}
-  const identity=await findIdentity(name,url);if(identity.exactProductMatches.length)return (await query(`SELECT * FROM competitive_products WHERE id=$1`,[identity.exactProductMatches[0].id])).rows[0];
+  const associate=async id=>(await query(`UPDATE competitive_products SET relevant_ci_products=CASE WHEN $2=ANY(relevant_ci_products) THEN relevant_ci_products ELSE array_append(relevant_ci_products,$2) END,updated_at=NOW() WHERE id=$1 AND merged_into_id IS NULL RETURNING *`,[id,validateCiProductKey(ciProductKey||'cip')])).rows[0];
+  if(productId){const product=await associate(productId);if(!product)throw Object.assign(new Error('Competitive product not found.'),{status:404});return product}
+  const identity=await findIdentity(name,url);if(identity.exactProductMatches.length)return associate(identity.exactProductMatches[0].id);
   const status=credible?'active':'draft',n=normalize(name);if(!n||n.length<3)throw Object.assign(new Error('A credible product identity is required.'),{status:400});
   const {rows}=await query(`INSERT INTO competitive_products(company_id,product_name,normalized_name,status,primary_website,relevant_ci_products,created_by) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *`,[identity.companyMatch?.id||null,String(name).trim(),n,status,url||null,[ciProductKey||'cip'],userId]);return rows[0]
 }
