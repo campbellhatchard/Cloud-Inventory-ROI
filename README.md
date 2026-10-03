@@ -183,4 +183,4 @@ Edit `public/scenario-templates.js`, add an entry to `SCENARIO_TEMPLATES`:
 
 ## Version
 
-Current: **v6.9.25** — Regression-backlog correction built from the exact v6.9.24 release. It repairs customer/scenario identity continuity, replaces repeated browser-print PDF failures with governed server files, restores Proposal initial-save reachability, and corrects confirmed coaching, comparison, stage, evidence-review, and UI defects. ROI Model remains v2.8, Brand System remains v1.0, Knowledge remains v1.0, and Christie Persona remains v1.0.
+Current: **v6.9.26** — Regression-hardening correction built from the exact v6.9.25 release. It synchronizes customer-level Field Inventory with saved ROI scenarios, isolates customer/scenario loading state, preserves and flushes Three Whys before Executive outputs, warns about unapplied customer values, hardens AI failures and context, enforces read-only Joint Project Plans, and removes stale role/version UI. ROI Model remains v2.8, Brand System remains v1.0, Knowledge remains v1.0, and Christie Persona remains v1.0.

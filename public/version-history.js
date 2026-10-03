@@ -7,6 +7,17 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.26', date: '2026-10-02', tag: 'regression-hardening',
+    title: 'ROI, saved-state, AI, and workspace reliability',
+    summary: 'Resolves the remaining confirmed regression backlog while preserving the governed ROI Model v2.8 and existing authorization and evidence boundaries.',
+    highlights: [
+      'Field Inventory is synchronized with the saved customer and scenario so reloads and product changes cannot reveal a different ROI.',
+      'Customer and scenario switches clear stale identity, picker, KPI, evidence, AI, and transient UI state before authoritative data renders.',
+      'Three Whys autosave is queued safely, flushed before Executive outputs, and reported in the Admin Error Log on failure.',
+      'Unapplied customer values are visible on the calculator, read-only Joint Project Plans cannot mutate, and AI formula/email behavior follows governed context.'
+    ]
+  },
+  {
     version: '6.9.25', date: '2026-10-02', tag: 'regression-backlog-correction',
     title: 'Customer identity, export, and saved-state reliability',
     summary: 'Corrects the confirmed production-regression backlog by resolving shared root causes instead of layering more browser-side patches.',

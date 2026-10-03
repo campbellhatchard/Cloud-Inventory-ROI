@@ -177,7 +177,8 @@
 
     const roleLabels = { admin:'Admin', rep:'Account Executive', se:'Solution Engineer', sales_manager:'Sales Manager', sales_leader:'Sales Leader', value_engineering:'Value Engineering' };
     const rawRoles = [user.role, ...(user.roleKeys || []), ...(user.roles || [])];
-    const normalizedRoles = [...new Set(rawRoles.map(role => String(typeof role==='object' ? (role.key||role.name||'') : role||'').trim().toLowerCase().replace(/\s+/g,'_')).map(role => role==='solution_engineer'?'se':role).filter(Boolean))];
+    const roleAliases={sales_rep:'rep',account_executive:'rep',solution_engineer:'se',sales_leader:'sales_manager'};
+    const normalizedRoles = [...new Set(rawRoles.map(role => String(typeof role==='object' ? (role.key||role.name||'') : role||'').trim().toLowerCase().replace(/\s+/g,'_')).map(role => roleAliases[role]||role).filter(Boolean))];
     const roleText = normalizedRoles.map(role => roleLabels[role] || role.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())).join(' · ') || 'User';
     const roleClass = normalizedRoles.includes('admin') ? 'ud-role--admin' : 'ud-role--rep';
 

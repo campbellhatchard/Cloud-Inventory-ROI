@@ -185,12 +185,16 @@ function expandAllCalcSections() {
 /* ════════════════════════════════════════
    Toast
    ════════════════════════════════════════ */
+let _toastTimer=null;
 function showToast(msg) {
   document.getElementById('toastMsg').textContent = msg;
   const t = document.getElementById('toast');
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2800);
+  clearTimeout(_toastTimer);
+  _toastTimer=setTimeout(() => t.classList.remove('show'), 4200);
 }
+function clearTransientNotices(){clearTimeout(_toastTimer);document.getElementById('toast')?.classList.remove('show');for(const id of ['confWarningBanner','unsavedBanner','pdfPopupFallback','pptxRetryNotice'])document.getElementById(id)?.remove();}
+window.clearTransientNotices=clearTransientNotices;
 
 function updateSavedBadge() {
   const b = document.getElementById('savedCount');
@@ -435,6 +439,12 @@ function lbClass(n) { return n>=0?'pos':'neg'; }
    Recalculate
    ════════════════════════════════════════ */
 function recalc() {
+  if (window._workspaceLoading) {
+    const set=(id,value)=>{const node=document.getElementById(id);if(node)node.textContent=value;};
+    ['lb-benefit','lb-roi','lb-npv3','lb-npv5'].forEach(id=>set(id,'—'));
+    const grid=document.getElementById('roiGrid');if(grid)grid.innerHTML='<div class="empty-state"><p>Loading the customer’s authoritative scenario…</p></div>';
+    return;
+  }
   const v=getVals(), r=calcROI(v);
   const el=id=>document.getElementById(id);
 
@@ -921,12 +931,21 @@ async function _doSave(v, dataBlob, baseId, note) {
     /* Saving creates a new immutable version. Subsequent Executive View
        autosaves must target that new current row, not the version just left. */
     window._calcScenarioId = saved.id;
+    window._calcLoadedScenarioMeta = {
+      id:saved.id,
+      baseId:saved.baseId||baseId||saved.id,
+      customerId:saved.customerId||window.currentScenarioCustomerId||null,
+      name:saved.name||v.name,
+      version:Number(saved.version||1),
+      isCurrent:true
+    };
     window._appliedValueDrafts = {};
     window._scenarioLoaded = true;
     window.invalidateExecutiveValueStory?.();
     showToast(`Saved v${saved.version} — "${saved.name}"`);
     /* Only now — after a confirmed successful save — is the form clean. */
-    if (typeof clearCalcDirty === 'function') clearCalcDirty();
+    if (typeof clearAllWorkingDirty === 'function') clearAllWorkingDirty();
+    else if (typeof clearCalcDirty === 'function') clearCalcDirty();
     trackEvent('scenario_saved', { company: v.company, version: saved.version });
     await fetchScenarios();
     if (typeof refreshCalcScenarioPicker === 'function') refreshCalcScenarioPicker();
@@ -943,6 +962,7 @@ async function _doSave(v, dataBlob, baseId, note) {
 
 async function loadScenario(id, options = {}) {
   try {
+    window._workspaceLoading = true;
     window._appliedValueDrafts = {};
     /* Finish any pending narrative write against the scenario being left
        before changing the active scenario id. */
@@ -956,7 +976,7 @@ async function loadScenario(id, options = {}) {
     /* Scenario selection must load the authoritative server record rather
        than a possibly stale in-memory copy from an earlier customer view. */
     const resp = await apiFetch('/api/scenarios/' + id);
-    if (!resp || !resp.ok) { showToast('Could not load scenario.'); return; }
+    if (!resp || !resp.ok) { window._workspaceLoading=false; showToast('Could not load scenario.'); return false; }
     fullData = await resp.json();
     inputs = fullData.data;
     window._roiModelVersion = Number(inputs && inputs.modelVersion) || 27;
@@ -967,12 +987,20 @@ async function loadScenario(id, options = {}) {
     updateCurrentBuyCycleStageDisplay(true);
     if (scenario) scenario.inputs = inputs;
     await fetchScenarios();
-    if (!inputs) { showToast('Scenario data not found.'); return; }
+    if (!inputs) { window._workspaceLoading=false; showToast('Scenario data not found.'); return false; }
     /* Establish scenario identity and its customer-level feature flags before
        loadFromObject recalculates ROI. Previously the prior customer's flag
        could be used for that first calculation; a later product selection then
        exposed the corrected number and looked like the product changed ROI. */
     window._calcScenarioId = id;
+    window._calcLoadedScenarioMeta = {
+      id,
+      baseId: fullData.base_id || scenario?.baseId || id,
+      customerId: fullData.customer_id || scenario?.customerId || null,
+      name: fullData.name || inputs.name || scenario?.name || 'Untitled',
+      version: Number(fullData.version || scenario?.version || 1),
+      isCurrent: fullData.is_current !== false
+    };
     const cid = (fullData && fullData.customer_id)
              || (scenario && scenario.customerId)
              || (inputs && inputs.customerId)
@@ -987,6 +1015,8 @@ async function loadScenario(id, options = {}) {
     window._loadingScenarioCurrency=true;
     if (typeof loadFromObject === 'function') loadFromObject(inputs);
     window._loadingScenarioCurrency=false;
+    window._workspaceLoading=false;
+    recalc();
     const profile=fullData.opportunityProfile||{};
     const opportunity=document.getElementById('opportunityValue');
     if(opportunity)opportunity.value=profile.estimatedOpportunityValue??'';
@@ -1015,6 +1045,7 @@ async function loadScenario(id, options = {}) {
     trackEvent('scenario_loaded', { company: inputs.company || '' });
     return true;
   } catch(e) {
+    window._workspaceLoading=false;
     console.error('loadScenario error:', e.message);
     showToast('Failed to load scenario.');
     return false;
@@ -1161,6 +1192,10 @@ function applySolutionEmphasis() {
 }
 
 function clearForm() {
+  window._scenarioLoaded=false;
+  window._calcScenarioId=null;
+  window._calcLoadedScenarioMeta=null;
+  window._appliedValueDrafts={};
   ['scenarioName','companyName','repName','opportunityValue','revenue','userCount','inventoryValue','itCost',
    'psvcCost','hwCost','trainCost','annualWriteOff','otifBaseline','otifTarget',
    'invTurnsCurrent','invTurnsBenchmark'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
@@ -1202,6 +1237,8 @@ function clearForm() {
   if (typeof updateLogoPreview === 'function') updateLogoPreview();
   if (typeof renderConfidence  === 'function') renderConfidence();
   recalc();
+  window.clearCalcScenarioPicker?.();
+  window.clearAllWorkingDirty?.();
   showToast('Ready for new scenario.');
 }
 

@@ -1,4 +1,14 @@
-# v6.9.23 Differential Audit
+# v6.9.26 Differential Audit
+
+v6.9.26 is a corrective build from the exact v6.9.25 render-ready archive. It resolves confirmed regression findings in customer/workspace state, customer-level Field Inventory persistence, Executive Three Whys persistence, Prospect-value warnings, AI failure handling and context, role presentation, and read-only Joint Project Plans.
+
+ROI formulas, overlap policy, ROI Model v2.8, immutable Prospect evidence, deliberate value application, authorization scope, output registry ownership, native currency, Brand System v1.0, Application Knowledge v1.0, and Christie Persona v1.0 are preserved.
+
+One migration, `039_sync_customer_field_inventory.sql`, reconciles each customer's current flag from its newest current scenario that contains an explicit boolean Field Inventory value. It does not modify ROI inputs or calculated results.
+
+Permanent coverage is provided by `test/v6926-regression-hardening.test.js` and all inherited suites.
+
+## Prior v6.9.23 Differential Audit
 
 v6.9.23 corrects saved-state completeness, Prospect-value continuity, field-inventory synchronization, Value History canonical mapping, contract-period labels, and AI service failure clarity. It changes no ROI formula, evidence boundary, schema, migration, or permission.
 

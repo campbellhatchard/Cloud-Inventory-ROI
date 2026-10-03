@@ -451,7 +451,10 @@ router.patch('/:id/narrative', async (req, res) => {
       [JSON.stringify(narrative), target.rows[0].id]
     );
     if (!rows.length) return res.status(404).json({ error: 'Scenario not found or access denied.' });
-    res.json({ saved: true, id: rows[0].id, updatedAt: rows[0].updated_at, threeWhysMeta:narrative.threeWhysMeta });
+    res.set('Cache-Control','no-store');
+    res.json({ saved: true, id: rows[0].id, updatedAt: rows[0].updated_at,
+      threeWhysAct:narrative.threeWhysAct, threeWhysCi:narrative.threeWhysCi,
+      threeWhysNow:narrative.threeWhysNow, threeWhysMeta:narrative.threeWhysMeta });
   } catch (err) {
     console.error('Autosave scenario narrative error:', err.message);
     res.status(500).json({ error: 'Failed to save executive narrative.' });
@@ -629,6 +632,17 @@ router.post('/', async (req, res) => {
          customer. This prevents an admin edit from creating an admin-owned
          customer with the same display name as the seller-owned account. */
       const customerId = sourceCustomerId || await ensureCustomer(effectiveOwnerId, company, client.query.bind(client));
+
+      /* Field Inventory is a customer-level modeling fact. Synchronize it in
+         the same transaction as the scenario version so a reload can never
+         calculate with a customer flag that disagrees with the saved current
+         scenario. Product selection remains independent from this flag. */
+      if (typeof dataWithMetrics.hasFieldInventory === 'boolean') {
+        await client.query(
+          'UPDATE customers SET has_field_inventory=$1, updated_at=NOW() WHERE id=$2',
+          [dataWithMetrics.hasFieldInventory, customerId]
+        );
+      }
 
       const { rows } = await client.query(
         `INSERT INTO scenarios

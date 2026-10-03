@@ -9,7 +9,8 @@
    promptScenarioForCompany) so behavior matches the other company-centric tabs.
    ═══════════════════════════════════════════════════════════════════ */
 
-let _calcDirty = false;           // unsaved-changes flag
+let _calcDirty = false;           // unsaved ROI/value changes
+let _narrativeDirty = false;      // independently autosaved Three Whys changes
 let _gateInitialized = false;
 
 function canCreateRoiCustomer() {
@@ -19,11 +20,14 @@ function canCreateRoiCustomer() {
 
 function markCalcDirty() { _calcDirty = true; updateCompletenessMeter(); _updateDirtyIndicator(); }
 function clearCalcDirty() { _calcDirty = false; _updateDirtyIndicator(); }
+function markNarrativeDirty() { _narrativeDirty = true; _updateDirtyIndicator(); }
+function clearNarrativeDirty() { _narrativeDirty = false; _updateDirtyIndicator(); }
+function clearAllWorkingDirty() { _calcDirty = false; _narrativeDirty = false; window._appliedValueDrafts = {}; _updateDirtyIndicator(); }
 
 function _updateDirtyIndicator() {
   const el = document.getElementById('saveStatus');
   if (!el) return;
-  if (_calcDirty) {
+  if (hasUnsavedChanges()) {
     el.style.display = 'inline-flex';
     el.innerHTML = '<span style="width:7px;height:7px;border-radius:50%;background:#F59E0B;flex-shrink:0;margin-right:5px;"></span><span style="color:rgba(255,255,255,.6);font-size:12px;">Unsaved changes</span>';
   } else {
@@ -35,6 +39,9 @@ function _updateDirtyIndicator() {
 if (typeof window !== 'undefined') {
   window.markCalcDirty = markCalcDirty;
   window.clearCalcDirty = clearCalcDirty;
+  window.markNarrativeDirty = markNarrativeDirty;
+  window.clearNarrativeDirty = clearNarrativeDirty;
+  window.clearAllWorkingDirty = clearAllWorkingDirty;
 }
 
 /* ── Entry point: called when the calc tab initializes ── */
@@ -231,7 +238,10 @@ function updateCompletenessMeter() {
 /* ── Unsaved-changes: single source of truth ──────────────────────────
    Every exit path — in-app tab switch, customer switch, logout, and
    browser close/refresh/back — routes through this one predicate. */
-function hasUnsavedChanges() { return _calcDirty === true; }
+function hasUnsavedChanges() {
+  return _calcDirty === true || _narrativeDirty === true ||
+    Object.keys(window._appliedValueDrafts || {}).length > 0;
+}
 window.hasUnsavedChanges = hasUnsavedChanges;
 
 /* In-app guard: returns true if it's safe to proceed (either nothing to
@@ -259,11 +269,12 @@ function bindCalcDirtyTracking() {
     const t = e.target && e.target.tagName;
     if (t === 'INPUT' || t === 'SELECT' || t === 'TEXTAREA') markCalcDirty();
   });
-  /* Three Whys live in the Exec tab (outside #calcBody) but are part of the
-     saved scenario, so track their edits toward the same dirty state. */
+  /* Three Whys autosave independently. Keeping their dirty scope separate
+     prevents a successful narrative save from leaving a false calculator
+     warning, while still protecting a pending/failed narrative write. */
   ['why_act','why_ci','why_now'].forEach(id => {
     const el = document.getElementById(id);
-    if (el && !el._dirtyBound) { el._dirtyBound = true; el.addEventListener('input', () => markCalcDirty()); }
+    if (el && !el._dirtyBound) { el._dirtyBound = true; el.addEventListener('input', () => markNarrativeDirty()); }
   });
   /* Note: the dirty flag is cleared inside _doSave() on confirmed save success
      and in loadFromObject() on load — NOT via a saveScenario wrapper — because

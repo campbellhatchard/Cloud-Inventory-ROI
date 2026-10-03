@@ -360,7 +360,7 @@
     runningBenefit += mBenefit;
     runningInvestment += monthlyRecurring;
     contractNpv += (mBenefit - monthlyRecurring) / Math.pow(1 + monthlyDiscount, month);
-    if (contractPayback === null && runningBenefit >= runningInvestment) {
+    if (contractPayback === null && runningInvestment > 0 && runningBenefit >= runningInvestment) {
       const prevBenefit = runningBenefit - mBenefit;
       const prevInvestment = runningInvestment - monthlyRecurring;
       const prevGap = prevInvestment - prevBenefit;

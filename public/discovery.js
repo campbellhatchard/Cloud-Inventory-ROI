@@ -569,6 +569,8 @@ async function resetDiscoveryForScenario(scenarioId) {
   discoveryAnswers      = {};
   discoveryEngagement   = null;
   latestSubmittedEvidence=null;
+  latestSubmittedEvidenceLoadError=null;
+  renderCalcProspectValueWarning();
 
   /* Re-attach to this scenario's existing active session, if any */
   if (scenarioId) {
@@ -589,9 +591,16 @@ async function resetDiscoveryForScenario(scenarioId) {
   }
   if (typeof renderDiscoveryTab === 'function') renderDiscoveryTab();
 }
+function unappliedProspectInputs(){
+  const inputs=[];if(!latestSubmittedEvidence?.submission)return inputs;
+  Object.keys(latestSubmittedEvidence.byInput||{}).forEach(input=>{const h=latestSubmittedEvidence.history?.inputs?.[input]||{},event=(h.events||[]).find(e=>e.event_type==='prospect_submitted'&&String(e.discovery_submission_id)===String(latestSubmittedEvidence.submission.id)),applied=(typeof fieldProvenance!=='undefined'?fieldProvenance[input]?.eventId:null)||h.valueUsed?.origin_event_id;if(event&&String(applied||'')!==String(event.id))inputs.push(input);});
+  return inputs;
+}
+function renderCalcProspectValueWarning(){const banner=document.getElementById('calcProspectValueWarning');if(!banner)return;const pending=unappliedProspectInputs();if(!pending.length){banner.style.display='none';banner.innerHTML='';return;}banner.style.display='flex';banner.innerHTML=`<div><strong>Customer-submitted values are waiting for review</strong><span>${pending.length} mapped value${pending.length===1?' has':'s have'} not been applied to this working business case.</span></div><button class="btn btn-primary btn-sm" onclick="switchTab('disc');setTimeout(applyDiscoveryToCalc,0)">Review Customer Values</button>`;}
+window.renderCalcProspectValueWarning=renderCalcProspectValueWarning;
 async function loadLatestSubmittedEvidence(){
-  latestSubmittedEvidence=null;latestSubmittedEvidenceLoadError=null;if(!window._calcScenarioId)return null;
-  try{const listRes=await apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/discovery-submissions');if(!listRes.ok)throw Error('Prospect submission list request failed ('+listRes.status+').');const list=await listRes.json(),submission=list.submissions&&list.submissions[0];if(!submission)return null;const [snapshotRes,historyRes]=await Promise.all([apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/discovery-submissions/'+encodeURIComponent(submission.id)),apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/value-history')]);if(!snapshotRes.ok)throw Error('Prospect submission snapshot request failed ('+snapshotRes.status+').');if(!historyRes.ok)throw Error('Value History request failed ('+historyRes.status+').');const snapshot=await snapshotRes.json(),history=await historyRes.json(),byQuestion={},byInput={};snapshot.answers.forEach(a=>{byQuestion[a.question_id]=a;if(a.canonical_input)byInput[a.canonical_input]=a;});latestSubmittedEvidence={submission:snapshot.submission,byQuestion,byInput,history};return latestSubmittedEvidence;}catch(error){latestSubmittedEvidenceLoadError=error;console.error('loadLatestSubmittedEvidence failed:',error.message);return null;}
+  latestSubmittedEvidence=null;latestSubmittedEvidenceLoadError=null;if(!window._calcScenarioId){window.renderCalcProspectValueWarning?.();return null;}
+  try{const listRes=await apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/discovery-submissions');if(!listRes?.ok)throw Error('Prospect submission list request failed ('+(listRes?.status||'unavailable')+').');const list=await listRes.json(),submission=list.submissions&&list.submissions[0];if(!submission){window.renderCalcProspectValueWarning?.();return null;}const [snapshotRes,historyRes]=await Promise.all([apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/discovery-submissions/'+encodeURIComponent(submission.id)),apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/value-history')]);if(!snapshotRes?.ok)throw Error('Prospect submission snapshot request failed ('+(snapshotRes?.status||'unavailable')+').');if(!historyRes?.ok)throw Error('Value History request failed ('+(historyRes?.status||'unavailable')+').');const snapshot=await snapshotRes.json(),history=await historyRes.json(),byQuestion={},byInput={};snapshot.answers.forEach(a=>{byQuestion[a.question_id]=a;if(a.canonical_input)byInput[a.canonical_input]=a;});latestSubmittedEvidence={submission:snapshot.submission,byQuestion,byInput,history};window.renderCalcProspectValueWarning?.();return latestSubmittedEvidence;}catch(error){latestSubmittedEvidenceLoadError=error;window.renderCalcProspectValueWarning?.();console.error('loadLatestSubmittedEvidence failed:',error.message);return null;}
 }
 let _answerSaveTimer      = null; // debounce timer for answer writes
 
@@ -1285,6 +1294,7 @@ async function applySubmittedEvidence(input,eventId){
   if(!eventId)return showToast?.('A verified submission event is required.');
   await applyValueEvent(input,eventId);
   await loadLatestSubmittedEvidence();
+  window.renderCalcProspectValueWarning?.();
   document.getElementById('prospectSyncModal')?.remove();
   showToast?.('Prospect-submitted value applied. Save a new scenario version when ready.');
 }

@@ -490,6 +490,9 @@ async function crStartResearch() {
     if (!resp || !resp.ok) {
       var err = resp ? await resp.json().catch(function(){ return {}; }) : {};
       _crShowError(err.error || 'Research failed. Check your API key and try again.');
+      _cr.running = false;
+      if (btn) { btn.disabled = false; btn.innerHTML = '\u2728 Research &amp; compare'; }
+      crCheckReady();
       return;
     }
 

@@ -69,7 +69,7 @@ router.get('/', async (req, res) => {
     const showAll = canViewTeam && req.query.all === 'true';
     let sql, params;
     if (showAll) {
-      sql = `SELECT m.id, m.company, m.title, m.target_close_date, m.token, m.is_active,
+      sql = `SELECT m.id, m.owner_id, m.company, m.title, m.target_close_date, m.token, m.is_active,
                     m.milestones, m.groups, m.created_at, m.updated_at,
                     u.username AS owner_username
              FROM mutual_action_plans m
@@ -78,7 +78,7 @@ router.get('/', async (req, res) => {
              ORDER BY m.updated_at DESC LIMIT 200`;
       params = [req.user.id,hasPermission(req.user,'view_all_customers')];
     } else {
-      sql = `SELECT id, company, title, target_close_date, token, is_active,
+      sql = `SELECT id, owner_id, company, title, target_close_date, token, is_active,
                     milestones, groups, created_at, updated_at
              FROM mutual_action_plans WHERE owner_id = $1
              ORDER BY updated_at DESC LIMIT 50`;

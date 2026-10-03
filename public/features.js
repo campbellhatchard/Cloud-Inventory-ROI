@@ -134,7 +134,8 @@ function loadFromObject(i) {
   renderConfidence();
   /* A freshly loaded scenario has no unsaved changes — clear the flag so the
      unsaved-changes guard doesn't nag right after loading. */
-  if (typeof clearCalcDirty === 'function') clearCalcDirty();
+  if (typeof clearAllWorkingDirty === 'function') clearAllWorkingDirty();
+  else if (typeof clearCalcDirty === 'function') clearCalcDirty();
 }
 
 /* ─────────────────────────────────────────
@@ -924,6 +925,9 @@ async function renderAnalytics() {
   const currentUser = window.ciAuth ? window.ciAuth.getUser() : {};
   const queryCard = document.getElementById('dealQueryCard');
   if (queryCard) queryCard.style.display = (typeof clientHasRole==='function'?clientHasRole(currentUser,'admin','Admin'):currentUser.role==='admin') ? 'block' : 'none';
+  const queryInput=document.getElementById('dealQueryInput'),queryButton=document.getElementById('dealQueryAskBtn');
+  if(queryInput){queryInput.removeAttribute('readonly');queryInput.value='';}
+  if(queryButton)queryButton.disabled=true;
   /* Team-wide events from the server (admin-gated). Falls back to empty
      if the current user isn't an admin or the call fails. */
   let serverSummary = null;

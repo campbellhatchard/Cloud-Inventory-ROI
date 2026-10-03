@@ -7,6 +7,9 @@
 let _maps = [];            // list cache
 let _mapCurrent = null;    // plan being edited
 let _mapDirty = false;     // customer outputs require an exact saved record
+let _mapReadOnly = false;  // team plans are view/export only for non-owners
+
+function mapCanMutate(){if(!_mapReadOnly)return true;showToast('Read-only plan — only the owner can change milestones or sharing.');return false;}
 
 function mapDisplayTitle(value) {
   const title = String(value || '').trim() || 'Joint Project Plan';
@@ -15,7 +18,7 @@ function mapDisplayTitle(value) {
 
 function mapOutputReady(){return !!(_mapCurrent&&_mapCurrent.id&&!_mapDirty);}
 function mapUpdateOutputControls(){for(const id of ['mapPdfIntBtn','mapPdfCustBtn','mapPptIntBtn','mapPptCustBtn','mapShareBtn']){const b=document.getElementById(id);if(b){b.disabled=!mapOutputReady();b.setAttribute('aria-disabled',String(!mapOutputReady()));}}}
-function mapMarkDirty(){_mapDirty=true;mapUpdateOutputControls();}
+function mapMarkDirty(){if(_mapReadOnly)return;_mapDirty=true;mapUpdateOutputControls();}
 function getSavedMapForOutput(){if(!_mapCurrent?.id){showToast('Save the Joint Project Plan before creating a customer output.');return null;}if(_mapDirty){showToast('Save your Joint Project Plan changes before creating a customer output.');return null;}const saved=_maps.find(x=>String(x.id)===String(_mapCurrent.id));return saved?mapNormalizeStructure(JSON.parse(JSON.stringify(saved))):mapNormalizeStructure(JSON.parse(JSON.stringify(_mapCurrent)));}
 
 const MAP_PHASES = ['Evaluate', 'Validate', 'Business Case', 'Legal & Procurement', 'Launch'];
@@ -257,6 +260,7 @@ function renderMapList() {
 }
 
 function newMap() {
+  _mapReadOnly = false;
   const v = typeof getVals === 'function' ? getVals() : {};
   _mapCurrent = {
     id: null,
@@ -275,6 +279,8 @@ async function openMap(id) {
   const m = _maps.find(x => x.id === id);
   if (!m) return;
   _mapCurrent = mapNormalizeStructure(JSON.parse(JSON.stringify(m)));
+  const user=window.ciAuth?.getUser?.()||{};
+  _mapReadOnly=String(m.owner_id||'')!==String(user.id||'') && String(m.owner_username||'')!==String(user.username||'');
   _mapDirty = false;
   renderMapEditor();
 }
@@ -316,6 +322,7 @@ function renderMapEditor() {
     <div class="btn-row" style="margin-bottom:1rem;">
       <button class="btn btn-ghost btn-sm" onclick="renderMapList()">← All plans</button>
     </div>
+    ${_mapReadOnly?'<div class="proposal-review-notice"><b>Read-only plan</b><br>You can review and export this team plan. Only its owner can edit milestones or manage the prospect link.</div>':''}
     <div class="card" style="margin-bottom:1.25rem;">
       <div style="display:grid;grid-template-columns:1.4fr 2fr 1fr;gap:10px;align-items:end;">
         <div class="field" style="margin:0;"><label>Company *</label>
@@ -363,6 +370,13 @@ function renderMapEditor() {
   if (mapInput) mapInput.value = m.company || '';
   mapUpdateGate();
   ed.querySelectorAll('input,select,textarea').forEach(el=>{el.addEventListener('input',mapMarkDirty);el.addEventListener('change',mapMarkDirty);});
+  if(_mapReadOnly){
+    ed.querySelectorAll('input,select,textarea').forEach(el=>{el.disabled=true;});
+    ed.querySelectorAll('button[onclick]').forEach(button=>{
+      const action=button.getAttribute('onclick')||'';
+      if(/saveMap|aiGenerateMap|shareMap|revokeMapLink|addMilestone|removeMilestone|moveMilestone|moveMapGroup|removeMapGroup|addMapGroup/.test(action))button.disabled=true;
+    });
+  }
   mapUpdateOutputControls();
 }
 
@@ -420,8 +434,8 @@ function mapUpdateGate() {
   const save = document.getElementById('mapSaveBtn');
   const ai   = document.getElementById('mapAiBtn');
   if (gate) gate.style.display = has ? 'none' : 'block';
-  if (save) save.disabled = !has;
-  if (ai)   ai.disabled = !has;
+  if (save) save.disabled = !has || _mapReadOnly;
+  if (ai)   ai.disabled = !has || _mapReadOnly;
 }
 
 function renderMilestones() {
@@ -467,10 +481,11 @@ function renderMilestones() {
 }
 
 function msField(id, field, value) {
+  if(!mapCanMutate())return;
   const x = (_mapCurrent.milestones || []).find(m => m.id === id);
   if (x) { x[field] = value; mapMarkDirty(); if (field === 'status') renderMapEditor(); }
 }
-function addMilestone(groupId, position) { mapMarkDirty();
+function addMilestone(groupId, position) { if(!mapCanMutate())return; mapMarkDirty();
   captureMapHeaderFields();
   _mapCurrent.milestones = _mapCurrent.milestones || [];
   const select = document.getElementById('mapAddGroup');
@@ -491,12 +506,12 @@ function addMilestone(groupId, position) { mapMarkDirty();
   mapRebuildMilestoneOrder();
   renderMapEditor();
 }
-function removeMilestone(id) { mapMarkDirty();
+function removeMilestone(id) { if(!mapCanMutate())return; mapMarkDirty();
   _mapCurrent.milestones = (_mapCurrent.milestones || []).filter(m => m.id !== id);
   renderMapEditor();
 }
 
-function moveMilestone(id, delta) { mapMarkDirty();
+function moveMilestone(id, delta) { if(!mapCanMutate())return; mapMarkDirty();
   captureMapHeaderFields();
   const item = _mapCurrent.milestones.find(m => m.id === id);
   if (!item) return;
@@ -510,7 +525,7 @@ function moveMilestone(id, delta) { mapMarkDirty();
   renderMapEditor();
 }
 
-function moveMilestoneToGroup(id, groupId) { mapMarkDirty();
+function moveMilestoneToGroup(id, groupId) { if(!mapCanMutate())return; mapMarkDirty();
   captureMapHeaderFields();
   const item = _mapCurrent.milestones.find(m => m.id === id);
   const group = _mapCurrent.groups.find(g => g.id === groupId);
@@ -521,7 +536,7 @@ function moveMilestoneToGroup(id, groupId) { mapMarkDirty();
   renderMapEditor();
 }
 
-function addMapGroup() { mapMarkDirty();
+function addMapGroup() { if(!mapCanMutate())return; mapMarkDirty();
   captureMapHeaderFields();
   const input = document.getElementById('mapNewGroupName');
   const name = (input && input.value || '').trim();
@@ -532,6 +547,7 @@ function addMapGroup() { mapMarkDirty();
 }
 
 function renameMapGroup(id, value) {
+  if(!mapCanMutate())return;
   const group = _mapCurrent.groups.find(g => g.id === id);
   const name = String(value || '').trim();
   if (!group || !name) { renderMapEditor(); return; }
@@ -539,7 +555,7 @@ function renameMapGroup(id, value) {
   _mapCurrent.milestones.filter(m => m.groupId === id).forEach(m => { m.phase = group.name; });
 }
 
-function moveMapGroup(id, delta) { mapMarkDirty();
+function moveMapGroup(id, delta) { if(!mapCanMutate())return; mapMarkDirty();
   captureMapHeaderFields();
   const from = _mapCurrent.groups.findIndex(g => g.id === id);
   const to = from + delta;
@@ -549,7 +565,7 @@ function moveMapGroup(id, delta) { mapMarkDirty();
   renderMapEditor();
 }
 
-function removeMapGroup(id) { mapMarkDirty();
+function removeMapGroup(id) { if(!mapCanMutate())return; mapMarkDirty();
   const groups = _mapCurrent.groups;
   if (groups.length <= 1) { showToast('A plan needs at least one grouping.'); return; }
   const at = groups.findIndex(g => g.id === id);
@@ -568,6 +584,7 @@ function removeMapGroup(id) { mapMarkDirty();
 
 /* ── Persistence ── */
 async function saveMap() {
+  if(!mapCanMutate())return;
   /* If the user typed a company name without clicking a suggestion, capture it now */
   const mapInput = document.getElementById('mapCompanyInput');
   if (mapInput && mapInput.value.trim() && !_mapCurrent.company) {
@@ -608,6 +625,7 @@ async function saveMap() {
 }
 
 async function shareMap() {
+  if(!mapCanMutate())return;
   if (!getSavedMapForOutput()) return;
   const resp = await apiFetch('/api/maps/' + _mapCurrent.id + '/share', { method: 'POST' });
   if (!resp || !resp.ok) { showToast('Could not generate link.'); return; }
@@ -618,6 +636,7 @@ async function shareMap() {
 }
 
 async function revokeMapLink() {
+  if(!mapCanMutate())return;
   if (!confirm('Revoke the prospect link? Their view will stop working immediately.')) return;
   const resp = await apiFetch('/api/maps/' + _mapCurrent.id + '/share', { method: 'DELETE' });
   if (resp && resp.ok) { _mapCurrent.token = null; renderMapEditor(); showToast('Link revoked.'); }
@@ -646,6 +665,7 @@ window.mapOutputReady=mapOutputReady;
 
 /* ── AI milestone generation ── */
 async function aiGenerateMap() {
+  if(!mapCanMutate())return;
   const btn = document.getElementById('mapAiBtn');
   const orig = btn.innerHTML;
   btn.disabled = true; btn.textContent = '✨ Drafting…';

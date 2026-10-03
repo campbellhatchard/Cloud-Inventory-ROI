@@ -204,6 +204,7 @@
 
   <!-- CALCULATOR BODY (hidden until a customer is chosen or gate skipped) -->
   <div id="calcBody" style="display:none;">
+  <div id="calcProspectValueWarning" class="disc-unapplied-warning" role="status" style="display:none;"></div>
   <div class="customer-search" id="customerSearchBar">
     <label for="customerSearchInput">Find an existing customer</label>
     <div class="cs-input-wrap">
@@ -1011,9 +1012,9 @@
     <div class="card-title">✨ Ask about your deals</div>
     <p style="font-size:12.5px;color:var(--gray-500);margin-bottom:10px;">e.g. "Which reps have the highest win rate?" or "Does prospect-supplied data correlate with winning?"</p>
     <div style="display:flex;gap:8px;">
-      <input type="text" id="dealQueryInput" name="analytics-deal-question-x7" placeholder="Ask a question about deal performance…" style="flex:1;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly')"
-        onkeydown="if(event.key==='Enter') askDealQuestion()"/>
-      <button class="btn btn-primary" onclick="askDealQuestion()">Ask</button>
+      <input type="text" id="dealQueryInput" name="analytics-deal-question-x7" placeholder="Ask a question about deal performance…" style="flex:1;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+        oninput="document.getElementById('dealQueryAskBtn').disabled=!this.value.trim()" onkeydown="if(event.key==='Enter'&&this.value.trim()) askDealQuestion()"/>
+      <button class="btn btn-primary" id="dealQueryAskBtn" onclick="askDealQuestion()" disabled>Ask</button>
     </div>
     <div id="dealQueryAnswer" style="display:none;"></div>
   </div>
@@ -1550,7 +1551,7 @@
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="6.9.25";</script>
+<script>const APP_VERSION="6.9.26";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
 <script src="ai-session.js"></script>
@@ -1658,6 +1659,7 @@ document.getElementById('industry')?.addEventListener('change', applyDefaultsAnd
 
 const _origSwitchTab = switchTab;
 window.switchTab = function(name) {
+  window.clearTransientNotices?.();
   /* Unsaved-changes: show a soft reminder instead of a blocking confirm().
      Still lets the rep navigate freely — just reminds them to save first. */
   if (name !== 'calc' && typeof hasUnsavedChanges === 'function' && hasUnsavedChanges()) {
@@ -1811,16 +1813,20 @@ function refreshCalcScenarioPicker() {
   /* Current versions only — the dropdown lists scenarios, not versions. */
   const customerId=window.currentScenarioCustomerId||window._currentCustomerId||null;
   const mine = all.filter(s => s && s.isCurrent !== false && (customerId?s.customerId===customerId:s.company===company));
-  if (!company || mine.length === 0) { wrap.style.display = 'none'; return; }
+  if (!company || mine.length === 0) { clearCalcScenarioPicker(); return; }
 
   mine.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
   const cur = window._calcScenarioId;
-  const active = mine.find(s => s.id === cur) || null;
-  sel.innerHTML = mine.map(s => {
+  const loaded=window._calcLoadedScenarioMeta;
+  const historical=loaded&&loaded.id===cur&&!mine.some(s=>s.id===cur)?{id:loaded.id,baseId:loaded.baseId,name:loaded.name,version:loaded.version,isCurrent:false}:null;
+  const options=historical?[historical,...mine]:mine;
+  const active = options.find(s => s.id === cur) || null;
+  sel.innerHTML = options.map(s => {
     const v = s.version ? ` (v${s.version})` : '';
-    return `<option value="${s.id}"${s.id === cur ? ' selected' : ''}>${escapeHtmlAttr(s.name || 'Untitled')}${v}</option>`;
+    const historicalLabel=s.isCurrent===false?' — Historical':'';
+    return `<option value="${s.id}"${s.id === cur ? ' selected' : ''}>${escapeHtmlAttr(s.name || 'Untitled')}${v}${historicalLabel}</option>`;
   }).join('');
-  if (!mine.some(s => s.id === cur)) sel.value = mine[0] ? mine[0].id : '';
+  if(active)sel.value=active.id;
   wrap.style.display = 'inline-flex';
 
   /* Show the versions button whenever a scenario is loaded. The count
@@ -1840,6 +1846,13 @@ function refreshCalcScenarioPicker() {
     }
   }
   if (typeof updateContextHeader === 'function') updateContextHeader();
+}
+
+function clearCalcScenarioPicker(){
+  const wrap=document.getElementById('calcScenarioPick'),sel=document.getElementById('calcScenarioSelect'),vbtn=document.getElementById('calcVersionsBtn');
+  if(sel){sel.innerHTML='';sel.value='';}
+  if(vbtn){vbtn.style.display='none';vbtn.dataset.baseId='';}
+  if(wrap)wrap.style.display='none';
 }
 
 function escapeHtmlAttr(s) {
@@ -1870,6 +1883,7 @@ function openCurrentVersionHistory() {
   else if (typeof showToast === 'function') showToast('Version history is unavailable.');
 }
 window.refreshCalcScenarioPicker = refreshCalcScenarioPicker;
+window.clearCalcScenarioPicker = clearCalcScenarioPicker;
 window.onCalcScenarioPick = onCalcScenarioPick;
 window.openCurrentVersionHistory = openCurrentVersionHistory;
 

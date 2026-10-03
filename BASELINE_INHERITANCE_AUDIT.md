@@ -1,19 +1,34 @@
+# v6.9.26 Pre-build Baseline Inheritance Audit
+
+- Exact parent archive: `cloud-inventory-roi-v6.9.25-render-ready.zip`
+- Verified parent SHA-256: `e946d2170675053022d68acfba16205829387b7e304a0da28eadeb8959c09113`
+- Parent application version: 6.9.25
+- Target application version: 6.9.26
+- Deployed parent Git commit: `2ea230462afce1ee6b53ee29805ccbac89aacbe6`
+- Developer source snapshot: `77befba6d01e1d68c5ab989830fa2a70a6b20d8f`
+- ROI authority: ROI Model v2.8 / `modelVersion` 28
+- Brand System, Application Knowledge, and Christie Persona: v1.0
+- Migration ceiling before this build: `038_repair_scenario_customer_identity.sql`
+- Output Registry: 25 active governed outputs
+- Authorization and role-capability expansion: none
+
+This corrective build addresses only defects confirmed during the v6.9.25 role-based regression. It preserves immutable Prospect evidence, deliberate per-value application, Rep Confirmed provenance, native currency, customer-safe output readiness, and the SE Solution Fit authorization boundary. No ROI formula or evidence-boundary change is authorized; calculator work is limited to authoritative Field Inventory persistence, state isolation, and verification of the existing ROI Model v2.8 engine.
+
+## Prior audit records
+
 # v6.9.25 Baseline Inheritance Audit
 
 - Parent archive: `cloud-inventory-roi-v6.9.24-render-ready.zip`
 - Verified parent SHA-256: `7f06565d76a4918f9c78fe8cc0debd1af64f71cc3a40ceeb474ec57726e0a7f2`
 - Parent application version: 6.9.24
 - Target application version: 6.9.25
-- Deployed parent Git commit: `fc348bd5cc43b31dd5b5611afd92a00d750afd2b`
-- Developer source snapshot: `00b8163afc7e621061a7db521b3a6bab685452a1`
+- Baseline Git snapshot: `00b8163afc7e621061a7db521b3a6bab685452a1`
 - ROI authority: ROI Model v2.8 / modelVersion 28
 - Brand System, Application Knowledge, and Christie Persona: v1.0
 - Database migration added: `038_repair_scenario_customer_identity.sql`
 - Authorization and role capabilities changed: none
 
 The corrective release preserves immutable Prospect evidence, deliberate per-value application, Rep Confirmed provenance, native currency, output readiness, and the SE Solution Fit authorization boundary. The migration repairs scenario-to-customer identity using the existing scenario owner and normalized company name; it does not broaden access or rewrite ROI evidence.
-
-## Prior audit records
 
 # v6.9.23 Baseline Inheritance Audit
 
@@ -58,8 +73,7 @@ The corrective release inherits from `cloud-inventory-roi-v6.9.23-render-ready.z
 - Verified parent SHA-256: `7f06565d76a4918f9c78fe8cc0debd1af64f71cc3a40ceeb474ec57726e0a7f2`
 - Parent application version: 6.9.24
 - Target application version: 6.9.25
-- Deployed parent Git commit: `fc348bd5cc43b31dd5b5611afd92a00d750afd2b`
-- Imported developer source snapshot: `00b8163afc7e621061a7db521b3a6bab685452a1`
+- Imported baseline Git snapshot: `00b8163afc7e621061a7db521b3a6bab685452a1`
 - ROI authority: ROI Model v2.8 / `modelVersion` 28
 - Brand System: v1.0
 - Application Knowledge: v1.0

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   server.js  —  Cloud Inventory ROI Builder  v6.9.25
+   server.js  —  Cloud Inventory ROI Builder  v6.9.26
    Database-backed multi-user edition — production hardened
 
    Security layers applied (Phase 10):
@@ -833,7 +833,7 @@ app.get('/api/enhance/health', (req, res) => {
 /* ── AI Enhance proxy — requires auth ── */
 app.post('/api/enhance', requireAuth, aiLimiter, async (req, res) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set.' });
+  if (!apiKey) return res.status(503).json({ error: 'AI enhancement is not configured.' });
   const { model, max_tokens, messages, system } = req.body;
   if (!messages || !Array.isArray(messages)) return res.status(400).json({ error: 'messages array required.' });
   const proofGuard='Customer-proof governance: Never invent or infer customer names, results, metrics, quotes, savings, or deployment claims. Reference a Cloud Inventory customer outcome only when the user message supplies an explicitly approved Customer Proof Catalog record. Peer proof never validates the current buyer or its ROI.';
@@ -867,6 +867,8 @@ app.post('/api/ai-help', requireAuth, aiLimiter, async (req,res)=>{
     const b=req.body||{},question=String(b.question||'').trim();
     if(!question)return res.status(400).json({error:'question required.'});
     if(b.scenarioId){const access=await scenarioAccess(req.user,b.scenarioId,'view');if(!access.exists)return res.status(404).json({error:'Scenario not found.'});if(!access.allowed)return res.status(403).json({error:'Access denied.'});}
+    const governedFormulaAnswer=applicationKnowledge.deterministicFormulaAnswer(question);
+    if(governedFormulaAnswer)return res.json({content:[{type:'text',text:governedFormulaAnswer}],governed:true,knowledgeVersion:applicationKnowledge.knowledge.knowledgeVersion});
     const system=applicationKnowledge.systemPrompt({workspaceId:String(b.workspaceId||'').slice(0,80),fieldId:String(b.focusedFieldId||'').slice(0,100),role:req.user.role});
     const conversation=Array.isArray(b.recentHelpConversation)?b.recentHelpConversation.slice(-8).filter(x=>x&&['user','assistant'].includes(x.role)&&typeof x.content==='string').map(x=>({role:x.role,content:x.content.slice(0,2000)})):[];
     if(!conversation.length||conversation.at(-1).content!==question)conversation.push({role:'user',content:question.slice(0,2000)});
@@ -905,13 +907,14 @@ app.get('/api/scenarios/:id/christie-context',requireAuth,async(req,res)=>{try{r
 app.post('/api/scenarios/:id/christie',requireAuth,aiLimiter,async(req,res)=>{try{
   const perspective=christiePerspective(req,req.body?.perspective);
   const context=await loadChristieContext(req,req.params.id,perspective),p=await christiePreferences(req.user.id);
-  const prefs={depth:p.christie_depth,challenge:p.christie_challenge,perspective};
   const question=String(req.body?.question||'Coach me on the highest-priority next customer commitment.').slice(0,2500);
+  const customerEmail=/draft[\s\S]{0,80}(customer|prospect)[\s\S]{0,80}(follow[- ]?up|email)|customer[- ]?ready email/i.test(question);
+  const prefs={depth:p.christie_depth,challenge:p.christie_challenge,perspective,responseMode:customerEmail?'customer_email':'coaching'};
   const recent=Array.isArray(req.body?.recentConversation)?req.body.recentConversation.slice(-8).filter(x=>x&&['user','assistant'].includes(x.role)&&typeof x.content==='string').map(x=>({role:x.role,content:x.content.slice(0,2500)})):[];
   recent.push({role:'user',content:question});
   let data;
   try{data=await callAnthropicDirect(recent,christie.systemPrompt(context,prefs),prefs.depth==='detailed'?2200:prefs.depth==='quick'?650:1300);}
-  catch(_){const fallback=christie.deterministicCoach(context,prefs);data={content:[{type:'text',text:Object.entries(fallback).filter(([k])=>!['depth','challenge','perspective'].includes(k)).map(([k,v])=>`${k.replace(/([A-Z])/g,' $1').replace(/^./,c=>c.toUpperCase())}: ${v}`).join('\n\n')}],fallback:true};}
+  catch(_){const text=customerEmail?christie.deterministicCustomerFollowUp(context):(()=>{const fallback=christie.deterministicCoach(context,prefs);return Object.entries(fallback).filter(([k])=>!['depth','challenge','perspective'].includes(k)).map(([k,v])=>`${k.replace(/([A-Z])/g,' $1').replace(/^./,c=>c.toUpperCase())}: ${v}`).join('\n\n');})();data={content:[{type:'text',text}],fallback:true};}
   res.json({...data,scenarioId:context.opportunity.scenarioId,baseId:context.opportunity.baseId,christieContextRevision:context.christieContextRevision,personaVersion:christie.persona.personaVersion,preferences:prefs});
  }catch(e){res.status(e.status||500).json({error:e.status?e.message:'Christie is unavailable.'});}});
 

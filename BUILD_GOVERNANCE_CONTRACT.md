@@ -435,3 +435,11 @@ Every new scenario version must retain the canonical customer identifier of its 
 ## GOVERNED OPERATIONAL PDF INVARIANT
 
 Joint Project Plan, Stakeholder Map, Solution Fit, Competitive Battlecard, and Impact Map PDF controls must download an actual server-generated PDF from the registered authoritative source. They may not depend on popup timing, browser print dialogs, or an unrelated compatibility generator. Missing saved authority must fail closed with an actionable message.
+
+## CUSTOMER WORKSPACE STATE ISOLATION INVARIANT
+
+Changing customer or scenario must enter a loading state, clear the prior scenario identity, picker selection, transient notices, Prospect evidence cache, and AI customer context, and render only after the selected customer's authoritative record is loaded. A customer with no saved scenario must never inherit values, version labels, warnings, or KPI totals from the prior customer.
+
+## ROI PRODUCT-NEUTRALITY INVARIANT
+
+Cloud Inventory product selection controls solution guidance and scope; it does not independently change ROI. With identical economic inputs, CIP, MEP, and EPP must produce identical ROI Model v2.8 results. Field Inventory contributes only when its customer-level flag is explicitly enabled and may change only the governed Field Inventory value drivers and their resulting economic rollups.

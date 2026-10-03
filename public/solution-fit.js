@@ -916,12 +916,13 @@
   function internalDoc(){
     const o=S.opportunity, a=S.architecture, p=S.partner, r=computeReadiness();
     const sel=S.processes.filter(x=>x.selected);
+    const standardCount=sel.filter(x=>x.source==='standard_app').length,nonStandardCount=sel.filter(x=>x.source==='non_standard').length;
     const demoed=sel.filter(x=>x.demoStatus==='Demonstrated');
     return `${docHeadBrand('Solution Fit, Gap & Services Handoff',
         `${esc(o.customer||'Customer not entered')}`,
         `INTERNAL · ${r.score}% READY`)}
     <div class="hd-summary">
-      <div><b>${sel.length}</b><span>Applications in scope</span></div>
+      <div><b>${sel.length}</b><span>Applications in scope${standardCount||nonStandardCount?` · ${standardCount} standard${nonStandardCount?` + ${nonStandardCount} non-standard`:''}`:''}</span></div>
       <div><b>${demoed.length}</b><span>Actually demoed</span></div>
       <div><b>${S.gaps.length}</b><span>Gaps / exceptions</span></div>
       <div><b>${S.interfaces.length}</b><span>Additional interfaces</span></div>
