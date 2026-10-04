@@ -23,7 +23,14 @@ function builder(report,{internalDraft=false}={}){
   const footer=()=>{ops.push(`${color(theme.border)} RG .5 w ${PAGE.left} 35 m ${PAGE.right} 35 l S`);ops.push(`BT /F1 7 Tf ${color(theme.muted)} rg ${PAGE.left} 22 Td (${esc(brand.audience(internalDraft?'internal':'customer'))}) Tj ET`);ops.push(`BT /F1 7 Tf ${color(theme.muted)} rg 520 22 Td (Page ${pageNo}) Tj ET`);};
   const text=(value,{size=10,bold=false,indent=0,width=86,leading=size+4,colorHex=theme.body}={})=>{const lines=wrap(value,width);for(const line of lines){ensure(leading+4);ops.push(`BT /${bold?'F2':'F1'} ${size} Tf ${color(colorHex)} rg ${PAGE.left+indent} ${y} Td (${esc(line)}) Tj ET`);y-=leading;}return lines.length;};
   const heading=value=>{ensure(34);y-=5;text(value,{size:14,bold:true,width:60,colorHex:theme.heading,leading:18});ops.push(`${color(theme.accent)} RG 1.5 w ${PAGE.left} ${y+5} m ${PAGE.right} ${y+5} l S`);y-=12;};
-  const metric=(label,value,x,top,w=118)=>{ops.push(`${color(theme.canvas)} rg ${x} ${top-54} ${w} 54 re f`);ops.push(`${color(theme.border)} RG .5 w ${x} ${top-54} ${w} 54 re S`);ops.push(`BT /F1 7 Tf ${color(theme.muted)} rg ${x+8} ${top-15} Td (${esc(label.toUpperCase())}) Tj ET`);ops.push(`BT /F2 13 Tf ${color(theme.heading)} rg ${x+8} ${top-39} Td (${esc(value)}) Tj ET`);};
+  const metric=(label,value,x,top,w=118)=>{
+    ops.push(`${color(theme.canvas)} rg ${x} ${top-54} ${w} 54 re f`);
+    ops.push(`${color(theme.border)} RG .5 w ${x} ${top-54} ${w} 54 re S`);
+    ops.push(`BT /F1 7 Tf ${color(theme.muted)} rg ${x+8} ${top-15} Td (${esc(label.toUpperCase())}) Tj ET`);
+    const display=String(value==null?'':value),long=display.length>18,fontSize=long?8.5:13;
+    const valueLines=wrap(display,long?Math.max(16,Math.floor((w-16)/4.8)):40).slice(0,2);
+    valueLines.forEach((line,index)=>ops.push(`BT /F2 ${fontSize} Tf ${color(theme.heading)} rg ${x+8} ${top-37-index*10} Td (${esc(line)}) Tj ET`));
+  };
   const tableRow=(cells,widths,{header=false}={})=>{ensure(24);const top=y+5;let x=PAGE.left;const fill=header?theme.tableHeader:'#FFFFFF';if(header)ops.push(`${color(fill)} rg ${PAGE.left} ${top-20} ${PAGE.right-PAGE.left} 22 re f`);cells.forEach((cell,i)=>{ops.push(`BT /${header?'F2':'F1'} ${header?8:8} Tf ${color(header?'#FFFFFF':theme.body)} rg ${x+5} ${top-14} Td (${esc(cell)}) Tj ET`);x+=widths[i];});ops.push(`${color(theme.border)} RG .4 w ${PAGE.left} ${top-21} m ${PAGE.right} ${top-21} l S`);y-=22;};
 
   addPage();

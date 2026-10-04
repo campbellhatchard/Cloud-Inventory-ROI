@@ -52,7 +52,9 @@ test('Executive PDF refuses to export stale ROI while calculator changes are uns
     CIEconomicAvailability: { hasEconomicValue: () => true, percent: () => '1%', paybackLabel: () => '1 month' },
     CIBrand: { audience: () => '', logo: () => '', documentCss: () => '' },
     CIProposalOutputBuilder: { buildProposalOutputHtml: () => '' },
-    hasUnsavedChanges: () => true
+    hasUnsavedChanges: () => true,
+    CIExecutiveOutputPreconditions: require('../public/executive-output-preconditions'),
+    getExecutiveOutputPersistenceState: () => ({ scenarioId:'scenario-1', calculatorDirty:true, narrativeDirty:false, appliedValueDraftCount:0 })
   };
   const document = {
     getElementById: id => id === 'pdfDownloadBtn' ? button : null,

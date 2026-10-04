@@ -183,4 +183,4 @@ Edit `public/scenario-templates.js`, add an entry to `SCENARIO_TEMPLATES`:
 
 ## Version
 
-Current: **v6.9.27** — Consolidated reliability correction built from the exact v6.9.26 release. It makes saved ROI results server-authoritative, restores all governed calculator inputs, hardens Prospect evidence review, aligns Solution Fit and Christie with governed workspace state, closes authorization and purge gaps, validates Joint Project Plans, and reuses competitive product identities across CIP/MEP/EPP. ROI Model remains v2.8, Brand System remains v1.0, Knowledge remains v1.0, and Christie Persona remains v1.0.
+Current: **v6.9.28** — Update1 corrective release built from the exact v6.9.27 release. It consolidates Prospect value authority, Executive output saved-state checks, transient modal handling, Stakeholder output preconditions, Competitive research readiness, Sales Manager opportunity identity, and internal Field Help context while preserving ROI Model v2.8, Brand System v1.0, Knowledge v1.0, and Christie Persona v1.0.

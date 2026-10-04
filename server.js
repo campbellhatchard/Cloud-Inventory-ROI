@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   server.js  —  Cloud Inventory ROI Builder  v6.9.27
+   server.js  —  Cloud Inventory ROI Builder  v6.9.28
    Database-backed multi-user edition — production hardened
 
    Security layers applied (Phase 10):
@@ -38,6 +38,7 @@ const brand = require('./src/shared/brand-system');
 const applicationKnowledge = require('./src/shared/application-knowledge');
 const christie = require('./src/shared/christie-context');
 const christieContextSource = require('./src/shared/christie-context-source');
+const { loadConfiguredProductKnowledge, resolveProductKnowledge } = require('./src/shared/competitive-research-source');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -1041,6 +1042,18 @@ app.get('/api/competitive/ci-source', requireAuth, async (req, res) => {
   }
 });
 
+/* One governed preflight contract is shared with the research execution path.
+   The browser may not infer readiness from a curated fallback label. */
+app.get('/api/competitive/research-readiness', requireAuth, async (req, res) => {
+  try {
+    const ciProductKey=require('./src/competitive-intelligence').validateCiProductKey(req.query.ciProduct || 'cip');
+    const readiness=await loadConfiguredProductKnowledge(db().query,ciProductKey);
+    res.json({ready:readiness.ready,ciProductKey,source:readiness.source?{id:readiness.source.id,name:readiness.source.source_name,type:readiness.source.source_type,createdAt:readiness.source.created_at}:null,blocker:readiness.blocker});
+  } catch(err) {
+    res.status(err.status||500).json({ready:false,error:err.status?err.message:'Competitive research readiness could not be evaluated.'});
+  }
+});
+
 /* POST /api/competitive/ci-source — admin: save new canonical CI source */
 app.post('/api/competitive/ci-source', requireAuth, async (req, res) => {
   if (!hasRole(req.user,'admin')) return res.status(403).json({ error: 'Admin only.' });
@@ -1090,20 +1103,9 @@ app.post('/api/competitive/research', requireAuth, aiLimiter, async (req, res) =
       else {const fetched=await fetchUrlContent(ciSourceOverride.url);if(fetched.ok)ciContent=fetched.text;}
       ciSourceLabel = ciSourceOverride.name || ciSourceOverride.url || 'Session-specific CI source';
     } else {
-      const { query } = db();
-      const { rows } = await query(
-        `SELECT source_type, source_name, source_url, content_text FROM ci_product_sources WHERE is_active = TRUE AND ci_product_key=$1 ORDER BY created_at DESC LIMIT 1`,
-        [governedCiProductKey]
-      );
-      if (rows[0]) {
-        if (rows[0].content_text) {
-          ciContent = rows[0].content_text.slice(0, 12000);
-          ciSourceLabel = rows[0].source_name;
-        } else if (rows[0].source_url) {
-          const fetched = await fetchUrlContent(rows[0].source_url);
-          if (fetched.ok) { ciContent = fetched.text; ciSourceLabel = rows[0].source_url; }
-        }
-      }
+      const knowledge=await resolveProductKnowledge({query:db().query,ciProductKey:governedCiProductKey,fetchUrlContent});
+      if(knowledge.ready){ciContent=knowledge.content;ciSourceLabel=knowledge.label;}
+      else return res.status(422).json({error:knowledge.blocker,code:'CI_PRODUCT_KNOWLEDGE_UNAVAILABLE'});
     }
 
     if(!ciContent)return res.status(422).json({error:'Approved Cloud Inventory product knowledge is unavailable. Ask an Admin to add a canonical source for this product.'});

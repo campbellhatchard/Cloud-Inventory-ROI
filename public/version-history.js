@@ -7,6 +7,17 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.28', date: '2026-10-03', tag: 'update1-corrective-build',
+    title: 'Canonical workflow reliability corrections',
+    summary: 'Replaces repeatedly patched workflow checks with shared authorities and permanent behavioral tests while preserving ROI Model v2.8 and governed evidence boundaries.',
+    highlights: [
+      'Prospect value application now validates immutable evidence through opportunity identity and returns safe, actionable failures without fabricating evidence.',
+      'Executive formats share one saved-state check, Stakeholder exports share one saved-map check, and active overlays suspend safely during Prospect evidence review.',
+      'Competitive research readiness uses the same approved server source as execution; Sales Manager rows are de-duplicated by opportunity as a defensive control.',
+      'Internal Field Help now builds a total allow-listed field context even when no field is focused.'
+    ]
+  },
+  {
     version: '6.9.27', date: '2026-10-03', tag: 'reliability-correction',
     title: 'Server-authoritative ROI and workflow integrity',
     summary: 'Consolidates confirmed reliability corrections while preserving ROI Model v2.8, evidence boundaries, and existing role capabilities.',

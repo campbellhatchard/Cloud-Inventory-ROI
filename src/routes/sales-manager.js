@@ -5,6 +5,7 @@ const { query } = require('../db');
 const { requireAuth, requireAnyRole } = require('../middleware/auth');
 const { hasPermission, customerScopeSql, scenarioAccess } = require('../authorization');
 const {evaluateLiveStageReadinessBatch,liveReadinessSummary}=require('../shared/stage-readiness-service');
+const {dedupeCurrentScenarioRows}=require('../shared/sales-manager-deals');
 
 const router = express.Router();
 router.use(requireAuth, requireAnyRole('sales_manager', 'admin'));
@@ -100,11 +101,13 @@ router.get('/dashboard', async (req, res) => {
       query(`SELECT * FROM sales_manager_actions ORDER BY due_date NULLS LAST,created_at DESC`),
       query(`SELECT DISTINCT u.id,u.username FROM users u LEFT JOIN sales_team_memberships tm ON tm.user_id=u.id AND tm.is_active=TRUE LEFT JOIN sales_team_memberships me ON me.team_id=tm.team_id AND me.user_id=$1 AND me.is_active=TRUE WHERE u.is_active=TRUE AND (u.role='rep' OR 'rep'=ANY(u.roles)) AND ($2 OR u.id=$1 OR me.id IS NOT NULL) ORDER BY u.username`,[req.user.id,global])
     ]);
-    const liveByScenario=await evaluateLiveStageReadinessBatch(scenarios.rows);
+    const currentScenarios=dedupeCurrentScenarioRows(scenarios.rows);
+    if(currentScenarios.length!==scenarios.rows.length)console.warn('sales_manager.duplicate_current_scenarios',{queryRows:scenarios.rows.length,uniqueOpportunities:currentScenarios.length});
+    const liveByScenario=await evaluateLiveStageReadinessBatch(currentScenarios);
     const handoffByCustomer = new Map(handoffs.rows.map(h => [String(h.customer_id), h]));
     const actionsByScenario = new Map();
     actions.rows.forEach(a => { const key=String(a.scenario_id); actionsByScenario.set(key,[...(actionsByScenario.get(key)||[]),a]); });
-    const deals = scenarios.rows.map(s => {
+    const deals = currentScenarios.map(s => {
       const plan = plans.rows.filter(p => (p.scenario_id && String(p.scenario_id) === String(s.id)) || lower(p.company) === lower(s.company)).sort((a,b)=>new Date(b.updated_at)-new Date(a.updated_at))[0];
       const people = stakeholders.rows.filter(p => lower(p.company) === lower(s.company) && String(p.owner_id) === String(s.owner_id));
       const data = s.data || {};

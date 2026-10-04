@@ -39,7 +39,7 @@ test('JPP output excludes legacy blank milestones',()=>{
 
 test('prospect value review pauses walkthrough and only reports success after an applied value',()=>{
  const discovery=read('public/discovery.js'),features=read('public/features.js');
- assert.match(discovery,/hiddenForProspectReview/);assert.match(discovery,/const applied=await applyValueEvent\(input,eventId\);\s*if\(!applied\)return/);
+ assert.match(discovery,/CITransientOverlays\?\.suspend\('prospect-evidence'\)/);assert.match(discovery,/CITransientOverlays\?\.restore/);assert.match(discovery,/const applied=await applyValueEvent\(input,eventId\);\s*if\(!applied\)return/);
  assert.match(features,/async function applyValueEvent[\s\S]*return true;[\s\S]*return false;/);
 });
 

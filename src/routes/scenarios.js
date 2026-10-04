@@ -32,6 +32,7 @@ const { buildExecutivePdf } = require('../exports/executive-pdf');
 const { buildExecutiveDocx } = require('../exports/executive-docx');
 const { loadExecutiveSource, executiveStoryFor, executiveReportFor } = require('../shared/executive-source');
 const { FINANCIAL_INPUTS, EVENT_TYPES, normalizeValue, sameValue, freshness, isFinancialInput, isCustomerEvent, unitFor, savedScenarioCurrency, buildSnapshotRows, enforceProvenance, summarize } = require('../shared/value-history');
+const { loadApplicableValueEvent } = require('../shared/prospect-value-authority');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -273,11 +274,12 @@ router.get('/:id/discovery-submissions/:submissionId',async(req,res)=>{try{
 
 router.get('/:id/value-history',async(req,res)=>{try{
   const sc=await authorizedScenario(req.user,req.params.id);if(sc.error)return res.status(sc.status).json({error:sc.error});
+  const editAccess=await scenarioAccess(req.user,req.params.id,'edit');
   const input=req.query.input?String(req.query.input):null;if(input&&!isFinancialInput(input))return res.status(400).json({error:'Unknown financial input.'});
   const events=(await query(`SELECT e.*,ds.submission_number,u.username actor_username FROM roi_value_events e LEFT JOIN discovery_submissions ds ON ds.id=e.discovery_submission_id LEFT JOIN users u ON u.id=e.actor_user_id WHERE e.base_id=$1 ${input?'AND e.canonical_input=$2':''} ORDER BY e.created_at DESC`,input?[sc.base_id,input]:[sc.base_id])).rows;
   const snapshots=(await query(`SELECT * FROM scenario_roi_value_snapshots WHERE base_id=$1 ${input?'AND canonical_input=$2':''} ORDER BY scenario_version DESC,canonical_input`,input?[sc.base_id,input]:[sc.base_id])).rows;
   const selected=snapshots.filter(x=>String(x.scenario_id)===String(sc.id));const grouped={};for(const key of new Set([...events.map(x=>x.canonical_input),...selected.map(x=>x.canonical_input)])){const ev=events.filter(x=>x.canonical_input===key).map(x=>({...x,freshness:isCustomerEvent(x)?freshness(x.evidence_date||x.created_at):{status:'Needs Review',days:null,customerSupported:false},occurredAfterScenario:(Number(x.source_scenario_version)||0)>Number(sc.version)}));grouped[key]=summarize(ev,selected.find(x=>x.canonical_input===key));}
-  res.json({baseId:sc.base_id,selectedScenario:{id:sc.id,version:sc.version,isCurrent:sc.is_current,isClosed:!!(sc.governed_outcome||sc.outcome)},inputs:grouped,events,snapshots});
+  res.json({baseId:sc.base_id,selectedScenario:{id:sc.id,version:sc.version,isCurrent:sc.is_current,isClosed:!!(sc.governed_outcome||sc.outcome),canEdit:!!editAccess.allowed},inputs:grouped,events,snapshots});
 }catch(err){console.error('Value history error:',err.message);res.status(500).json({error:'Failed to load Value History.'});}});
 
 router.post('/:id/value-history/:canonicalInput/revalidate',async(req,res)=>{try{
@@ -312,8 +314,10 @@ router.post('/:id/value-history/:canonicalInput/rep-confirm',async(req,res)=>{tr
 
 router.post('/:id/value-history/:canonicalInput/apply',async(req,res)=>{try{
   const sc=await authorizedScenario(req.user,req.params.id,'edit');if(sc.error)return res.status(sc.status).json({error:sc.error});if(!sc.is_current||sc.governed_outcome||sc.outcome)return res.status(409).json({error:'Closed or historical scenario values cannot be changed.'});
-  const input=String(req.params.canonicalInput);const event=await query(`SELECT e.*,u.username actor_username,u.is_active internal_actor_valid FROM roi_value_events e LEFT JOIN users u ON u.id=e.actor_user_id LEFT JOIN discovery_submissions ds ON ds.id=e.discovery_submission_id LEFT JOIN discovery_sessions dss ON dss.id=ds.discovery_session_id WHERE e.id=$1 AND e.base_id=$2 AND e.canonical_input=$3 AND (e.event_type<>'prospect_submitted' OR (ds.base_id=$2 AND dss.customer_id=$4))`,[req.body?.eventId,sc.base_id,input,sc.customer_id]);if(!event.rows.length)return res.status(404).json({error:'Value event not found for this customer opportunity.'});
-  await log({userId:req.user.id,action:'roi_value.applied',entityType:'roi_value_event',entityId:event.rows[0].id,detail:{baseId:sc.base_id,canonicalInput:input,targetScenarioId:sc.id},ipAddress:req.ip});const eventType=event.rows[0].event_type;res.json({apply:{canonicalInput:input,value:event.rows[0].normalized_value??event.rows[0].value_text,fieldState:eventType==='prospect_submitted'?'confirmed_prospect':['customer_revalidated','customer_provided'].includes(eventType)?'confirmed_customer':eventType==='rep_confirmed'&&event.rows[0].internal_actor_valid?'confirmed':'estimated',provenance:{eventId:event.rows[0].id,source:eventType==='rep_confirmed'?'Internally confirmed':eventType,date:event.rows[0].evidence_date||event.rows[0].created_at,confirmedBy:event.rows[0].actor_username,note:event.rows[0].evidence_note,stakeholderId:event.rows[0].stakeholder_id,stakeholder:event.rows[0].stakeholder_name_snapshot}},dirty:true,scenarioUnchanged:true});
+  const input=String(req.params.canonicalInput);const authority=await loadApplicableValueEvent({query,eventId:req.body?.eventId,baseId:sc.base_id,canonicalInput:input});
+  if(!authority.ok){console.warn('roi_value.apply_rejected',{scenarioId:sc.id,baseId:sc.base_id,canonicalInput:input,eventId:req.body?.eventId||null,code:authority.code});return res.status(authority.status).json({error:authority.error,code:authority.code});}
+  const event=authority.event;
+  await log({userId:req.user.id,action:'roi_value.applied',entityType:'roi_value_event',entityId:event.id,detail:{baseId:sc.base_id,canonicalInput:input,targetScenarioId:sc.id},ipAddress:req.ip});const eventType=event.event_type;res.json({apply:{canonicalInput:input,value:event.normalized_value??event.value_text,fieldState:eventType==='prospect_submitted'?'confirmed_prospect':['customer_revalidated','customer_provided'].includes(eventType)?'confirmed_customer':eventType==='rep_confirmed'&&event.internal_actor_valid?'confirmed':'estimated',provenance:{eventId:event.id,source:eventType==='rep_confirmed'?'Internally confirmed':eventType,date:event.evidence_date||event.created_at,confirmedBy:event.actor_username,note:event.evidence_note,stakeholderId:event.stakeholder_id,stakeholder:event.stakeholder_name_snapshot}},dirty:true,scenarioUnchanged:true});
 }catch(err){res.status(500).json({error:'Failed to apply value event.'});}});
 
 /* ═══════════════════════════════════════

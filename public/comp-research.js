@@ -13,6 +13,9 @@ var _cr = {
   result:     null,   /* last research result from server */
   running:    false,
   ciHistory:  [],     /* past CI sources from server */
+  serverKnowledgeReady: false,
+  knowledgeLoading: true,
+  knowledgeProductKey: null,
 };
 
 /* ── Tab switch ── */
@@ -47,10 +50,9 @@ function renderCompResearch() {
   _loadCISourceInfo();
 }
 
-/* Carry the product and competitor selected on the Battlecard tab into AI
-   Research. A selected CIP/MEP motion is already a valid first-party source:
-   the curated battlecard contains the approved product positioning and proof
-   points. Reps can still replace it with a URL or uploaded document. */
+/* Carry product identity into Research. Curated Battlecard text is useful
+   orientation, but the governed server preflight decides whether approved
+   Cloud Inventory product knowledge is available for AI research. */
 function _battlecardResearchContext() {
   var solEl = document.getElementById('compSolutionFilter');
   var compEl = document.getElementById('compSelect');
@@ -90,6 +92,7 @@ function _syncBattlecardResearchContext() {
   if (!_cr.ciSource || _cr.ciSource.type === 'battlecard') {
     _cr.ciSource = _curatedProductSource(ctx);
   }
+  if(_cr.knowledgeProductKey!==ctx.solutionKey){_cr.serverKnowledgeReady=false;_cr.knowledgeLoading=true;_cr.knowledgeProductKey=ctx.solutionKey;}
 }
 
 function _researchCompetitorOptions() {
@@ -232,39 +235,33 @@ function _bindResearchEvents() {
 /* ── Load canonical CI source from server ── */
 async function _loadCISourceInfo() {
   var ctx = _battlecardResearchContext();
+  _cr.knowledgeLoading = true;
+  _cr.serverKnowledgeReady = false;
+  _cr.knowledgeProductKey = ctx.solutionKey;
+  crCheckReady();
   try {
-    var resp = await apiFetch('/api/competitive/ci-source?ciProduct=' + encodeURIComponent(ctx.solutionKey));
-    if (!resp || !resp.ok) {
-      if (_cr.ciSource) {
-        _renderCIActive(_cr.ciSource.name, 'doc', 'Selected on Battlecard · approved product positioning');
-        _setStatus('crCiStatus', 'Ready', 'cr-status-ready');
-        crCheckReady();
-      } else {
-        _setCIStatusMissing();
-      }
-      return;
-    }
+    var resp = await apiFetch('/api/competitive/research-readiness?ciProduct=' + encodeURIComponent(ctx.solutionKey));
+    if (!resp || !resp.ok) throw new Error('Competitive research readiness unavailable.');
     var data = await resp.json();
-    if (data && data.source_name) {
-      _cr.ciSource = { type: 'canonical', name: data.source_name, url: data.source_url || null, solutionKey:ctx.solutionKey };
-      _renderCIActive(data.source_name, data.source_type === 'url' ? 'web' : 'pdf',
-        'Canonical source \u00b7 set by admin \u00b7 ' + new Date(data.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}));
-      _setStatus('crCiStatus', 'Ready', 'cr-status-ready');
-    } else if (_cr.ciSource) {
-      _renderCIActive(_cr.ciSource.name, 'doc', 'Selected on Battlecard · approved product positioning');
+    _cr.serverKnowledgeReady = Boolean(data && data.ready);
+    if (data && data.ready && data.source) {
+      if (!_cr.ciSource || ['battlecard','canonical'].includes(_cr.ciSource.type)) {
+        _cr.ciSource = { type:'canonical', name:data.source.name, solutionKey:ctx.solutionKey };
+      }
+      _renderCIActive(_cr.ciSource.name, _cr.ciSource.type === 'url' ? 'web' : 'doc', 'Canonical source · governed by Admin');
       _setStatus('crCiStatus', 'Ready', 'cr-status-ready');
     } else {
-      _setCIStatusMissing();
+      _renderCIActive((_cr.ciSource && _cr.ciSource.name) || ctx.solutionName, 'doc', 'Battlecard context only · approved product knowledge required');
+      _setStatus('crCiStatus', 'Admin source needed', 'cr-status-missing');
     }
   } catch(e) {
-    if (_cr.ciSource) {
-      _renderCIActive(_cr.ciSource.name, 'doc', 'Selected on Battlecard · approved product positioning');
-      _setStatus('crCiStatus', 'Ready', 'cr-status-ready');
-    } else {
-      _setCIStatusMissing();
-    }
+    _cr.serverKnowledgeReady = false;
+    _renderCIActive((_cr.ciSource && _cr.ciSource.name) || ctx.solutionName, 'doc', 'Readiness unavailable · retry before researching');
+    _setStatus('crCiStatus', 'Unavailable', 'cr-status-missing');
+  } finally {
+    _cr.knowledgeLoading = false;
+    crCheckReady();
   }
-  crCheckReady();
 }
 
 function _setCIStatusMissing() {
@@ -401,9 +398,7 @@ function _activeSourceHtml(name, iconType, meta, clearFn) {
 
 function crClearCI() {
   _cr.ciSource = _curatedProductSource(_battlecardResearchContext());
-  _renderCIActive(_cr.ciSource.name, 'doc', 'Selected on Battlecard · approved product positioning');
-  _setStatus('crCiStatus', 'Ready', 'cr-status-ready');
-  crCheckReady();
+  _loadCISourceInfo();
 }
 
 function crClearComp() {
@@ -416,29 +411,32 @@ function crClearComp() {
 
 /* ── Enable/disable research button ── */
 function crCheckReady() {
-  var ciOk   = !!_cr.ciSource;
   var compSel = (document.getElementById('crCompSel') || {}).value;
   var compUrl = ((document.getElementById('crCompUrl') || {}).value || '').trim();
   var compOk  = !!_cr.compSource || (compSel && compSel !== 'other') || compUrl.length > 5;
+  var readiness = window.CICompetitiveResearchReadiness.evaluateCompetitiveResearchReadiness({serverKnowledgeReady:_cr.serverKnowledgeReady,ciSource:_cr.ciSource,competitorReady:compOk,loading:_cr.knowledgeLoading});
+  var ciOk = readiness.productReady;
   var btn = document.getElementById('crResearchBtn');
   var title = document.getElementById('crActionTitle');
   var sub   = document.getElementById('crActionSub');
   if (!btn) return;
-  btn.disabled = !(ciOk && compOk);
-  if (ciOk && compOk) {
+  btn.disabled = !readiness.ready;
+  if (readiness.ready) {
     var ciLabel   = _cr.ciSource ? _cr.ciSource.name : 'canonical source';
     var compLabel = _cr.compSource ? _cr.compSource.displayName || _cr.compSource.name : _compDisplayName();
     if (title) title.textContent = 'Ready to research';
     if (sub) sub.textContent = escapeHtml(ciLabel.slice(0,50)) + ' vs ' + escapeHtml(compLabel) + '. AI will compare deployment, mobile, ERP compatibility, field inventory, and pricing.';
   } else {
-    if (title) title.textContent = ciOk ? 'Select a competitor to continue' : 'Set a Cloud Inventory source to continue';
-    if (sub) sub.textContent = 'AI will compare product capabilities and generate a provenance-tagged battlecard.';
+    if (title) title.textContent = readiness.message;
+    if (sub) sub.textContent = ciOk ? 'AI will compare product capabilities and generate a provenance-tagged battlecard.' : 'Research remains disabled until governed product knowledge is available.';
   }
 }
 
 /* ── Run research ── */
 async function crStartResearch() {
   if (_cr.running) return;
+  crCheckReady();
+  if (document.getElementById('crResearchBtn')?.disabled) { showToast('Resolve the Research readiness requirement before continuing.'); return; }
   /* Build request body */
   var compSel  = (document.getElementById('crCompSel') || {}).value || 'other';
   var compName = _compDisplayName();

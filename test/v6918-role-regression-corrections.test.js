@@ -64,13 +64,15 @@ test('customer switching clears dependent scenario and Prospect evidence state b
   assert.match(switcher,/Loaded scenario does not belong to the selected customer/);
 });
 
-test('Prospect value application is bound to both opportunity and customer',()=>{
+test('Prospect value application is bound to immutable evidence in the authorized opportunity',()=>{
   const routes=read('src/routes/scenarios.js');
   const apply=routes.slice(routes.indexOf("router.post('/:id/value-history/:canonicalInput/apply'"),routes.indexOf('/* ═',routes.indexOf("router.post('/:id/value-history/:canonicalInput/apply'")));
-  assert.match(apply,/LEFT JOIN discovery_submissions ds/);
-  assert.match(apply,/LEFT JOIN discovery_sessions dss/);
-  assert.match(apply,/ds\.base_id=\$2 AND dss\.customer_id=\$4/);
-  assert.match(apply,/sc\.customer_id/);
+  const authority=read('src/shared/prospect-value-authority.js');
+  assert.match(apply,/loadApplicableValueEvent/);
+  assert.match(authority,/WHERE e\.id=\$1 AND e\.base_id=\$2 AND e\.canonical_input=\$3/);
+  assert.match(authority,/event\.event_type==='prospect_submitted'/);
+  assert.match(authority,/event\.submission_base_id/);
+  assert.doesNotMatch(apply,/dss\.customer_id=\$4/);
 });
 
 test('feature renderers tolerate unavailable economics and optional scenario inputs',()=>{

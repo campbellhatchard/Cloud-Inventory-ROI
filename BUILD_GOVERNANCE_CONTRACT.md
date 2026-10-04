@@ -455,3 +455,23 @@ An HTTP GET may display and validate a destructive-operation confirmation, but i
 ## JPP SCENARIO ATTACHMENT INVARIANT
 
 A Joint Project Plan attached to a scenario must derive its customer/company and owner scope from that authorized scenario. The relationship must be database constrained, and blank milestones may not be saved or counted in governed outputs.
+
+## OPPORTUNITY-SCOPED PROSPECT VALUE INVARIANT
+
+Applying a submitted Prospect value must authorize the target scenario, validate the immutable value event and submission against the same opportunity `base_id`, and require the requested canonical input. Review or apply may never synthesize missing evidence, reinterpret a draft as a submission, or silently apply a customer value.
+
+## CROSS-FORMAT OUTPUT PRECONDITION INVARIANT
+
+Formats representing the same governed artifact must use one saved-state and authoritative-record precondition. A PDF, Word, or PowerPoint adapter may not introduce a broader or narrower dirty-state rule than its sibling formats.
+
+## COMPETITIVE RESEARCH READINESS INVARIANT
+
+Competitive research preflight and execution must use the same governed product-knowledge authority. Curated browser presentation text is not an approved canonical source and may not independently enable an AI research request.
+
+## TRANSIENT OVERLAY OWNERSHIP INVARIANT
+
+A modal that suspends tours, coaches, or context-help overlays must restore only the overlays it suspended and must preserve their prior visibility state. Opening a governed review dialog may not leave competing overlays active or permanently dismiss them.
+
+## CURRENT OPPORTUNITY UNIQUENESS INVARIANT
+
+At most one non-deleted scenario per opportunity `base_id` may be current. Database constraints are authoritative; server-side de-duplication may defend a read projection but may not replace the persistence invariant.

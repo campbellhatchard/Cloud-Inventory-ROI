@@ -173,9 +173,15 @@ async function printActionPlan(variant) {
 /* ═══════════════════════════════════════════════════════════════════
    STAKEHOLDER MAP — PRINT / PDF
    ═══════════════════════════════════════════════════════════════════ */
+function requireSavedStakeholderMapForOutput() {
+  if(!window.CIOperationalOutputPreconditions){showToast('Select a saved customer stakeholder map before exporting PowerPoint or PDF.');return null;}
+  const result=window.CIOperationalOutputPreconditions.stakeholderOutputContext({company:_stakeCompany,stakeholders:_stakeholders});
+  if(!result.ok){showToast(result.message);return null;}
+  return result;
+}
 async function printStakeholderMap() {
-  if (!_stakeholders.length) { showToast('Add stakeholders first.'); return; }
-  const company = _stakeCompany || 'All companies';
+  const context=requireSavedStakeholderMapForOutput();if(!context)return;
+  const company = context.company;
   return deServerDownload('/api/stakeholders/export-pdf?company='+encodeURIComponent(company),'Cloud-Inventory-Internal-Stakeholder-Map.pdf','Stakeholder Map PDF');
 
   /* Quadrant dots as absolutely-positioned HTML */
@@ -233,7 +239,7 @@ async function printStakeholderMap() {
    ═══════════════════════════════════════════════════════════════════ */
 async function pptStakeholderMap() {
   if (!(await deChk())) return;
-  if (!_stakeholders.length) { showToast('Add stakeholders first.'); return; }
+  const context=requireSavedStakeholderMapForOutput();if(!context)return;
   const btn = document.getElementById('stakePptBtn');
   const orig = btn ? btn.innerHTML : '';
   if (btn) { btn.disabled = true; btn.textContent = 'Building…'; }
@@ -792,11 +798,11 @@ async function exportGovernedOnePager(){
     if(!window._calcScenarioId)throw new Error('Save the opportunity before creating the one-pager.');
     const story=await loadExecutiveValueStory(true),e=story.economics,c=story.meta.currency,audience=(typeof getVals==='function'?getVals().execAudience:'mixed')||'mixed',labels={cfo:'CFO',coo:'VP Operations',ceo:'CEO / Executive Sponsor',cio:'CIO / IT',mixed:'Executive'},pptx=new pptxgen();
     pptx.defineLayout({name:'CI',width:PPT.W,height:PPT.H});pptx.layout='CI';pptx.title=`Internal ${labels[audience]||labels.mixed} One-Pager — ${story.meta.customer}`;
-    const s=pptx.addSlide();s.background={color:PPT.GRAY_BG};pptChrome(s,{page:1,audience:'internal'});s.addShape('rect',{x:4.6,y:PPT.H-.43,w:5.1,h:.3,fill:{color:PPT.GRAY_BG},line:{color:PPT.GRAY_BG}});s.addText(window.CIBrand.audience('internal'),{x:5,y:PPT.H-.4,w:4.4,h:.2,fontSize:7.5,color:PPT.GRAY_TXT,align:'right',fontFace:PPT.FONT});s.addText('CONFIDENTIAL — INTERNAL USE ONLY',{x:.45,y:.35,w:4.4,h:.25,fontSize:9,bold:true,color:PPT.RED,fontFace:PPT.FONT});pptTitle(s,`${labels[audience]||labels.mixed} value-case brief`);
+    const s=pptx.addSlide();s.background={color:PPT.GRAY_BG};pptChrome(s,{page:1,audience:'internal'});s.addShape('rect',{x:4.6,y:PPT.H-.43,w:5.1,h:.3,fill:{color:PPT.GRAY_BG},line:{color:PPT.GRAY_BG}});s.addText(window.CIBrand.audience('internal'),{x:5,y:PPT.H-.4,w:4.4,h:.2,fontSize:7.5,color:PPT.GRAY_TXT,align:'right',fontFace:PPT.FONT});s.addText('CONFIDENTIAL — INTERNAL USE ONLY',{x:.45,y:.35,w:4.4,h:.25,fontSize:9,bold:true,color:PPT.RED,fontFace:PPT.FONT});s.addText(`${labels[audience]||labels.mixed} value-case brief`,{x:.45,y:.82,w:9.0,h:.55,fontSize:24,bold:true,color:PPT.CYAN,fontFace:PPT.FONT,fit:'shrink',margin:0});
     s.addText(story.meta.customer,{x:.5,y:1.35,w:4.4,h:.35,fontSize:18,bold:true,color:PPT.NAVY,fontFace:PPT.FONT});
     [['Annual Customer Benefit',pptMoney(e.annualBenefit,c)],['Total Contract Benefit',pptMoney(e.totalContractBenefit,c)],['Modeled Customer Investment',pptMoney(e.totalContractInvestment,c)],['Net Economic Benefit',pptMoney(e.netEconomicBenefit,c)],['Contract ROI',window.CIEconomicAvailability.percent(e.contractRoi,{missing:'Not yet established'})],['NPV',pptMoney(e.npv,c)],['Payback',window.CIEconomicAvailability.paybackLabel(e)],['Customer-Supported Value',`${e.customerSupportedValuePct}%`]].forEach(([k,v],i)=>{const x=.5+(i%2)*2.25,y=1.9+Math.floor(i/2)*.68;s.addText(k,{x,y,w:2.05,h:.2,fontSize:8,color:PPT.GRAY_TXT,fontFace:PPT.FONT});s.addText(v,{x,y:y+.2,w:2.05,h:.3,fontSize:13,bold:true,color:PPT.NAVY,fontFace:PPT.FONT});});
     s.addText('Executive Value Story',{x:5.25,y:1.35,w:4.2,h:.3,fontSize:15,bold:true,color:PPT.CYAN_DARK,fontFace:PPT.FONT});[['Why Change',story.threeWhys.whyChange],['Why Now',story.threeWhys.whyNow],['Why Cloud Inventory',story.threeWhys.whyCloudInventory]].forEach(([k,v],i)=>{const y=1.8+i*1.05;s.addText(k,{x:5.25,y,w:4.2,h:.23,fontSize:10,bold:true,color:PPT.NAVY,fontFace:PPT.FONT});s.addText(v.value,{x:5.25,y:y+.25,w:4.2,h:.55,fontSize:9.5,color:PPT.GRAY_TXT,fontFace:PPT.FONT,fit:'shrink'});});
-    s.addText('Uses the authoritative Executive Value Story. No independent ROI, cost-of-delay, benchmark, competitor, or implementation claim is generated.',{x:5.25,y:5.0,w:4.2,h:.3,fontSize:7.5,italic:true,color:PPT.GRAY_TXT,fontFace:PPT.FONT});
+    s.addText('Uses the authoritative Executive Value Story. No independent ROI, cost-of-delay, benchmark, competitor, or implementation claim is generated.',{x:5.25,y:4.68,w:4.2,h:.32,fontSize:7.5,italic:true,color:PPT.GRAY_TXT,fontFace:PPT.FONT,fit:'shrink',margin:0});
     const safe=story.meta.customer.replace(/[^a-z0-9]+/gi,'-');await pptx.writeFile({fileName:`Cloud-Inventory-Internal-${labels[audience]||labels.mixed}-One-Pager-${safe}-${new Date().toISOString().slice(0,10)}.pptx`});showToast?.('Internal one-pager downloaded.');
   }catch(err){console.error('governed_one_pager.failed',{message:err.message});showToast?.(err.message||'One-pager could not be generated.');}
   finally{if(btn){btn.disabled=false;btn.innerHTML=orig||'Role one-pager';}}
@@ -922,4 +928,4 @@ window.deServerDownload = deServerDownload;
 /* Primary production paths for saved operational PowerPoints. */
 async function deServerPpt(url,button,fileName,retry){const old=button?.innerHTML;if(button){button.disabled=true;button.textContent='Generating…';}try{const r=await fetch(url,{credentials:'same-origin',headers:{Accept:'application/vnd.openxmlformats-officedocument.presentationml.presentation'}});if(!r.ok)throw new Error((await r.json().catch(()=>({}))).error||`Request failed (${r.status})`);const blob=await r.blob();deDownloadBlob(blob,fileName);document.getElementById('operationalPptRetry')?.remove();showToast('PowerPoint downloaded.');return true;}catch(e){console.error('operational_pptx.failed',{message:e.message});let n=document.getElementById('operationalPptRetry');if(!n){n=document.createElement('div');n.id='operationalPptRetry';n.className='proposal-review-notice';n.innerHTML='<b>PowerPoint could not be generated.</b> <button class="btn btn-secondary btn-sm">Retry</button>';n.querySelector('button').onclick=retry;(document.querySelector('.pane.active .page-header')||document.querySelector('.pane.active')||document.body).prepend(n);}showToast('PowerPoint could not be generated.');return false;}finally{if(button){button.disabled=false;button.innerHTML=old||'PowerPoint';}}}
 window.pptActionPlan=async function(variant){const saved=window.getSavedMapForOutput?.();if(!saved)return;const customer=String(_mapCurrent.company||'Customer').replace(/[^a-z0-9]+/gi,'-'),button=document.getElementById(variant==='customer'?'mapPptCustBtn':'mapPptIntBtn'),name=`Cloud-Inventory-${variant==='internal'?'Internal-':''}Joint-Project-Plan-${customer}-${new Date().toISOString().slice(0,10)}.pptx`;await deServerPpt(`/api/maps/${encodeURIComponent(_mapCurrent.id)}/export-pptx?audience=${variant}`,button,name,()=>window.pptActionPlan(variant));};
-window.pptStakeholderMap=pptStakeholderMap=async function(){if(!_stakeCompany)return showToast('Select a saved customer stakeholder map before exporting PowerPoint.');const company=String(_stakeCompany).replace(/[^a-z0-9]+/gi,'-'),button=document.getElementById('stakePptBtn');await deServerPpt(`/api/stakeholders/export-pptx?company=${encodeURIComponent(_stakeCompany)}`,button,`Cloud-Inventory-Internal-Stakeholder-Map-${company}-${new Date().toISOString().slice(0,10)}.pptx`,()=>window.pptStakeholderMap());};
+window.pptStakeholderMap=pptStakeholderMap=async function(){const context=requireSavedStakeholderMapForOutput();if(!context)return;const company=String(context.company).replace(/[^a-z0-9]+/gi,'-'),button=document.getElementById('stakePptBtn');await deServerPpt(`/api/stakeholders/export-pptx?company=${encodeURIComponent(context.company)}`,button,`Cloud-Inventory-Internal-Stakeholder-Map-${company}-${new Date().toISOString().slice(0,10)}.pptx`,()=>window.pptStakeholderMap());};

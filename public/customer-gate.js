@@ -243,6 +243,14 @@ function hasUnsavedChanges() {
     Object.keys(window._appliedValueDrafts || {}).length > 0;
 }
 window.hasUnsavedChanges = hasUnsavedChanges;
+window.getExecutiveOutputPersistenceState = function getExecutiveOutputPersistenceState() {
+  return {
+    scenarioId: window._calcScenarioId || null,
+    calculatorDirty: _calcDirty === true,
+    narrativeDirty: _narrativeDirty === true,
+    appliedValueDraftCount: Object.keys(window._appliedValueDrafts || {}).length
+  };
+};
 
 /* In-app guard: returns true if it's safe to proceed (either nothing to
    lose, or the user accepted losing it). Used by tab switch, customer
