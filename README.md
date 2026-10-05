@@ -183,4 +183,4 @@ Edit `public/scenario-templates.js`, add an entry to `SCENARIO_TEMPLATES`:
 
 ## Version
 
-Current: **v6.9.28** — Update1 corrective release built from the exact v6.9.27 release. It consolidates Prospect value authority, Executive output saved-state checks, transient modal handling, Stakeholder output preconditions, Competitive research readiness, Sales Manager opportunity identity, and internal Field Help context while preserving ROI Model v2.8, Brand System v1.0, Knowledge v1.0, and Christie Persona v1.0.
+Current: **v6.9.29** — reliability architecture release built from the exact v6.9.28 corrective candidate. It replaces five recurring failure points with authoritative contracts for Prospect value application, exact Field Help semantics, competitive request context, customer opportunity/version counts, and paginated Error Log totals while preserving ROI Model v2.8, Brand System v1.0, Knowledge v1.0, and Christie Persona v1.0.

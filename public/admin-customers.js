@@ -39,7 +39,7 @@
   function cardHtml(c) {
     return `<button class="ac-card" onclick="acOpen('${esc(c.id)}')">
       <div class="ac-card-name">${esc(c.name)}</div>
-      <div class="ac-card-meta">${c.scenarioCount||0} scenario${c.scenarioCount===1?'':'s'}${c.ownerUsername?` · owner: ${esc(c.ownerUsername)}`:''}</div>
+      <div class="ac-card-meta">${c.opportunityCount??c.scenarioCount??0} opportunit${(c.opportunityCount??c.scenarioCount)===1?'y':'ies'} · ${c.versionCount||0} saved version${c.versionCount===1?'':'s'}${c.ownerUsername?` · owner: ${esc(c.ownerUsername)}`:''}</div>
     </button>`;
   }
 

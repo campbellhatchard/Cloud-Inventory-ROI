@@ -152,10 +152,20 @@ function switchTab(name) {
 }
 
 function syncCompDropdowns() {
+  const scenarioKey=window._calcScenarioId||window._calcLoadedScenarioMeta?.id||'unsaved';
+  const savedProduct=(document.getElementById('solution')||{}).value||'cip';
+  const productSelect=document.getElementById('compSolutionFilter');
+  if(productSelect)productSelect.value=window.CICompetitiveContext?.resolve({scenarioKey,savedProduct,currentProduct:productSelect.value})||savedProduct;
   const cv = document.getElementById('competitor').value;
   const cs = document.getElementById('compSelect');
   if (cv && cs) cs.value = cv;
 }
+window.competitiveProductChanged=function(){
+  const scenarioKey=window._calcScenarioId||window._calcLoadedScenarioMeta?.id||'unsaved';
+  const selected=(document.getElementById('compSolutionFilter')||{}).value||'cip';
+  window.CICompetitiveContext?.setOverride(scenarioKey,selected);
+  window.renderCompFilter?.();
+};
 
 function toggleSidebar() {
   const sb = document.getElementById('sidebar');

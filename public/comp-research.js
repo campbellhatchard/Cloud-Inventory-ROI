@@ -235,12 +235,14 @@ function _bindResearchEvents() {
 /* ── Load canonical CI source from server ── */
 async function _loadCISourceInfo() {
   var ctx = _battlecardResearchContext();
+  var request = window.CICompetitiveContext?.beginRequest('competitive-readiness', ctx.solutionKey);
   _cr.knowledgeLoading = true;
   _cr.serverKnowledgeReady = false;
   _cr.knowledgeProductKey = ctx.solutionKey;
   crCheckReady();
   try {
-    var resp = await apiFetch('/api/competitive/research-readiness?ciProduct=' + encodeURIComponent(ctx.solutionKey));
+    var resp = await apiFetch('/api/competitive/research-readiness?ciProduct=' + encodeURIComponent(ctx.solutionKey), request?.signal ? { signal: request.signal } : {});
+    if (request && !request.isCurrent()) return;
     if (!resp || !resp.ok) throw new Error('Competitive research readiness unavailable.');
     var data = await resp.json();
     _cr.serverKnowledgeReady = Boolean(data && data.ready);
@@ -255,12 +257,12 @@ async function _loadCISourceInfo() {
       _setStatus('crCiStatus', 'Admin source needed', 'cr-status-missing');
     }
   } catch(e) {
+    if (e.name === 'AbortError') return;
     _cr.serverKnowledgeReady = false;
     _renderCIActive((_cr.ciSource && _cr.ciSource.name) || ctx.solutionName, 'doc', 'Readiness unavailable · retry before researching');
     _setStatus('crCiStatus', 'Unavailable', 'cr-status-missing');
   } finally {
-    _cr.knowledgeLoading = false;
-    crCheckReady();
+    if (!request || request.isCurrent()) { _cr.knowledgeLoading = false; crCheckReady(); }
   }
 }
 

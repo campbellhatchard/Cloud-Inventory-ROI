@@ -132,7 +132,7 @@ router.get('/', async (req, res) => {
 router.get('/errors', async (req, res) => {
   try {
     const { recentErrors } = require('../error-log');
-    const data = await recentErrors(req.query.limit || 100, req.query.offset || 0);
+    const data = await recentErrors(req.query.limit || 100, req.query.offset || 0, req.query.kind || 'all');
     res.json(data);
   } catch (err) {
     console.error('List errors failed:', err.message);

@@ -7,6 +7,17 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.29', date: '2026-10-04', tag: 'reliability-architecture',
+    title: 'Authoritative workflow contracts',
+    summary: 'Replaces five recurring failure points with focused, testable authorities rather than additional UI patches.',
+    highlights: [
+      'Prospect value application validates immutable submissions and answers against the real PostgreSQL schema and returns safe, phase-specific failures.',
+      'Field Help resolves exact canonical field semantics, so Annual revenue can no longer inherit contribution-margin guidance.',
+      'Competitive context is scenario-owned and stale asynchronous responses are cancelled before they can overwrite the selected product.',
+      'Customer summaries distinguish opportunities from saved versions, and Error Log totals and badges now share one server response contract.'
+    ]
+  },
+  {
     version: '6.9.28', date: '2026-10-03', tag: 'update1-corrective-build',
     title: 'Canonical workflow reliability corrections',
     summary: 'Replaces repeatedly patched workflow checks with shared authorities and permanent behavioral tests while preserving ROI Model v2.8 and governed evidence boundaries.',

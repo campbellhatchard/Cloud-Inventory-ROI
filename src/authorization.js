@@ -75,7 +75,7 @@ async function opportunityAccessByBaseId(user,baseId,mode='view'){
   if(!rows.length)return {exists:false,allowed:false,reasons:[]};
   return scenarioAccess(user,rows[0].id,mode);
 }
-async function listAuthorizedCustomers(user){const global=hasPermission(user,'view_all_customers'),team=hasPermission(user,'view_team_customers');const {rows}=await query(`SELECT c.id,c.name,c.owner_id,u.username owner_username,COUNT(s.id) FILTER(WHERE s.deleted_at IS NULL)::int scenario_count FROM customers c JOIN users u ON u.id=c.owner_id LEFT JOIN scenarios s ON s.customer_id=c.id WHERE ($2 OR c.owner_id=$1 OR EXISTS(SELECT 1 FROM scenarios sx WHERE sx.customer_id=c.id AND $1=ANY(sx.shared_with) AND sx.deleted_at IS NULL) OR ($3 AND ${customerScopeSql('c','$1')})) GROUP BY c.id,u.username ORDER BY c.name`,[user.id,global,team]);return rows;}
+async function listAuthorizedCustomers(user){const global=hasPermission(user,'view_all_customers'),team=hasPermission(user,'view_team_customers');const {rows}=await query(`SELECT c.id,c.name,c.owner_id,c.created_at,c.updated_at,u.username owner_username,COUNT(DISTINCT s.base_id) FILTER(WHERE s.deleted_at IS NULL)::int opportunity_count,COUNT(s.id) FILTER(WHERE s.deleted_at IS NULL)::int version_count FROM customers c JOIN users u ON u.id=c.owner_id LEFT JOIN scenarios s ON s.customer_id=c.id WHERE c.deleted_at IS NULL AND ($2 OR c.owner_id=$1 OR EXISTS(SELECT 1 FROM scenarios sx WHERE sx.customer_id=c.id AND $1=ANY(sx.shared_with) AND sx.deleted_at IS NULL) OR ($3 AND ${customerScopeSql('c','$1')})) GROUP BY c.id,u.username ORDER BY c.name`,[user.id,global,team]);return rows;}
 async function searchAuthorizedCustomers(user,filters={}){
  const global=hasPermission(user,'view_all_customers'),team=hasPermission(user,'view_team_customers');
  const limit=Math.max(1,Math.min(50,Number(filters.limit)||25)),offset=Math.max(0,Number(filters.offset)||0);
@@ -95,7 +95,8 @@ async function searchAuthorizedCustomers(user,filters={}){
    2 evidence_stage,0 stage_readiness,
    NULLIF(s.data->>'targetCloseDate','') target_close,
    h.readiness solution_fit_readiness,h.status solution_fit_status,h.primary_se_id,pse.username primary_se,
-   COALESCE((SELECT COUNT(DISTINCT sx.base_id)::int FROM scenarios sx WHERE sx.customer_id=scoped.id AND sx.is_current=TRUE AND sx.deleted_at IS NULL),0) scenario_count,
+   COALESCE((SELECT COUNT(DISTINCT sx.base_id)::int FROM scenarios sx WHERE sx.customer_id=scoped.id AND sx.deleted_at IS NULL),0) opportunity_count,
+   COALESCE((SELECT COUNT(*)::int FROM scenarios sx WHERE sx.customer_id=scoped.id AND sx.deleted_at IS NULL),0) version_count,
    COALESCE((SELECT ARRAY_AGG(DISTINCT t.name ORDER BY t.name) FROM sales_team_memberships om JOIN sales_teams t ON t.id=om.team_id AND t.status='active' WHERE om.user_id=scoped.owner_id AND om.is_active=TRUE AND om.effective_start<=CURRENT_DATE AND (om.effective_end IS NULL OR om.effective_end>=CURRENT_DATE)),'{}') team_names,
    COUNT(*) OVER() total_count
  FROM scoped

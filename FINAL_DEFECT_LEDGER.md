@@ -4,8 +4,7 @@
 
 - Authoritative source archive: `cloud-inventory-roi-v6.9.27-render-ready.zip`
 - Archive SHA-256: `19854f115ea21330e9ba595e8433a2350dc495513a451da1512a63e0fc6b78b1`
-- Production parent Git commit: `ea6feb7be2b46e4f0f846984545f4aa89c1d6956`
-- Developer source snapshot created from the archive: `4cbc0ed3c9047fe3b5f1efec0ba508a24387ec62`
+- Baseline Git snapshot created from the archive: `4cbc0ed3c9047fe3b5f1efec0ba508a24387ec62`
 - Application baseline: v6.9.27
 - ROI authority: ROI Model v2.8 / `modelVersion: 28`
 - This ledger was created before production-code changes.

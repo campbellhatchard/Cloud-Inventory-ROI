@@ -735,7 +735,7 @@
     <div class="card" style="margin-bottom:1rem;">
       <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;">
         <div class="field" style="min-width:220px;flex:1;max-width:300px;margin-bottom:0;"><label>Cloud Inventory solution</label>
-          <select id="compSolutionFilter" onchange="renderCompFilter()">
+          <select id="compSolutionFilter" onchange="competitiveProductChanged()">
             <option value="cip">Cloud Inventory Platform (CIP)</option>
             <option value="mep">Mobile Enterprise Platform (MEP)</option>
             <option value="epp">Enterprise Printing Platform (EPP)</option>
@@ -1535,6 +1535,7 @@
 <script src="format-utils.js"></script>
 <script src="industry-data.js"></script>
 <script src="scenario-templates.js"></script>
+<script src="competitive-context.js"></script>
 <script src="app.js"></script>
 <script src="features.js"></script>
 <script src="narrative.js"></script>
@@ -1556,7 +1557,7 @@
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="6.9.28";</script>
+<script>const APP_VERSION="6.9.29";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
 <script src="ai-session.js"></script>
@@ -2177,25 +2178,21 @@ async function loadErrorLog(filter) {
   if (!host) return;
   host.innerHTML = '<div class="empty-state"><p>Loading…</p></div>';
   try {
-    const resp = await apiFetch('/api/logs/errors?limit=200');
+    const resp = await apiFetch('/api/logs/errors?limit=200&kind=' + encodeURIComponent(_elogFilter));
     if (!resp || !resp.ok) { host.innerHTML = '<div class="empty-state"><p>Could not load the error log.</p></div>'; return; }
     var data = await resp.json();
-    var all = data.errors || [];
-    var total = data.total || 0;
-
-    /* Filter */
-    var filtered = all;
-    if (_elogFilter === 'client') filtered = all.filter(function(e){ return (e.source||'').startsWith('client'); });
-    if (_elogFilter === 'server') filtered = all.filter(function(e){ return !(e.source||'').startsWith('client'); });
-
-    /* Count badges */
-    var clientCount = all.filter(function(e){ return (e.source||'').startsWith('client'); }).length;
-    var serverCount = all.length - clientCount;
-    if (countEl) countEl.textContent = total ? total + ' recorded' + (total !== all.length ? ' (showing last 200)' : '') + '.' : 'None recorded — clean.';
+    var filtered = data.errors || [];
+    var page = data.page || {offset:data.offset||0,returned:filtered.length,totalFiltered:data.total||0,totalAll:data.total||0,counts:data.counts||{}};
+    var total = Number(page.totalAll)||0;
+    var clientCount = Number(page.counts?.client)||0;
+    var serverCount = Number(page.counts?.server)||0;
+    var first = page.returned ? Number(page.offset)+1 : 0;
+    var last = Number(page.offset)+Number(page.returned||0);
+    if (countEl) countEl.textContent = total ? total + ' recorded. Showing ' + first + '–' + last + ' of ' + page.totalFiltered + (_elogFilter==='all'?'':' '+_elogFilter) + '.' : 'None recorded — clean.';
 
     /* Filter pills */
     var pillHtml = '<div class="elog-filter-row">'
-      + '<button class="elog-pill' + (_elogFilter==='all'?' active':'') + '" onclick="loadErrorLog(\'all\')">All (' + all.length + ')</button>'
+      + '<button class="elog-pill' + (_elogFilter==='all'?' active':'') + '" onclick="loadErrorLog(\'all\')">All (' + total + ')</button>'
       + '<button class="elog-pill' + (_elogFilter==='server'?' active':'') + '" onclick="loadErrorLog(\'server\')">Server (' + serverCount + ')</button>'
       + '<button class="elog-pill' + (_elogFilter==='client'?' active':'') + '" onclick="loadErrorLog(\'client\')">Client / browser (' + clientCount + ')</button>'
       + '</div>';
@@ -3041,7 +3038,7 @@ async function onCustomerSearch(q) {
   box.innerHTML = matches.length
     ? matches.map(c => `<button type="button" class="cs-result" onclick="selectCustomerFromSearch('${escapeHtml(c.id)}')">
         <span class="cs-name">${escapeHtml(c.name)}</span>
-        <span class="cs-meta">${c.scenarioCount||0} scenario${(c.scenarioCount===1)?'':'s'} · ${escapeHtml(c.owner||'')}${c.opportunity?` · ${escapeHtml(c.opportunity)}`:''}</span>
+        <span class="cs-meta">${c.opportunityCount??c.scenarioCount??0} opportunit${(c.opportunityCount??c.scenarioCount)===1?'y':'ies'}${c.versionCount?` · ${c.versionCount} saved version${c.versionCount===1?'':'s'}`:''} · ${escapeHtml(c.owner||'')}${c.opportunity?` · ${escapeHtml(c.opportunity)}`:''}</span>
       </button>`).join('')
     : '<div class="cs-empty">No customers match this search within your authorized access.</div>';
   box.style.display = 'block';

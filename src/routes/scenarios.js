@@ -32,7 +32,8 @@ const { buildExecutivePdf } = require('../exports/executive-pdf');
 const { buildExecutiveDocx } = require('../exports/executive-docx');
 const { loadExecutiveSource, executiveStoryFor, executiveReportFor } = require('../shared/executive-source');
 const { FINANCIAL_INPUTS, EVENT_TYPES, normalizeValue, sameValue, freshness, isFinancialInput, isCustomerEvent, unitFor, savedScenarioCurrency, buildSnapshotRows, enforceProvenance, summarize } = require('../shared/value-history');
-const { loadApplicableValueEvent } = require('../shared/prospect-value-authority');
+const { resolveValueApplication } = require('../shared/prospect-value-authority');
+const { sendProblem, problem } = require('../shared/api-problem');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -314,11 +315,10 @@ router.post('/:id/value-history/:canonicalInput/rep-confirm',async(req,res)=>{tr
 
 router.post('/:id/value-history/:canonicalInput/apply',async(req,res)=>{try{
   const sc=await authorizedScenario(req.user,req.params.id,'edit');if(sc.error)return res.status(sc.status).json({error:sc.error});if(!sc.is_current||sc.governed_outcome||sc.outcome)return res.status(409).json({error:'Closed or historical scenario values cannot be changed.'});
-  const input=String(req.params.canonicalInput);const authority=await loadApplicableValueEvent({query,eventId:req.body?.eventId,baseId:sc.base_id,canonicalInput:input});
-  if(!authority.ok){console.warn('roi_value.apply_rejected',{scenarioId:sc.id,baseId:sc.base_id,canonicalInput:input,eventId:req.body?.eventId||null,code:authority.code});return res.status(authority.status).json({error:authority.error,code:authority.code});}
-  const event=authority.event;
-  await log({userId:req.user.id,action:'roi_value.applied',entityType:'roi_value_event',entityId:event.id,detail:{baseId:sc.base_id,canonicalInput:input,targetScenarioId:sc.id},ipAddress:req.ip});const eventType=event.event_type;res.json({apply:{canonicalInput:input,value:event.normalized_value??event.value_text,fieldState:eventType==='prospect_submitted'?'confirmed_prospect':['customer_revalidated','customer_provided'].includes(eventType)?'confirmed_customer':eventType==='rep_confirmed'&&event.internal_actor_valid?'confirmed':'estimated',provenance:{eventId:event.id,source:eventType==='rep_confirmed'?'Internally confirmed':eventType,date:event.evidence_date||event.created_at,confirmedBy:event.actor_username,note:event.evidence_note,stakeholderId:event.stakeholder_id,stakeholder:event.stakeholder_name_snapshot}},dirty:true,scenarioUnchanged:true});
-}catch(err){res.status(500).json({error:'Failed to apply value event.'});}});
+  const input=String(req.params.canonicalInput);const authority=await resolveValueApplication({query,eventId:req.body?.eventId,baseId:sc.base_id,canonicalInput:input});
+  if(!authority.ok){console.warn('roi_value.apply_rejected',{scenarioId:sc.id,baseId:sc.base_id,canonicalInput:input,eventId:req.body?.eventId||null,code:authority.problem.code,phase:authority.problem.phase});return sendProblem(res,authority.problem);}
+  await log({userId:req.user.id,action:'roi_value.applied',entityType:'roi_value_event',entityId:authority.event.id,detail:{baseId:sc.base_id,canonicalInput:input,targetScenarioId:sc.id},ipAddress:req.ip});res.json({apply:authority.apply});
+}catch(err){console.error('roi_value.apply_failed',{scenarioId:req.params.id,canonicalInput:req.params.canonicalInput,eventId:req.body?.eventId||null,phase:'value-application',message:err.message});return sendProblem(res,problem({status:500,code:'VALUE_APPLICATION_FAILED',title:'Value application failed',detail:'The verified value could not be applied. Please try again or contact an administrator.',phase:'value-application'}));}});
 
 /* ═══════════════════════════════════════
    GET /api/scenarios/:id

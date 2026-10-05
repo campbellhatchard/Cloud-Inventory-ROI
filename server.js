@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   server.js  —  Cloud Inventory ROI Builder  v6.9.28
+   server.js  —  Cloud Inventory ROI Builder  v6.9.29
    Database-backed multi-user edition — production hardened
 
    Security layers applied (Phase 10):
@@ -241,13 +241,13 @@ app.get('/api/companies', requireAuth, async (req, res) => {
   try {
     const { rows } = await db().query(
       `WITH all_companies AS (
-         SELECT company, updated_at, 'scenario'    AS src FROM scenarios
+         SELECT company, updated_at, 'scenario' AS src, base_id::text AS record_key FROM scenarios
            WHERE owner_id = $1 AND deleted_at IS NULL AND company <> ''
          UNION ALL
-         SELECT company, updated_at, 'plan'        AS src FROM mutual_action_plans
+         SELECT company, updated_at, 'plan' AS src, id::text AS record_key FROM mutual_action_plans
            WHERE owner_id = $1 AND company <> ''
          UNION ALL
-         SELECT company, updated_at, 'stakeholder' AS src FROM stakeholders
+         SELECT company, updated_at, 'stakeholder' AS src, id::text AS record_key FROM stakeholders
            WHERE owner_id = $1 AND company <> ''
        ),
        canonical AS (
@@ -257,9 +257,9 @@ app.get('/api/companies', requireAuth, async (req, res) => {
        ),
        counts AS (
          SELECT LOWER(company) AS key,
-                COUNT(*) FILTER (WHERE src = 'scenario')    AS scenarios,
-                COUNT(*) FILTER (WHERE src = 'plan')        AS plans,
-                COUNT(*) FILTER (WHERE src = 'stakeholder') AS stakeholders
+                COUNT(DISTINCT record_key) FILTER (WHERE src = 'scenario')    AS scenarios,
+                COUNT(DISTINCT record_key) FILTER (WHERE src = 'plan')        AS plans,
+                COUNT(DISTINCT record_key) FILTER (WHERE src = 'stakeholder') AS stakeholders
          FROM all_companies
          GROUP BY LOWER(company)
        )
@@ -303,7 +303,8 @@ app.get('/api/customers', requireAuth, async (req, res) => {
   try {
     const { listAuthorizedCustomers } = require('./src/authorization');
     const rows=await listAuthorizedCustomers(req.user);
-    const customers=rows.map(r=>({id:r.id,name:r.name,ownerId:r.owner_id,ownerUsername:r.owner_username,scenarioCount:Number(r.scenario_count)||0}));
+    const { mapCustomerSummaryRow } = require('./src/shared/customer-summary');
+    const customers=rows.map(mapCustomerSummaryRow);
     console.info('landing_customers.completed',{userId:req.user.id,status:200,count:customers.length,elapsedMs:Date.now()-started});res.json(customers);
   } catch (err) {
     console.error('landing_customers.failed',{userId:req.user.id,status:500,elapsedMs:Date.now()-started,message:err.message});
@@ -380,7 +381,8 @@ app.get('/api/admin/export/:entity', requireAuth, async (req, res) => {
       filename: 'customers.csv',
       sql: `SELECT c.id, c.name, u.username AS owner,
               c.has_field_inventory,
-              COUNT(DISTINCT s.id) AS scenario_count,
+              COUNT(DISTINCT s.base_id) AS opportunity_count,
+              COUNT(s.id) AS saved_version_count,
               c.created_at, c.updated_at, c.deleted_at
             FROM customers c
             JOIN users u ON u.id = c.owner_id
@@ -405,7 +407,8 @@ app.get('/api/admin/export/:entity', requireAuth, async (req, res) => {
       sql: `SELECT u.id, u.username, u.email, u.role, u.is_active,
               u.created_at,
               MAX(s.updated_at) AS last_scenario_saved,
-              COUNT(DISTINCT s.id) AS scenario_count
+              COUNT(DISTINCT s.base_id) AS opportunity_count,
+              COUNT(s.id) AS saved_version_count
             FROM users u
             LEFT JOIN scenarios s ON s.owner_id = u.id AND s.deleted_at IS NULL AND s.is_current = TRUE
             GROUP BY u.id
@@ -507,7 +510,8 @@ app.post('/api/admin/cleanup/preview', requireAuth, async (req, res) => {
              WHERE LOWER(ds.company) LIKE $1 OR LOWER(COALESCE(s.name,'')) LIKE $1 OR LOWER(u.username) LIKE $1
              ORDER BY ds.company, ds.created_at DESC`, [pat]),
       query(`SELECT c.id,c.name,u.username AS owner,c.deleted_at,c.deleted_at IS NOT NULL AS already_removed,
-               COUNT(DISTINCT s.id) AS scenario_count
+               COUNT(DISTINCT s.base_id) AS opportunity_count,
+               COUNT(s.id) AS saved_version_count
              FROM customers c JOIN users u ON u.id = c.owner_id
              LEFT JOIN scenarios s ON s.customer_id = c.id
              WHERE LOWER(c.name) LIKE $1 OR LOWER(u.username) LIKE $1 OR LOWER(COALESCE(s.name,'')) LIKE $1
@@ -882,9 +886,12 @@ app.post('/api/ai-help', requireAuth, aiLimiter, async (req,res)=>{
     const b=req.body||{},question=String(b.question||'').trim();
     if(!question)return res.status(400).json({error:'question required.'});
     if(b.scenarioId){const access=await scenarioAccess(req.user,b.scenarioId,'view');if(!access.exists)return res.status(404).json({error:'Scenario not found.'});if(!access.allowed)return res.status(403).json({error:'Access denied.'});}
+    const focusedFieldId=String(b.focusedFieldId||'').slice(0,100);
+    const governedFieldAnswer=applicationKnowledge.deterministicFieldAnswer(question,focusedFieldId);
+    if(governedFieldAnswer)return res.json({content:[{type:'text',text:governedFieldAnswer}],governed:true,knowledgeVersion:applicationKnowledge.knowledge.knowledgeVersion,fieldId:focusedFieldId});
     const governedFormulaAnswer=applicationKnowledge.deterministicFormulaAnswer(question);
     if(governedFormulaAnswer)return res.json({content:[{type:'text',text:governedFormulaAnswer}],governed:true,knowledgeVersion:applicationKnowledge.knowledge.knowledgeVersion});
-    const system=applicationKnowledge.systemPrompt({workspaceId:String(b.workspaceId||'').slice(0,80),fieldId:String(b.focusedFieldId||'').slice(0,100),role:req.user.role});
+    const system=applicationKnowledge.systemPrompt({workspaceId:String(b.workspaceId||'').slice(0,80),fieldId:focusedFieldId,role:req.user.role});
     const conversation=Array.isArray(b.recentHelpConversation)?b.recentHelpConversation.slice(-8).filter(x=>x&&['user','assistant'].includes(x.role)&&typeof x.content==='string').map(x=>({role:x.role,content:x.content.slice(0,2000)})):[];
     if(!conversation.length||conversation.at(-1).content!==question)conversation.push({role:'user',content:question.slice(0,2000)});
     const data=await callAnthropicDirect(conversation,system,700);res.json(data);

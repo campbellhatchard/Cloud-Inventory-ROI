@@ -475,3 +475,23 @@ A modal that suspends tours, coaches, or context-help overlays must restore only
 ## CURRENT OPPORTUNITY UNIQUENESS INVARIANT
 
 At most one non-deleted scenario per opportunity `base_id` may be current. Database constraints are authoritative; server-side de-duplication may defend a read projection but may not replace the persistence invariant.
+
+## PROSPECT VALUE SCHEMA-INTEGRITY INVARIANT
+
+Prospect value application must use one server authority that validates the immutable value event, submission, submitted answer, canonical input, and opportunity `base_id` against the deployed schema. The authority may not infer submission ownership through mutable draft/session columns or query columns that are not created by migrations. Safe client errors must retain a stable machine code and failure phase without exposing database detail.
+
+## FIELD SEMANTIC IDENTITY INVARIANT
+
+AI Help must resolve field meaning from the exact canonical field identifier. Formula membership may add calculation context but may not replace a field's definition, unit, inclusion rules, or requested entry. Fields that participate in one formula must remain semantically distinct.
+
+## COMPETITIVE ASYNC-CONTEXT INVARIANT
+
+Competitive Intelligence must default to the product saved on the selected scenario. An explicit product override applies only to that same scenario. Every asynchronous competitive request must be bound to its initiating scenario/product generation; a stale or aborted response may not update the current workspace.
+
+## CUSTOMER COUNT SEMANTICS INVARIANT
+
+Customer opportunity counts must count distinct opportunity `base_id` values. Saved scenario/version counts must count scenario rows. APIs and UI labels must expose these as separate measures and may not call version rows opportunities.
+
+## PAGINATED TOTALS CONTRACT INVARIANT
+
+An administrative list and its totals, category badges, and page range must be returned from one server query/snapshot and use declared scopes. A client may not combine database totals with counts derived from only the currently downloaded page.

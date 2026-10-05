@@ -68,10 +68,10 @@ test('Prospect value application is bound to immutable evidence in the authorize
   const routes=read('src/routes/scenarios.js');
   const apply=routes.slice(routes.indexOf("router.post('/:id/value-history/:canonicalInput/apply'"),routes.indexOf('/* ═',routes.indexOf("router.post('/:id/value-history/:canonicalInput/apply'")));
   const authority=read('src/shared/prospect-value-authority.js');
-  assert.match(apply,/loadApplicableValueEvent/);
-  assert.match(authority,/WHERE e\.id=\$1 AND e\.base_id=\$2 AND e\.canonical_input=\$3/);
-  assert.match(authority,/event\.event_type==='prospect_submitted'/);
-  assert.match(authority,/event\.submission_base_id/);
+  assert.match(apply,/resolveValueApplication/);
+  assert.match(authority,/WHERE e\.id::text=\$1 AND e\.base_id=\$2 AND e\.canonical_input=\$3/);
+  assert.match(authority,/discovery_submission_answers/);
+  assert.match(authority,/submission_answer_valid/);
   assert.doesNotMatch(apply,/dss\.customer_id=\$4/);
 });
 

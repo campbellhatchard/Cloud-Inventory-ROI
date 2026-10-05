@@ -39,17 +39,43 @@ async function logError(err, ctx = {}) {
 }
 
 /* Fetch recent errors for the admin view. */
-async function recentErrors(limit = 100, offset = 0) {
-  const { query } = db();
+async function recentErrors(limit = 100, offset = 0, kind = 'all', dataQuery = null) {
+  const query = dataQuery || db().query;
   const lim = Math.min(Math.max(parseInt(limit, 10) || 100, 1), 500);
   const off = Math.max(parseInt(offset, 10) || 0, 0);
+  const normalizedKind = ['all', 'server', 'client'].includes(kind) ? kind : 'all';
+  /* Totals and page rows are resolved by one PostgreSQL statement so the UI
+     cannot combine a newer total with an older page. */
   const { rows } = await query(
-    `SELECT id, occurred_at, level, source, message, method, path, status, user_id, ip
-       FROM error_log ORDER BY occurred_at DESC LIMIT $1 OFFSET $2`,
-    [lim, off]
+    `WITH base AS (
+       SELECT id,occurred_at,level,source,message,stack,method,path,status,user_id,ip,
+              CASE WHEN source LIKE 'client%' THEN 'client' ELSE 'server' END kind
+       FROM error_log
+     ), filtered AS (
+       SELECT * FROM base WHERE $3='all' OR kind=$3
+     ), page AS (
+       SELECT id,occurred_at,level,source,message,stack,method,path,status,user_id,ip
+       FROM filtered ORDER BY occurred_at DESC LIMIT $1 OFFSET $2
+     )
+     SELECT COALESCE((SELECT jsonb_agg(to_jsonb(p) ORDER BY p.occurred_at DESC) FROM page p),'[]'::jsonb) errors,
+            (SELECT COUNT(*)::int FROM base) total_all,
+            (SELECT COUNT(*)::int FROM filtered) total_filtered,
+            (SELECT COUNT(*)::int FROM base WHERE kind='server') total_server,
+            (SELECT COUNT(*)::int FROM base WHERE kind='client') total_client`,
+    [lim, off, normalizedKind]
   );
-  const { rows: cnt } = await query('SELECT COUNT(*)::int AS n FROM error_log');
-  return { errors: rows, total: cnt[0] ? cnt[0].n : 0 };
+  const row = rows[0] || {};
+  const errors = Array.isArray(row.errors) ? row.errors : [];
+  const page = {
+    limit: lim,
+    offset: off,
+    returned: errors.length,
+    totalFiltered: Number(row.total_filtered) || 0,
+    totalAll: Number(row.total_all) || 0,
+    counts: { all: Number(row.total_all) || 0, server: Number(row.total_server) || 0, client: Number(row.total_client) || 0 },
+    kind: normalizedKind
+  };
+  return { errors, page, total: page.totalAll, limit: lim, offset: off, counts: page.counts };
 }
 
 /* Prune errors older than N days (default 90). Returns rows removed. */

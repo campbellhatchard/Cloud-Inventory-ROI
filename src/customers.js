@@ -24,13 +24,16 @@ async function ensureCustomer(ownerId, name, q) {
   return rows[0] ? rows[0].id : null;
 }
 
-/* List customers for an owner (AE view). Includes scenario counts. */
+const { mapCustomerSummaryRow } = require('./shared/customer-summary');
+
+/* List customers for an owner (AE view). Separates opportunities from saved versions. */
 async function listCustomersForOwner(ownerId) {
   const { query } = require('./db');
   const { rows } = await query(
     `SELECT c.id, c.name, c.created_at, c.updated_at, c.owner_id,
             u.username AS owner_username,
-            COUNT(s.id) FILTER (WHERE s.deleted_at IS NULL) AS scenario_count
+            COUNT(DISTINCT s.base_id) FILTER (WHERE s.deleted_at IS NULL) AS opportunity_count,
+            COUNT(s.id) FILTER (WHERE s.deleted_at IS NULL) AS version_count
        FROM customers c
        LEFT JOIN users u ON u.id = c.owner_id
        LEFT JOIN scenarios s ON s.customer_id = c.id
@@ -48,7 +51,8 @@ async function listAllCustomers() {
   const { rows } = await query(
     `SELECT c.id, c.name, c.created_at, c.updated_at, c.owner_id,
             u.username AS owner_username,
-            COUNT(s.id) FILTER (WHERE s.deleted_at IS NULL) AS scenario_count
+            COUNT(DISTINCT s.base_id) FILTER (WHERE s.deleted_at IS NULL) AS opportunity_count,
+            COUNT(s.id) FILTER (WHERE s.deleted_at IS NULL) AS version_count
        FROM customers c
        LEFT JOIN users u ON u.id = c.owner_id
        LEFT JOIN scenarios s ON s.customer_id = c.id
@@ -58,14 +62,7 @@ async function listAllCustomers() {
   return rows.map(mapCustomerRow);
 }
 
-function mapCustomerRow(r) {
-  return {
-    id: r.id, name: r.name,
-    ownerId: r.owner_id, ownerUsername: r.owner_username || null,
-    scenarioCount: Number(r.scenario_count) || 0,
-    createdAt: r.created_at, updatedAt: r.updated_at
-  };
-}
+const mapCustomerRow = mapCustomerSummaryRow;
 
 /* Fetch a single customer, scoped to owner unless the caller is privileged
    (SE/admin). `allowAny` = cross-customer read (Phase 2 will set this for SEs). */
