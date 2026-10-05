@@ -593,15 +593,14 @@ async function resetDiscoveryForScenario(scenarioId) {
   if (typeof renderDiscoveryTab === 'function') renderDiscoveryTab();
 }
 function unappliedProspectInputs(){
-  const inputs=[];if(!latestSubmittedEvidence?.submission)return inputs;
-  Object.keys(latestSubmittedEvidence.byInput||{}).forEach(input=>{const h=latestSubmittedEvidence.history?.inputs?.[input]||{},event=(h.events||[]).find(e=>e.event_type==='prospect_submitted'&&String(e.discovery_submission_id)===String(latestSubmittedEvidence.submission.id)),applied=(typeof fieldProvenance!=='undefined'?fieldProvenance[input]?.eventId:null)||h.valueUsed?.origin_event_id;if(event&&String(applied||'')!==String(event.id))inputs.push(input);});
-  return inputs;
+  if(!latestSubmittedEvidence?.submission)return [];
+  return (latestSubmittedEvidence.rows||[]).filter(row=>row.status==='AVAILABLE').map(row=>row.canonicalInput);
 }
 function renderCalcProspectValueWarning(){const banner=document.getElementById('calcProspectValueWarning');if(!banner)return;const pending=unappliedProspectInputs();if(!pending.length){banner.style.display='none';banner.innerHTML='';return;}banner.style.display='flex';banner.innerHTML=`<div><strong>Customer-submitted values are waiting for review</strong><span>${pending.length} mapped value${pending.length===1?' has':'s have'} not been applied to this working business case.</span></div><button class="btn btn-primary btn-sm" onclick="switchTab('disc');setTimeout(applyDiscoveryToCalc,0)">Review Customer Values</button>`;}
 window.renderCalcProspectValueWarning=renderCalcProspectValueWarning;
 async function loadLatestSubmittedEvidence(){
   latestSubmittedEvidence=null;latestSubmittedEvidenceLoadError=null;if(!window._calcScenarioId){window.renderCalcProspectValueWarning?.();return null;}
-  try{const listRes=await apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/discovery-submissions');if(!listRes?.ok)throw Error('Prospect submission list request failed ('+(listRes?.status||'unavailable')+').');const list=await listRes.json(),submission=list.submissions&&list.submissions[0];if(!submission){window.renderCalcProspectValueWarning?.();return null;}const [snapshotRes,historyRes]=await Promise.all([apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/discovery-submissions/'+encodeURIComponent(submission.id)),apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/value-history')]);if(!snapshotRes?.ok)throw Error('Prospect submission snapshot request failed ('+(snapshotRes?.status||'unavailable')+').');if(!historyRes?.ok)throw Error('Value History request failed ('+(historyRes?.status||'unavailable')+').');const snapshot=await snapshotRes.json(),history=await historyRes.json(),byQuestion={},byInput={};snapshot.answers.forEach(a=>{byQuestion[a.question_id]=a;if(a.canonical_input)byInput[a.canonical_input]=a;});latestSubmittedEvidence={submission:snapshot.submission,byQuestion,byInput,history};window.renderCalcProspectValueWarning?.();return latestSubmittedEvidence;}catch(error){latestSubmittedEvidenceLoadError=error;window.renderCalcProspectValueWarning?.();console.error('loadLatestSubmittedEvidence failed:',error.message);return null;}
+  try{const response=await apiFetch('/api/scenarios/'+encodeURIComponent(window._calcScenarioId)+'/prospect-evidence-review');if(!response?.ok)throw Error('Prospect evidence review request failed ('+(response?.status||'unavailable')+').');const review=await response.json();if(!review.submission){window.renderCalcProspectValueWarning?.();return null;}const byQuestion={},byInput={};(review.answers||[]).forEach(answer=>{byQuestion[answer.question_id]=answer;});(review.rows||[]).forEach(row=>{if(row.answer&&!row.conflictingAnswers?.length)byInput[row.canonicalInput]=row.answer;});latestSubmittedEvidence={...review,byQuestion,byInput,history:review.history||{selectedScenario:review.selectedScenario,inputs:{}}};window.renderCalcProspectValueWarning?.();return latestSubmittedEvidence;}catch(error){latestSubmittedEvidenceLoadError=error;window.renderCalcProspectValueWarning?.();console.error('loadLatestSubmittedEvidence failed:',error.message);return null;}
 }
 let _answerSaveTimer      = null; // debounce timer for answer writes
 
@@ -1277,33 +1276,50 @@ async function applyDiscoveryToCalc() {
   await loadLatestSubmittedEvidence();
   if(latestSubmittedEvidenceLoadError)return showToast?.('Prospect evidence could not be loaded. Please try again.');
   if(!latestSubmittedEvidence)return showToast?.('No immutable prospect submission is available yet. Working draft answers cannot be applied as prospect-verified.');
-  const submission=latestSubmittedEvidence.submission,history=latestSubmittedEvidence.history;
-  const selected=history.selectedScenario||{},canApply=selected.isCurrent&&!selected.isClosed&&selected.canEdit!==false;
-  const rows=[];
-  Object.keys(latestSubmittedEvidence.byInput).forEach(function(input){
-    const answer=latestSubmittedEvidence.byInput[input],h=history.inputs&&history.inputs[input]||{};
-    const event=(h.events||[]).find(function(e){return e.event_type==='prospect_submitted'&&String(e.discovery_submission_id)===String(submission.id);});
-    const el=document.getElementById(input),current=el?el.value:(h.valueUsed&&h.valueUsed.value_text)||'Not captured';
-    const hasWorking=Object.prototype.hasOwnProperty.call(discoveryAnswers,answer.question_id),working=hasWorking?discoveryAnswers[answer.question_id]:'',draftDiff=hasWorking&&String(working).trim()!==String(answer.answer_text||'').trim();
-    rows.push('<article class="disc-sync-review"><div><small>'+escapeHtml(answer.question_text||input)+'</small><strong>'+escapeHtml(input)+'</strong></div><div><small>Current working value</small><b>'+escapeHtml(current||'Not captured')+'</b></div><div><small>Latest submitted value</small><b>'+escapeHtml(answer.answer_text||'—')+'</b><span>Submission '+submission.submission_number+' · '+new Date(submission.submitted_at).toLocaleDateString()+'</span>'+(draftDiff?'<em>Working draft has changed since submission. This refers to the Prospect Link draft, not the applied Calculator value.</em>':'')+'</div><div>'+(event&&canApply?'<button class="btn btn-primary btn-sm" onclick="applySubmittedEvidence(\''+input+'\',\''+event.id+'\')">Use Prospect Value</button>':event?'<span class="history-immutable">Read only for this scenario</span>':'<span class="disc-no-event">No verified value event</span>')+'<button class="btn btn-ghost btn-sm" onclick="openValueHistory(\''+input+'\')">View History</button></div></article>');
+  renderProspectEvidenceModal();
+}
+
+function prospectEvidenceAction(row,canApply){
+  if(row.status==='APPLIED')return '<span class="disc-evidence-status disc-evidence-applied">Applied to this business case</span>';
+  if(row.status==='PREVIOUSLY_APPLIED')return '<span class="disc-evidence-status disc-evidence-review">Previously applied; working value later changed</span>';
+  if(row.status==='CONFLICT')return '<span class="disc-evidence-status disc-no-event">Multiple answers map to this field</span>';
+  if(row.status==='NO_VERIFIED_EVENT')return '<span class="disc-evidence-status disc-no-event">No verified value event</span>';
+  if(!canApply||row.status==='READ_ONLY')return '<span class="disc-evidence-status history-immutable">Read only for this scenario</span>';
+  return '<button class="btn btn-primary btn-sm" data-evidence-apply="'+escapeHtml(row.canonicalInput)+'" onclick="applySubmittedEvidence(\''+row.canonicalInput+'\',\''+row.event.id+'\',this)">Use Prospect Value</button>';
+}
+
+function renderProspectEvidenceModal(options){
+  options=options||{};
+  const submission=latestSubmittedEvidence.submission,selected=latestSubmittedEvidence.selectedScenario||latestSubmittedEvidence.history?.selectedScenario||{};
+  const canApply=selected.isCurrent&&!selected.isClosed&&selected.canEdit!==false;
+  const rows=(latestSubmittedEvidence.rows||[]).map(function(row){
+    const input=row.canonicalInput,answer=row.answer||row.conflictingAnswers?.[0]||{},el=document.getElementById(input)||document.getElementById(row.event?.canonical_input==='labor'?'laborCost':input),current=el?el.value:(row.currentValue??'Not captured');
+    const hasWorking=answer.question_id&&Object.prototype.hasOwnProperty.call(discoveryAnswers,answer.question_id),working=hasWorking?discoveryAnswers[answer.question_id]:'',draftDiff=hasWorking&&String(working).trim()!==String(answer.answer_text||'').trim();
+    const conflictDetail=row.status==='CONFLICT'?'<em>Questionnaire governance found more than one submitted answer for this input. Nothing was selected automatically.</em>':'';
+    return '<article class="disc-sync-review" id="prospectEvidenceRow_'+escapeHtml(input)+'" data-evidence-status="'+escapeHtml(row.status)+'"><div><small>'+escapeHtml(answer.question_text||input)+'</small><strong>'+escapeHtml(input)+'</strong></div><div><small>Current working value</small><b>'+escapeHtml(current===''?'Not captured':current)+'</b></div><div><small>Latest submitted value</small><b>'+escapeHtml(answer.answer_text||'—')+'</b><span>Submission '+submission.submission_number+' · '+new Date(submission.submitted_at).toLocaleDateString()+'</span>'+(draftDiff?'<em>Working draft has changed since submission. This refers to the Prospect Link draft, not the applied Calculator value.</em>':'')+conflictDetail+'</div><div class="disc-sync-actions">'+prospectEvidenceAction(row,canApply)+'<button class="btn btn-ghost btn-sm" onclick="openValueHistory(\''+input+'\')">View History</button></div></article>';
   });
   const old=document.getElementById('prospectSyncModal');if(old)old.remove();
-  if(prospectEvidenceOverlayToken)window.CITransientOverlays?.restore(prospectEvidenceOverlayToken);
-  prospectEvidenceOverlayToken=window.CITransientOverlays?.suspend('prospect-evidence')||null;
+  if(!prospectEvidenceOverlayToken)prospectEvidenceOverlayToken=window.CITransientOverlays?.suspend('prospect-evidence')||null;
   const readOnlyReason=canApply?'':(!selected.isCurrent||selected.isClosed?'Historical or closed scenario — evidence is viewable but cannot be applied.':'You have view-only access — evidence is visible but cannot be applied.');
   const modal=document.createElement('div');modal.id='prospectSyncModal';modal.className='modal-overlay open';modal.innerHTML='<div class="modal-card modal-wide"><div class="modal-header"><div><h2>Review Prospect Evidence</h2><p>Latest immutable Submission '+submission.submission_number+'. Values are applied individually and never overwrite the business case automatically.</p></div><button class="modal-close" onclick="closeProspectSyncModal()">&times;</button></div><div class="modal-body">'+(readOnlyReason?'<div class="history-immutable">'+readOnlyReason+'</div>':'')+(rows.join('')||'<div class="empty-state"><p>This submission contains no mapped financial values.</p></div>')+'</div></div>';document.body.appendChild(modal);
+  const body=modal.querySelector?.('.modal-body');if(body&&Number.isFinite(options.scrollTop))body.scrollTop=options.scrollTop;
 }
 
 function closeProspectSyncModal(){document.getElementById('prospectSyncModal')?.remove();if(prospectEvidenceOverlayToken){window.CITransientOverlays?.restore(prospectEvidenceOverlayToken);prospectEvidenceOverlayToken=null;}}
 
-async function applySubmittedEvidence(input,eventId){
+async function applySubmittedEvidence(input,eventId,button){
   if(!eventId)return showToast?.('A verified submission event is required.');
-  const applied=await applyValueEvent(input,eventId);
-  if(!applied)return;
+  if(button?.dataset?.applying==='true')return;
+  const modal=document.getElementById('prospectSyncModal'),body=modal?.querySelector?.('.modal-body'),scrollTop=body?.scrollTop||0,priorLabel=button?.textContent||'';
+  if(button){button.dataset.applying='true';button.disabled=true;button.textContent='Applying…';}
+  const idempotencyKey=(window.crypto?.randomUUID?.()||('prospect-'+eventId+'-'+Date.now()));
+  const applied=await applyValueEvent(input,eventId,{keepModal:true,silentSuccess:true,idempotencyKey});
+  if(!applied){if(button){button.dataset.applying='false';button.disabled=false;button.textContent=priorLabel;}return;}
   await loadLatestSubmittedEvidence();
   window.renderCalcProspectValueWarning?.();
-  closeProspectSyncModal();
-  showToast?.('Prospect-submitted value applied. Save a new scenario version when ready.');
+  if(latestSubmittedEvidence&&!latestSubmittedEvidenceLoadError)renderProspectEvidenceModal({scrollTop});
+  else if(button){button.dataset.applying='false';button.disabled=false;button.textContent=priorLabel;}
+  showToast?.(applied.alreadyApplied?'This Prospect value was already applied.':'Prospect-submitted value applied and saved to the current business case.');
 }
 
 function clearDiscoveryAnswers() {

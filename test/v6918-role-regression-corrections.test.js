@@ -67,12 +67,13 @@ test('customer switching clears dependent scenario and Prospect evidence state b
 test('Prospect value application is bound to immutable evidence in the authorized opportunity',()=>{
   const routes=read('src/routes/scenarios.js');
   const apply=routes.slice(routes.indexOf("router.post('/:id/value-history/:canonicalInput/apply'"),routes.indexOf('/* ═',routes.indexOf("router.post('/:id/value-history/:canonicalInput/apply'")));
-  const authority=read('src/shared/prospect-value-authority.js');
-  assert.match(apply,/resolveValueApplication/);
+  const authority=read('src/shared/prospect-value-authority.js'),service=read('src/shared/roi-value-application.js');
+  assert.match(apply,/transaction\(client=>applyRoiValueEvent/);
+  assert.match(service,/loadApplicableValueEvent/);
   assert.match(authority,/WHERE e\.id::text=\$1 AND e\.base_id=\$2 AND e\.canonical_input=\$3/);
   assert.match(authority,/discovery_submission_answers/);
   assert.match(authority,/submission_answer_valid/);
-  assert.doesNotMatch(apply,/dss\.customer_id=\$4/);
+  assert.doesNotMatch(apply+service,/dss\.customer_id=\$4/);
 });
 
 test('feature renderers tolerate unavailable economics and optional scenario inputs',()=>{
@@ -140,7 +141,7 @@ test('Joint Project Plan milestone titles persist immediately while typing',()=>
 test('submitted Prospect values remain explicit and warn until deliberately applied',()=>{
   const discovery=read('public/discovery.js');
   assert.match(discovery,/Customer-submitted values are waiting for review/);
-  assert.match(discovery,/h\.valueUsed\?\.origin_event_id/);
+  assert.match(discovery,/row\.status==='AVAILABLE'/);
   assert.match(discovery,/onclick="applyDiscoveryToCalc\(\)"/);
   assert.match(discovery,/activeProvenance\[q\.sync\]\?\.eventId/);
 });

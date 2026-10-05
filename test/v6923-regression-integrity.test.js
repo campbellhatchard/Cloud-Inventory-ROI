@@ -25,11 +25,13 @@ test('field inventory value is opt-in and reconciliation person-hours persist',(
   assert.match(features,/fieldReconcilePersonHours/);
 });
 
-test('prospect-applied values survive calculator navigation until a save or reload boundary',()=>{
-  const features=read('public/features.js'),app=read('public/app.js');
-  assert.match(features,/window\._appliedValueDrafts\[fieldId\]=a\.value/);
-  assert.match(app,/Object\.entries\(window\._appliedValueDrafts\)/);
-  assert.match(app,/window\._appliedValueDrafts\s*=\s*\{\}/);
+test('prospect-applied values are server-persisted and no longer depend on a navigation-only browser draft',()=>{
+  const features=read('public/features.js'),route=read('src/routes/scenarios.js'),service=read('src/shared/roi-value-application.js');
+  assert.match(features,/a\.persisted!==true/);
+  assert.doesNotMatch(features.slice(features.indexOf('async function applyValueEvent'),features.indexOf('function renderConfidence')),/_appliedValueDrafts|markCalcDirty/);
+  assert.match(route,/transaction\(client=>applyRoiValueEvent/);
+  assert.match(service,/UPDATE scenarios SET data=\$2::jsonb/);
+  assert.match(service,/INSERT INTO roi_value_applications/);
 });
 
 test('scenario saves preserve Three Whys and wait for field-inventory authority',()=>{

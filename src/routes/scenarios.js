@@ -32,8 +32,10 @@ const { buildExecutivePdf } = require('../exports/executive-pdf');
 const { buildExecutiveDocx } = require('../exports/executive-docx');
 const { loadExecutiveSource, executiveStoryFor, executiveReportFor } = require('../shared/executive-source');
 const { FINANCIAL_INPUTS, EVENT_TYPES, normalizeValue, sameValue, freshness, isFinancialInput, isCustomerEvent, unitFor, savedScenarioCurrency, buildSnapshotRows, enforceProvenance, summarize } = require('../shared/value-history');
-const { resolveValueApplication } = require('../shared/prospect-value-authority');
 const { sendProblem, problem } = require('../shared/api-problem');
+const { scenarioDisplayValue, historicalSnapshotMatches } = require('../shared/scenario-input-storage');
+const { loadProspectEvidenceReview } = require('../shared/prospect-evidence-review');
+const { applyRoiValueEvent } = require('../shared/roi-value-application');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -56,7 +58,8 @@ async function captureScenarioValueHistory(client,{scenario,sourceScenarioId,dat
   for(let row of rows){
     row.baseId=scenario.base_id;
     row=enforceProvenance(row,byId.get(String(row.originEventId)));
-    const old=priorByInput.get(row.canonicalInput),changed=old&&!sameValue(old.normalized_value??old.value_text,row.normalizedValue??row.valueText);
+    const old=priorByInput.get(row.canonicalInput),historicalValue=old?.normalized_value??old?.value_text,currentValue=row.normalizedValue??row.valueText;
+    const changed=old&&!historicalSnapshotMatches(row.canonicalInput,historicalValue,currentValue);
     let origin=row.originEventId&&byId.has(String(row.originEventId))?row.originEventId:null;
     if((changed||!old)&&!origin){
       const created=await client.query(`INSERT INTO roi_value_events(base_id,canonical_input,event_type,value_text,normalized_value,currency,unit,source_scenario_id,source_scenario_version,evidence_source,evidence_date,actor_user_id,provenance_state) VALUES($1,$2,'rep_updated',$3,$4,$5,$6,$7,$8,'Scenario save',CURRENT_DATE,$9,'estimated') RETURNING id`,[scenario.base_id,row.canonicalInput,row.valueText,row.normalizedValue,row.currency,row.unit,scenario.id,scenario.version,userId]);
@@ -273,14 +276,30 @@ router.get('/:id/discovery-submissions/:submissionId',async(req,res)=>{try{
   res.json({submission:head.rows[0],answers:answers.rows,immutable:true});
 }catch(err){res.status(500).json({error:'Failed to load submission snapshot.'});}});
 
+/* One server-owned review projection replaces the former browser-side join of
+   three independently timed responses. Empty submissions remain a successful
+   response; route/database failures remain distinguishable failures. */
+router.get('/:id/prospect-evidence-review',async(req,res)=>{try{
+  const sc=await authorizedScenario(req.user,req.params.id);if(sc.error)return res.status(sc.status).json({error:sc.error});
+  const editAccess=await scenarioAccess(req.user,req.params.id,'edit');
+  const review=await transaction(async client=>{
+    await client.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY');
+    const fresh=await client.query(`SELECT s.id,s.base_id,s.version,s.is_current,s.data,s.outcome,g.outcome governed_outcome FROM scenarios s LEFT JOIN scenario_stage_governance g ON g.scenario_id=s.id WHERE s.id=$1 AND s.deleted_at IS NULL`,[sc.id]);
+    if(!fresh.rows[0])throw Object.assign(new Error('Scenario not found.'),{status:404});
+    return loadProspectEvidenceReview({client,scenario:fresh.rows[0],canEdit:!!editAccess.allowed});
+  });
+  res.json(review);
+}catch(err){console.error('Prospect evidence review error:',err.message);res.status(err.status||500).json({error:err.status?err.message:'Prospect evidence could not be loaded.'});}});
+
 router.get('/:id/value-history',async(req,res)=>{try{
   const sc=await authorizedScenario(req.user,req.params.id);if(sc.error)return res.status(sc.status).json({error:sc.error});
   const editAccess=await scenarioAccess(req.user,req.params.id,'edit');
   const input=req.query.input?String(req.query.input):null;if(input&&!isFinancialInput(input))return res.status(400).json({error:'Unknown financial input.'});
   const events=(await query(`SELECT e.*,ds.submission_number,u.username actor_username FROM roi_value_events e LEFT JOIN discovery_submissions ds ON ds.id=e.discovery_submission_id LEFT JOIN users u ON u.id=e.actor_user_id WHERE e.base_id=$1 ${input?'AND e.canonical_input=$2':''} ORDER BY e.created_at DESC`,input?[sc.base_id,input]:[sc.base_id])).rows;
   const snapshots=(await query(`SELECT * FROM scenario_roi_value_snapshots WHERE base_id=$1 ${input?'AND canonical_input=$2':''} ORDER BY scenario_version DESC,canonical_input`,input?[sc.base_id,input]:[sc.base_id])).rows;
-  const selected=snapshots.filter(x=>String(x.scenario_id)===String(sc.id));const grouped={};for(const key of new Set([...events.map(x=>x.canonical_input),...selected.map(x=>x.canonical_input)])){const ev=events.filter(x=>x.canonical_input===key).map(x=>({...x,freshness:isCustomerEvent(x)?freshness(x.evidence_date||x.created_at):{status:'Needs Review',days:null,customerSupported:false},occurredAfterScenario:(Number(x.source_scenario_version)||0)>Number(sc.version)}));grouped[key]=summarize(ev,selected.find(x=>x.canonical_input===key));}
-  res.json({baseId:sc.base_id,selectedScenario:{id:sc.id,version:sc.version,isCurrent:sc.is_current,isClosed:!!(sc.governed_outcome||sc.outcome),canEdit:!!editAccess.allowed},inputs:grouped,events,snapshots});
+  const applications=(await query(`SELECT a.*,u.username applied_by_username FROM roi_value_applications a LEFT JOIN users u ON u.id=a.actor_user_id WHERE a.target_scenario_id=$1 ${input?'AND a.canonical_input=$2':''} ORDER BY a.created_at DESC`,input?[sc.id,input]:[sc.id])).rows,applicationByEvent=new Map(applications.map(a=>[String(a.source_value_event_id),a]));
+  const selected=sc.is_current?buildSnapshotRows(sc.data||{}).map(x=>({scenario_id:sc.id,base_id:sc.base_id,scenario_version:sc.version,canonical_input:x.canonicalInput,value_text:x.valueText,normalized_value:x.normalizedValue,unit:x.unit,currency:x.currency,field_state:x.fieldState,provenance:x.provenance,origin_event_id:x.originEventId,working_value:true})):snapshots.filter(x=>String(x.scenario_id)===String(sc.id));const grouped={};for(const key of new Set([...events.map(x=>x.canonical_input),...selected.map(x=>x.canonical_input)])){const used=selected.find(x=>x.canonical_input===key),ev=events.filter(x=>x.canonical_input===key).map(x=>({...x,application:applicationByEvent.get(String(x.id))||null,isApplied:String(used?.origin_event_id||'')===String(x.id),freshness:isCustomerEvent(x)?freshness(x.evidence_date||x.created_at):{status:'Needs Review',days:null,customerSupported:false},occurredAfterScenario:(Number(x.source_scenario_version)||0)>Number(sc.version)}));grouped[key]=summarize(ev,used);}
+  res.json({baseId:sc.base_id,selectedScenario:{id:sc.id,version:sc.version,isCurrent:sc.is_current,isClosed:!!(sc.governed_outcome||sc.outcome),canEdit:!!editAccess.allowed},inputs:grouped,events,snapshots,applications});
 }catch(err){console.error('Value history error:',err.message);res.status(500).json({error:'Failed to load Value History.'});}});
 
 router.post('/:id/value-history/:canonicalInput/revalidate',async(req,res)=>{try{
@@ -301,7 +320,7 @@ router.post('/:id/value-history/:canonicalInput/rep-confirm',async(req,res)=>{tr
   const result=await transaction(async client=>{
     const locked=await client.query(`SELECT s.id,s.base_id,s.version,s.is_current,s.data,s.outcome,g.outcome governed_outcome FROM scenarios s LEFT JOIN scenario_stage_governance g ON g.scenario_id=s.id WHERE s.id=$1 AND s.deleted_at IS NULL FOR UPDATE OF s`,[access.id]);const sc=locked.rows[0];
     if(!sc||!sc.is_current||sc.governed_outcome||sc.outcome)throw Object.assign(new Error('Rep confirmation is available only on an active current scenario.'),{status:409});
-    if(!sameValue(sc.data?.[input],value))throw Object.assign(new Error('Save the current working value before confirming it.'),{status:409});
+    if(!sameValue(scenarioDisplayValue(sc.data||{},input),value))throw Object.assign(new Error('Save the current working value before confirming it.'),{status:409});
     const actor=await client.query('SELECT id,username FROM users WHERE id=$1 AND is_active=TRUE',[req.user.id]);if(!actor.rows.length)throw Object.assign(new Error('An active internal user is required to confirm this value.'),{status:403});
     const previous=await client.query(`SELECT id FROM roi_value_events WHERE base_id=$1 AND canonical_input=$2 AND event_type='rep_confirmed' ORDER BY created_at DESC LIMIT 1`,[sc.base_id,input]);
     const created=await client.query(`INSERT INTO roi_value_events(base_id,canonical_input,event_type,value_text,normalized_value,currency,unit,source_scenario_id,source_scenario_version,evidence_source,evidence_note,evidence_date,actor_user_id,provenance_state,supersedes_event_id) VALUES($1,$2,'rep_confirmed',$3,$4,$5,$6,$7,$8,'Internal review',$9,CURRENT_DATE,$10,'confirmed',$11) RETURNING *`,[sc.base_id,input,String(b.value),value,savedScenarioCurrency(sc.data),unitFor(input),sc.id,sc.version,note,req.user.id,previous.rows[0]?.id||null]);
@@ -314,10 +333,11 @@ router.post('/:id/value-history/:canonicalInput/rep-confirm',async(req,res)=>{tr
 }catch(err){console.error('Rep confirmation error:',err.message);res.status(err.status||500).json({error:err.status?err.message:'Rep confirmation could not be recorded.'});}});
 
 router.post('/:id/value-history/:canonicalInput/apply',async(req,res)=>{try{
-  const sc=await authorizedScenario(req.user,req.params.id,'edit');if(sc.error)return res.status(sc.status).json({error:sc.error});if(!sc.is_current||sc.governed_outcome||sc.outcome)return res.status(409).json({error:'Closed or historical scenario values cannot be changed.'});
-  const input=String(req.params.canonicalInput);const authority=await resolveValueApplication({query,eventId:req.body?.eventId,baseId:sc.base_id,canonicalInput:input});
-  if(!authority.ok){console.warn('roi_value.apply_rejected',{scenarioId:sc.id,baseId:sc.base_id,canonicalInput:input,eventId:req.body?.eventId||null,code:authority.problem.code,phase:authority.problem.phase});return sendProblem(res,authority.problem);}
-  await log({userId:req.user.id,action:'roi_value.applied',entityType:'roi_value_event',entityId:authority.event.id,detail:{baseId:sc.base_id,canonicalInput:input,targetScenarioId:sc.id},ipAddress:req.ip});res.json({apply:authority.apply});
+  const sc=await authorizedScenario(req.user,req.params.id,'edit');if(sc.error)return res.status(sc.status).json({error:sc.error});
+  const input=String(req.params.canonicalInput);
+  const result=await transaction(client=>applyRoiValueEvent({client,scenarioId:sc.id,authorizedBaseId:sc.base_id,canonicalInput:input,eventId:req.body?.eventId,userId:req.user.id,ipAddress:req.ip,idempotencyKey:req.body?.idempotencyKey}));
+  if(!result.ok){console.warn('roi_value.apply_rejected',{scenarioId:sc.id,baseId:sc.base_id,canonicalInput:input,eventId:req.body?.eventId||null,code:result.problem.code,phase:result.problem.phase});return sendProblem(res,result.problem);}
+  res.status(result.alreadyApplied?200:201).json({apply:result.apply,application:result.application,alreadyApplied:result.alreadyApplied});
 }catch(err){console.error('roi_value.apply_failed',{scenarioId:req.params.id,canonicalInput:req.params.canonicalInput,eventId:req.body?.eventId||null,phase:'value-application',message:err.message});return sendProblem(res,problem({status:500,code:'VALUE_APPLICATION_FAILED',title:'Value application failed',detail:'The verified value could not be applied. Please try again or contact an administrator.',phase:'value-application'}));}});
 
 /* ═══════════════════════════════════════

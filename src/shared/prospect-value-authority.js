@@ -54,15 +54,19 @@ function buildValueApplication(event, canonicalInput) {
           : 'estimated',
     provenance: {
       eventId: event.id,
-      source: eventType === 'rep_confirmed' ? 'Internally confirmed' : eventType,
+      source: eventType === 'prospect_submitted'
+        ? 'Prospect Link submission'
+        : eventType === 'rep_confirmed'
+          ? 'Internally confirmed'
+          : event.evidence_source || String(eventType || '').replace(/_/g, ' '),
       date: event.evidence_date || event.created_at,
       confirmedBy: event.actor_username,
       note: event.evidence_note,
       stakeholderId: event.stakeholder_id,
       stakeholder: event.stakeholder_name_snapshot
     },
-    dirty: true,
-    scenarioUnchanged: true
+    dirty: false,
+    scenarioUnchanged: false
   };
 }
 

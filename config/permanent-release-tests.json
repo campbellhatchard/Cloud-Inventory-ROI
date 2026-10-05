@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "6.9.29",
+  "release": "6.9.30",
   "tests": [
     {"invariant":"Customer Business Case","path":"test/release-integrity.test.js"},
     {"invariant":"customer-safe payload","path":"test/release-integrity.test.js"},
@@ -44,5 +44,7 @@
     ,{"invariant":"v6.9.27 server ROI, evidence workflow, authorization, and workspace integrity","path":"test/v6927-consolidated-corrections.test.js"}
     ,{"invariant":"v6.9.28 Update1 shared workflow authorities and regression corrections","path":"test/v6928-master-corrections.test.js"}
     ,{"invariant":"v6.9.29 reliability architecture and contract corrections","path":"test/v6929-reliability-architecture.test.js"}
+    ,{"invariant":"v6.9.30 server-authoritative Prospect evidence application and ROI persistence","path":"test/v6930-server-authoritative-prospect-values.test.js"}
+    ,{"invariant":"v6.9.30 durable Prospect submission notification outbox","path":"test/v6930-prospect-notification-outbox.test.js"}
   ]
 }

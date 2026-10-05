@@ -7,6 +7,17 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.30', date: '2026-10-05', tag: 'server-authoritative-prospect-values',
+    title: 'Durable Prospect evidence application',
+    summary: 'Moves Prospect value application and notification reliability from transient browser state to transactional server authority.',
+    highlights: [
+      'Use Prospect Value now saves the selected value, provenance, application history, audit record, and recalculated ROI in one database transaction.',
+      'Repeated clicks are idempotent, the evidence dialog stays open, and each row clearly shows Applied, Previously applied, conflict, or read-only state.',
+      'Percentage inputs preserve display and storage units; missing or formatting-only customer answers can no longer become zero.',
+      'Prospect submission notifications use a durable retryable outbox while immutable evidence submission remains successful if the email provider is unavailable.'
+    ]
+  },
+  {
     version: '6.9.29', date: '2026-10-04', tag: 'reliability-architecture',
     title: 'Authoritative workflow contracts',
     summary: 'Replaces five recurring failure points with focused, testable authorities rather than additional UI patches.',

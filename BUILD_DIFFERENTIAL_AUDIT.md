@@ -1,23 +1,21 @@
-# v6.9.29 Differential Audit
+# v6.9.30 Differential Audit
 
-v6.9.29 is a focused reliability build from the exact v6.9.28 corrective candidate. It changes no ROI formula, evidence boundary, role, route authorization, database schema, or output owner.
+v6.9.30 implements Option B from the exact v6.9.29 Render-ready baseline: Prospect evidence application is server-authoritative, durable, idempotent, and independently observable. It does not change ROI Model v2.8 formulas, evidence qualification, roles, or customer-output ownership.
 
 ## Root-cause corrections
 
-- **Prospect value application:** replaces a query against nonexistent `discovery_sessions.customer_id` with one immutable-evidence authority joining the value event, submission, and submitted answer by opportunity `base_id`, submission ID, canonical input, question, and value.
-- **Field Help:** separates exact field semantics from formula context. Annual revenue, contribution margin, labor rates, inventory inputs, and Field Inventory inputs now retain distinct definitions and entry guidance.
-- **Competitive Intelligence:** establishes scenario/product request generations, cancels stale requests, and scopes explicit product overrides to the active scenario.
-- **Customer counts:** distinguishes opportunity count (`COUNT(DISTINCT base_id)`) from saved-version count (`COUNT(s.id)`) and labels both explicitly.
-- **Admin Error Log:** returns rows, global total, filtered total, category totals, and page metadata from one query/snapshot.
+- **Durable application:** `Use Prospect Value` locks and updates the selected current scenario in one transaction rather than changing only browser fields.
+- **Canonical units:** one mapping translates display values to legacy scenario storage keys and fractional percentage storage. Formatting-only values remain missing rather than becoming zero.
+- **Authoritative ROI:** the same transaction recomputes all derived economics through the canonical server projection.
+- **Immutable history:** every successful application receives a constrained immutable application record, provenance, and audit event; repeat requests are idempotent.
+- **Consistent review:** one repeatable-read endpoint loads immutable submission answers, matching value events, application state, and current scenario values.
+- **Durable notification:** Prospect submission creates a notification outbox record and audit event in the submission transaction; provider failure becomes a retryable state rather than a lost email.
+- **UI state:** the comparison modal remains open, prevents duplicate clicks, refreshes only the affected evidence state, and distinguishes Applied, Previously applied, unavailable, conflicting, and read-only rows.
 
 ## Explicitly unchanged
 
-- ROI Model v2.8 / modelVersion 28, formulas, overlap rules, native currency, and Field Inventory methodology.
-- Immutable Prospect submission boundary, deliberate per-value application, Value History, and Rep Confirmed provenance.
-- BuyCycle, Solution Fit authorization, role/capability rules, output registry, and customer-facing document authorities.
-
-## Test protection
-
-`test/v6929-reliability-architecture.test.js` permanently covers the five corrected contracts and confirms ROI Model v2.8 remains unchanged.
+- ROI Model v2.8 / modelVersion 28 formulas, overlap rules, native currency, contract horizon, and Field Inventory methodology.
+- Immutable Prospect submission boundary and deliberate per-value approval by an authorized internal user.
+- BuyCycle, Solution Fit authorization, role/capability rules, output registry, Executive Value Story, and customer-facing output authorities.
 
 SE Solution Fit Scope: Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.

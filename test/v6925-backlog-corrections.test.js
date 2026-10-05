@@ -46,7 +46,7 @@ test('proposal first-load save deadlock is removed and explicit save remains ava
 
 test('evidence review, JPP validation, role display and analytics input regressions remain corrected',()=>{
   const discovery=read('public/discovery.js'),map=read('public/map.js'),api=read('public/src/client/api.js'),html=read('public/index.html'),css=read('public/style.css');
-  assert.match(discovery,/hasWorking=Object\.prototype\.hasOwnProperty/);assert.match(map,/Name each milestone before saving/);
+  assert.match(discovery,/hasWorking=[^;]*Object\.prototype\.hasOwnProperty/);assert.match(map,/Name each milestone before saving/);
   assert.match(api,/Solution Engineer/);assert.match(api,/normalizedRoles/);assert.match(html,/name="analytics-deal-question-x7"/);
   assert.match(css,/#prospectSyncModal \.modal-card/);
 });

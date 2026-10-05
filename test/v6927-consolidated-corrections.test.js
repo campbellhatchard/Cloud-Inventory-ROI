@@ -39,8 +39,8 @@ test('JPP output excludes legacy blank milestones',()=>{
 
 test('prospect value review pauses walkthrough and only reports success after an applied value',()=>{
  const discovery=read('public/discovery.js'),features=read('public/features.js');
- assert.match(discovery,/CITransientOverlays\?\.suspend\('prospect-evidence'\)/);assert.match(discovery,/CITransientOverlays\?\.restore/);assert.match(discovery,/const applied=await applyValueEvent\(input,eventId\);\s*if\(!applied\)return/);
- assert.match(features,/async function applyValueEvent[\s\S]*return true;[\s\S]*return false;/);
+ assert.match(discovery,/CITransientOverlays\?\.suspend\('prospect-evidence'\)/);assert.match(discovery,/CITransientOverlays\?\.restore/);assert.match(discovery,/const applied=await applyValueEvent\(input,eventId,\{keepModal:true,silentSuccess:true,idempotencyKey\}\);/);
+ assert.match(features,/async function applyValueEvent[\s\S]*a\.persisted!==true[\s\S]*return x;[\s\S]*return false;/);
 });
 
 test('all current ROI fields restored with correct decimal-to-percent mapping',()=>{

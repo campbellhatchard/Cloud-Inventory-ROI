@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   server.js  —  Cloud Inventory ROI Builder  v6.9.29
+   server.js  —  Cloud Inventory ROI Builder  v6.9.30
    Database-backed multi-user edition — production hardened
 
    Security layers applied (Phase 10):
@@ -39,6 +39,13 @@ const applicationKnowledge = require('./src/shared/application-knowledge');
 const christie = require('./src/shared/christie-context');
 const christieContextSource = require('./src/shared/christie-context-source');
 const { loadConfiguredProductKnowledge, resolveProductKnowledge } = require('./src/shared/competitive-research-source');
+const { normalizeExternalNumber } = require('./src/shared/scenario-input-storage');
+const {
+  enqueueProspectSubmissionNotification,
+  dispatchProspectSubmissionNotification,
+  processPendingProspectSubmissionNotifications
+} = require('./src/shared/prospect-submission-notifications');
+const { sendDiscoverySubmitted } = require('./src/email');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -1587,8 +1594,9 @@ app.put('/api/discovery/session-records/:sessionId/answers',requireAuth,async(re
 
 /* ── Prospect submits their discovery answers ───────────────────────
    Called by confirmSubmit() on the prospect page after the review step.
-   Stamps submitted_at, emails the rep, logs the audit event.
-   Fire-and-forget on email — submission always succeeds even if email fails. */
+   The immutable evidence snapshot, audit record and notification outbox entry
+   commit together. Email delivery is retryable and never controls submission
+   success. */
 app.post('/api/discovery/sessions/:token/submit', async (req, res) => {
   try {
     const token = String(req.params.token || '').trim();
@@ -1601,53 +1609,24 @@ app.post('/api/discovery/sessions/:token/submit', async (req, res) => {
     const result=await transaction(async client=>{
       const locked=await client.query(`SELECT ds.*,s.base_id,s.version source_scenario_version FROM discovery_sessions ds JOIN scenarios s ON s.id=ds.scenario_id WHERE ds.token=$1 AND ds.is_active=TRUE FOR UPDATE OF ds`,[token]);
       if(!locked.rows.length)throw Object.assign(new Error('Session not found or inactive.'),{status:404});const session=locked.rows[0];
-      const existing=await client.query(`SELECT * FROM discovery_submissions WHERE discovery_session_id=$1 AND client_submission_id=$2`,[session.id,clientSubmissionId]);if(existing.rows.length)return{session,submission:existing.rows[0],duplicate:true};
+      const existing=await client.query(`SELECT * FROM discovery_submissions WHERE discovery_session_id=$1 AND client_submission_id=$2`,[session.id,clientSubmissionId]);if(existing.rows.length){await enqueueProspectSubmissionNotification(client,{submissionId:existing.rows[0].id,recipientUserId:session.owner_id});return{session,submission:existing.rows[0],duplicate:true};}
       const {ensureSessionQuestions}=require('./src/shared/discovery-session-schema');const schema=await ensureSessionQuestions(client,session,{legacy:session.questionnaire_schema_source!=='server_generated'}),context=new Map(schema.map(q=>[String(q.question_id),q]));
       const answers=(await client.query(`SELECT da.question_id,da.answer FROM discovery_answers da JOIN discovery_session_questions q ON q.discovery_session_id=da.session_id AND q.question_id=da.question_id WHERE da.session_id=$1 AND da.answer IS NOT NULL AND BTRIM(da.answer)<>'' ORDER BY q.display_order`,[session.id])).rows;
       const number=Number(session.submission_count||0)+1,hash=crypto.createHash('sha256').update(JSON.stringify(answers)).digest('hex');
       const made=await client.query(`INSERT INTO discovery_submissions(discovery_session_id,base_id,source_scenario_id,source_scenario_version,submission_number,answer_count,submitted_by,submission_hash,client_submission_id) VALUES($1,$2,$3,$4,$5,$6,'prospect',$7,$8) RETURNING *`,[session.id,session.base_id,session.scenario_id,session.source_scenario_version,number,answers.length,hash,clientSubmissionId]);const submission=made.rows[0];
-      for(const answer of answers){const meta=context.get(String(answer.question_id));let normalized=meta.classification==='financial_input'?Number(String(answer.answer).replace(/[$,%\s,]/g,'')):null;if(Number.isFinite(normalized)&&meta.conversion==='hoursPerWeek')normalized=Math.min(100,(normalized/40)*100);await client.query(`INSERT INTO discovery_submission_answers(submission_id,question_id,question_text,section,classification,canonical_input,answer_text,normalized_value,unit) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,[submission.id,answer.question_id,meta.question_text,meta.section,meta.classification,meta.canonical_input,answer.answer,Number.isFinite(normalized)?normalized:null,meta.unit]);if(meta.classification==='financial_input'&&meta.canonical_input&&Number.isFinite(normalized))await client.query(`INSERT INTO roi_value_events(base_id,canonical_input,question_id,event_type,value_text,normalized_value,currency,unit,source_scenario_id,source_scenario_version,discovery_submission_id,evidence_source,evidence_date,provenance_state) VALUES($1,$2,$3,'prospect_submitted',$4,$5,NULL,$6,$7,$8,$9,'Prospect Link submission',$10,'confirmed_prospect')`,[session.base_id,meta.canonical_input,answer.question_id,answer.answer,normalized,meta.unit,session.scenario_id,session.source_scenario_version,submission.id,submission.submitted_at]);}
-      await client.query(`UPDATE discovery_sessions SET submitted_at=COALESCE(submitted_at,$2),last_submitted_at=$2,submission_count=$3,answer_count=$4,updated_at=NOW() WHERE id=$1`,[session.id,submission.submitted_at,number,answers.length]);return{session,submission,duplicate:false};
+      for(const answer of answers){const meta=context.get(String(answer.question_id));let normalized=meta.classification==='financial_input'?normalizeExternalNumber(answer.answer):null;if(normalized!==null&&meta.conversion==='hoursPerWeek')normalized=Math.min(100,(normalized/40)*100);await client.query(`INSERT INTO discovery_submission_answers(submission_id,question_id,question_text,section,classification,canonical_input,answer_text,normalized_value,unit) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,[submission.id,answer.question_id,meta.question_text,meta.section,meta.classification,meta.canonical_input,answer.answer,normalized,meta.unit]);if(meta.classification==='financial_input'&&meta.canonical_input&&normalized!==null)await client.query(`INSERT INTO roi_value_events(base_id,canonical_input,question_id,event_type,value_text,normalized_value,currency,unit,source_scenario_id,source_scenario_version,discovery_submission_id,evidence_source,evidence_date,provenance_state) VALUES($1,$2,$3,'prospect_submitted',$4,$5,NULL,$6,$7,$8,$9,'Prospect Link submission',$10,'confirmed_prospect')`,[session.base_id,meta.canonical_input,answer.question_id,answer.answer,normalized,meta.unit,session.scenario_id,session.source_scenario_version,submission.id,submission.submitted_at]);}
+      await client.query(`UPDATE discovery_sessions SET submitted_at=COALESCE(submitted_at,$2),last_submitted_at=$2,submission_count=$3,answer_count=$4,updated_at=NOW() WHERE id=$1`,[session.id,submission.submitted_at,number,answers.length]);
+      await enqueueProspectSubmissionNotification(client,{submissionId:submission.id,recipientUserId:session.owner_id});
+      await client.query(`INSERT INTO audit_log(user_id,action,entity_type,entity_id,detail) VALUES($1,'discovery.submission_snapshot_created','discovery_submission',$2,$3::jsonb)`,[session.owner_id,submission.id,JSON.stringify({sessionId:session.id,baseId:session.base_id,submissionNumber:submission.submission_number,answerCount:answers.length})]);
+      return{session,submission,duplicate:false};
     });
     const s={...result.session,id:result.session.id,submitted_at:result.submission.submitted_at,answer_count:result.submission.answer_count};
     res.status(result.duplicate?200:201).json({ok:true,submissionId:result.submission.id,submissionNumber:result.submission.submission_number,submittedAt:s.submitted_at,answerCount:s.answer_count,idempotentReplay:result.duplicate});
 
-    /* ── Async: email the rep (never blocks the response) ── */
-    if (!result.duplicate) {
-      try {
-        const { rows: userRows } = await query(
-          `SELECT u.email, u.username FROM users u WHERE u.id = $1`, [s.owner_id]
-        );
-        if (userRows.length) {
-          const rep     = userRows[0];
-          const discUrl = `${APP_URL}/?tab=disc`;
-          const { sendDiscoverySubmitted } = require('./src/email');
-          await sendDiscoverySubmitted(
-            rep.email,
-            rep.username,
-            s.company || 'Your prospect',
-            s.answer_count,
-            discUrl
-          );
-        }
-      } catch (emailErr) {
-        console.error('[discovery submit] email failed:', emailErr.message);
-      }
-
-      /* Audit log */
-      try {
-        const { log, ACTIONS } = require('./src/audit');
-        await log({
-          userId:     s.owner_id,
-          action:     'discovery.submission_snapshot_created',
-          entityType: 'discovery_submission',
-          entityId:   result.submission.id,
-          detail:     { sessionId:s.id, baseId:s.base_id, submissionNumber:result.submission.submission_number, answerCount:s.answer_count }
-        });
-      } catch (auditErr) {
-        console.error('[discovery submit] audit log failed:', auditErr.message);
-      }
-    }
+    /* Nudge the durable outbox after the response. Idempotent replays also
+       retry a prior undelivered notification instead of losing it. */
+    dispatchProspectSubmissionNotification({transaction,query,submissionId:result.submission.id,sendDiscoverySubmitted,appUrl:APP_URL})
+      .catch(error=>console.error('[discovery notification] dispatch failed:',error.message));
   } catch (err) {
     console.error('[discovery submit] error:', err.message);
     res.status(err.status||500).json({ error: err.message||'Failed to record submission.' });
@@ -1867,6 +1846,7 @@ app.use((err, req, res, next) => {
 /* ═══════ STARTUP ═══════ */
 let server;
 let cleanupTimer;
+let notificationTimer;
 let purgeTask;
 let shuttingDown = false;
 
@@ -1919,6 +1899,25 @@ function startCleanupTimer() {
   }
 }
 
+async function deliverPendingProspectNotifications() {
+  try {
+    const { query, transaction } = db();
+    const results = await processPendingProspectSubmissionNotifications({
+      query, transaction, sendDiscoverySubmitted, appUrl: APP_URL, limit: 20
+    });
+    const sent = results.filter(item=>item.sent).length;
+    if (results.length) console.log(`[discovery notification] processed=${results.length} sent=${sent}`);
+  } catch (error) {
+    console.error('[discovery notification] retry failed:', error.message);
+  }
+}
+
+function startProspectNotificationTimer() {
+  deliverPendingProspectNotifications();
+  notificationTimer = setInterval(deliverPendingProspectNotifications, 5 * 60 * 1000);
+  if (typeof notificationTimer.unref === 'function') notificationTimer.unref();
+}
+
 function closeServer() {
   return new Promise((resolve, reject) => {
     if (!server) return resolve();
@@ -1941,6 +1940,10 @@ async function shutdown(signal) {
     if (cleanupTimer) {
       clearInterval(cleanupTimer);
       cleanupTimer = null;
+    }
+    if (notificationTimer) {
+      clearInterval(notificationTimer);
+      notificationTimer = null;
     }
 
     if (purgeTask && typeof purgeTask.stop === 'function') {
@@ -1994,6 +1997,7 @@ async function start() {
       await runMigrations();
 
       startCleanupTimer();
+      startProspectNotificationTimer();
 
       const { startPurgeJob } = require('./src/jobs/auditPurge');
       purgeTask = startPurgeJob();

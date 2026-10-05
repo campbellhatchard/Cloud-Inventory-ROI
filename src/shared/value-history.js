@@ -1,18 +1,18 @@
 'use strict';
 const { INPUTS } = require('./questionnaire-roi-registry');
+const { normalizeExternalNumber, scenarioDisplayValue } = require('./scenario-input-storage');
 const FINANCIAL_INPUTS=Object.freeze(Object.keys(INPUTS));
 const CUSTOMER_EVENTS=new Set(['prospect_submitted','customer_revalidated','customer_provided','legacy_prospect_recovered']);
 const EVENT_TYPES=new Set(['prospect_submitted','customer_revalidated','customer_provided','rep_confirmed','rep_updated','legacy_scenario_snapshot','legacy_prospect_recovered']);
 const FRESH_DAYS=90,AGING_FROM_DAYS=60;
-function normalizeValue(value){if(value===null||value===undefined||value==='')return null;const n=Number(String(value).replace(/[$,%\s]/g,'').replace(/,/g,''));return Number.isFinite(n)?n:null;}
+function normalizeValue(value){return normalizeExternalNumber(value);}
 function sameValue(a,b){const x=normalizeValue(a),y=normalizeValue(b);return x===null||y===null?String(a??'').trim()===String(b??'').trim():Math.abs(x-y)<=Math.max(.000001,Math.abs(y)*1e-9);}
 function freshness(date,now=new Date()){if(!date)return{status:'Needs Review',days:null,customerSupported:false};const days=Math.max(0,Math.floor((now-new Date(date))/86400000));return{status:days>FRESH_DAYS?'Stale':days>=AGING_FROM_DAYS?'Aging':'Current',days,customerSupported:days<=FRESH_DAYS};}
 function isFinancialInput(input){return FINANCIAL_INPUTS.includes(input);}
 function isCustomerEvent(event){return CUSTOMER_EVENTS.has(event?.event_type||event?.eventType);}
 function unitFor(input){return INPUTS[input]?.[1]||null;}
 function savedScenarioCurrency(data={}){const value=String(data.currency||'').trim().toUpperCase();return ['USD','GBP','EUR','AUD','NZD'].includes(value)?value:'USD';}
-const SAVED_KEY=Object.freeze({userCount:'users',laborCost:'labor',inventoryValue:'inventory'});
-function buildSnapshotRows(data={}){const states=data.fieldStates||{},provenance=data.fieldProvenance||{};return FINANCIAL_INPUTS.map(k=>({canonicalInput:k,savedKey:SAVED_KEY[k]||k,value:data[SAVED_KEY[k]||k]})).filter(x=>x.value!==''&&x.value!==null&&x.value!==undefined).map(({canonicalInput:k,value})=>({canonicalInput:k,valueText:String(value),normalizedValue:normalizeValue(value),unit:unitFor(k),currency:data.currency||null,fieldState:states[k]||'estimated',provenance:provenance[k]||{},originEventId:provenance[k]?.eventId||null}));}
+function buildSnapshotRows(data={}){const states=data.fieldStates||{},provenance=data.fieldProvenance||{};return FINANCIAL_INPUTS.map(k=>({canonicalInput:k,value:scenarioDisplayValue(data,k)})).filter(x=>x.value!==null).map(({canonicalInput:k,value})=>({canonicalInput:k,valueText:String(value),normalizedValue:normalizeValue(value),unit:unitFor(k),currency:data.currency||null,fieldState:states[k]||'estimated',provenance:provenance[k]||{},originEventId:provenance[k]?.eventId||null}));}
 function validRepConfirmation(row,event){return !!event&&event.event_type==='rep_confirmed'&&!!event.actor_user_id&&event.internal_actor_valid!==false&&String(event.base_id||event.baseId||'')===String(row.baseId||event.base_id||event.baseId||'')&&event.canonical_input===row.canonicalInput&&sameValue(row.normalizedValue??row.valueText,event.normalized_value??event.normalizedValue??event.value_text);}
 function enforceProvenance(row,event){
   if(row.fieldState==='confirmed'){

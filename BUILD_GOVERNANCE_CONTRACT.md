@@ -495,3 +495,11 @@ Customer opportunity counts must count distinct opportunity `base_id` values. Sa
 ## PAGINATED TOTALS CONTRACT INVARIANT
 
 An administrative list and its totals, category badges, and page range must be returned from one server query/snapshot and use declared scopes. A client may not combine database totals with counts derived from only the currently downloaded page.
+
+## SERVER-AUTHORITATIVE PROSPECT VALUE APPLICATION INVARIANT
+
+Applying an immutable Prospect value must be one idempotent database transaction that locks the current scenario, revalidates opportunity and evidence scope, translates canonical display units to scenario storage units, recomputes ROI through the canonical server engine, persists provenance and an immutable application record, and writes the audit event. Browser state may display the committed result but may not be the persistence authority. A same-value application must still persist Prospect provenance, and an application may never silently convert a missing value to zero.
+
+## DURABLE PROSPECT SUBMISSION NOTIFICATION INVARIANT
+
+Immutable Prospect submission evidence, its audit record, and a unique notification outbox entry must commit together. Email-provider availability may not determine submission success. Delivery must be retryable and idempotent, and diagnostic records must not store raw customer answers, credentials, or tokens.
