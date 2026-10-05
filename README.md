@@ -183,4 +183,4 @@ Edit `public/scenario-templates.js`, add an entry to `SCENARIO_TEMPLATES`:
 
 ## Version
 
-Current: **v6.9.30** — server-authoritative Prospect evidence application release built from the exact v6.9.29 Render-ready package. It makes per-value application durable and idempotent, recalculates ROI in the same transaction, preserves percentage units, records immutable application history, and queues Prospect submission notifications durably while preserving ROI Model v2.8, Brand System v1.0, Knowledge v1.0, and Christie Persona v1.0.
+Current: **v6.9.31** — focused Sales Manager identity and Competitive Product Search reliability correction built from the exact v6.9.30 Render-ready package. It applies one canonical opportunity projection before manager roll-ups and gives Product Search explicit, accessible non-credential semantics while preserving ROI Model v2.8, Brand System v1.0, Knowledge v1.0, and Christie Persona v1.0.

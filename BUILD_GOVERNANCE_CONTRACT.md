@@ -503,3 +503,11 @@ Applying an immutable Prospect value must be one idempotent database transaction
 ## DURABLE PROSPECT SUBMISSION NOTIFICATION INVARIANT
 
 Immutable Prospect submission evidence, its audit record, and a unique notification outbox entry must commit together. Email-provider availability may not determine submission success. Delivery must be retryable and idempotent, and diagnostic records must not store raw customer answers, credentials, or tokens.
+
+## SALES MANAGER CANONICAL OPPORTUNITY INVARIANT
+
+Every Sales Manager list, filter, priority view, count, and monetary roll-up must consume one canonical projection keyed by opportunity `base_id`. Repeated rows caused by version, child-record, authorization, refresh, or transport multiplicity may contribute only once. Different `base_id` values must remain separate even when every visible label and value matches; display text is never an identity key.
+
+## COMPETITIVE SEARCH TRANSIENCE INVARIANT
+
+Competitive Product Search must be rendered as an accessible search control with non-credential identity and no credential-field semantics. The query is transient UI state used only to retrieve matching governed products. It may not automatically create, update, link, approve, or persist Company, Product, Research, Finding, Knowledge, or Battlecard data, and autofill protection may not clear legitimate user input.

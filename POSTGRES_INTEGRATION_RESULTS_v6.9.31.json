@@ -1,0 +1,27 @@
+{
+  "release": "6.9.31",
+  "generatedAt": "2026-10-05T19:15:09.443Z",
+  "databaseUrlPresent": true,
+  "databaseName": "ci_v6931_test",
+  "postgresqlVersion": "PostgreSQL 16.15, compiled by Visual C++ build 1944, 64-bit",
+  "node": "v24.19.0",
+  "migration": {
+    "executed": true,
+    "exitCode": 0,
+    "result": "PASS"
+  },
+  "command": "npm run test:postgres",
+  "suites": [
+    "test/routes.test.js",
+    "test/v653-postgres-integration.test.js",
+    "test/v663-postgres-authorization.test.js",
+    "test/v664-postgres-product-identity.test.js",
+    "test/v6930-postgres-value-application.test.js"
+  ],
+  "passed": 23,
+  "failed": 0,
+  "skipped": 0,
+  "notTested": 0,
+  "durationMs": 160519,
+  "result": "PASS"
+}

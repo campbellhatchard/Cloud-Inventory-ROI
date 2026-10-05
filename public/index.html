@@ -741,7 +741,13 @@
             <option value="epp">Enterprise Printing Platform (EPP)</option>
           </select>
         </div>
-        <div class="field" style="min-width:260px;flex:2;max-width:460px;margin-bottom:0;"><label>Current competing solution</label>
+        <div class="field" role="search" aria-label="Competitive product search" style="min-width:220px;flex:1;max-width:300px;margin-bottom:0;">
+          <label for="compProductSearch">Product search</label>
+          <input id="compProductSearch" class="comp-product-search" type="search" name="ci-competitive-product-query"
+                 placeholder="Search company, product, or alias…" autocomplete="off" autocorrect="off"
+                 autocapitalize="off" spellcheck="false" inputmode="search" aria-controls="compSelect">
+        </div>
+        <div class="field" style="min-width:260px;flex:2;max-width:460px;margin-bottom:0;"><label for="compSelect">Current competing solution</label>
           <select id="compSelect" onchange="renderComp()">
             <option value="">— Select competitor —</option>
           </select>
@@ -1557,7 +1563,7 @@
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="6.9.30";</script>
+<script>const APP_VERSION="6.9.31";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
 <script src="ai-session.js"></script>
@@ -1581,6 +1587,7 @@
 <script src="deal-coach.js"></script>
 <script src="buyer-readiness.js"></script>
 <script src="comp-research.js"></script>
+<script src="sales-manager-opportunity-authority.js"></script>
 <script src="sales-manager.js"></script>
 <script>
 function clientHasRole(user,key,label) { return !!user && (user.role===key || (user.roleKeys||[]).includes(key) || (user.roles||[]).includes(label||key)); }

@@ -7,6 +7,17 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.31', date: '2026-10-05', tag: 'manager-identity-and-search-semantics',
+    title: 'Canonical manager roll-ups and safe Product Search',
+    summary: 'Applies canonical opportunity identity before every Sales Manager roll-up and prevents Competitive Product Search from resembling a credential field.',
+    highlights: [
+      'Sales Manager server and browser paths now share one base-ID projection before filters, counts, values, priority lists, and queue rendering.',
+      'Different opportunity IDs remain separate even when customer, scenario, owner, stage, and value labels match.',
+      'Competitive Product Search is a labeled search control with non-credential naming, autocomplete metadata, keyboard support, and no input-clearing workaround.',
+      'Search text remains transient and cannot become governed Product, Research, Finding, Approved Knowledge, or Battlecard data.'
+    ]
+  },
+  {
     version: '6.9.30', date: '2026-10-05', tag: 'server-authoritative-prospect-values',
     title: 'Durable Prospect evidence application',
     summary: 'Moves Prospect value application and notification reliability from transient browser state to transactional server authority.',

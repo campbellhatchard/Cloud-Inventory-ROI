@@ -7,7 +7,7 @@ const {parseOpportunityValue,buildOpportunityProfile,snapshotOpportunityValue}=r
 const root=path.join(__dirname,'..'),read=f=>fs.readFileSync(path.join(root,f),'utf8');
 const scenarios=read('src/routes/scenarios.js'),authorization=read('src/authorization.js');
 const switcherRoute=read('src/routes/customer-switcher.js'),switcherUi=read('public/customer-switcher.js');
-const managerRoute=read('src/routes/sales-manager.js'),managerUi=read('public/sales-manager.js');
+const managerRoute=read('src/routes/sales-manager.js'),managerUi=read('public/sales-manager.js'),managerAuthority=read('public/sales-manager-opportunity-authority.js');
 const closeRoute=read('src/routes/stage-readiness.js'),calculator=read('public/app.js');
 
 test('Opportunity Value validation accepts null and zero but rejects malformed, negative, and non-finite values',()=>{
@@ -56,7 +56,8 @@ test('Sales Manager separates commercial and ROI financial fields',()=>{
 });
 
 test('portfolio aggregation is currency aware and reports missing values',()=>{
-  assert.match(managerUi,/function valueStats/);assert.match(managerUi,/totals\[c\]/);assert.match(managerUi,/missingValueCount/);
+  assert.match(managerUi,/function valueStats/);assert.match(managerUi,/summarizeOpportunityValues\(xs\)/);
+  assert.match(managerAuthority,/totals\[currency\]/);assert.match(managerAuthority,/missingValueCount/);
   assert.match(managerUi,/Object\.entries\(stats\?\.totals/);assert.match(managerUi,/join\(' · '\)/);
   assert.doesNotMatch(managerUi,/currency:'USD'/);
   assert.match(managerUi,/of known opportunity value/);assert.match(managerUi,/not entered/);
