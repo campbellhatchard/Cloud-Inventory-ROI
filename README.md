@@ -183,4 +183,4 @@ Edit `public/scenario-templates.js`, add an entry to `SCENARIO_TEMPLATES`:
 
 ## Version
 
-Current: **v6.9.31** — focused Sales Manager identity and Competitive Product Search reliability correction built from the exact v6.9.30 Render-ready package. It applies one canonical opportunity projection before manager roll-ups and gives Product Search explicit, accessible non-credential semantics while preserving ROI Model v2.8, Brand System v1.0, Knowledge v1.0, and Christie Persona v1.0.
+Current: **v6.9.32** — focused Prospect evidence count-consistency correction built from the exact v6.9.31 Render-ready package. Discovery and Calculator warnings now consume the same server-authoritative review status and wording while preserving immutable evidence, individual value application, ROI Model v2.8, Brand System v1.0, Knowledge v1.0, and Christie Persona v1.0.

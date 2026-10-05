@@ -7,6 +7,17 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.32', date: '2026-10-05', tag: 'prospect-evidence-count-consistency',
+    title: 'Consistent Prospect evidence review counts',
+    summary: 'Makes Discovery and Calculator warnings use the same server-authoritative Prospect evidence review status and wording.',
+    highlights: [
+      'Discovery no longer reconstructs pending evidence from browser Value History and calculator provenance.',
+      'Both warnings count the same AVAILABLE immutable value events returned by the governed review service.',
+      'A matching numeric value still remains pending until its Prospect provenance is explicitly applied.',
+      'Immutable submissions, individual apply controls, authorization, Value History, and ROI Model v2.8 are unchanged.'
+    ]
+  },
+  {
     version: '6.9.31', date: '2026-10-05', tag: 'manager-identity-and-search-semantics',
     title: 'Canonical manager roll-ups and safe Product Search',
     summary: 'Applies canonical opportunity identity before every Sales Manager roll-up and prevents Competitive Product Search from resembling a credential field.',

@@ -511,3 +511,7 @@ Every Sales Manager list, filter, priority view, count, and monetary roll-up mus
 ## COMPETITIVE SEARCH TRANSIENCE INVARIANT
 
 Competitive Product Search must be rendered as an accessible search control with non-credential identity and no credential-field semantics. The query is transient UI state used only to retrieve matching governed products. It may not automatically create, update, link, approve, or persist Company, Product, Research, Finding, Knowledge, or Battlecard data, and autofill protection may not clear legitimate user input.
+
+## PROSPECT EVIDENCE REVIEW COUNT INVARIANT
+
+Every surface that reports unapplied Prospect evidence must consume the same server-authoritative review-row status. Discovery, Calculator, and review-dialog counts may not independently infer application state from browser provenance, mutable working values, or a second Value History projection. A submitted value whose number already matches the working value remains unapplied until the immutable Prospect value event is explicitly applied and its provenance is saved.

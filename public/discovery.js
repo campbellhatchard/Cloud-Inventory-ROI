@@ -592,11 +592,11 @@ async function resetDiscoveryForScenario(scenarioId) {
   }
   if (typeof renderDiscoveryTab === 'function') renderDiscoveryTab();
 }
-function unappliedProspectInputs(){
-  if(!latestSubmittedEvidence?.submission)return [];
-  return (latestSubmittedEvidence.rows||[]).filter(row=>row.status==='AVAILABLE').map(row=>row.canonicalInput);
+function prospectEvidenceReviewSummary(){
+  if(!window.CIProspectEvidenceSummary)throw Error('Prospect evidence summary authority is unavailable.');
+  return window.CIProspectEvidenceSummary.summarize(latestSubmittedEvidence);
 }
-function renderCalcProspectValueWarning(){const banner=document.getElementById('calcProspectValueWarning');if(!banner)return;const pending=unappliedProspectInputs();if(!pending.length){banner.style.display='none';banner.innerHTML='';return;}banner.style.display='flex';banner.innerHTML=`<div><strong>Customer-submitted values are waiting for review</strong><span>${pending.length} mapped value${pending.length===1?' has':'s have'} not been applied to this working business case.</span></div><button class="btn btn-primary btn-sm" onclick="switchTab('disc');setTimeout(applyDiscoveryToCalc,0)">Review Customer Values</button>`;}
+function renderCalcProspectValueWarning(){const banner=document.getElementById('calcProspectValueWarning');if(!banner)return;const summary=prospectEvidenceReviewSummary();if(!summary.pendingReviewCount){banner.style.display='none';banner.innerHTML='';return;}banner.style.display='flex';banner.innerHTML=`<div><strong>Customer-submitted values are waiting for review</strong><span>${window.CIProspectEvidenceSummary.pendingMessage(summary)}</span></div><button class="btn btn-primary btn-sm" onclick="switchTab('disc');setTimeout(applyDiscoveryToCalc,0)">Review Customer Values</button>`;}
 window.renderCalcProspectValueWarning=renderCalcProspectValueWarning;
 async function loadLatestSubmittedEvidence(){
   latestSubmittedEvidence=null;latestSubmittedEvidenceLoadError=null;if(!window._calcScenarioId){window.renderCalcProspectValueWarning?.();return null;}
@@ -903,16 +903,8 @@ function renderDiscoveryTab() {
     }
   }
 
-  var unappliedProspectInputs=[];
-  if(latestSubmittedEvidence&&latestSubmittedEvidence.submission){
-    Object.keys(latestSubmittedEvidence.byInput||{}).forEach(function(input){
-      var h=latestSubmittedEvidence.history?.inputs?.[input]||{};
-      var event=(h.events||[]).find(function(e){return e.event_type==='prospect_submitted'&&String(e.discovery_submission_id)===String(latestSubmittedEvidence.submission.id);});
-      var appliedEvent=activeProvenance[input]?.eventId || h.valueUsed?.origin_event_id;
-      if(event&&String(appliedEvent||'')!==String(event.id))unappliedProspectInputs.push(input);
-    });
-  }
-  var unappliedHtml=unappliedProspectInputs.length?'<div class="disc-unapplied-warning" role="status"><div><strong>Customer-submitted values are waiting for review</strong><span>'+unappliedProspectInputs.length+' mapped value'+(unappliedProspectInputs.length===1?' has':'s have')+' not been applied to the current business case.</span></div><button class="btn btn-primary btn-sm" onclick="applyDiscoveryToCalc()">Review Prospect Evidence</button></div>':'';
+  var prospectEvidenceSummary=prospectEvidenceReviewSummary();
+  var unappliedHtml=prospectEvidenceSummary.pendingReviewCount?'<div class="disc-unapplied-warning" role="status"><div><strong>Customer-submitted values are waiting for review</strong><span>'+escapeHtml(window.CIProspectEvidenceSummary.pendingMessage(prospectEvidenceSummary))+'</span></div><button class="btn btn-primary btn-sm" onclick="applyDiscoveryToCalc()">Review Prospect Evidence</button></div>':'';
 
   var linkHtml;
   if (!activeCompany) {

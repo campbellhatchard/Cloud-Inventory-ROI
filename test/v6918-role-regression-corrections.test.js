@@ -140,8 +140,10 @@ test('Joint Project Plan milestone titles persist immediately while typing',()=>
 
 test('submitted Prospect values remain explicit and warn until deliberately applied',()=>{
   const discovery=read('public/discovery.js');
+  const summary=read('public/prospect-evidence-summary.js');
   assert.match(discovery,/Customer-submitted values are waiting for review/);
-  assert.match(discovery,/row\.status==='AVAILABLE'/);
+  assert.match(summary,/row\?\.status==='AVAILABLE'/);
+  assert.match(discovery,/CIProspectEvidenceSummary\.summarize/);
   assert.match(discovery,/onclick="applyDiscoveryToCalc\(\)"/);
   assert.match(discovery,/activeProvenance\[q\.sync\]\?\.eventId/);
 });
