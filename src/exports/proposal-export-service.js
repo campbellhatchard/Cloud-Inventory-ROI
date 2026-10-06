@@ -4,9 +4,11 @@ const {buildExecutiveValueStory}=require('../shared/executive-value-story');
 const {evaluateExecutiveOutputReadiness}=require('../shared/executive-output-readiness');
 const {resolveProposalOutput}=require('../shared/proposal-output');
 
-async function prepareProposalExport({user,scenarioId,internalDraft=false,reviewAcknowledged=false}){
+async function prepareProposalExport({user,scenarioId,internalDraft=false,reviewAcknowledged=false},dependencies={}){
  if(!scenarioId)throw Object.assign(new Error('A scenario is required for proposal export.'),{status:400});
- const source=await loadExecutiveSource(user,scenarioId);
+ const source=dependencies.loadExecutiveSource
+  ? await dependencies.loadExecutiveSource(user,scenarioId)
+  : await loadExecutiveSource(user,scenarioId);
  if(source.error)throw Object.assign(new Error(source.error),{status:source.status});
  if(!source.proposal)throw Object.assign(new Error('Save the proposal before exporting.'),{status:409});
  const story=buildExecutiveValueStory(source);

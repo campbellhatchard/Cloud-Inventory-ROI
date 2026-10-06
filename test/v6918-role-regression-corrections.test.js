@@ -95,7 +95,8 @@ test('generated downloads use an attached anchor and reject empty artifacts',()=
   const outputs=read('public/executive-output-adapters.js'),operational=read('public/deal-export.js');
   assert.match(outputs,/blob instanceof Blob\)\|\|blob\.size===0/);
   assert.match(outputs,/document\.body\.appendChild\(a\);a\.click\(\)/);
-  assert.match(outputs,/async function proposalFileExport.*downloadBlob\(blob,/s);
+  assert.match(outputs,/async function requestProposalFile.*downloadBlob\(blob,/s);
+  assert.match(outputs,/async function proposalFileExport.*withExecutiveExportDeadline.*requestProposalFile/s);
   assert.match(outputs,/proposalExportWord=.*proposalFileExport/s);
   assert.match(operational,/function deDownloadBlob\(blob,fileName\)/);
   assert.match(operational,/document\.body\.appendChild\(a\);a\.click\(\)/);

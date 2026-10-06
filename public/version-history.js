@@ -7,6 +7,17 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.33', date: '2026-10-06', tag: 'proposal-pdf-export-reliability',
+    title: 'Reliable Proposal PDF Internal Draft export',
+    summary: 'Separates governed readiness review from the bounded PDF request so human review time cannot cause a false generation timeout.',
+    highlights: [
+      'Save, readiness evaluation, and the Internal Draft decision complete before the 30-second file-request deadline begins.',
+      'Rapid repeat clicks share one in-flight export and cannot create duplicate server requests or downloads.',
+      'The Proposal PDF route now uses one tested response authority for bytes, filename, audience, readiness, and no-store headers.',
+      'Proposal facts, Brand System, native currency, authorization, ROI Model v2.8, and all other outputs remain unchanged.'
+    ]
+  },
+  {
     version: '6.9.32', date: '2026-10-05', tag: 'prospect-evidence-count-consistency',
     title: 'Consistent Prospect evidence review counts',
     summary: 'Makes Discovery and Calculator warnings use the same server-authoritative Prospect evidence review status and wording.',

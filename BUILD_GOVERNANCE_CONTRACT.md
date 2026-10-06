@@ -515,3 +515,7 @@ Competitive Product Search must be rendered as an accessible search control with
 ## PROSPECT EVIDENCE REVIEW COUNT INVARIANT
 
 Every surface that reports unapplied Prospect evidence must consume the same server-authoritative review-row status. Discovery, Calculator, and review-dialog counts may not independently infer application state from browser provenance, mutable working values, or a second Value History projection. A submitted value whose number already matches the working value remains unapplied until the immutable Prospect value event is explicitly applied and its provenance is saved.
+
+## PROPOSAL EXPORT PREFLIGHT AND DEADLINE INVARIANT
+
+Proposal save, governed readiness evaluation, and any required user acknowledgement or Internal Draft decision must complete before the bounded file-generation request begins. Human decision time may never consume the network/file-generation deadline. A Proposal export action may have only one in-flight preflight/request pipeline; repeat activation must reuse or reject that operation rather than issue duplicate requests or downloads. The authenticated route and shared Proposal production builders remain the authority for artifact bytes, audience, readiness, filename, headers, and customer-safe content.

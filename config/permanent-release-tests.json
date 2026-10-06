@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "6.9.32",
+  "release": "6.9.33",
   "tests": [
     {"invariant":"Customer Business Case","path":"test/release-integrity.test.js"},
     {"invariant":"customer-safe payload","path":"test/release-integrity.test.js"},
@@ -33,7 +33,8 @@
     {"invariant":"Proposal PDF shared production builder","path":"test/v6913-proposal-postgres-certification.test.js"},
     {"invariant":"mandatory live PostgreSQL release certification","path":"test/v6913-proposal-postgres-certification.test.js"},
     {"invariant":"production recovery for prospect ROI, discovery processing, scenario list and stale PDF values","path":"test/v6913-production-recovery.test.js"},
-    {"invariant":"Prospect Evidence review controls and distinct load errors","path":"test/discovery-review-wiring.test.js"}
+    {"invariant":"Prospect Evidence review controls and distinct load errors","path":"test/discovery-review-wiring.test.js"},
+    {"invariant":"Proposal export preflight, single-flight request deadline, PDF response authority, and HTTP authentication","path":"test/v6933-proposal-pdf-timeout-correction.test.js"}
     ,{"invariant":"v6.9.20 role-based regression corrections","path":"test/v6918-role-regression-corrections.test.js"}
     ,{"invariant":"v6.9.21 live regression corrections","path":"test/v6921-live-regression-corrections.test.js"}
     ,{"invariant":"v6.9.22 Executive readiness dialog visibility and uniqueness","path":"test/v6922-executive-readiness-modal.test.js"}

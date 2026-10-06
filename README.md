@@ -1,5 +1,7 @@
 # Cloud Inventory ROI Business Case Builder
 
+Current release: **v6.9.33**
+
 A multi-user SaaS application for Cloud Inventory sales reps and Solution Engineers to build data-driven executive business cases for prospects evaluating Cloud Inventory's WMS and field inventory solutions.
 
 ---

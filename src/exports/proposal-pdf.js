@@ -1,7 +1,7 @@
 'use strict';
 const {buildTextPdf}=require('./executive-pdf');
 const economic=require('../../public/economic-availability');
-const {customerCommercialTerms}=require('../shared/proposal-output');
+const {customerCommercialTerms,proposalFilename}=require('../shared/proposal-output');
 
 function buildProposalPdf({story,proposal,audience='customer',draft=false,review=false}){
  if(!story||!proposal)throw new Error('Canonical Executive Value Story and saved Proposal are required.');
@@ -21,4 +21,19 @@ function buildProposalPdf({story,proposal,audience='customer',draft=false,review
   ]
  });
 }
-module.exports={buildProposalPdf};
+function buildProposalPdfResponse({story,proposal,readiness,output}){
+ if(!readiness||!output)throw new Error('Governed Proposal readiness and output classification are required.');
+ const buffer=buildProposalPdf({story,proposal,audience:output.audience,draft:output.draft,review:readiness.status==='review'});
+ const company=String(story.meta.customer||'Prospect');
+ return Object.freeze({
+  buffer,
+  headers:Object.freeze({
+   'Content-Type':'application/pdf',
+   'Cache-Control':'private, no-store',
+   'X-Executive-Readiness':readiness.status,
+   'X-Output-Audience':output.audience,
+   'Content-Disposition':`attachment; filename="${proposalFilename(company,{draft:output.draft,extension:'pdf'})}"`
+  })
+ });
+}
+module.exports={buildProposalPdf,buildProposalPdfResponse};

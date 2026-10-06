@@ -27,7 +27,7 @@ const { evaluateExecutiveOutputReadiness } = require('./src/shared/executive-out
 const { resolveProposalOutput, proposalFilename } = require('./src/shared/proposal-output');
 const { discoverySessionScope } = require('./src/shared/discovery-session-query');
 const { buildProposalDocx } = require('./src/exports/proposal-docx');
-const { buildProposalPdf } = require('./src/exports/proposal-pdf');
+const { buildProposalPdfResponse } = require('./src/exports/proposal-pdf');
 const { buildRoiMethodologyPdf } = require('./src/exports/roi-methodology-pdf');
 const { buildImpactMapPdf, buildCompetitivePdf } = require('./src/exports/operational-pdf');
 const { getQuestionnaire } = require('./src/shared/questionnaire-definitions');
@@ -1305,9 +1305,9 @@ app.post('/api/export/proposal-docx', requireAuth, async (req, res) => {
 app.post('/api/export/proposal-pdf', requireAuth, async (req, res) => {
  try {
   const scenarioId=String(req.body?.scenarioId||''),prepared=await prepareProposalExport({user:req.user,scenarioId,internalDraft:req.body?.internalDraft,reviewAcknowledged:req.body?.reviewAcknowledged});
-  const {story,proposal,readiness,output}=prepared,company=String(story.meta.customer||'Prospect'),buffer=buildProposalPdf({story,proposal,audience:output.audience,draft:output.draft,review:readiness.status==='review'});
-  res.setHeader('Content-Type','application/pdf');res.setHeader('X-Executive-Readiness',readiness.status);res.setHeader('X-Output-Audience',output.audience);
-  res.setHeader('Content-Disposition',`attachment; filename="${proposalFilename(company,{draft:output.draft,extension:'pdf'})}"`);res.send(buffer);
+  const response=buildProposalPdfResponse(prepared);
+  for(const [name,value] of Object.entries(response.headers))res.setHeader(name,value);
+  res.send(response.buffer);
  } catch(error){console.error('proposal-pdf error:',error.message);res.status(error.status||500).json({error:error.status?error.message:'PDF export failed.',readiness:error.readiness});}
 });
 app.post('/api/export/roi-methodology-pdf', requireAuth, async (req,res)=>{
