@@ -21,6 +21,7 @@
    can paste a link; receiver auto-loads it.
    ───────────────────────────────────────── */
 async function generateShareURL() {
+  if (window.CIAppContext && !window.CIAppContext.requireSaved('sharing the business case')) return;
   return shareBusinessCase();
 }
 function showShareModal(url) {
@@ -540,6 +541,7 @@ function renderConfidence() {
    Creates a ready-to-send follow-up email
    ───────────────────────────────────────── */
 async function generateEmail() {
+  if (window.CIAppContext && !window.CIAppContext.requireSaved('creating customer-facing email')) return;
   const id=window._calcScenarioId;
   if(!id){showToast('Save the scenario before creating customer-facing value messaging.');return;}
   try{

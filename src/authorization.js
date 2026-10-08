@@ -35,7 +35,7 @@ function customerScopeSql(alias='c',userParam='$1'){
 }
 async function customerAccess(user,customerId,mode='view',dataQuery=query){
   const global=hasPermission(user,mode==='edit'?'edit_all_customers':'view_all_customers');
-  const {rows}=await dataQuery(`SELECT c.id,c.name,c.owner_id,
+  const {rows}=await dataQuery(`SELECT c.id,c.name,c.owner_id,c.has_field_inventory,c.status,
     EXISTS(SELECT 1 FROM scenarios sx WHERE sx.customer_id=c.id AND $1=ANY(sx.shared_with) AND sx.deleted_at IS NULL) explicitly_shared,
     EXISTS(SELECT 1 FROM sales_team_memberships viewer JOIN sales_teams active_team ON active_team.id=viewer.team_id AND active_team.status='active' JOIN sales_team_memberships owner_m ON owner_m.team_id=viewer.team_id AND owner_m.user_id=c.owner_id AND owner_m.is_active=TRUE AND owner_m.effective_start<=CURRENT_DATE AND (owner_m.effective_end IS NULL OR owner_m.effective_end>=CURRENT_DATE) WHERE viewer.user_id=$1 AND viewer.is_active=TRUE AND viewer.effective_start<=CURRENT_DATE AND (viewer.effective_end IS NULL OR viewer.effective_end>=CURRENT_DATE)) team_scoped
     FROM customers c WHERE c.id=$2`,[user.id,customerId]);
@@ -75,12 +75,12 @@ async function opportunityAccessByBaseId(user,baseId,mode='view'){
   if(!rows.length)return {exists:false,allowed:false,reasons:[]};
   return scenarioAccess(user,rows[0].id,mode);
 }
-async function listAuthorizedCustomers(user){const global=hasPermission(user,'view_all_customers'),team=hasPermission(user,'view_team_customers');const {rows}=await query(`SELECT c.id,c.name,c.owner_id,c.created_at,c.updated_at,u.username owner_username,COUNT(DISTINCT s.base_id) FILTER(WHERE s.deleted_at IS NULL)::int opportunity_count,COUNT(s.id) FILTER(WHERE s.deleted_at IS NULL)::int version_count FROM customers c JOIN users u ON u.id=c.owner_id LEFT JOIN scenarios s ON s.customer_id=c.id WHERE c.deleted_at IS NULL AND ($2 OR c.owner_id=$1 OR EXISTS(SELECT 1 FROM scenarios sx WHERE sx.customer_id=c.id AND $1=ANY(sx.shared_with) AND sx.deleted_at IS NULL) OR ($3 AND ${customerScopeSql('c','$1')})) GROUP BY c.id,u.username ORDER BY c.name`,[user.id,global,team]);return rows;}
+async function listAuthorizedCustomers(user){const global=hasPermission(user,'view_all_customers'),team=hasPermission(user,'view_team_customers');const {rows}=await query(`SELECT c.id,c.name,c.owner_id,c.has_field_inventory,c.status,c.created_at,c.updated_at,u.username owner_username,COUNT(DISTINCT s.base_id) FILTER(WHERE s.deleted_at IS NULL)::int opportunity_count,COUNT(s.id) FILTER(WHERE s.deleted_at IS NULL)::int version_count FROM customers c JOIN users u ON u.id=c.owner_id LEFT JOIN scenarios s ON s.customer_id=c.id WHERE c.deleted_at IS NULL AND ($2 OR c.owner_id=$1 OR EXISTS(SELECT 1 FROM scenarios sx WHERE sx.customer_id=c.id AND $1=ANY(sx.shared_with) AND sx.deleted_at IS NULL) OR ($3 AND ${customerScopeSql('c','$1')})) GROUP BY c.id,u.username ORDER BY c.name`,[user.id,global,team]);return rows;}
 async function searchAuthorizedCustomers(user,filters={}){
  const global=hasPermission(user,'view_all_customers'),team=hasPermission(user,'view_team_customers');
  const limit=Math.max(1,Math.min(50,Number(filters.limit)||25)),offset=Math.max(0,Number(filters.offset)||0);
  const {rows}=await query(`WITH scoped AS (
-   SELECT c.id,c.name,c.owner_id,u.username owner_username,
+   SELECT c.id,c.name,c.owner_id,c.has_field_inventory,c.status,u.username owner_username,
      c.owner_id=$1 is_owner,
      EXISTS(SELECT 1 FROM scenarios sh WHERE sh.customer_id=c.id AND $1=ANY(sh.shared_with) AND sh.deleted_at IS NULL) explicitly_shared,
      EXISTS(SELECT 1 FROM sales_team_memberships viewer JOIN sales_teams active_team ON active_team.id=viewer.team_id AND active_team.status='active' JOIN sales_team_memberships owner_m ON owner_m.team_id=viewer.team_id AND owner_m.user_id=c.owner_id AND owner_m.is_active=TRUE AND owner_m.effective_start<=CURRENT_DATE AND (owner_m.effective_end IS NULL OR owner_m.effective_end>=CURRENT_DATE) WHERE viewer.user_id=$1 AND viewer.is_active=TRUE AND viewer.effective_start<=CURRENT_DATE AND (viewer.effective_end IS NULL OR viewer.effective_end>=CURRENT_DATE)) team_scoped

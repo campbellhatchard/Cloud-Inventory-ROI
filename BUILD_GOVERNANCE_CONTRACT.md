@@ -519,3 +519,15 @@ Every surface that reports unapplied Prospect evidence must consume the same ser
 ## PROPOSAL EXPORT PREFLIGHT AND DEADLINE INVARIANT
 
 Proposal save, governed readiness evaluation, and any required user acknowledgement or Internal Draft decision must complete before the bounded file-generation request begins. Human decision time may never consume the network/file-generation deadline. A Proposal export action may have only one in-flight preflight/request pipeline; repeat activation must reuse or reject that operation rather than issue duplicate requests or downloads. The authenticated route and shared Proposal production builders remain the authority for artifact bytes, audience, readiness, filename, headers, and customer-safe content.
+
+## SERVER-AUTHORITATIVE CUSTOMER CREATION INVARIANT
+
+A Customer Workspace may become active only after an authenticated, authorized server endpoint validates the shared Customer Setup contract and PostgreSQL returns the customer ID. Browser-only customer objects are not customer records. Duplicate handling must follow the database identity rule and may disclose or open an existing record only when the requesting user is authorized for it.
+
+## CUSTOMER CONTEXT ACTION INVARIANT
+
+Save, Executive, Share, and Email availability must be derived from explicit customer/scenario state. No-customer state may not display calculated zero economics as though a business case exists. Customer changes must protect unsaved work with Save & Continue, Discard & Continue, and Cancel, and a failed save may not change customer context.
+
+## ACCESSIBLE ALERT INVARIANT
+
+Material application information, success, warning, and error messages must have a visible accessible alert with severity-appropriate ARIA semantics. Warnings and errors remain until dismissed unless the workflow explicitly classifies them as routine. Optional audio is browser-local, disabled by default, supplemental to the visual message, and may not write governed customer or scenario data.

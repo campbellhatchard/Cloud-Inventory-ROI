@@ -91,6 +91,9 @@ const ACTIONS = {
   TEAM_MEMBER_REMOVED:      'sales_team.member_removed',
   HANDOFF_ASSIGNMENT_CHANGED:'handoff.assignment_changed',
 
+  // Customers
+  CUSTOMER_CREATED:          'customer.created',
+
   // Scenarios
   SCENARIO_SAVED:           'scenario.saved',
   SCENARIO_LOADED:          'scenario.loaded',

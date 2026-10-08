@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="style.css"/>
 <link rel="stylesheet" href="exec.css"/>
 <link rel="stylesheet" href="customer-switcher.css"/>
+<link rel="stylesheet" href="customer-setup-alerts.css"/>
 <link rel="stylesheet" href="brand-tokens.css"/>
 <!-- Auth helper must load before app scripts -->
 <script src="src/client/api.js"></script>
@@ -113,7 +114,7 @@
   <button class="nav-item" onclick="switchTab('stake')" id="nav-stake"><span class="nav-icon">○</span>Stakeholders</button>
   <button class="nav-item" onclick="switchTab('solfit')" id="nav-solfit"><span class="nav-icon">◇</span>Solution Fit</button>
   <button class="nav-item" onclick="switchTab('map')" id="nav-map"><span class="nav-icon">☰</span>Joint Project Plan</button>
-  <button class="nav-item" onclick="switchTab('exec')" id="nav-exec"><span class="nav-icon">▤</span>Executive Outputs</button>
+  <button class="nav-item" data-context-action="output" onclick="switchTab('exec')" id="nav-exec"><span class="nav-icon">▤</span>Executive Outputs</button>
 
   <div class="sidebar-section-label">Analyze &amp; Coach</div>
   <button class="nav-item" onclick="openChristieForPerspective('rep')" id="nav-coach"><span class="nav-icon">✦</span>Deal Coach</button>
@@ -156,16 +157,16 @@
       </div>
       <button class="btn btn-ghost btn-sm" id="calcSwitchCustomerBtn" onclick="openCustomerSwitcher()" title="Switch customer" style="display:none;">⇄ Switch customer</button>
       <button class="btn btn-ghost btn-sm" id="roiModelUpgradeBtn" onclick="previewRoiModelUpgrade()" style="display:none;" title="Preview Model v2.8 without changing this saved version">Preview v2.8 upgrade</button>
-      <button class="btn btn-primary btn-sm" id="calcSaveBtn" onclick="saveScenario()" title="Save this scenario">
+      <button class="btn btn-primary btn-sm" id="calcSaveBtn" data-context-action="save" onclick="saveScenario()" title="Save this scenario">
         <svg viewBox="0 0 16 16" fill="none" width="13" height="13"><path d="M13 15H3a1 1 0 01-1-1V2a1 1 0 011-1h7.5L14 4.5V14a1 1 0 01-1 1z" stroke="currentColor" stroke-width="1.5"/><path d="M10 1v4H5V1M5 9h6M5 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         Save Scenario
       </button>
-      <button class="btn btn-secondary btn-sm" onclick="switchTab('exec')" title="Review customer-facing executive outputs">
+      <button class="btn btn-secondary btn-sm" data-context-action="output" onclick="switchTab('exec')" title="Review customer-facing executive outputs">
         <svg viewBox="0 0 16 16" fill="none" width="13" height="13"><rect x="2" y="1" width="12" height="14" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         Review Executive Output
       </button>
-      <button class="btn btn-ghost btn-sm" onclick="generateShareURL()" title="Copy shareable link">🔗 Share</button>
-      <button class="btn btn-ghost btn-sm" onclick="generateEmail()">✉️ Email</button>
+      <button class="btn btn-ghost btn-sm" data-context-action="share" onclick="generateShareURL()" title="Copy shareable link">🔗 Share</button>
+      <button class="btn btn-ghost btn-sm" data-context-action="email" onclick="generateEmail()">✉️ Email</button>
     </div>
   </div>
 
@@ -176,14 +177,11 @@
       <div class="cg-sub">Start a new customer or pick up an existing one. You can also skip straight to the calculator.</div>
 
       <div class="cg-cards">
-        <div class="cg-card">
+        <div class="cg-card" id="cgNewCustomerCard">
           <div class="cg-card-icon" style="background:#0089A6;">＋</div>
           <div class="cg-card-title">New customer</div>
-          <div class="cg-card-desc">Begin a fresh business case for a company you haven't modeled yet.</div>
-          <div class="cg-new-row">
-            <input type="text" id="cgNewCompany" placeholder="Company name…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="cg-new-company-field" onkeydown="if(event.key==='Enter')cgCreateNew()"/>
-            <button class="btn btn-primary btn-sm" onclick="cgCreateNew()">Create</button>
-          </div>
+          <div class="cg-card-desc">Save the customer first, then start a business case in the correct customer workspace.</div>
+          <div class="cg-new-row"><button class="btn btn-primary btn-sm" onclick="cgCreateNew()">Start Customer Setup</button></div>
         </div>
         <div class="cg-card">
           <div class="cg-card-icon" style="background:#12786F;">☰</div>
@@ -211,7 +209,7 @@
       <input type="text" id="customerSearchInput" placeholder="Search customers by name…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="cust-search-field-x7" role="searchbox" aria-label="Find an existing customer" readonly onfocus="this.removeAttribute('readonly');onCustomerSearch(this.value)" oninput="onCustomerSearch(this.value)">
       <div id="customerSearchResults" class="cs-results" style="display:none;"></div>
     </div>
-    <span class="cs-hint">or start a new one below</span>
+    <span class="cs-hint">or choose Create New Customer from Customer Workspace</span>
   </div>
   <div id="calcBreadcrumb" class="calc-breadcrumb"></div>
   <div id="caseCompleteness" class="case-completeness"></div>
@@ -240,7 +238,7 @@
       <span class="ws-num">5</span>Results
     </button>
     <span class="ws-sep">›</span>
-    <button class="ws-step" onclick="switchTab('exec')" style="color:var(--cyan-dark);font-weight:600;">
+    <button class="ws-step" data-context-action="output" onclick="switchTab('exec')" style="color:var(--cyan-dark);font-weight:600;">
       <span class="ws-num" style="background:var(--cyan);color:#fff;">→</span>Executive PDF
     </button>
   </div>
@@ -688,17 +686,17 @@
   <div id="contractEconomics"></div>
 
   <div class="btn-row">
-    <button class="btn btn-primary" onclick="saveScenario()">
+    <button class="btn btn-primary" data-context-action="save" onclick="saveScenario()">
       <svg viewBox="0 0 16 16" fill="none"><path d="M13 15H3a1 1 0 01-1-1V2a1 1 0 011-1h7.5L14 4.5V14a1 1 0 01-1 1z" stroke="currentColor" stroke-width="1.5"/><path d="M10 1v4H5V1M5 9h6M5 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       Save scenario
     </button>
-    <button class="btn btn-primary" onclick="switchTab('exec')">
+    <button class="btn btn-primary" data-context-action="output" onclick="switchTab('exec')">
       <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="12" height="14" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       Executive presentation
     </button>
-    <button class="btn btn-ghost" onclick="generateEmail()">✉️ Email template</button>
+    <button class="btn btn-ghost" data-context-action="email" onclick="generateEmail()">✉️ Email template</button>
     <button class="btn btn-ghost" onclick="showCRMModal()">📋 Copy for CRM</button>
-    <button class="btn btn-ghost" onclick="generateShareURL()">🔗 Share link</button>
+    <button class="btn btn-ghost" data-context-action="share" onclick="generateShareURL()">🔗 Share link</button>
     <button class="btn btn-ghost" onclick="clearForm()">New scenario</button>
     <button class="btn btn-ghost" onclick="showTemplatePicker()" title="Start from a pre-filled vertical template">🗂 Start from template</button>
   </div>
@@ -1289,6 +1287,14 @@
         </div>
       </div>
 
+      <div class="card" style="margin-bottom:1.25rem;">
+        <div class="card-title" style="margin-bottom:.85rem;">Notifications</div>
+        <label class="audio-pref-row">
+          <span><strong>Audio alerts</strong><small>Optional short cues accompany visible and accessible alerts.</small></span>
+          <input type="checkbox" data-audio-alert-preference onchange="AppAlerts.setAudioEnabled(this.checked)" aria-label="Audio alerts">
+        </label>
+      </div>
+
       <!-- Change password card -->
       <div class="card">
         <div class="card-title" style="margin-bottom:.85rem;">Change password</div>
@@ -1542,6 +1548,7 @@
 <script src="industry-data.js"></script>
 <script src="scenario-templates.js"></script>
 <script src="competitive-context.js"></script>
+<script src="app-alerts.js"></script>
 <script src="app.js"></script>
 <script src="features.js"></script>
 <script src="narrative.js"></script>
@@ -1564,11 +1571,14 @@
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="6.9.33";</script>
+<script>const APP_VERSION="6.9.34";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
 <script src="ai-session.js"></script>
 <script src="customer-switcher.js"></script>
+<script src="app-context.js"></script>
+<script src="customer-setup-core.js"></script>
+<script src="customer-setup.js"></script>
 <script src="application-knowledge.js"></script>
 <script src="assistant.js"></script>
 <script src="input-format.js"></script>
@@ -1673,6 +1683,7 @@ document.getElementById('industry')?.addEventListener('change', applyDefaultsAnd
 
 const _origSwitchTab = switchTab;
 window.switchTab = function(name) {
+  if (name === 'exec' && window.CIAppContext && !window.CIAppContext.requireSaved('opening Executive Outputs')) return;
   window.clearTransientNotices?.();
   /* Unsaved-changes: show a soft reminder instead of a blocking confirm().
      Still lets the rep navigate freely — just reminds them to save first. */
@@ -1713,7 +1724,7 @@ window.switchTab = function(name) {
     toTop.style.display = (name === 'impact') ? 'none' : '';
   }
 };
-window.saveScenario = function() { if (typeof saveScenarioWithVersion === 'function') saveScenarioWithVersion(false); };
+window.saveScenario = function(options) { if (typeof saveScenarioWithVersion === 'function') return saveScenarioWithVersion(Boolean(options && options.skipDialog)); return Promise.resolve(null); };
 
 /* ── Discovery submission notification badge ───────────────────────
    Polls for unread submitted sessions and shows a dot on the
@@ -3132,11 +3143,11 @@ const _fabEl = document.getElementById('fabRow'); if (_fabEl) _fabEl.style.displ
 </button>
 
 <div class="fab-row" id="fabRow" style="display:none;">
-  <button class="fab fab-secondary" onclick="saveScenario()" title="Save scenario" style="position:relative;">
+  <button class="fab fab-secondary" data-context-action="save" onclick="saveScenario()" title="Save scenario" style="position:relative;">
     💾
     <span class="fab-label">Save scenario</span>
   </button>
-  <button class="fab fab-primary" onclick="switchTab('exec')" title="View executive presentation" style="position:relative;">
+  <button class="fab fab-primary" data-context-action="output" onclick="switchTab('exec')" title="View executive presentation" style="position:relative;">
     📄
     <span class="fab-label">Executive PDF</span>
   </button>

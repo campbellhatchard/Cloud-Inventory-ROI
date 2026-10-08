@@ -7,6 +7,17 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.34', date: '2026-10-08', tag: 'customer-workflow-and-alert-integrity',
+    title: 'Server-authoritative customer setup and context-safe actions',
+    summary: 'Creates customers through one validated server workflow, protects unsaved work during context changes, and centralizes accessible visual alerts with optional local audio cues.',
+    highlights: [
+      'New Customer now opens a schema-driven setup dialog and enters the calculator only after PostgreSQL returns the authoritative customer ID.',
+      'Customer switching offers Save & Continue, Discard & Continue, and Cancel; a failed save leaves the user in the original customer context.',
+      'Save, Executive, Share, and Email controls now reflect explicit customer and scenario states instead of exposing fake zero-value output.',
+      'Important warnings and errors remain visible, audio is optional and browser-local, and ROI Model v2.8 is unchanged.'
+    ]
+  },
+  {
     version: '6.9.33', date: '2026-10-06', tag: 'proposal-pdf-export-reliability',
     title: 'Reliable Proposal PDF Internal Draft export',
     summary: 'Separates governed readiness review from the bounded PDF request so human review time cannot cause a false generation timeout.',

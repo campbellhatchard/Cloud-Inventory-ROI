@@ -12,7 +12,7 @@
    Validates required fields, then either shows a version dialog (for
    existing scenarios) or saves directly.
    ───────────────────────────────────────── */
-function saveScenarioWithVersion(skipDialog) {
+async function saveScenarioWithVersion(skipDialog) {
   const v = getVals(), r = calcROI(v);
 
   const missingCompany  = !v.company || !v.company.trim() || v.company.trim() === 'Prospect';
@@ -31,12 +31,12 @@ function saveScenarioWithVersion(skipDialog) {
       const el = document.getElementById('scenarioName');
       if (el) { el.style.borderColor = 'var(--red)'; if (!missingCompany) el.focus(); setTimeout(() => { el.style.borderColor = ''; }, 3000); }
     }
-    return;
+    return null;
   }
 
   if (!v.revenue && !v.inventory && !v.users) {
     showToast('Add at least one financial input (revenue, inventory value, or user count) before saving.');
-    return;
+    return null;
   }
 
   /* Build data blob with calc results */
@@ -72,10 +72,10 @@ function saveScenarioWithVersion(skipDialog) {
 
   if (existing && !skipDialog && !document.getElementById('saveVersionModal')) {
     showSaveVersionDialog(v, r, dataBlob, existing);
-    return;
+    return null;
   }
 
-  commitSave(v, dataBlob, existing ? existing.baseId : null, '');
+  return commitSave(v, dataBlob, existing ? existing.baseId : null, '');
 }
 
 /* ─────────────────────────────────────────

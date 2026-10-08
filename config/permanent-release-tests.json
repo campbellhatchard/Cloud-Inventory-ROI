@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "6.9.33",
+  "release": "6.9.34",
   "tests": [
     {"invariant":"Customer Business Case","path":"test/release-integrity.test.js"},
     {"invariant":"customer-safe payload","path":"test/release-integrity.test.js"},
@@ -49,5 +49,8 @@
     ,{"invariant":"v6.9.30 durable Prospect submission notification outbox","path":"test/v6930-prospect-notification-outbox.test.js"}
     ,{"invariant":"v6.9.31 canonical Sales Manager aggregation and non-credential Competitive Product Search","path":"test/v6931-final-two-defects.test.js"}
     ,{"invariant":"v6.9.32 consistent server-authoritative Prospect evidence review counts","path":"test/v6932-prospect-evidence-count-consistency.test.js"}
+    ,{"invariant":"v6.9.33 Proposal export preflight, single-flight request deadline, PDF response authority, and HTTP authentication","path":"test/v6933-proposal-pdf-timeout-correction.test.js"}
+    ,{"invariant":"v6.9.34 server-authoritative customer creation, context-safe actions, and accessible alert framework","path":"test/v6934-customer-alert-workflow.test.js"}
+    ,{"invariant":"v6.9.34 PostgreSQL customer creation persistence and duplicate boundary","path":"test/v6934-postgres-customer-creation.test.js"}
   ]
 }

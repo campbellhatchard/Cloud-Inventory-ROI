@@ -6,6 +6,7 @@
 <title>Cloud Inventory — Discovery Questionnaire</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="brand-tokens.css"/>
+<link rel="stylesheet" href="customer-setup-alerts.css"/>
 <script src="brand-system.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -324,6 +325,7 @@ button{cursor:pointer;}
 
 <div class="toast" id="toast"></div>
 
+<script src="app-alerts.js"></script>
 <script src="/roi-engine.js"></script>
 <script src="/questionnaire-roi-registry.js"></script>
 <script src="discovery.js"></script>
@@ -1468,7 +1470,7 @@ async function confirmSubmit() {
   } catch (e) {
     console.warn('submit endpoint error:', e.message);_submitting=false;
     document.querySelectorAll('button[onclick="confirmSubmit()"]').forEach(function(btn){btn.disabled=false;btn.textContent='Confirm and send';});
-    alert('Your answers are still here, but the submission could not be confirmed. Please try again.');return;
+    AppAlerts.error('Your answers are still here, but the submission could not be confirmed. Please try again.', {key:'prospect-submit-failed',persist:true});return;
   }
 
   document.getElementById('mainContent').innerHTML = `

@@ -18,11 +18,11 @@ function canCreateRoiCustomer() {
   return !!user && (clientHasRole(user,'rep','Sales Rep') || clientHasRole(user,'admin','Admin'));
 }
 
-function markCalcDirty() { _calcDirty = true; updateCompletenessMeter(); _updateDirtyIndicator(); }
-function clearCalcDirty() { _calcDirty = false; _updateDirtyIndicator(); }
-function markNarrativeDirty() { _narrativeDirty = true; _updateDirtyIndicator(); }
-function clearNarrativeDirty() { _narrativeDirty = false; _updateDirtyIndicator(); }
-function clearAllWorkingDirty() { _calcDirty = false; _narrativeDirty = false; window._appliedValueDrafts = {}; _updateDirtyIndicator(); }
+function markCalcDirty() { _calcDirty = true; updateCompletenessMeter(); _updateDirtyIndicator(); window.CIAppContext?.sync(); }
+function clearCalcDirty() { _calcDirty = false; _updateDirtyIndicator(); window.CIAppContext?.sync(); }
+function markNarrativeDirty() { _narrativeDirty = true; _updateDirtyIndicator(); window.CIAppContext?.sync(); }
+function clearNarrativeDirty() { _narrativeDirty = false; _updateDirtyIndicator(); window.CIAppContext?.sync(); }
+function clearAllWorkingDirty() { _calcDirty = false; _narrativeDirty = false; window._appliedValueDrafts = {}; _updateDirtyIndicator(); window.CIAppContext?.sync(); }
 
 function _updateDirtyIndicator() {
   const el = document.getElementById('saveStatus');
@@ -109,10 +109,10 @@ async function showCustomerGate() {
   clearGateFields();
   requestAnimationFrame(clearGateFields);
   setTimeout(clearGateFields, 120);
-  const focusEl = document.getElementById('cgNewCompany');
-  const newCard = focusEl?.closest('.cg-card');
+  const newCard = document.getElementById('cgNewCustomerCard');
   if (newCard) newCard.hidden = !canCreateRoiCustomer();
-  if (focusEl && canCreateRoiCustomer()) focusEl.focus();
+  if (canCreateRoiCustomer()) newCard?.querySelector('button')?.focus();
+  window.CIAppContext?.sync();
 }
 function showCalcBody() {
   const gate = document.getElementById('customerGate');
@@ -123,8 +123,9 @@ function showCalcBody() {
   if (switchBtn) switchBtn.style.display = '';
   updateBreadcrumb();
   updateCompletenessMeter();
+  window.CIAppContext?.sync();
 }
-function skipCustomerGate() { showCalcBody(); }
+function skipCustomerGate() { showCalcBody(); window.CIAppContext?.sync(); }
 
 /* ── New customer ── */
 function cgCreateNew() {
@@ -132,24 +133,7 @@ function cgCreateNew() {
     showToast('ROI customer creation requires the Sales Rep or Admin role. Use Solution Fit to work with existing customers.');
     return;
   }
-  const input = document.getElementById('cgNewCompany');
-  const typed = input ? input.value.trim() : '';
-  if (!typed) { if (input) input.focus(); return; }
-  const proceed = (finalName) => {
-    if (!finalName) return;
-    if (typeof clearForm === 'function') clearForm();
-    const cn = document.getElementById('companyName');
-    if (cn) { cn.value = finalName; cn.dispatchEvent(new Event('change')); }
-    if (typeof getCompanies === 'function' && !getCompanies().some(c => c.name.toLowerCase() === finalName.toLowerCase())) {
-      getCompanies().push({ name: finalName, scenarios: 0, plans: 0, stakeholders: 0 });
-    }
-    rememberRecentCustomer(finalName);
-    clearCalcDirty();
-    showCalcBody();
-    if (typeof recalc === 'function') recalc();
-  };
-  if (typeof checkCompanyOnEntry === 'function') checkCompanyOnEntry(typed, proceed);
-  else proceed(typed);
+  window.requestCreateNewCustomer?.();
 }
 
 /* ── Existing customer list ── */
@@ -257,6 +241,7 @@ window.getExecutiveOutputPersistenceState = function getExecutiveOutputPersisten
    switch, and logout. */
 function confirmDiscardChanges() {
   if (!hasUnsavedChanges()) return true;
+  window.AppAlerts?.warning('You have unsaved changes. Confirm whether to leave this work.', { key:'unsaved-native-guard', persist:true });
   return confirm('You have unsaved changes to this business case. Leave anyway? Your unsaved edits will be lost.');
 }
 if (typeof window !== 'undefined') window.confirmDiscardChanges = confirmDiscardChanges;

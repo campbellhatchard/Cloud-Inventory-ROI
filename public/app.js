@@ -197,13 +197,17 @@ function expandAllCalcSections() {
    ════════════════════════════════════════ */
 let _toastTimer=null;
 function showToast(msg) {
+  if (window.AppAlerts) {
+    const severity = window.AppAlerts.inferSeverity(msg);
+    return window.AppAlerts[severity](msg, { persist: severity === 'warning' || severity === 'error' });
+  }
   document.getElementById('toastMsg').textContent = msg;
   const t = document.getElementById('toast');
   t.classList.add('show');
   clearTimeout(_toastTimer);
   _toastTimer=setTimeout(() => t.classList.remove('show'), 4200);
 }
-function clearTransientNotices(){clearTimeout(_toastTimer);document.getElementById('toast')?.classList.remove('show');for(const id of ['confWarningBanner','unsavedBanner','pdfPopupFallback','pptxRetryNotice'])document.getElementById(id)?.remove();}
+function clearTransientNotices(){clearTimeout(_toastTimer);document.getElementById('toast')?.classList.remove('show');window.AppAlerts?.clearTransient();for(const id of ['confWarningBanner','unsavedBanner','pdfPopupFallback','pptxRetryNotice'])document.getElementById(id)?.remove();}
 window.clearTransientNotices=clearTransientNotices;
 
 function updateSavedBadge() {
@@ -458,6 +462,17 @@ function recalc() {
   const v=getVals(), r=calcROI(v);
   const el=id=>document.getElementById(id);
 
+  const activeCustomerId = window.currentScenarioCustomerId || window._currentCustomerId || window._activeCustomerMeta?.id || null;
+  if (!activeCustomerId) {
+    const lb=(id,value)=>{const node=el(id);if(node){node.textContent=value;node.className='lb-value r-neu';}};
+    lb('lb-benefit','No business case'); lb('lb-roi','—'); lb('lb-npv3','—'); lb('lb-npv5','—');
+    const roiLabel=el('lb-roi-label');if(roiLabel)roiLabel.textContent='Contract ROI';
+    if(el('roiGrid'))el('roiGrid').innerHTML='<div class="empty-state"><p>Select or create a customer to begin a business case.</p></div>';
+    if(el('contractEconomics'))el('contractEconomics').innerHTML='';
+    window.CIAppContext?.sync();
+    return;
+  }
+
   if (typeof updateCompletenessMeter === 'function') updateCompletenessMeter();
   if (typeof renderAccuracySuggestion === 'function') renderAccuracySuggestion(v);
 
@@ -520,14 +535,14 @@ function recalc() {
   /* Gate the headline KPIs: they read $0 / 0% until a customer is selected AND
      meaningful inputs have been entered (or a saved scenario is loaded). This
      avoids showing live numbers for an empty, customer-less exploratory form. */
-  const _companySelected = !!(v.company && v.company.trim() && v.company.trim() !== 'Prospect');
+  const _companySelected = Boolean(activeCustomerId);
   const _hasInputs = (v.revenue>0 || v.users>0 || v.inventory>0 || v.labor>0 || v.invest>0 || v.otc>0);
   const _kpiLive = window._scenarioLoaded === true || (_companySelected && _hasInputs);
   if (!_kpiLive) {
-    lb('lb-benefit', fmt(0), lbClass(0));
-    lb('lb-roi',     '0%', lbClass(0));
-    lb('lb-npv3',    fmt(0), lbClass(0));
-    lb('lb-npv5',    fmt(0), lbClass(0));
+    lb('lb-benefit', '—', lbClass(0));
+    lb('lb-roi',     '—', lbClass(0));
+    lb('lb-npv3',    '—', lbClass(0));
+    lb('lb-npv5',    '—', lbClass(0));
   } else {
     lb('lb-benefit', fmt(r.annualBenefit), lbClass(r.annualBenefit));
     lb('lb-roi',     r.totalContractRoi===null?'—':fmtPct(r.totalContractRoi), lbClass(r.totalContractRoi));
@@ -535,6 +550,7 @@ function recalc() {
     lb('lb-npv5',    fmt(r.totalContractNpv), lbClass(r.totalContractNpv));
     const roiLabel = el('lb-roi-label'); if (roiLabel) roiLabel.textContent = `Total ${r.contractMonths}-month ROI`;
   }
+  window.CIAppContext?.sync();
 
   const paySignStr  = r.paybackFromSigning  === null ? '—' : r.paybackFromSigning  >= 60 ? '60+ mo' : r.paybackFromSigning.toFixed(1)  + ' mo';
   const payLiveStr  = r.paybackFromGoLive   === null ? '—' : r.paybackFromGoLive   >= 60 ? '60+ mo' : r.paybackFromGoLive.toFixed(1)   + ' mo';

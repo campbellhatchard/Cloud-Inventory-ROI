@@ -235,6 +235,7 @@ app.use('/api/solution-fit/customers', require('./src/routes/solution-fit-custom
 app.use('/api/solution-fit/catalog', require('./src/routes/solution-fit-catalog'));
 app.use('/api/sales-teams', require('./src/routes/sales-teams'));
 app.use('/api/customer-switcher', require('./src/routes/customer-switcher'));
+app.use('/api/customers', require('./src/routes/customers'));
 app.use('/api/sales-manager', require('./src/routes/sales-manager'));
 app.use('/api/stage-readiness', require('./src/routes/stage-readiness'));
 app.use('/api/competitive-intelligence', require('./src/routes/competitive-intelligence'));
@@ -325,7 +326,7 @@ app.get('/api/customers/:id', requireAuth, async (req, res) => {
     const access=await customerAccess(req.user,req.params.id,'view');
     if(!access.exists)return res.status(404).json({error:'Customer not found.'});
     if(!access.allowed)return res.status(403).json({error:'Access denied.'});
-    const c=access.customer;res.json({id:c.id,name:c.name,ownerId:c.owner_id,accessReasons:access.reasons});
+    const c=access.customer;res.json({id:c.id,name:c.name,ownerId:c.owner_id,hasFieldInventory:c.has_field_inventory===true,status:c.status||'active',accessReasons:access.reasons});
   } catch (err) {
     console.error('Get customer error:', err.message);
     res.status(500).json({ error: 'Failed to load customer.' });

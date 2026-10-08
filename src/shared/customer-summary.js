@@ -11,6 +11,8 @@ function mapCustomerSummaryRow(row = {}) {
     name: row.name,
     ownerId: row.owner_id,
     ownerUsername: row.owner_username || null,
+    hasFieldInventory: row.has_field_inventory === true,
+    status: row.status || 'active',
     opportunityCount,
     versionCount,
     scenarioCount: opportunityCount,
