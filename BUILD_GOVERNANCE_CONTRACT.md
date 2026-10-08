@@ -531,3 +531,7 @@ Save, Executive, Share, and Email availability must be derived from explicit cus
 ## ACCESSIBLE ALERT INVARIANT
 
 Material application information, success, warning, and error messages must have a visible accessible alert with severity-appropriate ARIA semantics. Warnings and errors remain until dismissed unless the workflow explicitly classifies them as routine. Optional audio is browser-local, disabled by default, supplemental to the visual message, and may not write governed customer or scenario data.
+
+## CUSTOMER OWNERSHIP REASSIGNMENT INVARIANT
+
+An Admin customer ownership reassignment must use a server-authoritative eligible Sales Rep list, an impact preview, a required reason, an expected-current-owner concurrency check, and one database transaction. The transaction may update only the canonical current Customer owner and operational owner scope needed for present access and future owner-routed notifications. It must write an immutable transfer record and audit event containing the old owner, new owner, Admin actor, reason, timestamp, and affected-record counts. It may never rewrite historical actors, immutable Prospect submissions, ROI Value History or application actors, Buyer Evidence history, Solution Engineer assignments, scenario/customer/opportunity identities, ROI values, frozen published artifacts, or prior notification history. A failed transfer must roll back every ownership and audit mutation.

@@ -253,8 +253,8 @@ test('validation summary is accessible and focuses the first invalid server-defi
   assert.match(source, /fields\[0\][\s\S]*\.focus\(\)/);
 });
 
-test('no migration or ROI methodology change is introduced by this correction', () => {
+test('v6.9.34 migration baseline and ROI methodology remain preserved', () => {
   const migrations = fs.readdirSync(path.join(root, 'migrations')).filter(file => file.endsWith('.sql'));
-  assert.equal(migrations.at(-1), '042_server_authoritative_value_application.sql');
+  assert.ok(migrations.includes('042_server_authoritative_value_application.sql'));
   assert.equal(require('../release-lineage.json').roiModelVersion, 28);
 });

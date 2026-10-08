@@ -93,6 +93,7 @@ const ACTIONS = {
 
   // Customers
   CUSTOMER_CREATED:          'customer.created',
+  CUSTOMER_OWNER_TRANSFERRED:'customer.ownership_transferred',
 
   // Scenarios
   SCENARIO_SAVED:           'scenario.saved',
