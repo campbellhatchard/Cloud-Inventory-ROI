@@ -1738,7 +1738,41 @@ body.livebar-off .guided-nav{top:calc(var(--topbar-h) + 8px);}
 .ac-won{background:var(--green-pale);color:var(--green);}
 .ac-lost{background:var(--red-pale);color:var(--red);}
 .ac-no_decision{background:var(--gray-100);color:var(--gray-600);}
+.ac-transfer-success{display:grid;gap:3px;margin:0 0 18px;padding:12px 14px;border:1px solid var(--green);border-radius:9px;background:var(--green-pale);color:var(--navy);}
+.ac-transfer-success span{font-size:11px;color:var(--gray-600);overflow-wrap:anywhere;}
+.ac-transfer-overlay{z-index:3100;align-items:center;justify-content:center;padding:20px;}
+.ac-transfer-dialog{width:min(900px,96vw);max-height:92vh;overflow:auto;padding:0;}
+.ac-transfer-dialog>header{display:flex;justify-content:space-between;gap:18px;padding:20px 22px;border-bottom:1px solid var(--gray-200);background:var(--gray-50);}
+.ac-transfer-dialog>header h2{margin:3px 0 4px;color:var(--navy);font-size:22px;}
+.ac-transfer-dialog>header p{margin:0;color:var(--gray-600);font-size:13px;}
+.ac-transfer-kicker{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--cyan-dark);}
+.ac-transfer-body{display:grid;gap:15px;padding:20px 22px;}
+.ac-transfer-body>label{display:grid;gap:6px;color:var(--navy);font-size:12px;font-weight:700;}
+.ac-transfer-body select,.ac-transfer-body textarea{width:100%;border:1px solid var(--gray-300);border-radius:8px;padding:10px;font:400 13px var(--font);color:var(--navy);background:var(--white);}
+.ac-transfer-body select:focus,.ac-transfer-body textarea:focus{outline:2px solid var(--cyan-pale);border-color:var(--cyan);}
+.ac-transfer-facts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.ac-transfer-facts>div{display:grid;gap:3px;padding:11px;border:1px solid var(--gray-200);border-radius:8px;background:var(--gray-50);}
+.ac-transfer-facts span{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--gray-500);}
+.ac-transfer-facts b{font-size:13px;color:var(--navy);}
+.ac-transfer-message{padding:10px 12px;border-radius:8px;font-size:12px;}
+.ac-transfer-message.info{background:var(--cyan-pale);color:var(--navy);}
+.ac-transfer-message.warning{background:var(--amber-pale);color:#6f4500;border:1px solid #e7bf66;}
+.ac-transfer-message.error{background:var(--red-pale);color:var(--red);border:1px solid #e9aaa6;}
+.ac-transfer-preview-actions{display:flex;justify-content:flex-end;}
+.ac-transfer-impact{border:1px solid var(--gray-200);border-radius:10px;padding:14px;background:var(--gray-50);}
+.ac-transfer-impact h3{margin:0 0 10px;color:var(--navy);font-size:16px;}
+.ac-transfer-help,.ac-transfer-confirmation{margin:0;color:var(--gray-600);font-size:12px;}
+.ac-transfer-counts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-bottom:14px;}
+.ac-transfer-counts>div{display:grid;gap:2px;padding:9px;border:1px solid var(--gray-200);border-radius:7px;background:var(--white);}
+.ac-transfer-counts span{font-size:10px;color:var(--gray-500);}
+.ac-transfer-counts b{font-size:16px;color:var(--navy);}
+.ac-transfer-columns{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.ac-transfer-columns section{padding:12px;border-radius:8px;background:var(--white);border:1px solid var(--gray-200);}
+.ac-transfer-columns h4{margin:0 0 7px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--cyan-dark);}
+.ac-transfer-columns ul{margin:0;padding-left:18px;color:var(--gray-700);font-size:11px;line-height:1.45;}
+.ac-transfer-dialog>footer{display:flex;justify-content:flex-end;gap:9px;padding:15px 22px;border-top:1px solid var(--gray-200);background:var(--white);position:sticky;bottom:0;}
 @media(max-width:640px){.ac-grid{grid-template-columns:1fr;}.ac-actions{flex-direction:column;}}
+@media(max-width:700px){.ac-transfer-overlay{padding:0;align-items:flex-end}.ac-transfer-dialog{width:100%;max-width:none;max-height:95vh;border-radius:14px 14px 0 0}.ac-transfer-facts,.ac-transfer-columns{grid-template-columns:1fr}.ac-transfer-counts{grid-template-columns:repeat(2,1fr)}.ac-transfer-dialog>footer{display:grid;grid-template-columns:1fr 1fr}.ac-transfer-dialog>footer button{width:100%}}
 
 /* ══ Consolidated pill component (v3.14.0 design-system pass) ══
    New badges/tags going forward should use this base + a color modifier,

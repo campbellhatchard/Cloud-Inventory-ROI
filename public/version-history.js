@@ -7,6 +7,17 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.35', date: '2026-10-08', tag: 'admin-customer-ownership-reassignment',
+    title: 'Governed Admin customer ownership reassignment',
+    summary: 'Adds a transactional Admin workflow to move current customer responsibility to an eligible Sales Rep while preserving historical authorship, evidence, economics, Solution Engineer assignments, and frozen outputs.',
+    highlights: [
+      'Admin Customers provides a dedicated transfer dialog with a server-authoritative Rep list, required reason, and impact preview.',
+      'The transfer updates current operational access and future owner-routed Prospect notifications in one transaction with concurrency protection.',
+      'Immutable submissions, Value History actors, Buyer Evidence history, SE assignments, scenario identities, ROI values, and published Customer Business Cases are not rewritten.',
+      'A dedicated immutable transfer record and audit event capture the prior owner, new owner, Admin actor, reason, timestamp, and affected-record counts.'
+    ]
+  },
+  {
     version: '6.9.34', date: '2026-10-08', tag: 'customer-workflow-and-alert-integrity',
     title: 'Server-authoritative customer setup and context-safe actions',
     summary: 'Creates customers through one validated server workflow, protects unsaved work during context changes, and centralizes accessible visual alerts with optional local audio cues.',
