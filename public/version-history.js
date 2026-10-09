@@ -7,6 +7,17 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.36', date: '2026-10-08', tag: 'advanced-admin-cleanup',
+    title: 'Advanced Admin cleanup and recoverable bulk actions',
+    summary: 'Adds server-authoritative date, owner, creator, type, and status filters with exact preview snapshots, dependency review, safe multi-selection, atomic soft removal, and governed recovery.',
+    highlights: [
+      'Created, updated, and removed dates use deterministic UTC calendar boundaries with quick and custom ranges.',
+      'Remove Selected and Remove All Filtered Results operate only on the exact server preview reviewed by the Admin, with stale-data checks and typed confirmation for high-impact actions.',
+      'Customer cleanup includes linked active workspace records while immutable Prospect evidence, Value History, stage history, ownership history, and audit records remain preserved.',
+      'Recovery preserves stable identity and reassigned ownership; Customer recovery also restores workspace records removed by the same cleanup batch while public links remain inactive.'
+    ]
+  },
+  {
     version: '6.9.35', date: '2026-10-08', tag: 'admin-customer-ownership-reassignment',
     title: 'Governed Admin customer ownership reassignment',
     summary: 'Adds a transactional Admin workflow to move current customer responsibility to an eligible Sales Rep while preserving historical authorship, evidence, economics, Solution Engineer assignments, and frozen outputs.',

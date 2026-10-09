@@ -253,7 +253,7 @@ test('validation summary is accessible and focuses the first invalid server-defi
   assert.match(source, /fields\[0\][\s\S]*\.focus\(\)/);
 });
 
-test('v6.9.34 migration baseline and ROI methodology remain preserved', () => {
+test('customer workflow correction preserves its migration boundary and ROI methodology', () => {
   const migrations = fs.readdirSync(path.join(root, 'migrations')).filter(file => file.endsWith('.sql'));
   assert.ok(migrations.includes('042_server_authoritative_value_application.sql'));
   assert.equal(require('../release-lineage.json').roiModelVersion, 28);

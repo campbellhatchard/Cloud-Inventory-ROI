@@ -484,6 +484,12 @@ app.get('/api/admin/companies', requireAuth, async (req, res) => {
   }
 });
 
+/* v6.9.36: all active Cleanup & Recovery traffic is owned by the
+   server-authoritative router. The v6.6.1 inline implementation below is kept
+   temporarily as unreachable release-history source and is not registered. */
+app.use('/api/admin/cleanup', requireAuth, require('./src/routes/admin-cleanup'));
+if (false) {
+
 /* ══════════════════════════════════════════════════════════════════
    ADMIN — DATA CLEANUP & RECOVERY (v6.6.1)
    Preview snapshots resolve the exact authorized IDs. Execution accepts only
@@ -696,6 +702,7 @@ app.post('/api/admin/cleanup/restore', requireAuth, async (req, res) => {
     res.status(500).json({ error: 'Restore failed.' });
   }
 });
+}
 
 
 app.get('/api/admin/purge/confirm', async (req, res) => {
@@ -1468,7 +1475,7 @@ app.post('/api/discovery/sessions', requireAuth, async (req, res) => {
     const access=await scenarioAccess(req.user,scenarioId,'edit');if(!access.exists)return res.status(404).json({error:'Scenario not found.'});if(!access.allowed)return res.status(403).json({error:'You do not have permission to create a Prospect Link for this opportunity.'});
     const token = crypto.randomBytes(32).toString('hex');
     const { transaction } = db();
-    const rows=await transaction(async client=>{const sc=await client.query(`SELECT s.id,s.base_id,s.version,s.owner_id,s.company,s.industry,COALESCE(c.has_field_inventory,FALSE) has_field_inventory FROM scenarios s LEFT JOIN customers c ON c.id=s.customer_id WHERE s.id=$1 AND s.deleted_at IS NULL`,[scenarioId]);if(!sc.rows.length)throw Object.assign(new Error('Scenario not found.'),{status:404});const x=sc.rows[0];const made=await client.query(`INSERT INTO discovery_sessions(scenario_id,base_id,source_scenario_version,owner_id,token,industry,company,has_field_inventory,questionnaire_schema_source) VALUES($1,$2,$3,$4,$5,$6,$7,$8,'server_generated') RETURNING *`,[x.id,x.base_id,x.version,x.owner_id,token,x.industry||'default',x.company||'',x.has_field_inventory]);const {ensureSessionQuestions}=require('./src/shared/discovery-session-schema');await ensureSessionQuestions(client,made.rows[0]);return made.rows;});
+    const rows=await transaction(async client=>{const sc=await client.query(`SELECT s.id,s.base_id,s.version,s.owner_id,s.company,s.industry,COALESCE(c.has_field_inventory,FALSE) has_field_inventory FROM scenarios s LEFT JOIN customers c ON c.id=s.customer_id WHERE s.id=$1 AND s.deleted_at IS NULL`,[scenarioId]);if(!sc.rows.length)throw Object.assign(new Error('Scenario not found.'),{status:404});const x=sc.rows[0];const made=await client.query(`INSERT INTO discovery_sessions(scenario_id,base_id,source_scenario_version,owner_id,token,industry,company,has_field_inventory,questionnaire_schema_source,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,'server_generated',$9) RETURNING *`,[x.id,x.base_id,x.version,x.owner_id,token,x.industry||'default',x.company||'',x.has_field_inventory,req.user.id]);const {ensureSessionQuestions}=require('./src/shared/discovery-session-schema');await ensureSessionQuestions(client,made.rows[0]);return made.rows;});
     const { log, ACTIONS } = require('./src/audit');
     await log({ userId: req.user.id, action: ACTIONS.DISCOVERY_LINK_GENERATED, entityType: 'discovery_session', entityId: rows[0].id, ipAddress: req.ip });
     res.json({ ok: true, token: rows[0].token, sessionId: rows[0].id, prospectUrl: `${APP_URL}/prospect.html?token=${rows[0].token}` });
