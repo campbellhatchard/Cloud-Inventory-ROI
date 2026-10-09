@@ -18,8 +18,8 @@ function createCustomerHandler({ dataQuery, auditLog, customerCreatedAction = 'c
     const { name, hasFieldInventory } = validation.value;
     try {
       const inserted = await dataQuery(
-        `INSERT INTO customers (name, owner_id, has_field_inventory, status)
-         VALUES ($1, $2, $3, 'active')
+        `INSERT INTO customers (name, owner_id, has_field_inventory, status, created_by)
+         VALUES ($1, $2, $3, 'active', $2)
          ON CONFLICT (owner_id, LOWER(name)) DO NOTHING
          RETURNING id, name, owner_id, has_field_inventory, status, created_at, updated_at`,
         [name, req.user.id, hasFieldInventory]

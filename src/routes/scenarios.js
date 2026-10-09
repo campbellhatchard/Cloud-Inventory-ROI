@@ -639,7 +639,7 @@ router.post('/', async (req, res) => {
       /* A new immutable version remains attached to the same first-class
          customer. This prevents an admin edit from creating an admin-owned
          customer with the same display name as the seller-owned account. */
-      const customerId = sourceCustomerId || await ensureCustomer(effectiveOwnerId, company, client.query.bind(client));
+      const customerId = sourceCustomerId || await ensureCustomer(effectiveOwnerId, company, client.query.bind(client), req.user.id);
 
       /* Field Inventory is a customer-level modeling fact. Synchronize it in
          the same transaction as the scenario version so a reload can never
@@ -656,8 +656,8 @@ router.post('/', async (req, res) => {
         `INSERT INTO scenarios
            (base_id, version, is_current, name, company, owner_id, customer_id,
             industry, deal_stage, exec_audience, solution, data, version_note,
-            outcome,outcome_reason,realized_value,outcome_at)
-         VALUES ($1, $2, TRUE, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,$13,$14,$15,$16)
+            outcome,outcome_reason,realized_value,outcome_at,created_by)
+         VALUES ($1, $2, TRUE, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,$13,$14,$15,$16,$17)
          RETURNING id, base_id, version, name, company, customer_id, is_current,
                    industry, deal_stage, exec_audience, solution, version_note,
                    created_at, updated_at`,
@@ -667,7 +667,8 @@ router.post('/', async (req, res) => {
           solution || null, JSON.stringify(dataWithMetrics), versionNote || null,
           sourceGovernance?.outcome||null,sourceGovernance?.outcome?sourceCompatibility?.outcome_reason||null:null,
           sourceGovernance?.outcome==='won'?sourceCompatibility?.realized_value||null:null,
-          sourceGovernance?.outcome?sourceCompatibility?.outcome_at||new Date():null
+          sourceGovernance?.outcome?sourceCompatibility?.outcome_at||new Date():null,
+          req.user.id
         ]
       );
 

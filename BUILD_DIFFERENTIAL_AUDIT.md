@@ -1,31 +1,24 @@
-# v6.9.35 Differential Audit
+# v6.9.36 Differential Audit
 
-v6.9.35 is a focused Admin customer-ownership reassignment build from `cloud-inventory-roi-v6.9.34-render-ready.zip`, SHA-256 `6c0458c45541fb0cf955bb0d6c460c9bcd65acede98ceade148e33a914acdb08`.
-
-The deployed production parent is Git commit `9fcbce9a527d2565f95f6c70e6cefe9581a9e50d`; the developer source snapshot is `9cf1e0c12e8ecf64f687db2772fcd8bdf08cba18`.
-
-> SE Solution Fit Scope:
-> Sales Engineers have cross-account access to all active customers for
-> Solution Fit discovery/create/view/edit only. This does not confer general
-> cross-account customer, scenario or opportunity access.
+v6.9.36 is a focused Advanced Admin Data Cleanup & Recovery build from `cloud-inventory-roi-v6.9.35-render-ready.zip`, SHA-256 `666727f7e4a6e762b8fd91435cb1edf7d52bd6f46c333f0c634ea575e17392db`.
 
 ## Added
 
-- Admin-only eligible Sales Rep, transfer-preview, and transfer endpoints.
-- A dedicated Admin Customers transfer dialog with required reason, impact preview, explicit confirmation, accessible keyboard containment, retained failure state, and success audit reference.
-- A transactional ownership service with customer-row locking, expected-owner concurrency protection, target eligibility and duplicate-customer checks, and rollback guarantees.
-- Immutable `customer_ownership_transfers` history with old/new owner, Admin actor, reason, timestamp, counts, and IP address.
-- Owner-only timestamp trigger behavior so an administrative ownership move does not masquerade as a historical business-content edit.
-- Focused executable and disposable-PostgreSQL certification suites.
+- Server-authoritative Created, Updated, and Removed date filters using UTC half-open ranges, including Today, Last 7/30/90 Days, Older Than 90 Days, custom, and open-ended ranges.
+- Current Owner, historical Created By, record type, lifecycle status, scenario version, Prospect state, and text-search predicates that compose with AND semantics.
+- Exact one-use preview snapshots with stable IDs, state fingerprints, dependency counts, filter summaries, expiry, and stale-state rejection.
+- Explicit multi-select, Select All Previewed Results, View Selected, Clear Selection, dependency review, typed high-impact confirmation, and atomic Remove Selected / Remove All actions.
+- Immutable cleanup batch and per-record audit events, forward-looking creator attribution without fabricated legacy creators, and cleanup-batch recovery linkage.
+- Customer recovery of only those operational children removed by the same cleanup batch, preserving identity, current owner, immutable history, and inactive public links.
+- Focused executable tests and a disposable-PostgreSQL integration suite.
 
-## Operational ownership updated
+## Preserved
 
-The transaction updates the current Customer owner and the operational owner scope used by current access and future owner-routed notifications: scenarios, Prospect Link sessions, scenario-linked/legacy JPPs and Stakeholders, Solution Fits, and Driver Resonance.
+The v6.9.35 ownership-reassignment transaction and all historical actor, Solution Engineer, immutable evidence, ROI, Buyer Evidence, publication, authorization, and output-governance protections remain unchanged. Cleanup never hard deletes governed business or evidence records.
 
-## Deliberately not updated
+SE Solution Fit Scope:
+Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.
 
-Immutable submissions and answers, ROI Value History and application actors, Rep Confirmed actors, Buyer Evidence history, scenario/customer/base IDs, scenario version numbers, ROI data, shared-access grants, Solution Engineer assignment and Solution Fit creator/editor history, prior notification records, audit history, and frozen publication rows remain unchanged.
+## Deliberately not changed
 
-## Unrelated behavior
-
-No feature, ROI calculation, evidence methodology, output generator, public/prospect endpoint, or non-Admin role capability was added or altered.
+ROI Model v2.8, formulas, customer-facing outputs, Prospect submission behavior, Value History semantics, Buyer Evidence methodology, Solution Fit permissions, Backlog 1, and the standalone CIP prototype are outside this build.

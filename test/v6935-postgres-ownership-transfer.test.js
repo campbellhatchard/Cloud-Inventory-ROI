@@ -147,19 +147,6 @@ if (!HAS_DB) {
     assert.equal(transferRow.reason,'Territory reassignment');assert.equal(transferRow.admin_actor_id,(await db.query('SELECT id FROM users WHERE username=$1',[ADMIN_USER])).rows[0].id);
   });
 
-  test('the transfer preserves historical evidence, actors, SE assignment, scenario identity, economics, timestamps and frozen output', async () => {
-    const scenarios = await db.query('SELECT id,base_id,version,data,updated_at FROM scenarios WHERE id=ANY($1::uuid[]) ORDER BY version',[[ids.scenario1,ids.scenario2]]);
-    assert.deepEqual(scenarios.rows.map(row=>row.id),[ids.scenario1,ids.scenario2]);
-    assert.deepEqual(scenarios.rows.map(row=>row.version),[1,2]);
-    assert.ok(scenarios.rows.every(row=>String(row.base_id)===String(ids.baseId)));
-    assert.deepEqual(scenarios.rows.map(row=>Number(row.data.annualBenefit)),[120000,120000]);
-    assert.deepEqual(scenarios.rows.map(row=>row.updated_at.toISOString()),ids.scenarioTimestamps);
-    assert.equal((await db.query('SELECT actor_user_id FROM roi_value_events WHERE id=$1',[ids.valueEvent])).rows[0].actor_user_id,ids.repA.id);
-    assert.equal((await db.query('SELECT submitted_by FROM discovery_submissions WHERE id=$1',[ids.submission])).rows[0].submitted_by,'prospect');
-    const fit=(await db.query('SELECT primary_se_id,created_by,last_edited_by FROM handoffs WHERE id=$1',[ids.handoff])).rows[0];assert.equal(fit.primary_se_id,ids.se.id);assert.equal(fit.created_by,ids.se.id);assert.equal(fit.last_edited_by,ids.se.id);
-    const published=(await db.query('SELECT owner_id,token,published_payload FROM business_case_shares WHERE scenario_id=$1',[ids.scenario2])).rows[0];assert.equal(published.owner_id,ids.repA.id);assert.match(published.token,/^published-/);assert.equal(Number(published.published_payload.annualBenefit),120000);
-  });
-
   test('new Rep and Manager gain scope while old Rep and Manager lose owner-derived scope', async () => {
     const lists = await Promise.all([repBToken,repAToken,managerBToken,managerAToken].map(token=>api('/api/customers',{token})));
     assert.equal(lists[0].json.some(row=>row.id===ids.customer),true);
@@ -192,6 +179,19 @@ if (!HAS_DB) {
     const future=(await db.query('SELECT recipient_user_id FROM prospect_submission_notifications WHERE submission_id=$1',[submitted.rows[0].id])).rows[0];
     assert.equal(future.recipient_user_id,ids.repB.id);
     assert.deepEqual((await db.query('SELECT recipient_user_id,status FROM prospect_submission_notifications WHERE submission_id=$1',[ids.submission])).rows,historical.rows);
+  });
+
+  test('historical evidence, actors, SE assignment, scenario identity, economics and frozen output remain unchanged', async () => {
+    const scenarios = await db.query('SELECT id,base_id,version,data,updated_at FROM scenarios WHERE id=ANY($1::uuid[]) ORDER BY version',[[ids.scenario1,ids.scenario2]]);
+    assert.deepEqual(scenarios.rows.map(row=>row.id),[ids.scenario1,ids.scenario2]);
+    assert.deepEqual(scenarios.rows.map(row=>row.version),[1,2]);
+    assert.ok(scenarios.rows.every(row=>String(row.base_id)===String(ids.baseId)));
+    assert.deepEqual(scenarios.rows.map(row=>Number(row.data.annualBenefit)),[120000,120000]);
+    assert.deepEqual(scenarios.rows.map(row=>row.updated_at.toISOString()),ids.scenarioTimestamps);
+    assert.equal((await db.query('SELECT actor_user_id FROM roi_value_events WHERE id=$1',[ids.valueEvent])).rows[0].actor_user_id,ids.repA.id);
+    assert.equal((await db.query('SELECT submitted_by FROM discovery_submissions WHERE id=$1',[ids.submission])).rows[0].submitted_by,'prospect');
+    const fit=(await db.query('SELECT primary_se_id,created_by,last_edited_by FROM handoffs WHERE id=$1',[ids.handoff])).rows[0];assert.equal(fit.primary_se_id,ids.se.id);assert.equal(fit.created_by,ids.se.id);assert.equal(fit.last_edited_by,ids.se.id);
+    const published=(await db.query('SELECT owner_id,token,published_payload FROM business_case_shares WHERE scenario_id=$1',[ids.scenario2])).rows[0];assert.equal(published.owner_id,ids.repA.id);assert.match(published.token,/^published-/);assert.equal(Number(published.published_payload.annualBenefit),120000);
   });
 
   test('a no-scenario Customer transfers successfully', async () => {
