@@ -1,37 +1,36 @@
-# v6.9.37 Pre-build Baseline Inheritance Audit
+# v6.9.38 Pre-build Baseline Inheritance Audit
 
-- Authoritative parent archive: `cloud-inventory-roi-v6.9.36-render-ready.zip`
-- Parent archive SHA-256: `17edbfff2bcd94e0a165a4e9771a940e96447846761fdf2e3036b39d2bc09128`
-- Exact deployed GitHub baseline commit: `2b3a5b5231e445a32071ecfb9581e3067ce15c6e`
-- Developer source snapshot: `ad9ad813191bef9601376a19e4728e9dcb9506a5`
-- Parent application/package version: `6.9.36`
-- Target application version: `6.9.37`
-- Parent migration level: `044_admin_bulk_cleanup.sql`
-- ROI authority: ROI Model v2.8 / `modelVersion` 28, unchanged
-- Brand, Application Knowledge, and Christie authorities: v1.0, unchanged
-- Parent active Output Registry entries: 25
-- Target active Output Registry entries: 27
+## Authoritative parent
 
-The verified v6.9.36 Render-ready archive is the sole source baseline. It was extracted and committed before production files were changed. No earlier package, branch, output generator, or reconstructed source was used.
+- Archive: `cloud-inventory-roi-v6.9.37-render-ready.zip`
+- SHA-256: `ea4c0b157743514f0f30b4ab57076fa2423082150fa07806f2bbee52427fe7da`
+- Deployed parent commit: `184d3667067bcaf7590dda2d60842ab0c2efb23b`
+- Developer source snapshot: `7954338eca8a9a756431f65ee9de8522a310095f`
+- Parent application version: `6.9.37`
+- Target application version: `6.9.38`
 
-## Inherited controls
+The parent archive hash was verified before production code changed. The working tree was clean at the recorded parent commit.
 
-The build preserves v6.9.35 Admin Customer Ownership Reassignment and v6.9.36 Advanced Admin Bulk Cleanup & Date Filtering. Their transaction, audit, immutable-history, date-boundary, preview-snapshot, concurrency, removal, and recovery invariants remain part of the permanent suite.
+## Protected inheritance
 
-All earlier permanent protections remain binding, including server-authoritative Prospect value application, durable submission notification, immutable Prospect evidence, Rep Confirmed provenance, Buyer Evidence governance, single-current-scenario authority, SE Solution Fit scope, Executive/Proposal output readiness, audience classification, output-runtime certification, and product-neutral ROI.
+- ROI authority remains ROI Model v2.8 / `modelVersion` 28.
+- Intentionally preserved legacy saved scenarios remain immutable unless a user deliberately creates an upgraded v2.8 version.
+- Brand System, Application Knowledge, and Christie Persona remain v1.0.
+- Executive Value Story, readiness, customer-safe projections, immutable Prospect evidence, Value History, Rep Confirmed, BuyCycle, Solution Fit authorization, saved-state output authority, Customer Business Case publication, and output registry behavior remain unchanged.
+- SE Solution Fit Scope: Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.
 
-## Existing ROI authority mapped before implementation
+## Baseline paths verified
 
-The active path is saved scenario → `loadExecutiveSource()` → `buildExecutiveValueStory()` → ROI Model v2.8 (`calculate()`) → governed story economics and active value drivers → customer output. Value History/current source metadata is stored on saved scenario field state and interpreted by the existing ROI maturity authority. Overlap and alternative-method decisions are emitted by the canonical ROI calculation.
+- Active ROI report Web route: `GET /api/scenarios/:id/roi-assumptions-report`
+- Active ROI report PDF route: `GET /api/scenarios/:id/export-roi-assumptions-pdf`
+- Shared source: `loadExecutiveSource()` → `buildExecutiveValueStory()` → authoritative ROI engine result
+- Active Web owner: `public/roi-assumptions-report.js`
+- Active PDF owner: `src/exports/roi-assumptions-pdf.js`
+- No database migration is required.
 
-The v6.9.37 report model consumes that path. It does not accept DOM, localStorage, sessionStorage, or unsaved calculator values as economic authority.
+## Production findings carried into this correction
 
-## Explicit non-scope
+1. Desktop report modal CSS did not apply above 640 pixels.
+2. Legacy saved-model method flags were absent, leaving two non-zero driver traces without inputs and misidentifying legacy service economics as v2.8 contribution-margin economics.
 
-This build does not change formulas, ROI Model version, Value History semantics, provenance rules, customer/opportunity identity, database schema, migrations, customer access, Solution Fit permissions, AI behavior, Admin transfer/cleanup behavior, or existing output economics. It adds only authenticated Web/PDF ROI transparency output, customer-safe methodology metadata, tests, and release evidence. Word, PowerPoint, and public-link formats are deliberately not added.
-
-## SE Solution Fit Scope
-
-Sales Engineers have cross-account access to all active customers for
-Solution Fit discovery/create/view/edit only. This does not confer general
-cross-account customer, scenario or opportunity access.
+No other production change is authorized by this correction.

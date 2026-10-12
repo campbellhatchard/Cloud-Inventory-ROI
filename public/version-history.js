@@ -7,6 +7,17 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.38', date: '2026-10-12', tag: 'roi-transparency-corrections',
+    title: 'ROI report desktop layout and legacy-scenario transparency',
+    summary: 'Corrects the ROI Assumptions report modal on desktop and restores a complete, model-accurate input trace for intentionally preserved legacy saved scenarios without changing their economics.',
+    highlights: [
+      'The ROI Assumptions Web report now opens as a bounded desktop modal with the intended overlay, document width, logo size, scrolling, and responsive behavior.',
+      'Legacy saved scenarios now show the labor, throughput, and service inputs that actually produced their authoritative saved results.',
+      'The report identifies the saved ROI model version and explains legacy service and productivity methods instead of describing them as v2.8 contribution-margin economics.',
+      'ROI formulas, saved values, authorization, evidence provenance, readiness, PDF classification, and database schema remain unchanged.'
+    ]
+  },
+  {
     version: '6.9.37', date: '2026-10-09', tag: 'roi-transparency',
     title: 'Customer-facing ROI assumptions and results transparency',
     summary: 'Adds one server-authoritative Web and PDF report showing the saved inputs, evidence sources, approved calculation basis, governed value-driver results, and exact contract economics behind the business case.',

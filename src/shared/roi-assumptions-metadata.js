@@ -25,6 +25,7 @@ const INPUTS=Object.freeze({
  revenue:{label:'Annual Revenue',format:'money',unit:'per year'},
  otifBaseline:{label:'Current On-Time, In-Full Performance',format:'percent',unit:'percentage'},
  otifTarget:{label:'Target On-Time, In-Full Performance',format:'percent',unit:'percentage'},
+ otifRisk:{label:'Saved Industry Service-Risk Factor',format:'percent',scale:100,unit:'percentage',assumption:true},
  contributionMarginPct:{label:'Contribution Margin',format:'percent',scale:100,unit:'percentage'},
  mOtif:{label:'Expected Service Recovery',format:'percent',scale:100,unit:'percentage',assumption:true},
  servicePenaltyCostYr:{label:'Annual Service Penalties and Credits',format:'money',unit:'per year'},
@@ -67,7 +68,7 @@ const DRIVERS=Object.freeze({
  workforce_productivity:{label:'Workforce Productivity',basis:'Employee population × annual loaded labor cost × measured avoidable-work rate × expected recovery. When measured labor waste is unavailable, the governed throughput method may be used instead.',methods:{labor_waste:['userCount','laborCost','laborWastePct','mLabor'],throughput:['ordersPerYr','costPerOrder','pickRateGainPct','mThroughput']}},
  inventory_writeoff:{label:'Inventory Write-Off Reduction',basis:'Annual inventory write-off baseline × expected recovery. If an annual write-off is unavailable, the baseline is derived from inventory value and the saved loss rate.',inputs:['annualWriteOff','inventoryValue','shrinkRate','currentAccuracy','mShrinkage']},
  inventory_carrying:{label:'Inventory Carrying Benefit',basis:'The model compares carrying-cost improvement and inventory-turns improvement on the same inventory pool and includes the higher governed estimate once.',inputs:['inventoryValue','carryRate','mCarrying','invTurnsCurrent','invTurnsBenchmark']},
- service_revenue_margin:{label:'Recovered Contribution Margin',basis:'Annual sales at risk × contribution margin × expected service recovery. When direct lost-sales data is unavailable, the governed revenue and service-performance gap method is used.',methods:{direct_lost_sales:['lostSalesYr','contributionMarginPct','mOtif'],modeled_otif_margin:['revenue','otifBaseline','otifTarget','contributionMarginPct','mOtif']}},
+ service_revenue_margin:{label:'Recovered Contribution Margin',basis:'Annual sales at risk × contribution margin × expected service recovery. When direct lost-sales data is unavailable, the governed revenue and service-performance gap method is used.',methods:{direct_lost_sales:['lostSalesYr','contributionMarginPct','mOtif'],modeled_otif_margin:['revenue','otifBaseline','otifTarget','contributionMarginPct','mOtif'],legacy_otif_gap:['revenue','otifBaseline','otifTarget','mOtif'],legacy_otif_risk:['revenue','otifRisk','mOtif']}},
  service_penalties:{label:'Service Penalties and Credits',basis:'Annual service penalties and credits × expected reduction.',inputs:['servicePenaltyCostYr','mServicePenalty']},
  expedite_premium:{label:'Expedite Premium',basis:'Annual emergency and expedited procurement spend × expected reduction.',inputs:['expediteSpendYr','mExpedite']},
  downtime:{label:'Downtime Reduction',basis:'Annual events × hours per event × incremental cost per hour × expected reduction.',inputs:['downtimeEventsYr','downtimeHrsPerEvent','downtimeCostPerHr','mDowntime']},
@@ -80,13 +81,49 @@ const DRIVERS=Object.freeze({
  it_displacement:{label:'IT Cost Displacement',basis:'Annual cost of existing inventory systems × expected displacement.',inputs:['itCost','mIt']}
 });
 
+function savedModelVersion(data={}){
+ const version=Number(data.modelVersion);
+ return Number.isFinite(version)&&version>0?version:27;
+}
+function roiModelLabel(data={}){
+ const version=savedModelVersion(data);
+ return version>=28?'ROI Model v2.8':`ROI Model v${(version/10).toFixed(1)} (legacy saved scenario)`;
+}
+function methodForDriver(formulaId,roi,data={}){
+ if(formulaId==='workforce_productivity'){
+  if(roi.productivityMethodUsed)return roi.productivityMethodUsed;
+  return savedModelVersion(data)<28&&Number(roi.laborSav)>0?'labor_waste':null;
+ }
+ if(formulaId==='service_revenue_margin'){
+  if(roi.serviceRevenueMethod)return roi.serviceRevenueMethod;
+  if(savedModelVersion(data)>=28||Number(roi.otifSav)<=0)return null;
+  const baseline=Number(data.otifBaseline)||0,target=Number(data.otifTarget)||0;
+  if(baseline>0&&target>baseline)return'legacy_otif_gap';
+  return baseline===0&&target===0&&Number(data.otifRisk)>0?'legacy_otif_risk':null;
+ }
+ return null;
+}
+function presentationForDriver(formulaId,roi,data={}){
+ const base=DRIVERS[formulaId];
+ if(!base)return null;
+ if(savedModelVersion(data)>=28)return base;
+ if(formulaId==='workforce_productivity'){
+  if(methodForDriver(formulaId,roi,data)==='throughput')return{...base,basis:'Annual orders × current cost per order × expected pick-rate improvement × expected throughput realization under the saved legacy model.'};
+  const measured=Number(data.modelVersion)>=25&&Number(data.laborWastePct)>0;
+  return{...base,basis:measured?'Employee population × annual loaded labor cost × measured avoidable-work rate × expected recovery under the saved legacy model.':'Employee population × annual loaded labor cost × expected recovery under the saved legacy model.'};
+ }
+ if(formulaId==='service_revenue_margin'){
+  const method=methodForDriver(formulaId,roi,data);
+  return{...base,label:'Service Revenue Opportunity — Legacy Saved Model',basis:method==='legacy_otif_risk'?'Annual revenue × saved industry service-risk factor × expected recovery. The saved legacy model does not apply contribution margin to this driver.':'Annual revenue × saved service-performance percentage-point improvement × expected recovery. The saved legacy model does not apply contribution margin to this driver.'};
+ }
+ return base;
+}
 function inputsForDriver(formulaId,roi,data={}){
  const d=DRIVERS[formulaId];if(!d)return[];
  if(formulaId==='inventory_writeoff')return Number(data.annualWriteOff)>0?['annualWriteOff','currentAccuracy','mShrinkage']:['inventoryValue','shrinkRate','currentAccuracy','mShrinkage'];
  if(formulaId==='inventory_carrying')return Number(roi.turnsSav)>0?d.inputs:d.inputs.filter(key=>!['invTurnsCurrent','invTurnsBenchmark'].includes(key));
  if(d.inputs)return d.inputs;
- if(formulaId==='workforce_productivity')return d.methods[roi.productivityMethodUsed]||[];
- if(formulaId==='service_revenue_margin')return d.methods[roi.serviceRevenueMethod]||[];
+ if(formulaId==='workforce_productivity'||formulaId==='service_revenue_margin')return d.methods[methodForDriver(formulaId,roi,data)]||[];
  return[];
 }
-module.exports={INPUTS,DRIVERS,inputsForDriver};
+module.exports={INPUTS,DRIVERS,inputsForDriver,methodForDriver,presentationForDriver,savedModelVersion,roiModelLabel};
