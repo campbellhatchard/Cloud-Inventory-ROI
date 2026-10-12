@@ -784,6 +784,7 @@
         Export to PowerPoint
       </button>
       <button class="btn btn-ghost" onclick="openProposal()">Create executive proposal</button>
+      <button class="btn btn-ghost" id="roiAssumptionsBtn" data-context-action="output" onclick="openRoiAssumptionsReport()" title="Review the saved inputs, evidence sources, calculation basis, and authoritative ROI results">ROI assumptions &amp; results</button>
       <button class="btn btn-ghost" onclick="shareBusinessCase()" title="Create a trackable shared link">🔗 Share &amp; track</button>
       <button class="btn btn-primary" id="saveExecutiveViewBtn" onclick="saveExecutiveView()" title="Save the Three Whys and executive narrative">💾 Save executive view</button>
 
@@ -1573,7 +1574,7 @@
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="6.9.36";</script>
+<script>const APP_VERSION="6.9.37";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
 <script src="ai-session.js"></script>
@@ -3163,6 +3164,7 @@ const _fabEl = document.getElementById('fabRow'); if (_fabEl) _fabEl.style.displ
 <link rel="stylesheet" href="teams-admin.css">
 <script src="teams-admin.js"></script>
 <script src="ui-v4.js"></script>
+<script src="roi-assumptions-report.js"></script>
 <script src="executive-output-adapters.js"></script>
 </body>
 </html>

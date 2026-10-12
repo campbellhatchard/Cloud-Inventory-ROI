@@ -6,6 +6,8 @@ const OUTPUTS=[
  ['executive-pdf','Executive Business Case — PDF','customer',['pdf'],'Executive Value Story','server','src/exports/executive-pdf.js',true,true],
  ['executive-docx','Executive Business Case — Word','customer',['docx'],'Executive Value Story','server','src/exports/executive-docx.js',true,true],
  ['executive-pptx','Executive Business Case — PowerPoint','customer',['pptx'],'Executive Value Story','server','src/exports/executive-pptx.js',true,true],
+ ['roi-assumptions-web','ROI Assumptions & Results — Web','customer',['html'],'Saved Scenario + Governed Provenance + ROI Model v2.8 Results','browser','public/roi-assumptions-report.js',true,true],
+ ['roi-assumptions-pdf','ROI Assumptions & Results — PDF','customer',['pdf'],'Saved Scenario + Governed Provenance + ROI Model v2.8 Results','server','src/exports/roi-assumptions-pdf.js',true,true],
  ['proposal-preview','Executive Proposal — Preview','customer',['html'],'Saved Proposal + Executive Value Story','browser-print','public/proposal-output-builder.js',true,true],
  ['proposal-pdf','Executive Proposal — PDF','customer',['pdf'],'Saved Proposal + Executive Value Story','server','src/exports/proposal-pdf.js',true,true],
  ['proposal-docx','Executive Proposal — Word','customer',['docx'],'Saved Proposal + Executive Value Story','server','src/exports/proposal-docx.js',true,true],
@@ -30,9 +32,9 @@ const OUTPUTS=[
  ['customer-value-email','Customer Value Email','customer',['text','mailto'],'Executive Value Story','browser-format','public/features.js',true,true],
  ['deal-coach-champion-kit','Deal Coach Champion Email / Kit','customer',['text'],'Executive Value Story','browser-format','public/deal-coach.js',true,true]
 ];
-const READINESS_TYPES=Object.freeze({'executive-web':'executive_view','executive-pdf':'pdf','executive-docx':'docx','executive-pptx':'pptx','proposal-preview':'proposal','proposal-pdf':'proposal','proposal-docx':'proposal','customer-share-html':'share','customer-value-email':'customer_email','deal-coach-champion-kit':'customer_email'});
+const READINESS_TYPES=Object.freeze({'executive-web':'executive_view','executive-pdf':'pdf','executive-docx':'docx','executive-pptx':'pptx','roi-assumptions-web':'roi_assumptions','roi-assumptions-pdf':'roi_assumptions','proposal-preview':'proposal','proposal-pdf':'proposal','proposal-docx':'proposal','customer-share-html':'share','customer-value-email':'customer_email','deal-coach-champion-kit':'customer_email'});
 const NOT_APPLICABLE='This output does not project the governed Executive Value Story and has its own source-specific controls.';
-const RECORDS=OUTPUTS.map(([outputId,displayName,audience,formats,authoritativeDataSource,generationMode,ownerModule,readinessRequired,customerSafe])=>Object.freeze({outputId,displayName,audience,formats:Object.freeze(formats),authoritativeDataSource,brandAudience:audience,internalDraftVariant:outputId.startsWith('proposal-')?Object.freeze({audience:'internal',brandAudience:'internal',customerSafe:false,classification:'DRAFT — NOT READY FOR CUSTOMER SHARING'}):null,active:!['champion-pack-pptx','deal-coach-champion-kit'].includes(outputId),logoRole:generationMode==='browser-print'||formats.includes('html')?'logoColor':'logoOfficeHighResolution',readinessRequired,readinessOutputType:READINESS_TYPES[outputId]||null,readinessNotApplicable:readinessRequired?null:NOT_APPLICABLE,customerSafe,generationMode,ownerModule}));
+const RECORDS=OUTPUTS.map(([outputId,displayName,audience,formats,authoritativeDataSource,generationMode,ownerModule,readinessRequired,customerSafe])=>Object.freeze({outputId,displayName,audience,formats:Object.freeze(formats),authoritativeDataSource,brandAudience:audience,internalDraftVariant:outputId.startsWith('proposal-')||outputId.startsWith('roi-assumptions-')?Object.freeze({audience:'internal',brandAudience:'internal',customerSafe:false,classification:'DRAFT — NOT READY FOR CUSTOMER SHARING'}):null,active:!['champion-pack-pptx','deal-coach-champion-kit'].includes(outputId),logoRole:generationMode==='browser-print'||formats.includes('html')?'logoColor':'logoOfficeHighResolution',readinessRequired,readinessOutputType:READINESS_TYPES[outputId]||null,readinessNotApplicable:readinessRequired?null:NOT_APPLICABLE,customerSafe,generationMode,ownerModule}));
 const byId=new Map(RECORDS.map(x=>[x.outputId,x]));
 function getOutput(id){const item=byId.get(id);if(!item)throw new Error(`Unknown output: ${id}`);return item;}
 function validateRegistry(){
@@ -51,7 +53,7 @@ function validateRegistry(){
   }
  }
  const routes=fs.readFileSync(path.join(root,'src/routes/scenarios.js'),'utf8');
- for(const route of ['/:id/export-pdf','/:id/export-pptx','/:id/export-docx'])if(!routes.includes(route))throw new Error(`Missing executive route: ${route}`);
+ for(const route of ['/:id/export-pdf','/:id/export-pptx','/:id/export-docx','/:id/roi-assumptions-report','/:id/export-roi-assumptions-pdf'])if(!routes.includes(route))throw new Error(`Missing executive route: ${route}`);
  const server=fs.readFileSync(path.join(root,'server.js'),'utf8');
  for(const route of ['/api/business-case-shares','/api/export/battlecard/:id','/api/export/battlecard-docx','/api/export/proposal-docx','/api/export/proposal-pdf','/api/export/roi-methodology-pdf'])if(!server.includes(route))throw new Error(`Missing output route: ${route}`);
  const browser=fs.readFileSync(path.join(root,'public/deal-export.js'),'utf8');

@@ -1,6 +1,6 @@
 /* Live presentation governance. This never writes or changes BuyCycle state. */
 const {hasEconomicValue,investmentEstablished}=require('../../public/economic-availability');
-const OUTPUTS=new Set(['executive_view','pdf','docx','pptx','proposal','share','customer_email']);
+const OUTPUTS=new Set(['executive_view','pdf','docx','pptx','proposal','share','customer_email','roi_assumptions']);
 const issue=(id,category,title,detail,fixAction)=>({id,category,title,detail,fixAction});
 function finiteEconomics(e={}){return['annualBenefit','totalContractBenefit','totalContractInvestment','netEconomicBenefit','contractRoi','npv'].every(k=>hasEconomicValue(e[k]))&&(e.payback===null||hasEconomicValue(e.payback));}
 function evaluateExecutiveOutputReadiness(story,{outputType='executive_view',proposalState={}}={}){

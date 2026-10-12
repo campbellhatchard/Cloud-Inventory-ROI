@@ -7,6 +7,17 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.37', date: '2026-10-09', tag: 'roi-transparency',
+    title: 'Customer-facing ROI assumptions and results transparency',
+    summary: 'Adds one server-authoritative Web and PDF report showing the saved inputs, evidence sources, approved calculation basis, governed value-driver results, and exact contract economics behind the business case.',
+    highlights: [
+      'The Executive workspace now provides a discoverable ROI assumptions & results review with a professionally structured customer output.',
+      'Inputs distinguish Prospect Submitted, Customer Revalidated, Rep Confirmed, Rep Estimate, and Cloud Inventory Model Assumption without inflating customer support.',
+      'Every value-driver result comes directly from ROI Model v2.8 and reconciles to Annual Customer Benefit; no browser or PDF calculation path was added.',
+      'Dirty scenarios are blocked, readiness governs customer versus internal-draft classification, and both new outputs are covered by executable runtime certification.'
+    ]
+  },
+  {
     version: '6.9.36', date: '2026-10-08', tag: 'advanced-admin-cleanup',
     title: 'Advanced Admin cleanup and recoverable bulk actions',
     summary: 'Adds server-authoritative date, owner, creator, type, and status filters with exact preview snapshots, dependency review, safe multi-selection, atomic soft removal, and governed recovery.',

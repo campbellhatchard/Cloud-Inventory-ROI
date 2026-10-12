@@ -30,6 +30,8 @@ const { evaluateExecutiveOutputReadiness } = require('../shared/executive-output
 const { buildExecutivePptx } = require('../exports/executive-pptx');
 const { buildExecutivePdf } = require('../exports/executive-pdf');
 const { buildExecutiveDocx } = require('../exports/executive-docx');
+const { buildRoiAssumptionsReportBundle } = require('../shared/roi-assumptions-report');
+const { buildRoiAssumptionsPdf } = require('../exports/roi-assumptions-pdf');
 const { loadExecutiveSource, executiveStoryFor, executiveReportFor } = require('../shared/executive-source');
 const { FINANCIAL_INPUTS, EVENT_TYPES, normalizeValue, sameValue, freshness, isFinancialInput, isCustomerEvent, unitFor, savedScenarioCurrency, buildSnapshotRows, enforceProvenance, summarize } = require('../shared/value-history');
 const { sendProblem, problem } = require('../shared/api-problem');
@@ -93,6 +95,19 @@ function withExecutiveExportTimeout(label,task){
   const timeout=new Promise((_,reject)=>{timer=setTimeout(()=>{const error=new Error(`${label} generation timed out.`);error.status=504;reject(error);},EXECUTIVE_EXPORT_SERVER_TIMEOUT_MS);});
   return Promise.race([Promise.resolve().then(task),timeout]).finally(()=>clearTimeout(timer));
 }
+
+async function governedRoiAssumptions(req){
+  const source=await loadExecutiveSource(req.user,req.params.id);
+  if(source.error)throw Object.assign(new Error(source.error),{status:source.status});
+  const bundle=buildRoiAssumptionsReportBundle(source),readiness=evaluateExecutiveOutputReadiness(bundle.story,{outputType:'roi_assumptions'});
+  const internalDraft=req.query.internalDraft==='true',reviewAcknowledged=req.query.reviewAcknowledged==='true';
+  if(readiness.status==='draft_only'&&!internalDraft)throw Object.assign(new Error('This output is available only as an internal draft.'),{status:409,readiness});
+  if(readiness.status==='review'&&!reviewAcknowledged)throw Object.assign(new Error('Review acknowledgement is required before creating this output.'),{status:409,readiness});
+  const draft=readiness.status==='draft_only',audience=draft?'internal':'customer';
+  return{...bundle,readiness,presentation:{status:readiness.status,label:readiness.label,audience,draft,review:readiness.status==='review'}};
+}
+router.get('/:id/roi-assumptions-report',async(req,res)=>{const started=Date.now();try{const output=await governedRoiAssumptions(req);res.set('Cache-Control','private, no-store');console.info('roi_assumptions_web.completed',{scenarioId:req.params.id,userId:req.user.id,status:output.readiness.status,elapsedMs:Date.now()-started});return res.json({report:output.report,presentation:output.presentation});}catch(err){console.error('roi_assumptions_web.failed',{scenarioId:req.params.id,userId:req.user.id,status:err.status||500,message:err.message});return res.status(err.status||500).json({error:err.message||'ROI Assumptions & Results could not be loaded.',...(err.readiness?{readiness:err.readiness}:{})});}});
+router.get('/:id/export-roi-assumptions-pdf',async(req,res)=>{const started=Date.now();try{const output=await withExecutiveExportTimeout('ROI Assumptions PDF',()=>governedRoiAssumptions(req)),buffer=await withExecutiveExportTimeout('ROI Assumptions PDF',()=>buildRoiAssumptionsPdf(output.report,output.presentation));if(!Buffer.isBuffer(buffer)||buffer.length<500)throw new Error('PDF generation returned an invalid file.');const safe=value=>String(value||'Saved-Scenario').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').slice(0,70)||'Saved-Scenario',prefix=output.presentation.draft?'Cloud_Inventory_INTERNAL_DRAFT_ROI_Assumptions':'Cloud_Inventory_ROI_Assumptions',name=`${prefix}_${safe(output.report.identity.customer)}_${safe(output.report.identity.scenario)}.pdf`;res.set('Content-Type','application/pdf');res.set('Content-Disposition',`attachment; filename="${name}"`);res.set('Cache-Control','private, no-store');res.set('X-Executive-Readiness',output.readiness.status);console.info('roi_assumptions_pdf.completed',{scenarioId:req.params.id,userId:req.user.id,status:output.readiness.status,bytes:buffer.length,elapsedMs:Date.now()-started});return res.send(buffer);}catch(err){const errorId=`roi-assumptions-${Date.now().toString(36)}`;console.error('roi_assumptions_pdf.failed',{scenarioId:req.params.id,userId:req.user.id,errorId,status:err.status||500,elapsedMs:Date.now()-started,message:err.message});return res.status(err.status||500).json({error:err.status===504?'ROI Assumptions & Results PDF generation timed out. Please retry.':(err.message||'ROI Assumptions & Results PDF could not be generated. Please retry.'),errorId,...(err.readiness?{readiness:err.readiness}:{})});}});
 
 router.get('/:id/export-pptx',async(req,res)=>{
   const started=Date.now(),scenarioId=String(req.params.id),internalDraft=req.query.internalDraft==='true',reviewAcknowledged=req.query.reviewAcknowledged==='true';
