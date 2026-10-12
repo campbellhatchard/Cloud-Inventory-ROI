@@ -47,6 +47,30 @@ test('overlap treatment is model-owned, explained and reconciled exactly',()=>{
  assert.equal(report.authority.reconciledAnnualBenefit,true);
 });
 
+test('legacy saved scenarios retain their original economics and expose every active driver input',()=>{
+ const source=fixture('USD',{modelVersion:27,revenue:200000000,otifBaseline:96,otifTarget:98,mOtif:.10,lostSalesYr:0,contributionMarginPct:.25}),report=buildRoiAssumptionsReportModel(source),story=buildExecutiveValueStory(source,{includeAuthoritativeCalculation:true}),roi=story.authoritativeRoi;
+ assert.equal(report.authority.roiModel,'ROI Model v2.7 (legacy saved scenario)');
+ assert.equal(report.identity.modelVersion,27);
+ assert.equal(report.drivers.reduce((sum,row)=>sum+row.annualBenefit,0),roi.annualBenefit);
+ const labor=report.drivers.find(row=>row.label==='Workforce productivity — labor recovery'),throughput=report.drivers.find(row=>row.label==='Warehouse throughput — legacy saved model'),service=report.drivers.find(row=>row.label==='Service Revenue Opportunity — Legacy Saved Model');
+ assert.deepEqual(labor.inputs.map(row=>row.label),['Employees Using Inventory Processes','Average Fully Burdened Labor Cost','Time Spent on Avoidable Inventory Work','Expected Labor Recovery']);
+ assert.deepEqual(throughput.inputs.map(row=>row.label),['Annual Orders','Current Cost per Order','Expected Pick-Rate Improvement','Expected Throughput Realization']);
+ assert.deepEqual(service.inputs.map(row=>row.label),['Annual Revenue','Current On-Time, In-Full Performance','Target On-Time, In-Full Performance','Expected Service Recovery']);
+ assert.match(labor.overlapNote,/separate additive benefit categories/i);assert.match(throughput.overlapNote,/separate additive benefit categories/i);assert.equal(service.overlapNote,'');
+ assert.match(service.calculationBasis,/does not apply contribution margin/i);
+ assert.ok(report.methodologyNotes.some(note=>/original authoritative economics are preserved/i.test(note)));
+ const html=renderer.buildRoiAssumptionsHtml(report,{audience:'internal',draft:true,brand});assert.match(html,/ROI Model v2\.7 \(legacy saved scenario\)/);
+ const pdf=buildRoiAssumptionsPdf(report,{audience:'internal',draft:true});assert.equal(pdf.subarray(0,4).toString(),'%PDF');assert.ok(pdf.length>3000);
+});
+
+test('ROI Assumptions desktop modal rules are not trapped inside the phone media query',()=>{
+ const css=read('public/style.css'),phone=css.indexOf('@media (max-width:640px){'),rar=css.indexOf('.rar-modal{');
+ assert.ok(phone>=0&&rar>phone,'expected responsive and report rules');
+ let depth=0;for(let i=phone;i<rar;i++){if(css[i]==='{')depth++;else if(css[i]==='}')depth--;}
+ assert.equal(depth,0,'desktop report modal CSS must be outside the max-width:640px block');
+ for(const rule of ['position:fixed','z-index:10000','height:min(92vh,980px)','max-width:170px'])assert.ok(css.slice(rar,css.indexOf('@media(max-width:850px)',rar)).includes(rule),rule);
+});
+
 test('null investment remains Not Modeled while explicit values and native currencies are preserved',()=>{
  const missing=fixture('GBP',{invest:undefined,otc:0}),report=buildRoiAssumptionsReportModel(missing),html=renderer.buildRoiAssumptionsHtml(report,{audience:'customer',brand});
  assert.equal(report.summary.modeledCustomerInvestment,null);assert.match(html,/Not Modeled/);assert.match(html,/£/);assert.doesNotMatch(html,/>\$0<|USD/);

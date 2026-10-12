@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "6.9.37",
+  "release": "6.9.38",
   "tests": [
     {"invariant":"Customer Business Case","path":"test/release-integrity.test.js"},
     {"invariant":"customer-safe payload","path":"test/release-integrity.test.js"},
@@ -57,5 +57,6 @@
     ,{"invariant":"v6.9.36 PostgreSQL cleanup filtering, dependency protection, atomic bulk actions and ownership-preserving restore","path":"test/v6936-postgres-admin-cleanup.test.js"}
     ,{"invariant":"v6.9.37 one server-authoritative ROI Assumptions report model, customer-safe provenance, reconciliation, Web and PDF output","path":"test/v6937-roi-assumptions-report.test.js"}
     ,{"invariant":"v6.9.37 PostgreSQL saved-scenario retrieval, authorization and PDF generation","path":"test/v6937-postgres-roi-assumptions.test.js"}
+    ,{"invariant":"v6.9.38 legacy saved-model ROI input trace and desktop report modal correction","path":"test/v6937-roi-assumptions-report.test.js"}
   ]
 }

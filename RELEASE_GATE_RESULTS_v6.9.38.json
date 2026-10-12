@@ -1,0 +1,200 @@
+{
+  "release": "6.9.38",
+  "baseline": {
+    "archive": "cloud-inventory-roi-v6.9.37-render-ready.zip",
+    "sha256": "ea4c0b157743514f0f30b4ab57076fa2423082150fa07806f2bbee52427fe7da"
+  },
+  "generatedAt": "2026-10-12T19:23:25.749Z",
+  "environment": {
+    "node": "v24.19.0",
+    "npm": "11.9.0",
+    "platform": "linux-x64",
+    "databaseAvailable": false,
+    "databaseIntegrationRequired": false,
+    "nodeEnv": "test"
+  },
+  "gates": [
+    {
+      "name": "production-dependencies",
+      "command": "npm ci --omit=dev --no-audit --no-fund",
+      "executed": false,
+      "exitCode": null,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "notTested": 1,
+      "durationMs": 0,
+      "result": "NOT TESTED",
+      "reason": "Dependency installation is reserved for the clean CI checkout."
+    },
+    {
+      "name": "postgres-integration",
+      "command": "npm run test:postgres",
+      "executed": false,
+      "exitCode": null,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "notTested": 9,
+      "durationMs": 0,
+      "result": "NOT TESTED",
+      "reason": "No safe disposable DATABASE_URL is available."
+    },
+    {
+      "name": "full-test-suite",
+      "command": "npm test (exact package script executed command-by-command)",
+      "notTested": 0,
+      "passed": 667,
+      "failed": 0,
+      "skipped": 3,
+      "legacyAssertionChecksPassed": 149,
+      "executed": true,
+      "exitCode": 0,
+      "durationMs": 2552,
+      "result": "PASS"
+    },
+    {
+      "name": "production-locks",
+      "command": "npm run test:production-locks (exact package script executed command-by-command)",
+      "notTested": 0,
+      "passed": 318,
+      "failed": 0,
+      "skipped": 0,
+      "legacyAssertionChecksPassed": 0,
+      "executed": true,
+      "exitCode": 0,
+      "durationMs": 1530,
+      "result": "PASS"
+    },
+    {
+      "name": "routes",
+      "command": "npm run test:routes",
+      "notTested": 1,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "legacyAssertionChecksPassed": 0,
+      "executed": true,
+      "exitCode": 0,
+      "durationMs": 143,
+      "result": "NOT TESTED"
+    },
+    {
+      "name": "brand-tests",
+      "command": "npm run test:brand",
+      "notTested": 0,
+      "passed": 19,
+      "failed": 0,
+      "skipped": 0,
+      "legacyAssertionChecksPassed": 0,
+      "executed": true,
+      "exitCode": 0,
+      "durationMs": 285,
+      "result": "PASS"
+    },
+    {
+      "name": "lineage",
+      "command": "node scripts/check-release-lineage.js",
+      "notTested": 0,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "legacyAssertionChecksPassed": 0,
+      "executed": true,
+      "exitCode": 0,
+      "durationMs": 72,
+      "result": "PASS"
+    },
+    {
+      "name": "active-output-audit",
+      "command": "node scripts/audit-active-output-paths.js",
+      "notTested": 0,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "legacyAssertionChecksPassed": 0,
+      "executed": true,
+      "exitCode": 0,
+      "durationMs": 81,
+      "result": "PASS"
+    },
+    {
+      "name": "brand-assets",
+      "command": "node scripts/generate-brand-assets.js --check",
+      "notTested": 0,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "legacyAssertionChecksPassed": 0,
+      "executed": true,
+      "exitCode": 0,
+      "durationMs": 60,
+      "result": "PASS"
+    },
+    {
+      "name": "application-knowledge",
+      "command": "node scripts/generate-application-knowledge.js --check",
+      "notTested": 0,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "legacyAssertionChecksPassed": 0,
+      "executed": true,
+      "exitCode": 0,
+      "durationMs": 66,
+      "result": "PASS"
+    },
+    {
+      "name": "active-output-runtime-matrix",
+      "command": "node --test test/output-runtime-matrix.test.js",
+      "notTested": 0,
+      "passed": 28,
+      "failed": 0,
+      "skipped": 0,
+      "legacyAssertionChecksPassed": 0,
+      "executed": true,
+      "exitCode": 0,
+      "durationMs": 676,
+      "result": "PASS"
+    }
+  ],
+  "postgresIntegration": {
+    "release": "6.9.38",
+    "generatedAt": "2026-10-12T19:23:25.749Z",
+    "databaseUrlPresent": false,
+    "databaseName": null,
+    "postgresqlVersion": "NOT TESTED",
+    "node": "v24.19.0",
+    "migration": {
+      "executed": false,
+      "exitCode": null,
+      "result": "NOT TESTED"
+    },
+    "command": "npm run test:postgres",
+    "suites": [
+      "test/routes.test.js",
+      "test/v653-postgres-integration.test.js",
+      "test/v663-postgres-authorization.test.js",
+      "test/v664-postgres-product-identity.test.js",
+      "test/v6930-postgres-value-application.test.js",
+      "test/v6934-postgres-customer-creation.test.js",
+      "test/v6935-postgres-ownership-transfer.test.js",
+      "test/v6936-postgres-admin-cleanup.test.js",
+      "test/v6937-postgres-roi-assumptions.test.js"
+    ],
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "notTested": 9,
+    "durationMs": 0,
+    "result": "NOT TESTED",
+    "reason": "No safe disposable DATABASE_URL was available; CI PostgreSQL 16 certification remains mandatory."
+  },
+  "summary": {
+    "executedGatesPassed": true,
+    "failedGates": [],
+    "databaseDependentTests": "NOT TESTED",
+    "dependencyInstall": "NOT TESTED — clean CI only",
+    "productionClassification": "UNASSIGNED — Product Owner decision after CI and Render validation"
+  }
+}
