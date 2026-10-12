@@ -99,6 +99,7 @@ function normalizeFilters(raw = {}, { now = new Date(), removedView = false } = 
 }
 
 function stable(value) {
+  if (value instanceof Date) return value.toISOString();
   if (Array.isArray(value)) return value.map(stable);
   if (!value || typeof value !== 'object') return value;
   return Object.keys(value).sort().reduce((out, key) => { out[key] = stable(value[key]); return out; }, {});

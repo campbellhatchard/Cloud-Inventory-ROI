@@ -4,7 +4,7 @@
     "archive": "cloud-inventory-roi-v6.9.35-render-ready.zip",
     "sha256": "666727f7e4a6e762b8fd91435cb1edf7d52bd6f46c333f0c634ea575e17392db"
   },
-  "generatedAt": "2026-10-09T15:17:19.215Z",
+  "generatedAt": "2026-10-12T15:26:02.413Z",
   "environment": {
     "node": "v24.19.0",
     "npm": "11.9.0",
@@ -23,7 +23,7 @@
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 1737
+      "durationMs": 4699
     },
     {
       "name": "database-migrations",
@@ -54,22 +54,22 @@
       "command": "npm test",
       "executed": true,
       "exitCode": 0,
-      "passed": 689,
+      "passed": 690,
       "failed": 0,
       "skipped": 2,
       "notTested": 0,
-      "durationMs": 3120
+      "durationMs": 2918
     },
     {
       "name": "v6936-admin-bulk-cleanup",
       "command": "npm run test:v6936",
       "executed": true,
       "exitCode": 0,
-      "passed": 99,
+      "passed": 100,
       "failed": 0,
       "skipped": 1,
       "notTested": 0,
-      "durationMs": 393
+      "durationMs": 383
     },
     {
       "name": "v6935-customer-ownership-transfer",
@@ -80,7 +80,7 @@
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 373
+      "durationMs": 357
     },
     {
       "name": "v6934-customer-alert-workflow",
@@ -91,7 +91,7 @@
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 369
+      "durationMs": 306
     },
     {
       "name": "v6933-proposal-pdf-timeout-correction",
@@ -102,7 +102,7 @@
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 825
+      "durationMs": 733
     },
     {
       "name": "v6932-prospect-evidence-count-consistency",
@@ -113,7 +113,7 @@
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 361
+      "durationMs": 310
     },
     {
       "name": "v6931-final-two-defects",
@@ -124,7 +124,7 @@
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 502
+      "durationMs": 433
     },
     {
       "name": "v6930-server-authoritative-prospect-values",
@@ -135,18 +135,18 @@
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 330
+      "durationMs": 320
     },
     {
       "name": "production-locks",
       "command": "npm run test:production-locks",
       "executed": true,
       "exitCode": 0,
-      "passed": 340,
+      "passed": 341,
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 2105
+      "durationMs": 2089
     },
     {
       "name": "routes",
@@ -157,7 +157,7 @@
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 330
+      "durationMs": 275
     },
     {
       "name": "brand-tests",
@@ -168,7 +168,7 @@
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 399
+      "durationMs": 366
     },
     {
       "name": "lineage",
@@ -179,7 +179,7 @@
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 55
+      "durationMs": 60
     },
     {
       "name": "active-output-audit",
@@ -190,7 +190,7 @@
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 78
+      "durationMs": 82
     },
     {
       "name": "brand-assets",
@@ -212,7 +212,7 @@
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 62
+      "durationMs": 60
     },
     {
       "name": "active-output-runtime-matrix",
@@ -223,7 +223,7 @@
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 578,
+      "durationMs": 655,
       "outputResults": [
         {
           "outputId": "competitive-docx",
@@ -234,7 +234,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 42,
+          "durationMs": 44,
           "error": null
         },
         {
@@ -246,7 +246,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 33,
+          "durationMs": 29,
           "error": null
         },
         {
@@ -270,7 +270,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 12,
+          "durationMs": 13,
           "error": null
         },
         {
@@ -282,7 +282,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 42,
+          "durationMs": 46,
           "error": null
         },
         {
@@ -294,7 +294,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 21,
+          "durationMs": 25,
           "error": null
         },
         {
@@ -306,7 +306,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 25,
+          "durationMs": 33,
           "error": null
         },
         {
@@ -330,7 +330,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 14,
+          "durationMs": 19,
           "error": null
         },
         {
@@ -342,7 +342,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 17,
+          "durationMs": 14,
           "error": null
         },
         {
@@ -354,7 +354,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 9,
+          "durationMs": 10,
           "error": null
         },
         {
@@ -366,7 +366,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 14,
+          "durationMs": 28,
           "error": null
         },
         {
@@ -378,7 +378,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 7,
+          "durationMs": 10,
           "error": null
         },
         {
@@ -390,7 +390,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 11,
+          "durationMs": 19,
           "error": null
         },
         {
@@ -402,7 +402,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 14,
+          "durationMs": 21,
           "error": null
         },
         {
@@ -438,7 +438,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 13,
+          "durationMs": 16,
           "error": null
         },
         {
@@ -462,7 +462,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 6,
+          "durationMs": 8,
           "error": null
         },
         {
@@ -474,7 +474,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 13,
+          "durationMs": 15,
           "error": null
         },
         {
@@ -486,7 +486,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 12,
+          "durationMs": 14,
           "error": null
         },
         {
@@ -498,7 +498,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 12,
+          "durationMs": 15,
           "error": null
         },
         {
@@ -522,7 +522,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 5,
+          "durationMs": 13,
           "error": null
         }
       ]
@@ -530,7 +530,7 @@
   ],
   "postgresIntegration": {
     "release": "6.9.36",
-    "generatedAt": "2026-10-09T15:17:19.214Z",
+    "generatedAt": "2026-10-12T15:26:02.412Z",
     "databaseUrlPresent": false,
     "databaseName": null,
     "postgresqlVersion": "NOT TESTED",
