@@ -30,8 +30,8 @@ test('cleanup uses an immutable explicit preview and recoverable governed remova
 
 test('cleanup UI previews dependencies, supports recovery, and avoids native confirmation',()=>{
   const html=read('public/index.html'),ui=read('public/admin-cleanup-v661.js');
-  for(const phrase of ['Data Cleanup & Recovery','Find & Remove','Recently Removed','Search customer, opportunity, or rep']) assert.match(html,new RegExp(phrase.replace(/[&]/g,'&amp;?'),'i'));
-  for(const phrase of ['Removal preview','Evidence protection','Remove Selected','Remove All Search Results','Cleanup reason','Solution Fits','Prospect sessions','Restore']) assert.ok(ui.includes(phrase),phrase);
+  for(const phrase of ['Data Cleanup & Recovery','Find & Remove','Recently Removed','Optional: customer, opportunity, owner, or creator']) assert.match(html,new RegExp(phrase.replace(/[&]/g,'&amp;?'),'i'));
+  for(const phrase of ['removal preview','Evidence protection','Remove Selected','Remove All Filtered Results','Cleanup reason','Solution Fits','Prospect sessions','Restore']) assert.ok(ui.includes(phrase),phrase);
   assert.doesNotMatch(ui,/\bconfirm\s*\(/);
   assert.match(ui,/role="dialog"/);
   assert.match(ui,/dialogKeys/);

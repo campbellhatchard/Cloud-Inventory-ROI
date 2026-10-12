@@ -8,18 +8,18 @@
 /* Ensure a customer row exists for (ownerId, name); return its id.
    Accepts an optional query executor `q` so it can run inside a transaction
    (pass the transaction client's query fn); defaults to the pool. */
-async function ensureCustomer(ownerId, name, q) {
+async function ensureCustomer(ownerId, name, q, createdById = ownerId) {
   const runner = q || require('./db').query;
   const clean = (name || '').trim();
   if (!ownerId || !clean) return null;
   /* Upsert: insert if new, else return the existing canonical row. */
   const { rows } = await runner(
-    `INSERT INTO customers (name, owner_id)
-     VALUES ($1, $2)
+    `INSERT INTO customers (name, owner_id, created_by)
+     VALUES ($1, $2, $3)
      ON CONFLICT (owner_id, LOWER(name))
        DO UPDATE SET updated_at = NOW()
      RETURNING id`,
-    [clean, ownerId]
+    [clean, ownerId, createdById || null]
   );
   return rows[0] ? rows[0].id : null;
 }

@@ -147,7 +147,7 @@ if (!HAS_DB) {
     assert.equal(transferRow.reason,'Territory reassignment');assert.equal(transferRow.admin_actor_id,(await db.query('SELECT id FROM users WHERE username=$1',[ADMIN_USER])).rows[0].id);
   });
 
-  test('the transfer preserves historical evidence, actors, SE assignment, scenario identity, economics, timestamps and frozen output', async () => {
+  test('historical evidence, actors, SE assignment, scenario identity, economics and frozen output remain unchanged', async () => {
     const scenarios = await db.query('SELECT id,base_id,version,data,updated_at FROM scenarios WHERE id=ANY($1::uuid[]) ORDER BY version',[[ids.scenario1,ids.scenario2]]);
     assert.deepEqual(scenarios.rows.map(row=>row.id),[ids.scenario1,ids.scenario2]);
     assert.deepEqual(scenarios.rows.map(row=>row.version),[1,2]);

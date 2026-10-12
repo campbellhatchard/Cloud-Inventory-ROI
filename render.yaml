@@ -11,7 +11,8 @@ services:
     runtime: node
     plan: starter
     buildCommand: npm ci --omit=dev --no-audit --no-fund
-    startCommand: node server.js
+    preDeployCommand: npm run migrate
+    startCommand: npm start
     healthCheckPath: /health
     autoDeployTrigger: commit
     maxShutdownDelaySeconds: 15
