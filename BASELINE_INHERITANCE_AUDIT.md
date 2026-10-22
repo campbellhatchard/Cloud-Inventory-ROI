@@ -1,36 +1,36 @@
-# v6.9.38 Pre-build Baseline Inheritance Audit
+# v6.9.39 Pre-build Baseline Inheritance Audit
 
 ## Authoritative parent
 
-- Archive: `cloud-inventory-roi-v6.9.37-render-ready.zip`
-- SHA-256: `ea4c0b157743514f0f30b4ab57076fa2423082150fa07806f2bbee52427fe7da`
-- Deployed parent commit: `184d3667067bcaf7590dda2d60842ab0c2efb23b`
-- Developer source snapshot: `7954338eca8a9a756431f65ee9de8522a310095f`
-- Parent application version: `6.9.37`
-- Target application version: `6.9.38`
+- Archive: `cloud-inventory-roi-v6.9.38-render-ready.zip`
+- SHA-256: `4a8e454ce5314340546751899c995f3ee9dadae23e97aa17d9e0f23cc74e220e`
+- Deployed parent commit: `f54bd01e22b25e1b4e3087bd13e38e8db06130a3`
+- Developer source snapshot: `5a1f4c9001627406b8f8a30ba547f8b35c23d103`
+- Parent application version: `6.9.38`
+- Target application version: `6.9.39`
 
-The parent archive hash was verified before production code changed. The working tree was clean at the recorded parent commit.
+The parent archive hash was previously verified for the deployed v6.9.38 release. This v6.9.39 package hash was independently verified as `071a32de3aa3b56f75fb13aa66d499d5ec40faba6abb79985bda711f5f2f287d`. The supplied developer snapshot was applied forward onto the exact deployed parent commit so production-only release corrections and evidence remain intact.
 
 ## Protected inheritance
 
-- ROI authority remains ROI Model v2.8 / `modelVersion` 28.
-- Intentionally preserved legacy saved scenarios remain immutable unless a user deliberately creates an upgraded v2.8 version.
+- ROI Model v2.8 / `modelVersion` 28 is unchanged.
 - Brand System, Application Knowledge, and Christie Persona remain v1.0.
-- Executive Value Story, readiness, customer-safe projections, immutable Prospect evidence, Value History, Rep Confirmed, BuyCycle, Solution Fit authorization, saved-state output authority, Customer Business Case publication, and output registry behavior remain unchanged.
-- SE Solution Fit Scope: Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.
+- Customer Business Case publication, Executive Value Story, readiness, Prospect evidence, Value History, Rep Confirmed, BuyCycle, Customer Email, Proposal, JPP, Stakeholder Map, Competitive Intelligence, and role authorization are unchanged.
+- SE cross-account authority remains limited to Solution Fit discovery/create/view/edit for active customers.
+- Existing Solution Fit routes, authorization, one-record-per-customer rule, saved-state output requirement, change history, and JSONB server persistence remain authoritative.
+- No browser storage is introduced.
 
 ## Baseline paths verified
 
-- Active ROI report Web route: `GET /api/scenarios/:id/roi-assumptions-report`
-- Active ROI report PDF route: `GET /api/scenarios/:id/export-roi-assumptions-pdf`
-- Shared source: `loadExecutiveSource()` → `buildExecutiveValueStory()` → authoritative ROI engine result
-- Active Web owner: `public/roi-assumptions-report.js`
-- Active PDF owner: `src/exports/roi-assumptions-pdf.js`
-- No database migration is required.
+- Browser owner: `public/solution-fit.js`
+- State source: saved `handoffs.data` loaded by `GET /api/handoffs/:customerId`
+- Save path: `PUT /api/handoffs/:customerId` with `{data:S}`
+- Creation path: explicit `POST /api/handoffs/:customerId`
+- Authorization owner: `src/authorization.js` and `src/routes/handoffs.js`
+- Existing PDF owner: `src/exports/operational-pdf.js`
+- Governed MEP application authority: `config/mep-standard-apps.json`
+- Database representation: additive JSONB; no migration is required.
 
-## Production findings carried into this correction
+## Authorized scope
 
-1. Desktop report modal CSS did not apply above 640 pixels.
-2. Legacy saved-model method flags were absent, leaving two non-zero driver traces without inputs and misidentifying legacy service economics as v2.8 contribution-margin economics.
-
-No other production change is authorized by this correction.
+Replace the existing Solution Fit presentation with the accepted guided layout, preserve all saved data, add explicit MEP Standard Package behavior, retain per-application assessment and gap handling, and generate the Professional Services turnover Word document from saved server state. No other application area is authorized to change.

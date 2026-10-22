@@ -8,6 +8,8 @@ function validateCatalog(value=catalog) {
     const apps=value.erps?.[erp];
     if (!Array.isArray(apps) || apps.length !== count) throw new Error(`${erp} must contain exactly ${count} standard apps.`);
     if (new Set(apps).size !== apps.length || apps.some(x=>!x || x!==x.trim())) throw new Error(`${erp} contains duplicate or invalid application names.`);
+    const packageApps=value.standardPackages?.[erp];
+    if (!Array.isArray(packageApps) || !packageApps.length || new Set(packageApps).size!==packageApps.length || packageApps.some(name=>!apps.includes(name))) throw new Error(`${erp} Standard Package must be a non-empty subset of its governed application catalog.`);
   }
   if (Object.keys(value.erps||{}).length !== Object.keys(EXPECTED_COUNTS).length) throw new Error('Unexpected ERP in MEP catalog.');
   return true;
