@@ -7,6 +7,18 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.39', date: '2026-10-21', tag: 'guided-solution-fit',
+    title: 'Guided Solution Fit and Professional Services turnover',
+    summary: 'Replaces the Solution Fit workspace with a compact guided workflow that preserves existing saved records, adds governed MEP Standard Package selection, and generates an internal Professional Services turnover Word document from the saved server record.',
+    highlights: [
+      'General inventory configuration is captured once for CIP and MEP before application scope.',
+      'CIP, MEP, and EPP applications capture demo status, fit, customer validation, and exceptions directly in scope.',
+      'MEP Standard Package applications remain selected while one-off exceptions can be documented without changing the rest of the package.',
+      'Legacy assessments and unknown saved fields are preserved; custom scope deactivates applications without erasing their evidence.',
+      'The Professional Services turnover Word document reuses saved customer and Solution Fit information and contains the approved Cloud Inventory branding.'
+    ]
+  },
+  {
     version: '6.9.38', date: '2026-10-12', tag: 'roi-transparency-corrections',
     title: 'ROI report desktop layout and legacy-scenario transparency',
     summary: 'Corrects the ROI Assumptions report modal on desktop and restores a complete, model-accurate input trace for intentionally preserved legacy saved scenarios without changing their economics.',

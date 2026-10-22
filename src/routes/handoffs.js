@@ -16,10 +16,33 @@ const { requireAuth } = require('../middleware/auth');
 const { readiness } = require('../shared/handoff-readiness');
 const { solutionFitAccess, hasPermission, rolesOf } = require('../authorization');
 const {buildSolutionFitPdf}=require('../exports/operational-pdf');
+const {buildSolutionFitTurnoverDocx}=require('../exports/solution-fit-turnover-docx');
+const SolutionFitState=require('../../public/solution-fit-state');
 const {safeFile}=require('../shared/output-brand');
+const fs=require('fs');
+const path=require('path');
 
 const router = express.Router();
 router.use(requireAuth);
+
+router.get('/:customerId/export-docx',async(req,res)=>{
+  try{
+    if(req.query.kind!=='turnover')return res.status(400).json({error:'Unsupported Solution Fit Word output.'});
+    const access=await loadAccessibleCustomer(req.params.customerId,req.user,'read');
+    if(!access.ok)return res.status(access.code).json({error:access.error});
+    const {rows}=await query(`SELECT data FROM handoffs WHERE customer_id=$1 AND deleted_at IS NULL`,[req.params.customerId]);
+    if(!rows.length)return res.status(409).json({error:'Save the Solution Fit before creating the turnover document.'});
+    const state=SolutionFitState.migrateState(JSON.parse(JSON.stringify(rows[0].data||{})));
+    const turnover=SolutionFitState.turnoverStats(state);
+    if(turnover.missing.length)return res.status(409).json({error:`Complete the required turnover fields before generating Word: ${turnover.missing.join(', ')}.`});
+    const owner=access.customer.ownerId?await query(`SELECT username FROM users WHERE id=$1`,[access.customer.ownerId]):{rows:[]};
+    const logoPath=path.join(__dirname,'../../public/ci-logo-full-color.png');
+    const buffer=await buildSolutionFitTurnoverDocx({data:state,customerName:access.customer.name,accountExecutive:owner.rows[0]?.username||'',logoData:fs.readFileSync(logoPath)});
+    res.set('Content-Type','application/vnd.openxmlformats-officedocument.wordprocessingml.document');res.set('Cache-Control','private, no-store');
+    res.set('Content-Disposition',`attachment; filename="Cloud-Inventory-PS-Turnover-${safeFile(access.customer.name)}-${new Date().toISOString().slice(0,10)}.docx"`);
+    res.send(buffer);
+  }catch(error){console.error('solution_fit_turnover_docx.failed',{errorId:`solution-turnover-${Date.now().toString(36)}`,message:error.message});res.status(500).json({error:'Professional Services turnover Word document could not be generated.'});}
+});
 
 router.get('/:customerId/export-pdf',async(req,res)=>{
   try{

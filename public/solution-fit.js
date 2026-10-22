@@ -15,6 +15,13 @@
 
   const PRODUCTS = ['MEP','CIP','EPP'];
   const PRODUCT_LABELS = {MEP:'Mobile Enterprise Platform (MEP)',CIP:'Cloud Inventory Platform',EPP:'Enterprise Printing Platform (EPP)'};
+  const SF_MODEL = window.SolutionFitState;
+  if (!SF_MODEL) throw new Error('Solution Fit state contract is unavailable.');
+  const WORKFLOW = [
+    ['context','Customer and SE'],['configuration','Inventory configuration'],['scope','Product and application scope'],
+    ['labels','Labels and printing'],['integration','Integrations'],['gaps','Gaps and exceptions'],
+    ['turnover','PS turnover'],['handoff','Readiness and document']
+  ];
   const blankProcess = (name, i, extra={}) => ({ id:`P-${String(i+1).padStart(3,'0')}`, name, selected:false, demoStatus:'Not reviewed', fit:'Not reviewed', customerValidation:'Not validated', notes:'',source:'legacy_process',...extra });
   const blankState = () => ({
     opportunity:{customer:'',solutionEngineer:'',solutionEngineerId:'',stage:'Stage 2 — Define Economic Consequences',products:[],productsOther:'',goLive:'',users:'',locations:'',problem:'',outcome:'',
@@ -26,6 +33,7 @@
     solutionScope:{primaryProduct:'',additionalProducts:[],erp:'',erpVersion:'',catalogId:'',catalogVersion:'',catalogSource:'',selectedApps:[]},
     processes:STANDARD_PROCESSES.map(blankProcess), gaps:[], interfaces:[],
     drivers:{offline:'Unknown',offlineDuration:'',devices:'',peripherals:'',customOutput:'Unknown',volumeConcern:'Unknown',volume:'',otherConstraint:''},
+    inventoryConfiguration:{},lpnConfiguration:{},printing:{sites:'',labelCount:'',solution:'',notes:''},turnover:{},ui:{solutionFitLayoutVersion:'6.9.39'},
     handoffType:'internal'
   });
   const blankCustomization = () => ({ module:'', description:'', impact:'None' });
@@ -35,6 +43,7 @@
   let customerId = null, customerName = '', canWrite = false, exists = false;
   let capabilities={canView:false,canEdit:false,canCreate:false,canRestore:false},mepCatalog=null,loadState='idle';
   let openGapId = null, activeTab = 'context', saveTimer = null, dirty = false;
+  let activeScopeProduct='MEP',scopeSearch='',scopeFilter='all';
   let showMissingOnly = false, activeTemplate = 'field', knownStakeholders = [];
   let knownSources = {}, sfKeyboardBound = false, sfActionsDelegated = false;
   let lastEditedByName = '', lastEditedAt = '';
@@ -126,6 +135,7 @@
         knownSources['opportunity.solutionEngineer'] = 'Signed-in user';
       }
       await loadSEList();
+      await ensureMepCatalog();
       /* Permission: can this user write? (server is authoritative; we mirror for UI). */
       await loadKnownStakeholders();
       if(!exists){renderGateState(data.removedRecoverable?'removed':'not-created',data);return false;}
@@ -140,6 +150,7 @@
 
   /* Tolerate handoffs saved under the previous field shapes (no data loss). */
   function migrateState(s) {
+    SF_MODEL.migrateState(s);
     const o = s.opportunity || (s.opportunity = {});
     if (typeof o.products === 'string') { o.products = o.products ? [o.products] : []; }
     if (!Array.isArray(o.products)) o.products = [];
@@ -493,12 +504,16 @@
     if(d.primaryProduct==='MEP'&&!d.selectedApps.length&&!d.custom.length)return window.showToast?.('Select at least one standard or non-standard application.');
     const priorScope=JSON.parse(JSON.stringify(currentScope()));
     if(d.mode==='edit'&&priorScope.erp&&priorScope.erp!==d.erp&&!confirm('Changing ERP will load a different standard-app catalog. Matching application assessments will be retained where possible. Applications not present in the new catalog will leave active scope but remain in Solution Fit change history. Continue?'))return;
-    const previous=new Map(S.processes.map(p=>[p.name,p]));
+    const previous=new Map(S.processes.map(p=>[SF_MODEL.processKey(p),p]));
     if(d.mode==='edit'&&(priorScope.primaryProduct!==d.primaryProduct||priorScope.erp!==d.erp)){S.scopeHistory=S.scopeHistory||[];S.scopeHistory.push({changedAt:new Date().toISOString(),scope:priorScope,processes:S.processes});}
-    const standard=d.primaryProduct==='MEP'?d.selectedApps.map((name,i)=>{const old=previous.get(name);return old?{...old,selected:true,source:'standard_app',product:'MEP',erp:d.erp,catalogVersion:mepCatalog.catalogVersion,scope_carried_forward:priorScope.erp&&priorScope.erp!==d.erp}:blankProcess(name,i,{selected:true,source:'standard_app',product:'MEP',erp:d.erp,catalogVersion:mepCatalog.catalogVersion});}):[];
-    const custom=d.custom.map((x,i)=>{const old=previous.get(x.name);return old?{...old,selected:true,source:'non_standard',reason:x.reason||old.reason||''}:blankProcess(x.name,standard.length+i,{selected:true,source:'non_standard',reason:x.reason||'',product:d.primaryProduct});});
-    if(d.primaryProduct==='MEP')S.processes=[...standard,...custom];
-    S.solutionScope={primaryProduct:d.primaryProduct,additionalProducts:d.additionalProducts,erp:d.primaryProduct==='MEP'?d.erp:'',erpVersion:d.primaryProduct==='MEP'?d.erpVersion:'',catalogId:d.primaryProduct==='MEP'?mepCatalog.catalogId:'',catalogVersion:d.primaryProduct==='MEP'?mepCatalog.catalogVersion:'',catalogSource:d.primaryProduct==='MEP'?mepCatalog.source:'',selectedApps:d.primaryProduct==='MEP'?[...d.selectedApps]:[]};
+    if(d.primaryProduct==='MEP'){
+      S.processes.filter(p=>p.product==='MEP'&&p.erp===d.erp).forEach(p=>{p.selected=false;});
+      d.selectedApps.forEach(name=>{const target=SF_MODEL.ensureProcess(S,{name,product:'MEP',erp:d.erp,group:d.erp,source:'standard_app',catalogVersion:mepCatalog.catalogVersion,selected:true});const prior=S.processes.find(p=>p!==target&&p.product==='MEP'&&p.erp===priorScope.erp&&p.name===name);if(prior&&priorScope.erp!==d.erp)carryForwardAssessment(target,prior);});
+      d.custom.forEach(x=>{const p=SF_MODEL.ensureProcess(S,{name:x.name,product:'MEP',erp:d.erp,group:d.erp,source:'non_standard',catalogVersion:mepCatalog.catalogVersion,selected:true});p.reason=x.reason||p.reason||'';});
+    } else {
+      d.custom.forEach(x=>{const p=SF_MODEL.ensureProcess(S,{name:x.name,product:d.primaryProduct,source:'non_standard',selected:true});p.reason=x.reason||p.reason||'';});
+    }
+    S.solutionScope={...S.solutionScope,primaryProduct:d.primaryProduct,additionalProducts:d.additionalProducts,erp:d.primaryProduct==='MEP'?d.erp:'',erpVersion:d.primaryProduct==='MEP'?d.erpVersion:'',catalogId:d.primaryProduct==='MEP'?mepCatalog.catalogId:'',catalogVersion:d.primaryProduct==='MEP'?mepCatalog.catalogVersion:'',catalogSource:d.primaryProduct==='MEP'?mepCatalog.source:'',selectedApps:d.primaryProduct==='MEP'?[...d.selectedApps]:[],packageMode:S.solutionScope?.packageMode||'custom'};
     S.opportunity.products=[d.primaryProduct,...d.additionalProducts];S.architecture.erp=S.solutionScope.erp;S.architecture.version=S.solutionScope.erpVersion;
     if(d.mode==='create'){
       if(!S.opportunity.customer)S.opportunity.customer=customerName;
@@ -511,26 +526,33 @@
   }
 
   /* ── Main render ────────────────────────────────────────────────── */
+  function selectedProducts(){
+    const products=Array.isArray(S.opportunity.products)?S.opportunity.products.filter(p=>PRODUCTS.includes(p)):[];
+    if(!products.length&&PRODUCTS.includes(currentScope().primaryProduct))products.push(currentScope().primaryProduct);
+    return [...new Set(products)];
+  }
+  function applicationAssessmentComplete(process){
+    return process.selected&&process.demoStatus!=='Not reviewed'&&process.fit!=='Not reviewed'&&process.customerValidation!=='Not validated'&&process.customerValidation!=='Validation pending'&&(!['Partial fit','Gap'].includes(process.fit)||String(process.notes||'').trim());
+  }
+  function workflowState(key){
+    const selected=S.processes.filter(p=>p.selected),inventory=SF_MODEL.inventoryStats(S),turnover=SF_MODEL.turnoverStats(S),readiness=computeReadiness();
+    if(key==='context')return!!(S.opportunity.customer&&S.opportunity.solutionEngineer);
+    if(key==='configuration')return inventory.pct===100;
+    if(key==='scope')return selected.length>0&&selected.every(applicationAssessmentComplete);
+    if(key==='labels')return!Number(S.printing.sites||0)||!!S.printing.solution;
+    if(key==='integration')return!!S.architecture.relationship&&(S.architecture.relationship==='Standalone'||!!S.architecture.integrationMethod);
+    if(key==='gaps')return S.gaps.every(g=>!materialGap(g)||(String(g.need||'').trim()&&String(g.gapDescription||'').trim()));
+    if(key==='turnover')return turnover.complete===turnover.total;
+    return readiness.status==='ready'&&turnover.complete===turnover.total&&!dirty;
+  }
   function renderApp() {
     const app = $('sfApp');
     const r = computeReadiness();
-    /* Tab labels with gap count badge */
-    const gapCount = S.gaps.length;
-    const missingCount = r.miss ? r.miss.length : 0;
-    const demoMissing = S.processes.filter(p=>p.selected && (p.demoStatus==='Not reviewed' || p.fit==='Not reviewed')).length;
-    const integrationMissing = r.miss.filter(x=>/integration|system of record|ERP|relationship/i.test(x.label)).length;
     const defaultCount = templateDefaultCount();
-    const templateOptions = Object.entries(SOLUTION_TEMPLATES).map(([key,t])=>`<option value="${key}" ${key===activeTemplate?'selected':''}>${esc(t.label)}</option>`).join('');
     const productsSummary = scopeSummary();
     const legacyMep=currentScope().primaryProduct==='MEP'&&!currentScope().catalogVersion;
     const user=window.ciAuth?.getUser?.()||{},roleKeys=[user.role,...(user.roles||[]),...(user.roleKeys||[])].map(x=>String(x||'').toLowerCase()),canUseSeChristie=String(window.currentScenarioCustomerId||'')===String(customerId||'')&&roleKeys.some(x=>['admin','se','solution_engineer','solution engineer','value_engineering','value engineering'].includes(x));
-    const tabs = [
-      { k:'context',     l:'Context' },
-      { k:'checklist',   l:'Demo &amp; Fit', badge:demoMissing || null, badgeCls:demoMissing?'sf-tab-badge-warn':'' },
-      { k:'gaps',        l:'Gaps',        badge: gapCount || null },
-      { k:'integration', l:'Integration', badge:integrationMissing || null, badgeCls:integrationMissing?'sf-tab-badge-warn':'' },
-      { k:'handoff',     l:'Readiness',   badge: missingCount || null, badgeCls:'sf-tab-badge-warn' }
-    ];
+    const products=selectedProducts();if(!products.includes(activeScopeProduct))activeScopeProduct=products[0]||'MEP';
     app.innerHTML = `
       ${legacyMep?'<div class="sf-legacy-banner"><div><strong>This Solution Fit uses the legacy generic workflow checklist.</strong><span>Select the ERP and governed applications before treating the assessment as MEP application evidence.</span></div>'+(canWrite?'<button class="btn btn-primary btn-sm" data-sfaction="editScope">Upgrade to ERP Standard Apps</button>':'')+'</div>':''}
       <div class="sf-topbar">
@@ -551,24 +573,28 @@
         </div>
       </div>
       <div class="sf-readiness-bar" id="sfReadinessBar"></div>
-      <div class="sf-tabs" role="tablist" aria-label="Solution Fit sections">
-        ${tabs.map(t=>`<button class="sf-tab ${activeTab===t.k?'active':''}" role="tab" aria-selected="${activeTab===t.k?'true':'false'}" data-sftab="${t.k}">${t.l}${t.badge?`<span class="sf-tab-badge ${t.badgeCls||''}">${t.badge}</span>`:''}</button>`).join('')}
-      </div>
-      <div class="sf-entry-toolbar">
-        <div class="sf-entry-tools-left">
-          <label class="sf-template-label">Template <select id="sfTemplateSelect">${templateOptions}</select></label>
-          <button class="btn btn-ghost btn-sm ${showMissingOnly?'active':''}" id="sfMissingToggle" aria-pressed="${showMissingOnly}">${showMissingOnly?'Show all fields':'Show missing only'}</button>
+      <nav class="sf-workflow-strip" aria-label="Guided Solution Fit workflow">
+        <div class="sf-workflow-head"><strong>Guided workflow</strong><span>Work left to right. Select a step to jump directly to it.</span></div>
+        <div class="sf-workflow-nav" role="tablist">
+          ${WORKFLOW.map(([key,label],index)=>`<button class="sf-workflow-step ${activeTab===key?'active':''} ${workflowState(key)?'complete':'attention'}" role="tab" aria-selected="${activeTab===key?'true':'false'}" data-sftab="${key}"><span class="sf-workflow-number">${index+1}</span><span>${esc(label)}</span><span class="sf-workflow-state">${workflowState(key)?'✓':'!'}</span></button>`).join('')}
         </div>
-        <div class="sf-entry-hint"><kbd>Tab</kbd> next field · <kbd>Ctrl</kbd> + <kbd>S</kbd> save · only exceptions need notes</div>
-      </div>
-      <div class="sf-panes ${showMissingOnly?'sf-missing-only':''}">
+      </nav>
+      <div class="sf-guided-layout">
+      <main class="sf-guided-main">
+      <div class="sf-panes">
         <div class="sf-pane" data-sfpane="context">${renderContext()}</div>
-        <div class="sf-pane" data-sfpane="checklist">${renderChecklist()}</div>
-        <div class="sf-pane" data-sfpane="gaps">${renderGaps()}</div>
+        <div class="sf-pane" data-sfpane="configuration">${renderInventoryConfiguration()}</div>
+        <div class="sf-pane" data-sfpane="scope">${renderProductScope()}</div>
+        <div class="sf-pane" data-sfpane="labels">${renderLabels()}</div>
         <div class="sf-pane" data-sfpane="integration">${renderIntegration()}</div>
+        <div class="sf-pane" data-sfpane="gaps">${renderGaps()}</div>
+        <div class="sf-pane" data-sfpane="turnover">${renderTurnover()}</div>
         <div class="sf-pane" data-sfpane="handoff">${renderReadinessTab(r)}</div>
       </div>
-      <div class="sf-next-row"><button class="btn btn-primary" id="sfNextSection">${activeTab==='handoff'?'Review handoff':'Next section →'}</button></div>`;
+      <div class="sf-next-row"><button class="btn btn-primary" id="sfNextSection">${activeTab==='handoff'?'Review handoff':'Next step →'}</button></div>
+      </main>
+      ${renderProgressSummary(r)}
+      </div>`;
     wireTabs();
     app.querySelector('[data-sfaction="askChristie"]')?.addEventListener('click',()=>window.openChristieForPerspective?.('se',window._calcScenarioId||null));
     wireBindings();
@@ -693,7 +719,6 @@
         ${f('Estimated users','opportunity.users','e.g. 45')}
         ${f('Locations / operating scope','opportunity.locations','e.g. 3 warehouses + 18 field sites')}
       </div>
-      ${productsField}
       <div class="sf-row2">
         ${ta('Business problem','opportunity.problem','What is the customer trying to solve?')}
         ${ta('Desired outcome','opportunity.outcome','What does success look like?')}
@@ -728,9 +753,92 @@
         <div class="sf-row2">${f('Contact name','partner.contactName')}${f('Email','partner.email')}</div>
       </div>`;
 
-    return sfSection('opp','opp','Opportunity',[oppFilled,9],oppBody)
-         + sfSection('arch','arch','System of record & architecture',[archFilled,4],archBody)
-         + sfSection('partner','partner','Partner involvement',[partFilled,3],partnerBody);
+    return `<div class="sf-step-intro"><div><span class="sf-step-kicker">Step 1</span><h2>Customer and Solution Engineering</h2><p>Customer identity and governed ROI workspace values are reused. Assign an active Solution Engineer and add only delivery context that is not already known.</p></div></div>`
+         + sfSection('opp','opp','Customer and opportunity context',[oppFilled,9],oppBody);
+  }
+
+  function renderInventoryConfiguration(){
+    const stats=SF_MODEL.inventoryStats(S),products=selectedProducts(),applies=products.includes('CIP')||products.includes('MEP');
+    const rows=SF_MODEL.INVENTORY_ITEMS.map((name,index)=>{
+      const record=S.inventoryConfiguration[name];
+      return `<article class="sf-config-item"><div class="sf-config-head"><strong>${esc(name)}</strong><select data-sfinventory="${index}">${SF_MODEL.ANSWERS.map(answer=>`<option ${record.answer===answer?'selected':''}>${esc(answer)}</option>`).join('')}</select></div><details ${record.note?'open':''}><summary>${record.note?'Edit note':'+ Add note'}</summary><textarea data-dictate data-sfinventory-note="${index}" placeholder="Optional comments or design detail">${esc(record.note)}</textarea></details></article>`;
+    }).join('');
+    const lpn=S.inventoryConfiguration['LPNs / Handling Units / Packing Units']?.answer==='Yes';
+    return `<div class="sf-step-intro"><div><span class="sf-step-kicker">Step 2</span><h2>General inventory configuration</h2><p>Shared CIP and MEP inventory requirements are answered once for the overall solution. Use Unknown / To confirm when the customer has not decided.</p></div><span class="sf-step-count">${stats.applicable?`${stats.answered} of ${stats.total}`:'Not applicable'}</span></div>
+      ${applies?`<div class="sf-config-grid">${rows}</div>${lpn?`<div class="sf-card"><h3>LPN / Handling Unit details</h3><div class="sf-grid4">${SF_MODEL.LPN_ITEMS.map(name=>`<div class="sf-field"><label>${esc(name)}</label><select data-sflpn="${esc(name)}">${SF_MODEL.ANSWERS.map(answer=>`<option ${S.lpnConfiguration[name]===answer?'selected':''}>${esc(answer)}</option>`).join('')}</select></div>`).join('')}</div></div>`:''}`:'<div class="sf-empty-state"><p>General inventory configuration applies when CIP or MEP is in scope.</p></div>'}`;
+  }
+
+  function productCatalog(product){
+    if(product==='MEP'){
+      const erp=currentScope().erp||'';
+      if(!erp)return[];
+      const packageApps=new Set(mepCatalog?.standardPackages?.[erp]||[]);
+      return (mepCatalog?.erps?.[erp]||[]).map(name=>({name,group:erp,erp,standardPackage:packageApps.has(name),source:'standard_app'}));
+    }
+    const groups=product==='CIP'?SF_MODEL.CIP_CATALOG:SF_MODEL.EPP_CATALOG;
+    return groups.flatMap(group=>group.apps.map(name=>({name,group:group.group,erp:'',standardPackage:false,source:'product_app'})));
+  }
+  function descriptorFor(product,item){return{product,name:item.name,group:item.group||'',erp:item.erp||'',source:item.source||'product_app',catalogVersion:product==='MEP'?(mepCatalog?.catalogVersion||''):''};}
+  function findProcess(product,item){return S.processes.find(process=>SF_MODEL.processKey(process)===SF_MODEL.processKey(descriptorFor(product,item)));}
+  function renderApplicationCard(product,item){
+    const process=findProcess(product,item),selected=!!process?.selected,index=process?S.processes.indexOf(process):-1;
+    const locked=product==='MEP'&&currentScope().packageMode==='standard'&&item.standardPackage;
+    const assessment=selected?`<div class="sf-inline-assessment">
+      <div class="sf-field"><label>Demo status</label><select data-sfpdemo="${index}">${SF_MODEL.DEMO_STATUSES.map(value=>`<option ${process.demoStatus===value?'selected':''}>${esc(value)}</option>`).join('')}</select></div>
+      <div class="sf-field"><label>Fit</label><select data-sfpfit="${index}">${SF_MODEL.FIT_STATUSES.map(value=>`<option ${process.fit===value?'selected':''}>${esc(value)}</option>`).join('')}</select></div>
+      <div class="sf-field"><label>Customer validation</label><select data-sfpvalidation="${index}">${SF_MODEL.VALIDATION_STATUSES.map(value=>`<option ${process.customerValidation===value?'selected':''}>${esc(value)}</option>`).join('')}</select></div>
+      <div class="sf-field sf-assessment-note"><label>Exceptions and notes</label><input data-sfpnote="${index}" value="${esc(process.notes)}" class="${['Partial fit','Gap'].includes(process.fit)&&!String(process.notes||'').trim()?'sf-required-input':''}" placeholder="${['Partial fit','Gap'].includes(process.fit)?'Describe the anticipated change, exception, or workaround (required)':'Evidence, exception, or customer note'}"></div>
+      <div class="sf-assessment-status"><span class="${applicationAssessmentComplete(process)?'complete':''}">${applicationAssessmentComplete(process)?'Assessment complete':'Assessment needs attention'}</span>${['Partial fit','Gap'].includes(process.fit)?`<button type="button" class="btn btn-ghost btn-sm" data-sfaction="gapFromProcess" data-process-index="${index}">Manage gap action</button>`:''}</div>
+    </div>`:'';
+    return `<article class="sf-application-card ${selected?'selected':''} ${item.standardPackage?'package':''}"><label class="sf-application-choice"><input type="checkbox" data-sfappselect="1" data-product="${product}" data-name="${esc(item.name)}" data-group="${esc(item.group||'')}" data-erp="${esc(item.erp||'')}" data-source="${esc(item.source||'product_app')}" ${selected?'checked':''} ${locked?'disabled':''}><span><strong>${esc(item.name)}</strong><small>${esc(item.group||product)}</small>${locked?'<em>Package baseline · remains selected</em>':''}</span>${product==='MEP'?`<span class="sf-app-kind ${item.standardPackage?'standard':'custom'}">${item.standardPackage?'Standard Package':'Additional'}</span>`:''}</label>${assessment}</article>`;
+  }
+  function renderStoredProcessCard(process){
+    const index=S.processes.indexOf(process),selected=!!process.selected;
+    return `<article class="sf-application-card ${selected?'selected':''}"><label class="sf-application-choice"><input type="checkbox" data-sfpsel="${index}" ${selected?'checked':''}><span><strong>${esc(process.name)}</strong><small>${esc(process.group||'Existing Solution Fit record')}</small><em>Preserved from the saved record</em></span><span class="sf-app-kind custom">Customer-specific</span></label>${selected?`<div class="sf-inline-assessment"><div class="sf-field"><label>Demo status</label><select data-sfpdemo="${index}">${SF_MODEL.DEMO_STATUSES.map(value=>`<option ${process.demoStatus===value?'selected':''}>${esc(value)}</option>`).join('')}</select></div><div class="sf-field"><label>Fit</label><select data-sfpfit="${index}">${SF_MODEL.FIT_STATUSES.map(value=>`<option ${process.fit===value?'selected':''}>${esc(value)}</option>`).join('')}</select></div><div class="sf-field"><label>Customer validation</label><select data-sfpvalidation="${index}">${SF_MODEL.VALIDATION_STATUSES.map(value=>`<option ${process.customerValidation===value?'selected':''}>${esc(value)}</option>`).join('')}</select></div><div class="sf-field sf-assessment-note"><label>Exceptions and notes</label><input data-sfpnote="${index}" value="${esc(process.notes)}" placeholder="Evidence, exception, or customer note"></div>${['Partial fit','Gap'].includes(process.fit)?`<button type="button" class="btn btn-ghost btn-sm" data-sfaction="gapFromProcess" data-process-index="${index}">Manage gap action</button>`:''}</div>`:''}</article>`;
+  }
+  function renderProductScope(){
+    const products=selectedProducts(),catalog=productCatalog(activeScopeProduct),query=scopeSearch.trim().toLowerCase();
+    let visible=catalog.filter(item=>!query||`${item.name} ${item.group}`.toLowerCase().includes(query));
+    if(activeScopeProduct==='MEP'&&scopeFilter==='standard')visible=visible.filter(item=>item.standardPackage);
+    if(activeScopeProduct==='MEP'&&scopeFilter==='additional')visible=visible.filter(item=>!item.standardPackage);
+    if(scopeFilter==='selected')visible=visible.filter(item=>findProcess(activeScopeProduct,item)?.selected);
+    if(scopeFilter==='missing')visible=visible.filter(item=>{const process=findProcess(activeScopeProduct,item);return process?.selected&&!applicationAssessmentComplete(process);});
+    const groups=[...new Set(visible.map(item=>item.group))];
+    const selectedCount=S.processes.filter(p=>p.selected&&p.product===activeScopeProduct).length;
+    const standardMode=activeScopeProduct==='MEP'&&currentScope().packageMode==='standard';
+    const catalogKeys=new Set(catalog.map(item=>SF_MODEL.processKey(descriptorFor(activeScopeProduct,item))));
+    const preserved=S.processes.filter(process=>process.product===activeScopeProduct&&!catalogKeys.has(SF_MODEL.processKey(process))).filter(process=>!query||`${process.name} ${process.group||''}`.toLowerCase().includes(query)).filter(process=>scopeFilter!=='selected'||process.selected).filter(process=>scopeFilter!=='missing'||(process.selected&&!applicationAssessmentComplete(process)));
+    return `<div class="sf-step-intro"><div><span class="sf-step-kicker">Step 3</span><h2>Product and application scope</h2><p>Select the applications included in the solution, then capture demo status, fit, customer validation, and exceptions directly on each selected application.</p></div><span class="sf-step-count">${S.processes.filter(p=>p.selected).length} selected</span></div>
+      <div class="sf-product-grid">${PRODUCTS.map(product=>`<label class="sf-product-choice ${products.includes(product)?'active':''}"><input type="checkbox" data-sfproducttoggle="${product}" ${products.includes(product)?'checked':''}><span><strong>${product} · ${esc(PRODUCT_LABELS[product])}</strong><small>${product==='MEP'?'Mobile workflows connected to the customer ERP.':product==='CIP'?'Cloud-native inventory execution and visibility.':'Managed label and document printing.'}</small></span></label>`).join('')}</div>
+      ${products.length?`<div class="sf-product-tabs">${products.map(product=>`<button class="${activeScopeProduct===product?'active':''}" data-sfproducttab="${product}">${esc(productLabel(product))}</button>`).join('')}</div>`:'<div class="sf-empty-state"><p>Select at least one product to define application scope.</p></div>'}
+      ${products.includes(activeScopeProduct)?`${activeScopeProduct==='MEP'?renderMepScopeSetup(standardMode):''}<div class="sf-scope-tools"><input id="sfScopeSearch" value="${esc(scopeSearch)}" placeholder="Search ${activeScopeProduct} applications"><button class="btn btn-ghost btn-sm ${scopeFilter==='all'?'active':''}" data-sfscopefilter="all">All</button>${activeScopeProduct==='MEP'?`<button class="btn btn-ghost btn-sm ${scopeFilter==='standard'?'active':''}" data-sfscopefilter="standard">Package apps</button><button class="btn btn-ghost btn-sm ${scopeFilter==='additional'?'active':''}" data-sfscopefilter="additional">Additional</button>`:''}<button class="btn btn-ghost btn-sm ${scopeFilter==='selected'?'active':''}" data-sfscopefilter="selected">Selected</button><button class="btn btn-ghost btn-sm ${scopeFilter==='missing'?'active':''}" data-sfscopefilter="missing">Show missing only</button><span>${selectedCount} selected</span><button class="btn btn-ghost btn-sm" data-sfaction="addProcess">+ Add customer-specific application</button></div>${groups.map(group=>`<details class="sf-catalog-group" open><summary>${esc(group)} (${visible.filter(item=>item.group===group).length})</summary><div class="sf-application-grid">${visible.filter(item=>item.group===group).map(item=>renderApplicationCard(activeScopeProduct,item)).join('')}</div></details>`).join('')}${preserved.length?`<details class="sf-catalog-group" open><summary>Saved customer-specific and legacy entries (${preserved.length})</summary><div class="sf-application-grid">${preserved.map(renderStoredProcessCard).join('')}</div></details>`:''}${!groups.length&&!preserved.length?'<div class="sf-empty-state"><p>No applications match the current filter.</p></div>':''}`:''}`;
+  }
+  function renderMepScopeSetup(standardMode){
+    const erp=currentScope().erp||'',packageApps=mepCatalog?.standardPackages?.[erp]||[],selectedPackage=packageApps.filter(name=>{const item=productCatalog('MEP').find(row=>row.name===name);return item&&findProcess('MEP',item)?.selected;}).length;
+    return `<div class="sf-mep-setup"><div class="sf-card"><h3>ERP family</h3><p>SAP Hana uses the same approved Standard Package list as SAP ECC6.</p><div class="sf-erp-buttons">${Object.keys(mepCatalog?.erps||{}).map(name=>`<button class="btn btn-ghost ${erp===name?'active':''}" data-sferp="${esc(name)}">${esc(name)}</button>`).join('')}</div></div><div class="sf-card"><h3>Scope approach</h3><p>Use the approved package as the baseline, or start a fully custom selection.</p><div class="sf-erp-buttons"><button class="btn btn-ghost ${standardMode?'active':''}" data-sfpackagemode="standard">Use Standard Package</button><button class="btn btn-ghost ${!standardMode?'active':''}" data-sfpackagemode="custom">Start Custom Scope</button></div></div></div>
+      <div class="sf-package-banner ${standardMode?'':'custom'}"><strong>${standardMode?`${esc(erp||'MEP')} Standard Package active`:'Custom scope'}</strong><span>${standardMode?`All ${packageApps.length} approved package applications remain selected. Record any anticipated change as an application exception; the rest of the package remains unchanged.`:'Applications are not selected automatically. Choose only the applications required for this customer.'}</span><b>${standardMode?`${selectedPackage}/${packageApps.length} package apps`:''}</b></div>`;
+  }
+
+  function renderLabels(){
+    const p=S.printing;
+    return `<div class="sf-step-intro"><div><span class="sf-step-kicker">Step 4</span><h2>Labels and printing</h2><p>Capture the compact printing context only when it applies. Detailed EPP application fit remains in Product and application scope.</p></div></div><div class="sf-card"><div class="sf-grid4"><div class="sf-field"><label>Sites needing label printing</label><input type="number" min="0" data-sfprinting="sites" value="${esc(p.sites)}"></div><div class="sf-field"><label>Number of labels</label><input type="number" min="0" data-sfprinting="labelCount" value="${esc(p.labelCount)}"></div><div class="sf-field"><label>Printing solution</label><select data-sfprinting="solution">${['','EPP','Third-party printing solution','Not required'].map(value=>`<option value="${esc(value)}" ${p.solution===value?'selected':''}>${esc(value||'Not selected')}</option>`).join('')}</select></div></div><div class="sf-field"><label>Custom label requirements</label><textarea data-dictate data-sfprinting="notes" placeholder="Only document customer-specific label formats or constraints">${esc(p.notes)}</textarea></div></div>`;
+  }
+
+  function renderTurnover(){
+    const t=S.turnover,stats=SF_MODEL.turnoverStats(S),field=(label,key,placeholder='',type='text')=>`<div class="sf-field"><label>${esc(label)}</label><input type="${type}" data-sfturnover="${key}" value="${esc(t[key])}" placeholder="${esc(placeholder)}"></div>`,area=(label,key,placeholder='')=>`<div class="sf-field sf-wide"><label>${esc(label)}</label><textarea data-dictate data-sfturnover="${key}" placeholder="${esc(placeholder)}">${esc(t[key])}</textarea></div>`,select=(label,key,values)=>`<div class="sf-field"><label>${esc(label)}</label><select data-sfturnover="${key}">${['',...values].map(value=>`<option value="${esc(value)}" ${t[key]===value?'selected':''}>${esc(value||'Select')}</option>`).join('')}</select></div>`;
+    const sourced=(label,value,source)=>`<div class="sf-field"><label>${esc(label)} <span class="sf-source-tag">${esc(source)}</span></label><input value="${esc(value||'Not yet established')}" readonly></div>`;
+    return `<div class="sf-step-intro"><div><span class="sf-step-kicker">Step 7</span><h2>Professional Services turnover</h2><p>Scope, configuration, application evidence, integrations, printing, and gaps carry forward automatically. Enter only the delivery information not already captured elsewhere.</p></div><span class="sf-step-count">${stats.complete} of ${stats.total}</span></div>
+      <div class="sf-source-cards"><div><strong>Solution Fit</strong><span>Scope and assessment carry forward.</span></div><div><strong>ROI workspace</strong><span>Customer, outcomes, stakeholders, users, locations, and go-live are reused.</span></div><div><strong>Turnover input</strong><span>Commercial and delivery details are entered once.</span></div></div>
+      <details class="sf-turnover-group" open><summary>Business and commercial context</summary><div class="sf-turnover-grid">${sourced('Customer',S.opportunity.customer,'Customer workspace')}${sourced('Business outcomes',S.opportunity.outcome,'Solution Fit context')}${area('Critical success factors','successFactors','What must be true for the implementation to succeed?')}${select('Contract review','contractStatus',['Signed and available','Exceptions documented','Not applicable'])}${area('Special contractual considerations','contractConsiderations','Major SOW changes, scope conditions, or commercial commitments')}${field('Solution Architect','solutionArchitect','Name and involvement')}${field('Customer ID','customerId','Nextworld or NetSuite ID')}${field('Sales cycle duration','salesCycle','Example: 8 months')}${area('Relationship history','relationshipHistory','Important relationship and account context')}</div></details>
+      <details class="sf-turnover-group"><summary>Customer project contacts</summary><div class="sf-turnover-grid">${sourced('Project Sponsor / Business owner',[S.opportunity.businessOwnerName,S.opportunity.businessOwnerTitle].filter(Boolean).join(' · '),'Stakeholder Map')}${field('Project Manager','projectManager','Name')}${field('Project Manager email','projectManagerEmail','name@customer.com','email')}${field('Business SMEs','businessSmes','Names and domains')}${field('IT Lead','itLead','Name and role')}${field('System Administrator email','systemAdminEmail','Used for provisioning and maintenance notices','email')}${area('Infrastructure contact','infrastructureContact','Name, email, and responsibility')}</div></details>
+      <details class="sf-turnover-group"><summary>Delivery ownership and timeline</summary><div class="sf-turnover-grid">${select('Delivery model','deliveryModel',['Cloud Inventory Professional Services','Implementation partner','Joint delivery'])}${field('Implementation partner','implementationPartner','Partner name or N/A')}${field('Internal delivery contact','internalDeliveryContact','Name and email')}${field('Partner delivery contact','partnerDeliveryContact','Name and email or N/A')}${area('Partner responsibilities','partnerResponsibilities','Scope and environment handoff boundaries')}${field('Project start','projectStart','', 'date')}${field('Kickoff date','kickoffDate','', 'date')}${sourced('Target go live',S.opportunity.goLive,'Solution Fit context')}${area('Date drivers and dependencies','dateDrivers','Hard dates, business drivers, or dependent projects')}${field('Third parties','thirdParties','Organizations and involvement')}</div></details>
+      <details class="sf-turnover-group"><summary>EAP and license provisioning</summary><div class="sf-turnover-grid">${select('Customer edition','eapEdition',['Standard','Premium','Enterprise'])}${field('Number of environments','environments','1','number')}${field('Authorized languages','authorizedLanguages','English, French, German')}${area('Authorized solution definitions','authorizedDefinitions','Exact EAP solution definition names')}${field('Customer email domain','customerDomain','@customer.com')}${field('Partner implementer email','partnerImplementerEmail','Required for partner delivery','email')}${selectedProducts().includes('MEP')?field('MEP License ID','mepLicenseId','From contract or Contracts'):''}${selectedProducts().includes('EPP')?select('EPP deployment','eppDeployment',['Cloud EPP','On-premise EPP'])+field('EPP License ID','eppLicenseId','From contract or Contracts'):''}</div></details>
+      <details class="sf-turnover-group"><summary>Physical environment and supporting documents</summary><div class="sf-turnover-grid">${select('Deployment model','deploymentModel',['Cloud','Customer hosted','Unknown / To confirm'])}${field('System sizing document','sizingDocument','Link or N/A')}${field('Current warehouse system','currentWarehouse','System and version')}${sourced('Locations',S.opportunity.locations,'ROI workspace')}${sourced('Number of users',S.opportunity.users,'ROI workspace')}${field('Device types planned','deviceTypes','Handhelds, printers, scanners')}${field('Hardware and device status','hardwareStatus','Ordered, available, or to confirm')}${field('Device readiness','deviceStatus','Configuration and staging status')}${area('Network and infrastructure constraints','networkConstraints','Connectivity, security, hosting, or device constraints')}${field('Signed order form and SOW','sowLink','Document link or repository location')}${field('RFP response','rfpLink','Link or N/A')}${field('Discovery materials','discoveryLink','Link or N/A')}${field('Onsite visit report','onsiteLink','Link or N/A')}${field('Demo scripts and presentations','demoLink','Link or N/A')}${area('Customer reference notes','referenceNotes','References discussed and follow-up')}</div></details>`;
+  }
+
+  function renderProgressSummary(r){
+    const selected=S.processes.filter(p=>p.selected),complete=selected.filter(applicationAssessmentComplete).length,inventory=SF_MODEL.inventoryStats(S),turnover=SF_MODEL.turnoverStats(S),openGaps=S.gaps.filter(g=>String(g.status||'Open')!=='Resolved'&&String(g.status||'Open')!=='Accepted exception').length;
+    return `<aside class="sf-progress-summary"><h3>Solution Fit progress</h3><div class="sf-summary-score">${r.score}%</div><div class="sf-progress"><div class="sf-progress-fill" style="width:${r.score}%"></div></div><dl><div><dt>Selected applications</dt><dd>${selected.length}</dd></div><div><dt>Complete assessments</dt><dd>${complete}</dd></div><div><dt>Configuration answered</dt><dd>${inventory.applicable?`${inventory.answered}/${inventory.total}`:'N/A'}</dd></div><div><dt>Open gaps</dt><dd>${openGaps}</dd></div><div><dt>Turnover fields</dt><dd>${turnover.complete}/${turnover.total}</dd></div></dl><p class="${dirty?'warn':''}">${dirty?'Unsaved changes are being sent to the server.':'Current browser state matches the last successful server save.'}</p></aside>`;
   }
 
   /* ── Tab 2: Demo & Fit checklist ────────────────────────────────── */
@@ -777,11 +885,11 @@
 
   /* ── Tab 3: Gap register ────────────────────────────────────────── */
   function nextGapId(){ const max=Math.max(0,...S.gaps.map(g=>Number((g.id||'').replace(/\D/g,''))||0)); return `GAP-${String(max+1).padStart(3,'0')}`; }
-  function newGap(v={}){ return {id:nextGapId(),process:'',demoEvidence:'Yes',need:'',classification:'UNKNOWN',priority:'Should Have',goLive:'Unknown',currentProcess:'',standardBehavior:'',gapDescription:'',businessRationale:'',acceptance:'',dependencies:'',assumptions:'',openQuestions:'',...v}; }
+  function newGap(v={}){ return {id:nextGapId(),process:'',demoEvidence:'Yes',need:'',classification:'UNKNOWN',priority:'Should Have',goLive:'Unknown',currentProcess:'',standardBehavior:'',gapDescription:'',businessRationale:'',acceptance:'',dependencies:'',assumptions:'',openQuestions:'',impact:'',resolution:'',owner:'',targetDate:'',status:'Open',...v}; }
   function renderGaps(){
     var mustCount = S.gaps.filter(function(g){return g.priority==='Must Have';}).length;
     var unknownCount = S.gaps.filter(function(g){return g.classification==='UNKNOWN';}).length;
-    return '<div class="sf-gap-header">'
+    return '<div class="sf-step-intro"><div><span class="sf-step-kicker">Step 6</span><h2>Gaps and exceptions</h2><p>Application gaps originate in Product and application scope. Add impact, resolution, owner, target date, and status here without re-entering the assessment.</p></div></div><div class="sf-gap-header">'
       + '<h3 class="sf-gap-title">Gap register</h3>'
       + (S.gaps.length ? '<div class="sf-gap-counts">'
         + (mustCount ? '<span class="sf-gap-count sf-gc-must">&#9679; ' + mustCount + ' Must have</span>' : '')
@@ -804,6 +912,7 @@
       + '<span class="' + classCls + '">' + esc(g.classification) + '</span>'
       + priLabel
       + '<span class="sf-gap-need">' + esc(g.need||'Requirement not entered') + '</span>'
+      + '<span class="sf-gap-owner">' + esc(g.owner?`Owner: ${g.owner}`:'Owner not assigned') + '</span>'
       + '<div class="sf-gap-actions">'
       + '<button class="btn btn-ghost btn-sm" data-sfgaptoggle="' + g.id + '">' + (open?'Close':'Details') + '</button>'
       + '<button class="btn btn-danger btn-sm" data-sfgapdel="' + idx + '" title="Delete gap">&#215;</button>'
@@ -821,11 +930,13 @@
       + '<div class="sf-field"><label>Standard behavior demonstrated</label><textarea data-dictate data-sfgfield="standardBehavior" data-sfgid="' + g.id + '">' + esc(g.standardBehavior) + '</textarea></div>'
       + '</div>'
       + '<div class="sf-field"><label>Precise gap / difference</label><textarea data-dictate data-sfgfield="gapDescription" data-sfgid="' + g.id + '">' + esc(g.gapDescription) + '</textarea></div>'
+      + '<div class="sf-row2"><div class="sf-field"><label>Business or operational impact</label><textarea data-dictate data-sfgfield="impact" data-sfgid="' + g.id + '">' + esc(g.impact||'') + '</textarea></div><div class="sf-field"><label>Workaround or proposed resolution</label><textarea data-dictate data-sfgfield="resolution" data-sfgid="' + g.id + '">' + esc(g.resolution||'') + '</textarea></div></div>'
       + '<div class="sf-row2">'
       + '<div class="sf-field"><label>Priority</label><select data-sfgfield="priority" data-sfgid="' + g.id + '">' + ['Must Have','Should Have','Could Have'].map(function(x){return '<option ' + (g.priority===x?'selected':'') + '>' + x + '</option>';}).join('') + '</select></div>'
       + '<div class="sf-field"><label>Required for go-live?</label><select data-sfgfield="goLive" data-sfgid="' + g.id + '">' + ['Unknown','Yes','No'].map(function(x){return '<option ' + (g.goLive===x?'selected':'') + '>' + x + '</option>';}).join('') + '</select></div>'
       + '</div>'
       + '<div class="sf-field"><label>Acceptance criteria</label><textarea data-dictate data-sfgfield="acceptance" data-sfgid="' + g.id + '">' + esc(g.acceptance) + '</textarea></div>'
+      + '<div class="sf-row3"><div class="sf-field"><label>Owner name or role</label><input data-sfgfield="owner" data-sfgid="' + g.id + '" value="' + esc(g.owner||'') + '"></div><div class="sf-field"><label>Target date</label><input type="date" data-sfgfield="targetDate" data-sfgid="' + g.id + '" value="' + esc(g.targetDate||'') + '"></div><div class="sf-field"><label>Status</label><select data-sfgfield="status" data-sfgid="' + g.id + '">' + ['Open','In review','Resolved','Accepted exception'].map(function(x){return '<option ' + (g.status===x?'selected':'') + '>' + x + '</option>';}).join('') + '</select></div></div>'
       + '<div class="sf-row2">'
       + '<div class="sf-field"><label>Dependencies / assumptions</label><textarea data-dictate data-sfgfield="dependencies" data-sfgid="' + g.id + '">' + esc(g.dependencies) + '</textarea></div>'
       + '<div class="sf-field"><label>Open questions</label><textarea data-dictate data-sfgfield="openQuestions" data-sfgid="' + g.id + '">' + esc(g.openQuestions) + '</textarea></div>'
@@ -838,8 +949,16 @@
   function renderIntegration(){
     var sel=function(label,path,opts){return '<div class="sf-field"><label>'+esc(label)+'</label><select data-sfbind="'+path+'">'+opts.map(function(x){return '<option '+(val(S,path)===x?'selected':'')+'>'+esc(x)+'</option>';}).join('')+'</select></div>';};
     var f=function(label,path,ph){ph=ph||'';return '<div class="sf-field"><label>'+esc(label)+'</label><input data-sfbind="'+path+'" value="'+esc(val(S,path))+'" placeholder="'+esc(ph)+'"></div>';};
+    var ta=function(label,path,ph){ph=ph||'';return '<div class="sf-field sf-wide"><label>'+esc(label)+'</label><textarea data-dictate data-sfbind="'+path+'" placeholder="'+esc(ph)+'">'+esc(val(S,path))+'</textarea></div>';};
     var hasInterfaces = S.interfaces.length > 0;
-    return '<div class="sf-card">'
+    return '<div class="sf-step-intro"><div><span class="sf-step-kicker">Step 5</span><h2>Integrations</h2><p>Keep the primary integration record short and product-neutral. Add an interface only when a distinct data exchange must be handed to delivery.</p></div></div>'
+      + '<div class="sf-card"><h3>Primary architecture</h3><div class="sf-row3">'
+      + sel('Deployment relationship','architecture.relationship',['','Standalone','Integrated to system of record','Hybrid'])
+      + (currentScope().primaryProduct==='MEP'?'<div class="sf-field"><label>ERP / system of record</label><input value="'+esc(currentScope().erp||'Not selected')+'" readonly></div>':f('ERP / system of record','architecture.erp'))
+      + f('ERP version','architecture.version')+'</div>'
+      + '<div class="sf-row2">'+sel('Primary integration method','architecture.integrationMethod',['','Cloud Inventory REST API','SOAP / web service','File','Middleware / iPaaS','Connector','Other'])+sel('Integration delivery owner','architecture.integrationOwner',['','Cloud Inventory','Customer','Partner','Shared'])+'</div>'
+      + ta('Integration notes','architecture.integrationNotes','Frequency, volumes, error handling, or material constraints')+'</div>'
+      + '<div class="sf-card">'
       + '<div class="sf-card-head"><h3>Additional interfaces</h3><button class="btn btn-ghost btn-sm" data-sfaction="addInterface">+ Add interface</button></div>'
       + '<div class="sf-table-wrap">'
       + (hasInterfaces
@@ -873,7 +992,8 @@
 
   /* ── Tab 5: Readiness + handoff documents ───────────────────────── */
   function renderReadinessTab(r){
-    return `<div class="sf-card">
+    const turnover=SF_MODEL.turnoverStats(S),turnoverReady=turnover.complete===turnover.total;
+    return `<div class="sf-step-intro"><div><span class="sf-step-kicker">Step 8</span><h2>Readiness and documents</h2><p>Generate outputs only from the successfully saved server record. The Professional Services turnover document also requires all turnover fields.</p></div></div><div class="sf-card">
       <div class="sf-readiness-head">
         <div class="sf-score-big">${r.score}%</div>
         <div>
@@ -898,9 +1018,11 @@
         : 'Internal handoff — includes fit classification, gaps, ownership, assumptions, and unresolved readiness items for Services scoping.'}</p>
       <div class="btn-row" style="margin-top:0;">
         <button class="btn btn-primary btn-sm" data-sfaction="printDoc">🖨 Print / Save as PDF</button>
+        <button class="btn btn-primary btn-sm" data-sfaction="turnoverDoc" ${turnoverReady?'':'disabled'}>Generate PS Turnover Word</button>
         <button class="btn btn-ghost btn-sm" data-sfaction="copyDoc">Copy text</button>
         <button class="btn btn-ghost btn-sm" onclick="printRiskLedger()" title="Print a prospect-facing risk ledger showing gaps and mitigations — share before procurement asks">📋 Risk ledger</button>
       </div>
+      ${turnoverReady?'':`<p class="sf-doc-note">Complete ${turnover.missing.length} required turnover field${turnover.missing.length===1?'':'s'} before generating the Word document: ${esc(turnover.missing.slice(0,4).join(', '))}${turnover.missing.length>4?'…':''}</p>`}
       <div class="sf-doc-preview" id="sfDocPreview">${S.handoffType==='customer'?customerDoc():internalDoc()}</div>
     </div>`;
   }
@@ -1037,6 +1159,14 @@
     if(navigator.clipboard){ navigator.clipboard.writeText(txt).then(()=>{ if(typeof showToast==='function') showToast('Document text copied.'); }).catch(()=>{ if(typeof showToast==='function') showToast('Copy not available in this browser.'); }); }
   }
 
+  async function downloadTurnoverDoc(){
+    if(!await flushSolutionFitSave())return;
+    const stats=SF_MODEL.turnoverStats(S);
+    if(stats.missing.length){window.showToast?.(`Complete the required turnover fields first: ${stats.missing.join(', ')}.`);return;}
+    if(!customerId||!window.deServerDownload){window.showToast?.('Professional Services turnover Word service is unavailable.');return;}
+    return window.deServerDownload(`/api/handoffs/${encodeURIComponent(customerId)}/export-docx?kind=turnover`,'Cloud-Inventory-PS-Turnover.docx','Professional Services Turnover');
+  }
+
   function setDocType(type){
     S.handoffType = type;
     scheduleSave();
@@ -1047,9 +1177,9 @@
 
   /* ── Wiring ─────────────────────────────────────────────────────── */
   function wireTabs(){
-    document.querySelectorAll('.sf-tab').forEach(t=>t.onclick=()=>{
+    document.querySelectorAll('#sfApp [data-sftab]').forEach(t=>t.onclick=()=>{
       activeTab=t.dataset.sftab;
-      document.querySelectorAll('.sf-tab').forEach(x=>{
+      document.querySelectorAll('#sfApp [data-sftab]').forEach(x=>{
         x.classList.toggle('active',x===t);
         x.setAttribute('aria-selected', x===t ? 'true' : 'false');
       });
@@ -1062,8 +1192,53 @@
     });
   }
   function showActivePane(){ document.querySelectorAll('.sf-pane').forEach(p=>p.style.display = p.dataset.sfpane===activeTab?'block':'none'); }
+  function syncSolutionScope(){
+    const products=selectedProducts();
+    S.solutionScope.primaryProduct=products[0]||'';
+    S.solutionScope.additionalProducts=products.slice(1);
+    S.solutionScope.selectedApps=S.processes.filter(p=>p.selected&&p.product==='MEP'&&(!currentScope().erp||p.erp===currentScope().erp)).map(p=>p.name);
+  }
+  function carryForwardAssessment(target,source){
+    if(!target||!source)return target;
+    for(const key of ['demoStatus','fit','customerValidation','notes','reason'])if((target[key]===undefined||target[key]===''||['Not reviewed','Not validated'].includes(target[key]))&&source[key]!==undefined)target[key]=source[key];
+    target.scope_carried_forward=true;
+    return target;
+  }
+  function toggleScopeProduct(product,checked){
+    const products=selectedProducts();
+    if(!checked&&products.length===1){window.showToast?.('A Solution Fit requires at least one product.');rerenderScope();return;}
+    if(checked){if(!S.opportunity.products.includes(product))S.opportunity.products.push(product);activeScopeProduct=product;}
+    else{S.opportunity.products=S.opportunity.products.filter(value=>value!==product);S.processes.filter(p=>p.product===product).forEach(p=>{p.selected=false;});if(activeScopeProduct===product)activeScopeProduct=S.opportunity.products[0]||'MEP';}
+    syncSolutionScope();rerenderScope();scheduleSave();
+  }
+  function changeMepErp(erp){
+    const prior=currentScope().erp;
+    if(prior===erp)return;
+    const priorByName=new Map(S.processes.filter(p=>p.product==='MEP'&&p.erp===prior).map(p=>[p.name,p]));
+    if(prior){S.scopeHistory=S.scopeHistory||[];S.scopeHistory.push({changedAt:new Date().toISOString(),scope:{...currentScope()},reason:'ERP family changed; prior application assessments retained in the saved record.'});}
+    S.processes.filter(p=>p.product==='MEP'&&p.erp===prior).forEach(p=>{p.selected=false;});
+    S.solutionScope.erp=erp;S.solutionScope.erpVersion='';S.solutionScope.catalogId=mepCatalog.catalogId;S.solutionScope.catalogVersion=mepCatalog.catalogVersion;S.solutionScope.catalogSource=mepCatalog.source;S.architecture.erp=erp;S.architecture.version='';
+    if(S.solutionScope.packageMode==='standard')applyMepPackageBaseline();
+    S.processes.filter(p=>p.product==='MEP'&&p.erp===erp&&p.selected).forEach(p=>{const source=priorByName.get(p.name);if(source)carryForwardAssessment(p,source);});
+    syncSolutionScope();rerenderScope();scheduleSave();
+  }
+  function applyMepPackageBaseline(){
+    const erp=currentScope().erp;if(!erp)return;
+    const packageNames=mepCatalog?.standardPackages?.[erp]||[];
+    SF_MODEL.applyStandardPackage(S,{erp,names:packageNames,catalogVersion:mepCatalog?.catalogVersion||''});
+  }
+  function setMepPackageMode(mode){
+    if(!currentScope().erp){window.showToast?.('Select the ERP family first.');return;}
+    if(mode==='standard')applyMepPackageBaseline();
+    else SF_MODEL.startCustomScope(S,{erp:currentScope().erp});
+    syncSolutionScope();rerenderScope();scheduleSave();
+  }
+  function toggleApplication(el){
+    const descriptor={product:el.dataset.product,name:el.dataset.name,group:el.dataset.group||'',erp:el.dataset.erp||'',source:el.dataset.source||'product_app',catalogVersion:el.dataset.product==='MEP'?(mepCatalog?.catalogVersion||''):''};
+    SF_MODEL.setSelected(S,descriptor,el.checked);syncSolutionScope();rerenderScope();scheduleSave();
+  }
   function goNextSection(){
-    const order = ['context','checklist','gaps','integration','handoff'];
+    const order = WORKFLOW.map(row=>row[0]);
     const next = order[Math.min(order.indexOf(activeTab) + 1, order.length - 1)];
     const tab = document.querySelector(`[data-sftab="${next}"]`);
     if (tab) tab.click();
@@ -1087,6 +1262,16 @@
     document.querySelectorAll('[data-sfbind]').forEach(el=>{
       el.addEventListener('input', ()=>{ setVal(S, el.dataset.sfbind, el.value); onEdit(el.dataset.sfbind); });
     });
+    document.querySelectorAll('[data-sfinventory]').forEach(el=>el.addEventListener('change',()=>{
+      const name=SF_MODEL.INVENTORY_ITEMS[Number(el.dataset.sfinventory)];if(name)S.inventoryConfiguration[name].answer=el.value;
+      rerenderConfiguration();scheduleSave();
+    }));
+    document.querySelectorAll('[data-sfinventory-note]').forEach(el=>el.addEventListener('input',()=>{
+      const name=SF_MODEL.INVENTORY_ITEMS[Number(el.dataset.sfinventoryNote)];if(name)S.inventoryConfiguration[name].note=el.value;scheduleSave();
+    }));
+    document.querySelectorAll('[data-sflpn]').forEach(el=>el.addEventListener('change',()=>{S.lpnConfiguration[el.dataset.sflpn]=el.value;scheduleSave();}));
+    document.querySelectorAll('[data-sfprinting]').forEach(el=>el.addEventListener('input',()=>{S.printing[el.dataset.sfprinting]=el.value;scheduleSave();}));
+    document.querySelectorAll('[data-sfturnover]').forEach(el=>el.addEventListener('input',()=>{S.turnover[el.dataset.sfturnover]=el.value;scheduleSave();}));
     document.querySelectorAll('[data-sfownerselect]').forEach(el=>el.addEventListener('change',()=>{
       const person = knownStakeholders.find(x=>String(x.id)===String(el.value));
       if (!person) return;
@@ -1100,11 +1285,18 @@
       scheduleSave();
     }));
     /* process cards */
-    document.querySelectorAll('[data-sfpsel]').forEach(el=>el.addEventListener('change',e=>{ const i=+el.dataset.sfpsel; S.processes[i].selected=e.target.checked; if(!e.target.checked){S.processes[i].demoStatus='Not reviewed';S.processes[i].fit='Not reviewed';} rerenderChecklist(); scheduleSave(); }));
-    document.querySelectorAll('[data-sfpdemo]').forEach(el=>el.addEventListener('change',e=>{ S.processes[+el.dataset.sfpdemo].demoStatus=e.target.value; rerenderChecklist(); scheduleSave(); }));
-    document.querySelectorAll('[data-sfpfit]').forEach(el=>el.addEventListener('change',e=>{ S.processes[+el.dataset.sfpfit].fit=e.target.value; rerenderChecklist(); scheduleSave(); }));
-    document.querySelectorAll('[data-sfpvalidation]').forEach(el=>el.addEventListener('change',e=>{ S.processes[+el.dataset.sfpvalidation].customerValidation=e.target.value; scheduleSave(); }));
+    document.querySelectorAll('[data-sfpsel]').forEach(el=>el.addEventListener('change',e=>{ const i=+el.dataset.sfpsel; S.processes[i].selected=e.target.checked; rerenderScope(); scheduleSave(); }));
+    document.querySelectorAll('[data-sfpdemo]').forEach(el=>el.addEventListener('change',e=>{ S.processes[+el.dataset.sfpdemo].demoStatus=e.target.value; rerenderScope(); scheduleSave(); }));
+    document.querySelectorAll('[data-sfpfit]').forEach(el=>el.addEventListener('change',e=>{ S.processes[+el.dataset.sfpfit].fit=e.target.value; rerenderScope(); scheduleSave(); }));
+    document.querySelectorAll('[data-sfpvalidation]').forEach(el=>el.addEventListener('change',e=>{ S.processes[+el.dataset.sfpvalidation].customerValidation=e.target.value; rerenderScope(); scheduleSave(); }));
     document.querySelectorAll('[data-sfpnote]').forEach(el=>el.addEventListener('input',e=>{ S.processes[+el.dataset.sfpnote].notes=e.target.value; scheduleSave(); }));
+    document.querySelectorAll('[data-sfproducttoggle]').forEach(el=>el.addEventListener('change',()=>toggleScopeProduct(el.dataset.sfproducttoggle,el.checked)));
+    document.querySelectorAll('[data-sfproducttab]').forEach(el=>el.addEventListener('click',()=>{activeScopeProduct=el.dataset.sfproducttab;scopeFilter='all';rerenderScope();}));
+    document.querySelectorAll('[data-sfscopefilter]').forEach(el=>el.addEventListener('click',()=>{scopeFilter=el.dataset.sfscopefilter;rerenderScope();}));
+    const scopeSearchEl=$('sfScopeSearch');if(scopeSearchEl)scopeSearchEl.addEventListener('input',()=>{scopeSearch=scopeSearchEl.value;rerenderScope();});
+    document.querySelectorAll('[data-sferp]').forEach(el=>el.addEventListener('click',()=>changeMepErp(el.dataset.sferp)));
+    document.querySelectorAll('[data-sfpackagemode]').forEach(el=>el.addEventListener('click',()=>setMepPackageMode(el.dataset.sfpackagemode)));
+    document.querySelectorAll('[data-sfappselect]').forEach(el=>el.addEventListener('change',()=>toggleApplication(el)));
     /* gaps */
     document.querySelectorAll('[data-sfgaptoggle]').forEach(el=>el.onclick=()=>{ openGapId = openGapId===el.dataset.sfgaptoggle?null:el.dataset.sfgaptoggle; rerenderGaps(); });
     document.querySelectorAll('[data-sfgapdel]').forEach(el=>el.onclick=()=>{ if(confirm('Delete this gap?')){ S.gaps.splice(+el.dataset.sfgapdel,1); rerenderGaps(); scheduleSave(); } });
@@ -1169,12 +1361,15 @@
   function onEdit(path){if(path==='architecture.version'&&currentScope().primaryProduct==='MEP')S.solutionScope.erpVersion=S.architecture.version;scheduleSave();}
 
   function rerenderChecklist(){ const pane=document.querySelector('[data-sfpane="checklist"]'); if(pane){pane.innerHTML=renderChecklist(); wireBindings(); if(!canWrite)disableInputs();} }
+  function rerenderScope(){ const pane=document.querySelector('[data-sfpane="scope"]'); if(pane){pane.innerHTML=renderProductScope(); wireBindings(); if(!canWrite)disableInputs();} }
+  function rerenderConfiguration(){ const pane=document.querySelector('[data-sfpane="configuration"]'); if(pane){pane.innerHTML=renderInventoryConfiguration(); wireBindings(); if(!canWrite)disableInputs();} }
   function rerenderGaps(){ const pane=document.querySelector('[data-sfpane="gaps"]'); if(pane){pane.innerHTML=renderGaps(); wireBindings(); if(!canWrite)disableInputs();} }
   function rerenderIntegration(){ const pane=document.querySelector('[data-sfpane="integration"]'); if(pane){pane.innerHTML=renderIntegration(); wireBindings(); if(!canWrite)disableInputs();} }
 
   async function handleAction(a,sourceEl){
     /* Print and copy are allowed for everyone with read access (AEs included). */
     if(a==='printDoc'){ await printHandoffDoc(); return; }
+    if(a==='turnoverDoc'){ await downloadTurnoverDoc(); return; }
     if(a==='copyDoc'){ copyDocText(); return; }
     if(a==='findCustomer'){window._sfSelectedCustomerId=null;customerId=null;$('sfApp').style.display='none';renderGate();return;}
     /* All other actions mutate state → require write access. */
@@ -1194,7 +1389,7 @@
       let count=0; S.processes.forEach(p=>{ if(p.selected){ p.fit='Full fit'; p.notes=''; count++; } });
       rerenderChecklist(); scheduleSave(); if(typeof showToast==='function') showToast(`${count} in-scope workflow${count===1?'':'s'} marked full fit.`); return;
     }
-    if(a==='addProcess'){ const n=prompt('New process name:'); if(n&&n.trim()){ S.processes.push(blankProcess(n.trim(),S.processes.length)); S.processes.at(-1).selected=true; rerenderChecklist(); scheduleSave(); } }
+    if(a==='addProcess'){ const n=prompt('Customer-specific application or process name:'); if(n&&n.trim()){ SF_MODEL.ensureProcess(S,{name:n.trim(),product:activeScopeProduct,erp:activeScopeProduct==='MEP'?currentScope().erp:'',group:'Customer-specific',source:'non_standard',selected:true}); rerenderScope(); scheduleSave(); } }
     else if(a==='addGap'){ S.gaps.push(newGap({})); openGapId=S.gaps.at(-1).id; rerenderGaps(); scheduleSave(); }
     else if(a==='addInterface'){ S.interfaces.push({id:nextIntId(),source:'',target:'',object:'',method:'TBD',direction:'Bidirectional',trigger:'Near real time',volume:'',owner:'TBD'}); rerenderIntegration(); scheduleSave(); }
     else if(a==='addCustomization'){ S.architecture.customizations.push(blankCustomization()); const pane=document.querySelector('[data-sfpane="context"]'); if(pane){pane.innerHTML=renderContext(); wireBindings();} scheduleSave(); }
@@ -1217,7 +1412,7 @@
     document.querySelectorAll('#sfApp [data-sfgapdel], #sfApp [data-sfintdel]').forEach(el=>{ el.style.display='none'; });
     document.querySelectorAll('#sfApp [data-sfaction]').forEach(el=>{
       const a=el.dataset.sfaction;
-      if(a!=='printDoc' && a!=='copyDoc') el.style.display='none';
+      if(a!=='printDoc' && a!=='copyDoc' && a!=='turnoverDoc') el.style.display='none';
     });
   }
 

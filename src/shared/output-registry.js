@@ -20,6 +20,7 @@ const OUTPUTS=[
  ['solution-summary-pdf','Solution Discovery / Demonstration Summary — PDF','customer',['pdf'],'Saved Solution Fit Handoff','server','src/exports/operational-pdf.js',false,true],
  ['solution-risk-pdf','Solution Fit Risk Ledger — PDF','customer',['pdf'],'Saved Solution Fit Handoff','server','src/exports/operational-pdf.js',false,true],
  ['solution-handoff-pdf','Solution Fit Internal Handoff — PDF','internal',['pdf'],'Saved Solution Fit Handoff','server','src/exports/operational-pdf.js',false,false],
+ ['solution-turnover-docx','Professional Services Turnover — Word','internal',['docx'],'Saved Solution Fit Handoff + Saved Turnover Inputs','server','src/exports/solution-fit-turnover-docx.js',false,false],
  ['competitive-pdf','Competitive Battlecard — PDF','internal',['pdf'],'Governed Battlecard Revision','server','src/exports/operational-pdf.js',false,false],
  ['competitive-docx','Competitive Battlecard — Word','internal',['docx'],'Governed Battlecard Revision','server','src/exports/competitive-docx.js',false,false],
  ['roi-methodology-pdf','ROI Methodology — PDF','internal',['pdf'],'Canonical saved ROI report / ROI Model v2.8','server','src/exports/roi-methodology-pdf.js',false,false],
