@@ -547,3 +547,11 @@ Every ROI Assumptions & Results output must be composed server-side from one sav
 ## SOLUTION FIT ADDITIVE STATE AND TURNOVER INVARIANT
 
 Solution Fit interface changes must migrate the saved handoff state additively, preserve unknown and legacy fields, and persist through the authenticated server handoff API. Package or custom-scope selection may change application inclusion but may not delete saved application assessment, evidence, exception, inventory, integration, or turnover data. Browser local storage and session storage are not authoritative persistence. The Professional Services turnover document must be generated from the saved Solution Fit record by the registered server-side production builder and must fail closed when required turnover inputs are incomplete.
+
+## SOLUTION FIT PRODUCT-SCOPE OWNERSHIP INVARIANT
+
+Create Solution Fit and Edit Scope may define only the primary and optional additional Cloud Inventory products. ERP family/version, Standard Package or Custom Scope, application selection, custom applications, assessment, gaps, integrations, readiness, and handoff belong to the main Solution Fit workflow. Product-scope changes must preserve historical assessment and evidence, require acknowledgement before removing a product from active scope, and may not create a second operational source of truth.
+
+## SOLUTION FIT CUSTOMER ISOLATION AND NAVIGATION INVARIANT
+
+Solution Fit customer selection must use its dedicated authorization and discovery contract and must not grant or mutate general ROI customer authority. Switching customers must protect unsaved work, clear the prior customer's complete UI and AI context before authoritative loading, reject stale asynchronous responses, and use reload-safe navigation state. A customer without an ROI scenario remains eligible, and one customer's ERP, application, assessment, progress, evidence, record IDs, or coaching context may never appear in another customer's workspace.
