@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "6.9.39",
+  "release": "6.9.40",
   "tests": [
     {"invariant":"Customer Business Case","path":"test/release-integrity.test.js"},
     {"invariant":"customer-safe payload","path":"test/release-integrity.test.js"},
@@ -59,5 +59,6 @@
     ,{"invariant":"v6.9.37 PostgreSQL saved-scenario retrieval, authorization and PDF generation","path":"test/v6937-postgres-roi-assumptions.test.js"}
     ,{"invariant":"v6.9.38 legacy saved-model ROI input trace and desktop report modal correction","path":"test/v6937-roi-assumptions-report.test.js"}
     ,{"invariant":"v6.9.39 additive server-backed Solution Fit workflow, MEP package behavior and PS turnover Word authority","path":"test/v6939-solution-fit-guided-workflow.test.js"}
+    ,{"invariant":"v6.9.40 product-only Solution Fit setup, protected in-workspace customer switching and cross-customer isolation","path":"test/v6940-solution-fit-scope-switch.test.js"}
   ]
 }

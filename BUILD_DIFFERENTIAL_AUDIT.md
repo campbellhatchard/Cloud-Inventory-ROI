@@ -1,59 +1,49 @@
-# v6.9.39 Differential Audit
+# v6.9.40 Differential Audit
 
 ## Intentionally changed
 
-- Replaced the Solution Fit tab presentation with an eight-step horizontal guided workflow.
-- Put General Inventory Configuration before Product and Application Scope.
-- Added CIP, MEP, and EPP application catalogs with direct per-application Demo Status, Fit, Customer Validation, and Exceptions/Notes controls.
-- Added governed MEP Standard Package subsets for JDE, EBS, Oracle Fusion, SAP ECC6, and SAP Hana; Hana intentionally shares the ECC6 package list.
-- Added Standard Package and Custom Scope behavior. Package applications remain selected; custom scope deselects them without deleting prior assessment evidence.
-- Preserved legacy/customer-specific processes in a visible saved-record section instead of dropping or hiding them.
-- Added compact Labels/Printing, centralized Gaps/Exceptions action fields, and Professional Services turnover inputs.
-- Added a branded internal Professional Services turnover DOCX produced from the successfully saved server record.
-- Registered and runtime-certified the DOCX output through its exact production builder.
-- Incremented application identity to `6.9.39` and updated lineage, changelog, output registry, knowledge metadata, and permanent regression protections.
-- Advanced GitHub certification artifact names and paths to v6.9.39 and added the v6.9.39 focused workflow to the machine release runner.
+- Replaced the Create/Edit Scope dialog's duplicated ERP and application controls with one product-only builder shared by MEP, CIP, and EPP.
+- Kept ERP family/version, Standard Package/Custom Scope, application selection, custom applications, assessment, gaps, integration, and readiness in the main Solution Fit workflow.
+- Added primary-product validation and a governed product-removal acknowledgement.
+- Preserved removed-product application rows and evidence as history while removing them only from active scope.
+- Added an always-visible `⇄ Switch Customer` action and clear current-customer workspace label.
+- Reused the dedicated Solution Fit customer discovery route rather than the general ROI customer list.
+- Added Save & Switch, Discard & Switch, and Cancel protection for dirty records. A failed save keeps the current customer and edits.
+- Added URL-backed `sfCustomer` navigation, authoritative refresh/back loading, loading-state clearing, stale-response rejection, and cross-customer Christie suppression.
+- Added permanent v6.9.40 behavioral tests and release metadata.
+
+## Root cause corrected
+
+The legacy setup wizard still seeded MEP ERP and application scope even after v6.9.39 made the main guided workflow authoritative for those fields. The server create endpoint required only a saved handoff document, not duplicated wizard inputs. The correction removes the second user-entry path without deleting the underlying fields or their main-workflow controls.
 
 ## Data-preservation controls
 
-- The migration function fills only missing keys and preserves unknown future/legacy keys.
-- Application deselection never resets Demo, Fit, Validation, Notes, IDs, or extension fields.
-- ERP changes retain the prior ERP records and may carry matching assessment evidence forward with `scope_carried_forward=true`.
-- The older scope wizard now merges records rather than replacing `S.processes`.
-- Server persistence remains the existing `handoffs.data` JSONB record; no `localStorage` or `sessionStorage` is used.
+- An unchanged Edit Scope round-trip preserves ERP, ERP version, application rows, custom applications, demo/fit/validation, notes, evidence IDs, gaps, integrations, readiness, and unknown extension fields byte-for-byte in the save candidate.
+- Product removal requires confirmation, marks matching application rows inactive by selection state, and appends scope history without deleting assessments or evidence.
+- Scope changes operate on a cloned candidate and mutate the live workspace only after the server accepts the save.
+- Customer switching clears all rendered/customer state before loading the next authoritative record and ignores late responses from prior selections.
 
 ## Intentionally preserved
 
-- ROI formulas, evidence methodology, provenance, null/zero semantics, native currency, and saved scenario economics.
-- All role and cross-account authorization boundaries.
-- Existing Solution Fit PDFs and saved-state output enforcement.
-- Existing database schema and all 44 inherited migrations.
-- Every unrelated page, route, output, AI workflow, and customer-facing surface.
-- The deployed v6.9.38 Render build command, pre-deploy migration command, `npm start` command, PostgreSQL database, environment variables, historical certification evidence, cumulative pretest hooks, timestamp fingerprint correction, and ownership-transfer regression ordering.
+- ROI calculations, economic semantics, evidence methodology, provenance, scenario persistence, and every non-Solution-Fit workflow.
+- Role semantics and cross-account boundaries.
+- All existing Solution Fit server routes, record identity, output preconditions, and database schema.
+- The v6.9.39 main workflow, MEP catalogs, Standard Package rules, custom applications, outputs, and turnover document.
+- The deployed Render build command, pre-deploy migration command, `npm start` command, PostgreSQL database, environment variables, historical certification evidence, cumulative pretest hooks, timestamp fingerprint correction, and ownership-transfer regression ordering.
 
-## Removed
+## Deferred by scope
 
-- The redundant standalone Demo/Fit primary navigation step is removed from the new presentation because assessment is performed directly on each selected application. Its saved data model is retained.
-- No saved field, API, record, route, or evidence is removed.
+File/photo attachments, attachment storage/deletion, PS turnover evidence packages, CIP prototype integration, new ROI functionality, and role-model changes are not implemented.
 
 ## Migrations
 
-- None. All new fields are additive within the existing governed JSONB document.
-
-## Test additions
-
-- Additive legacy-state migration and unknown-field preservation.
-- Standard Package/custom-scope selection with assessment retention.
-- Governed package catalog subset and SAP list parity.
-- Server-only persistence and workflow ordering.
-- Actual branded DOCX generation and OOXML validation.
-- Saved-record DOCX route and fail-closed required-field validation.
+None. This correction uses the existing additive JSONB state and route model.
 
 ## Packaging reconciliation
 
-- The supplied archive was based on developer snapshot `5a1f4c9001627406b8f8a30ba547f8b35c23d103`, not the deployed v6.9.38 GitHub commit.
-- Intended v6.9.39 source changes were applied forward to deployed commit `f54bd01e22b25e1b4e3087bd13e38e8db06130a3`.
-- Historical evidence rewrites, removed cumulative test hooks, the removed pre-deploy migration command, the alternate start command, and unrelated v6.9.36/v6.9.35 test changes were rejected as packaging regressions.
+- The supplied archive was based on developer snapshot `069f02b8ed42d78e21dd0b583acdb2a3c9274674`, not the deployed v6.9.39 GitHub commit.
+- The intended v6.9.40 delta was applied forward to deployed commit `3ad081be117574568d7608bdf952d1ef034924ca`.
+- Historical evidence rewrites, removed cumulative test hooks, the removed pre-deploy migration command, the alternate start command, and unrelated regression reversions were rejected as packaging regressions.
 
 ## Unresolved certification
 

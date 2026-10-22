@@ -41,7 +41,7 @@ test('pagination retains results and advances the server offset',async()=>{
 
 test('active UI uses only the dedicated Solution Fit endpoint and retains governed state copy',()=>{
   const ui=read('public/solution-fit.js');
-  assert.match(ui,/Customers could not be loaded/);assert.match(ui,/We couldn\\'t load the Solution Fit customer list\./);assert.match(ui,/No active customers match this search\./);assert.match(ui,/No active customers are currently available\./);assert.match(ui,/Loading active customers…/);assert.match(ui,/sfCustomerRetry/);
+  assert.match(ui,/Customers could not be loaded/);assert.match(ui,/We couldn\\'t load the Solution Fit customer list\./);assert.match(ui,/No customers match your search\./);assert.match(ui,/No active customers are currently available\./);assert.match(ui,/Loading active customers…/);assert.match(ui,/sfCustomerRetry/);
   assert.match(ui,/\/api\/solution-fit\/customers/);assert.doesNotMatch(ui,/apiFetch\('\/api\/customers/);
   assert.doesNotMatch(ui,/No customers yet — save a scenario first/);
 });

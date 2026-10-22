@@ -115,7 +115,7 @@
     for(const name of LPN_ITEMS)if(state.lpnConfiguration[name]===undefined)state.lpnConfiguration[name]='Not answered';
     state.printing=fillMissing(state.printing||{}, {sites:'',labelCount:'',solution:'',notes:''});
     state.turnover=fillMissing(state.turnover||{}, TURNOVER_DEFAULTS);
-    state.ui=fillMissing(state.ui||{}, {solutionFitLayoutVersion:'6.9.39'});
+    state.ui=fillMissing(state.ui||{}, {solutionFitLayoutVersion:'6.9.40'});
     const primary=state.solutionScope.primaryProduct||state.opportunity.products[0]||'';
     state.processes.forEach((process,index)=>{
       if(!isObject(process))return;

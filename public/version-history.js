@@ -7,6 +7,18 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.40', date: '2026-10-22', tag: 'solution-fit-scope-switch',
+    title: 'Product-only Solution Fit setup and protected customer switching',
+    summary: 'Removes duplicate MEP ERP/application entry from Create and Edit Scope, and adds a clear in-workspace Switch Customer flow that preserves authorization, saved data, and customer isolation.',
+    highlights: [
+      'Create and Edit Scope now manage only the primary and optional additional Cloud Inventory products.',
+      'MEP ERP, package, applications, demo, fit, validation, gaps, and integration remain in the main guided workflow.',
+      'Existing MEP, CIP, EPP, custom application, evidence, and history records remain intact during product-scope edits.',
+      'Switch Customer protects unsaved changes with Save & Switch, Discard & Switch, and Cancel choices.',
+      'The selected Solution Fit customer is URL-backed for refresh and browser Back while dedicated Solution Fit authorization remains server-enforced.'
+    ]
+  },
+  {
     version: '6.9.39', date: '2026-10-21', tag: 'guided-solution-fit',
     title: 'Guided Solution Fit and Professional Services turnover',
     summary: 'Replaces the Solution Fit workspace with a compact guided workflow that preserves existing saved records, adds governed MEP Standard Package selection, and generates an internal Professional Services turnover Word document from the saved server record.',
