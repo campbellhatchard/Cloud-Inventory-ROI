@@ -8,8 +8,8 @@ const now='2026-08-30';
 const criterion=(id,extra={})=>({id,source:'evidence',minQuality:'moderate',customerValidation:false,freshnessDays:90,...extra});
 const record=(id,extra={})=>({[id]:{evidence:`Customer confirmed ${id}`,stakeholder:'Pat Buyer',source:'Customer meeting',evidenceDate:'2026-08-20',quality:'strong',customerValidated:true,...extra}});
 const evaluate=(id,extra={},config={})=>evaluateCriterionEvidence({criterion:criterion(id,config),now,...extra});
-const process=(id,validation='Customer validated')=>({id,name:`Workflow ${id}`,selected:true,demoStatus:'Demonstrated',fit:'Fit',customerValidation:validation});
-const completeFit=processes=>({data:{opportunity:{customer:'Acme',solutionEngineer:'SE',products:['MEP'],locations:'3',users:'20',problem:'Lost time',outcome:'Accuracy'},architecture:{relationship:'Standalone',erp:'ERP',version:'1'},partner:{involved:'No'},processes,gaps:[]}});
+const process=(id,validation='Customer validated')=>({id,name:`Workflow ${id}`,product:'MEP',erp:'ERP',source:'standard_app',selected:true,demoStatus:'Demonstrated',fit:'Fit',customerValidation:validation});
+const completeFit=processes=>({primary_se_id:'se-1',data:{solutionScope:{primaryProduct:'MEP',additionalProducts:[],erp:'ERP',erpVersion:'1'},opportunity:{customer:'Acme',products:['MEP'],locations:'3',users:'20',problem:'Lost time',outcome:'Accuracy'},architecture:{relationship:'Standalone',erp:'ERP',version:'1'},partner:{involved:'No'},processes,gaps:[]}});
 
 test('an unrelated stakeholder or generic status cannot prove stakeholder criteria',()=>{
   const stakeholders=[{id:1,name:'Influencer',role:'influencer',engaged:true}];

@@ -30,14 +30,14 @@ router.get('/:customerId/export-docx',async(req,res)=>{
     if(req.query.kind!=='turnover')return res.status(400).json({error:'Unsupported Solution Fit Word output.'});
     const access=await loadAccessibleCustomer(req.params.customerId,req.user,'read');
     if(!access.ok)return res.status(access.code).json({error:access.error});
-    const {rows}=await query(`SELECT data FROM handoffs WHERE customer_id=$1 AND deleted_at IS NULL`,[req.params.customerId]);
+    const {rows}=await query(`SELECT h.data,h.primary_se_id,pse.username primary_se_name FROM handoffs h LEFT JOIN users pse ON pse.id=h.primary_se_id WHERE h.customer_id=$1 AND h.deleted_at IS NULL`,[req.params.customerId]);
     if(!rows.length)return res.status(409).json({error:'Save the Solution Fit before creating the turnover document.'});
-    const state=SolutionFitState.migrateState(JSON.parse(JSON.stringify(rows[0].data||{})));
+    const state=normalizeHandoffData(rows[0].data||{});
     const turnover=SolutionFitState.turnoverStats(state);
     if(turnover.missing.length)return res.status(409).json({error:`Complete the required turnover fields before generating Word: ${turnover.missing.join(', ')}.`});
     const owner=access.customer.ownerId?await query(`SELECT username FROM users WHERE id=$1`,[access.customer.ownerId]):{rows:[]};
     const logoPath=path.join(__dirname,'../../public/ci-logo-full-color.png');
-    const buffer=await buildSolutionFitTurnoverDocx({data:state,customerName:access.customer.name,accountExecutive:owner.rows[0]?.username||'',logoData:fs.readFileSync(logoPath)});
+    const buffer=await buildSolutionFitTurnoverDocx({data:state,customerName:access.customer.name,accountExecutive:owner.rows[0]?.username||'',primarySeName:rows[0].primary_se_name||'',logoData:fs.readFileSync(logoPath)});
     res.set('Content-Type','application/vnd.openxmlformats-officedocument.wordprocessingml.document');res.set('Cache-Control','private, no-store');
     res.set('Content-Disposition',`attachment; filename="Cloud-Inventory-PS-Turnover-${safeFile(access.customer.name)}-${new Date().toISOString().slice(0,10)}.docx"`);
     res.send(buffer);
@@ -49,9 +49,9 @@ router.get('/:customerId/export-pdf',async(req,res)=>{
     const access=await loadAccessibleCustomer(req.params.customerId,req.user,'read');
     if(!access.ok)return res.status(access.code).json({error:access.error});
     const kind=['summary','risk','handoff'].includes(req.query.kind)?req.query.kind:'summary';
-    const {rows}=await query(`SELECT data FROM handoffs WHERE customer_id=$1 AND deleted_at IS NULL`,[req.params.customerId]);
+    const {rows}=await query(`SELECT h.data,h.primary_se_id,pse.username primary_se_name FROM handoffs h LEFT JOIN users pse ON pse.id=h.primary_se_id WHERE h.customer_id=$1 AND h.deleted_at IS NULL`,[req.params.customerId]);
     if(!rows.length)return res.status(409).json({error:'Save the Solution Fit before creating an output.'});
-    const buf=buildSolutionFitPdf(rows[0].data||{},{kind,customer:access.customer.name});
+    const buf=buildSolutionFitPdf(normalizeHandoffData(rows[0].data||{}),{kind,customer:access.customer.name,primarySeName:rows[0].primary_se_name||''});
     const label=kind==='risk'?'Solution-Fit-Risk-Ledger':kind==='handoff'?'Internal-Solution-Handoff':'Solution-Discovery-Summary';
     res.set('Content-Type','application/pdf');res.set('Cache-Control','private, no-store');
     res.set('Content-Disposition',`attachment; filename="Cloud-Inventory-${label}-${safeFile(access.customer.name)}-${new Date().toISOString().slice(0,10)}.pdf"`);
@@ -73,8 +73,18 @@ async function loadAccessibleCustomer(customerId, user, mode /* 'read' | 'write'
 
 function changes(before,after,prefix='') { const out=[];const keys=new Set([...Object.keys(before||{}),...Object.keys(after||{})]);for(const k of keys){const p=prefix?`${prefix}.${k}`:k,a=before?.[k],b=after?.[k];if(a&&b&&typeof a==='object'&&typeof b==='object'&&!Array.isArray(a)&&!Array.isArray(b))out.push(...changes(a,b,p));else if(JSON.stringify(a)!==JSON.stringify(b))out.push({path:p,before:a===undefined?null:a,after:b===undefined?null:b});}return out; }
 
-function scoreOf(data) {
-  try { const r = readiness(data || {}); return { readiness: r.score, status: r.status }; }
+function normalizeHandoffData(input) {
+  const data=SolutionFitState.migrateState(JSON.parse(JSON.stringify(input||{})));
+  if(data.opportunity){
+    if(data.opportunity.solutionEngineer&&!data.opportunity.legacySolutionEngineerDisplay)data.opportunity.legacySolutionEngineerDisplay=data.opportunity.solutionEngineer;
+    delete data.opportunity.solutionEngineer;
+    delete data.opportunity.solutionEngineerId;
+  }
+  return SolutionFitState.synchronizeAuthority(data);
+}
+
+function scoreOf(data,primarySeId) {
+  try { const r = readiness(data || {},{primarySeId}); return { readiness: r.score, status: r.status }; }
   catch (e) { return { readiness: 0, status: 'not_ready' }; }
 }
 
@@ -89,8 +99,8 @@ router.get('/:customerId', async (req, res) => {
 
     const { rows } = await query(
       `SELECT h.id,h.customer_id,h.owner_id,h.data,h.readiness,h.status,h.created_by,h.primary_se_id,h.additional_se_ids,
-              h.last_edited_by,u.username last_edited_by_name,h.created_at,h.updated_at
-         FROM handoffs h LEFT JOIN users u ON u.id=h.last_edited_by WHERE h.customer_id = $1 AND h.deleted_at IS NULL`, [req.params.customerId]
+              h.last_edited_by,u.username last_edited_by_name,pse.username primary_se_name,h.created_at,h.updated_at
+         FROM handoffs h LEFT JOIN users u ON u.id=h.last_edited_by LEFT JOIN users pse ON pse.id=h.primary_se_id WHERE h.customer_id = $1 AND h.deleted_at IS NULL`, [req.params.customerId]
     );
     if (!rows.length) {
       const removed=await query(`SELECT id FROM handoffs WHERE customer_id=$1 AND deleted_at IS NOT NULL LIMIT 1`,[req.params.customerId]);
@@ -98,17 +108,18 @@ router.get('/:customerId', async (req, res) => {
         exists: false, customerId: req.params.customerId,
         customerName: access.customer.name,
         data: {}, readiness: 0, status: 'not_ready', removedRecoverable:removed.rows.length>0,
-        capabilities:{canView:true,canEdit:editAccess.ok,canCreate:!!canCreate,canRestore:removed.rows.length>0&&hasPermission(req.user,'edit_all_solution_fits')}
+        primarySeId:null,primarySeName:'',additionalSeIds:[],
+        capabilities:{canView:true,canEdit:editAccess.ok,canCreate:!!canCreate,canRestore:removed.rows.length>0&&hasPermission(req.user,'edit_all_solution_fits'),canAssign:hasPermission(req.user,'assign_solution_fit'),canSelfAssign:rolesOf(req.user).includes('se')}
       });
     }
     const h = rows[0];
     res.json({
       exists: true, id: h.id, customerId: h.customer_id, ownerId: h.owner_id,
       customerName: access.customer.name,
-      data: h.data || {}, readiness: h.readiness, status: h.status,
-      createdBy:h.created_by,primarySeId:h.primary_se_id,additionalSeIds:h.additional_se_ids||[],
+      data: normalizeHandoffData(h.data || {}), readiness: h.readiness, status: h.status,
+      createdBy:h.created_by,primarySeId:h.primary_se_id,primarySeName:h.primary_se_name||'',additionalSeIds:h.additional_se_ids||[],
       lastEditedBy: h.last_edited_by,lastEditedByName:h.last_edited_by_name,accessReasons:access.reasons,createdAt: h.created_at, updatedAt: h.updated_at,
-      capabilities:{canView:true,canEdit:editAccess.ok,canCreate:false,canRestore:false}
+      capabilities:{canView:true,canEdit:editAccess.ok,canCreate:false,canRestore:false,canAssign:hasPermission(req.user,'assign_solution_fit'),canSelfAssign:rolesOf(req.user).includes('se')}
     });
   } catch (err) {
     console.error('Get handoff error:', err.message);
@@ -122,13 +133,14 @@ router.post('/:customerId',async(req,res)=>{
     const access=await loadAccessibleCustomer(req.params.customerId,req.user,'write');
     if(!access.ok)return res.status(access.code).json({error:access.error});
     if(!hasPermission(req.user,'create_solution_fit')&&!hasPermission(req.user,'edit_all_solution_fits'))return res.status(403).json({error:'You do not have permission to create a Solution Fit.'});
-    const data=req.body&&typeof req.body.data==='object'&&req.body.data?req.body.data:{};
+    const data=normalizeHandoffData(req.body&&typeof req.body.data==='object'&&req.body.data?req.body.data:{});
     const result=await transaction(async client=>{
       const locked=await client.query(`SELECT id,deleted_at FROM handoffs WHERE customer_id=$1 FOR UPDATE`,[req.params.customerId]);
       if(locked.rows.some(x=>!x.deleted_at))return {conflict:'active'};
       if(locked.rows.some(x=>x.deleted_at))return {conflict:'removed'};
-      const isSe=rolesOf(req.user).includes('se');
-      const saved=await client.query(`INSERT INTO handoffs(customer_id,owner_id,data,readiness,status,last_edited_by,created_by,primary_se_id) VALUES($1,$2,$3,0,'not_ready',$4,$4,$5) RETURNING id,customer_id,readiness,status,updated_at,primary_se_id`,[req.params.customerId,access.customer.ownerId,JSON.stringify(data),req.user.id,isSe?req.user.id:null]);
+      const userRoles=rolesOf(req.user),isSe=userRoles.includes('se')&&!userRoles.includes('admin');
+      const primarySeId=isSe?req.user.id:null,{readiness:score,status}=scoreOf(data,primarySeId);
+      const saved=await client.query(`INSERT INTO handoffs(customer_id,owner_id,data,readiness,status,last_edited_by,created_by,primary_se_id) VALUES($1,$2,$3,$4,$5,$6,$6,$7) RETURNING id,customer_id,readiness,status,updated_at,primary_se_id`,[req.params.customerId,access.customer.ownerId,JSON.stringify(data),score,status,req.user.id,primarySeId]);
       return {row:saved.rows[0]};
     });
     if(result.conflict==='active')return res.status(409).json({error:'An active Solution Fit already exists.',code:'SOLUTION_FIT_EXISTS'});
@@ -153,12 +165,12 @@ router.put('/:customerId', async (req, res) => {
     const access = await loadAccessibleCustomer(req.params.customerId, req.user, 'write');
     if (!access.ok) return res.status(access.code).json({ error: access.error });
 
-    const data = (req.body && typeof req.body.data === 'object' && req.body.data) ? req.body.data : {};
-    const { readiness: score, status } = scoreOf(data);
+    const data = normalizeHandoffData((req.body && typeof req.body.data === 'object' && req.body.data) ? req.body.data : {});
 
-    const prior=await query('SELECT id,data,deleted_at FROM handoffs WHERE customer_id=$1',[req.params.customerId]);
+    const prior=await query('SELECT id,data,deleted_at,primary_se_id FROM handoffs WHERE customer_id=$1',[req.params.customerId]);
     if(!prior.rows.length)return res.status(404).json({error:'Create the Solution Fit before saving changes.',code:'SOLUTION_FIT_NOT_CREATED'});
     if(prior.rows[0].deleted_at)return res.status(409).json({error:'This Solution Fit was removed and must be restored before editing.',code:'SOLUTION_FIT_REMOVED'});
+    const { readiness: score, status } = scoreOf(data,prior.rows[0].primary_se_id);
     const rows = await transaction(async client=>{
       const saved=await client.query(
       `UPDATE handoffs
@@ -201,6 +213,31 @@ router.put('/:customerId', async (req, res) => {
 
 router.get('/:customerId/history',async(req,res)=>{try{const access=await loadAccessibleCustomer(req.params.customerId,req.user,'read');if(!access.ok)return res.status(access.code).json({error:access.error});const {rows}=await query(`SELECT hh.id,hh.field_path,hh.previous_value,hh.new_value,hh.changed_at,u.username changed_by FROM handoff_change_history hh LEFT JOIN users u ON u.id=hh.changed_by WHERE hh.customer_id=$1 ORDER BY hh.changed_at DESC LIMIT 500`,[req.params.customerId]);res.json(rows);}catch(e){res.status(500).json({error:'Failed to load Solution Fit history.'});}});
 
-router.put('/:customerId/assignment',async(req,res)=>{if(!hasPermission(req.user,'assign_solution_fit')&&!hasPermission(req.user,'edit_team_solution_fits'))return res.status(403).json({error:'Solution Fit assignment permission required.'});try{const access=await loadAccessibleCustomer(req.params.customerId,req.user,'write');if(!access.ok)return res.status(access.code).json({error:access.error});const b=req.body||{},additional=Array.isArray(b.additionalSeIds)?b.additionalSeIds:[];if(!hasPermission(req.user,'assign_solution_fit')&&(String(b.primarySeId||'')!==String(req.user.id)||additional.length))return res.status(403).json({error:'Sales Engineers may self-assign as Primary SE; only an Admin may assign other or additional SEs.'});const {rows}=await query(`UPDATE handoffs SET primary_se_id=$1,additional_se_ids=$2,updated_at=NOW(),last_edited_by=$3 WHERE customer_id=$4 AND deleted_at IS NULL RETURNING id,primary_se_id,additional_se_ids`,[b.primarySeId||null,additional,req.user.id,req.params.customerId]);if(!rows.length)return res.status(404).json({error:'Save the active Solution Fit before assigning SEs.'});await log({userId:req.user.id,action:'handoff.assignment_changed',entityType:'handoff',entityId:rows[0].id,detail:b,ipAddress:req.ip});res.json(rows[0]);}catch(e){res.status(500).json({error:'Failed to assign Solution Fit.'});}});
+router.put('/:customerId/assignment',async(req,res)=>{
+  if(!hasPermission(req.user,'assign_solution_fit')&&!hasPermission(req.user,'edit_team_solution_fits'))return res.status(403).json({error:'Solution Fit assignment permission required.'});
+  try{
+    const access=await loadAccessibleCustomer(req.params.customerId,req.user,'write');if(!access.ok)return res.status(access.code).json({error:access.error});
+    const b=req.body||{},primarySeId=b.primarySeId||null,uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const additional=[...new Set(Array.isArray(b.additionalSeIds)?b.additionalSeIds.filter(id=>id&&String(id)!==String(primarySeId)):[])];
+    if(!hasPermission(req.user,'assign_solution_fit')&&(String(primarySeId||'')!==String(req.user.id)||additional.length))return res.status(403).json({error:'Sales Engineers may self-assign as Primary SE; only an Admin may assign other or additional SEs.'});
+    const requested=[...new Set([primarySeId,...additional].filter(Boolean))];
+    if(requested.some(id=>!uuid.test(String(id))))return res.status(400).json({error:'Solution Engineer assignment contains an invalid user identifier.',code:'INVALID_SOLUTION_ENGINEER'});
+    if(requested.length){
+      const eligible=await query(`SELECT id,username FROM users WHERE id=ANY($1::uuid[]) AND is_active=TRUE AND (role='se' OR 'se'=ANY(COALESCE(roles,'{}'::text[])))`,[requested]);
+      if(eligible.rows.length!==requested.length)return res.status(400).json({error:'Primary and additional Solution Engineers must be active users with the Solution Engineer role.',code:'INVALID_SOLUTION_ENGINEER'});
+    }
+    const result=await transaction(async client=>{
+      const current=await client.query(`SELECT id,data,created_by FROM handoffs WHERE customer_id=$1 AND deleted_at IS NULL FOR UPDATE`,[req.params.customerId]);
+      if(!current.rows.length)return null;
+      const normalized=normalizeHandoffData(current.rows[0].data||{}),score=scoreOf(normalized,primarySeId);
+      const saved=await client.query(`UPDATE handoffs SET primary_se_id=$1,additional_se_ids=$2,readiness=$3,status=$4,updated_at=NOW(),last_edited_by=$5 WHERE customer_id=$6 AND deleted_at IS NULL RETURNING id,primary_se_id,additional_se_ids,readiness,status,created_by`,[primarySeId,additional,score.readiness,score.status,req.user.id,req.params.customerId]);
+      return saved.rows[0];
+    });
+    if(!result)return res.status(404).json({error:'Save the active Solution Fit before assigning SEs.'});
+    const assigned=primarySeId?await query(`SELECT username FROM users WHERE id=$1`,[primarySeId]):{rows:[]};
+    await log({userId:req.user.id,action:'handoff.assignment_changed',entityType:'handoff',entityId:result.id,detail:{primarySeId,additionalSeIds:additional},ipAddress:req.ip});
+    res.json({...result,primarySeName:assigned.rows[0]?.username||''});
+  }catch(e){console.error('Solution Fit assignment error:',e.message);res.status(500).json({error:'Failed to assign Solution Fit.'});}
+});
 
 module.exports = router;

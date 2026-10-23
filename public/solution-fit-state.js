@@ -15,6 +15,10 @@
   const DEMO_STATUSES=Object.freeze(['Not reviewed','Planned','Demonstrated','Partially demonstrated','Discussed only','Not demonstrated','Not applicable']);
   const FIT_STATUSES=Object.freeze(['Not reviewed','Full fit','Partial fit','Gap','Unknown','Not applicable']);
   const VALIDATION_STATUSES=Object.freeze(['Not validated','Validation pending','Customer validated','Customer rejected','Customer declined','Not applicable']);
+  const LEGACY_GENERIC_NAMES=Object.freeze([
+    'Receiving','Putaway','Inventory Movement','Picking','Packing','Shipping','Cycle Counting','Replenishment',
+    'Production Issue / Return','Field Inventory','Returns','Printing / Labeling'
+  ]);
 
   const CIP_CATALOG=Object.freeze([
     {group:'Dashboards',apps:['Inbound Insights','Inventory Insights','Outbound Insights','Wave Insights']},
@@ -48,24 +52,82 @@
   ]);
 
   const isObject=value=>value&&typeof value==='object'&&!Array.isArray(value);
+  const text=value=>String(value==null?'':value).trim();
+  function hash32(value,seed=2166136261){let hash=seed>>>0;for(const char of String(value)){hash^=char.charCodeAt(0);hash=Math.imul(hash,16777619)>>>0;}return hash.toString(16).padStart(8,'0');}
+  function descriptorKey(process){
+    const p=process||{};
+    return [text(p.product).toUpperCase(),text(p.erp).toUpperCase(),text(p.group).toUpperCase(),text(p.name).toUpperCase()].join('\u001f');
+  }
+  function governedProcessId(process){
+    const key=descriptorKey(process);
+    return `APP-GOV-${hash32(key)}${hash32([...key].reverse().join(''),3335557771)}`;
+  }
+  function nextSequence(items,prefix){
+    const used=new Set((items||[]).map(item=>text(item&&item.id)));
+    let number=1,id='';
+    do{id=`${prefix}-${String(number++).padStart(6,'0')}`;}while(used.has(id));
+    return id;
+  }
+  function nextSequenceFromSet(used,prefix){
+    let number=1,id='';
+    do{id=`${prefix}-${String(number++).padStart(6,'0')}`;}while(used.has(id));
+    return id;
+  }
+  function nextCustomProcessId(state){return nextSequence(state&&state.processes,'APP-CUSTOM');}
+  function nextLegacyProcessId(state){return nextSequence(state&&state.processes,'APP-LEGACY');}
+  function nextGapId(state){return nextSequence(state&&state.gaps,'GAP');}
+  function hasAssessment(process){
+    const p=process||{};
+    return p.selected===true
+      || !['','Not reviewed'].includes(text(p.demoStatus))
+      || !['','Not reviewed'].includes(text(p.fit))
+      || !['','Not validated'].includes(text(p.customerValidation))
+      || !!text(p.notes||p.reason);
+  }
+  function isLegacyProcess(process){return process&&process.source==='legacy_process';}
+  function hasUnresolvedLegacy(state){return (state&&state.processes||[]).some(process=>isLegacyProcess(process)&&process.historical!==true);}
+  function activeProducts(state){
+    const scope=state&&state.solutionScope||{},products=[];
+    if(text(scope.primaryProduct))products.push(scope.primaryProduct);
+    if(Array.isArray(scope.additionalProducts))products.push(...scope.additionalProducts);
+    if(!products.length&&Array.isArray(state&&state.opportunity&&state.opportunity.products))products.push(...state.opportunity.products);
+    return [...new Set(products.filter(Boolean))];
+  }
+  function hasActiveProduct(state,product){return activeProducts(state).includes(product);}
+  function processIsActive(state,process){
+    if(!process||process.selected!==true||process.historical===true||isLegacyProcess(process))return false;
+    if(!activeProducts(state).includes(process.product))return false;
+    if(process.product==='MEP'&&text(process.erp)!==text(state&&state.solutionScope&&state.solutionScope.erp))return false;
+    return true;
+  }
+  function activeProcesses(state){return (state&&state.processes||[]).filter(process=>processIsActive(state,process));}
+  function activeGaps(state){
+    const ids=new Set(activeProcesses(state).map(process=>process.id));
+    return (state&&state.gaps||[]).filter(gap=>!gap.historical&&(gap.processId?ids.has(gap.processId):true));
+  }
   function fillMissing(target,defaults){
     if(!isObject(target))target={};
     for(const [key,value] of Object.entries(defaults))if(target[key]===undefined)target[key]=Array.isArray(value)?value.slice():isObject(value)?fillMissing({},value):value;
     return target;
   }
   function blankProcess(name,index,extra={}){
-    return {id:`P-${String(index+1).padStart(3,'0')}`,name,selected:false,demoStatus:'Not reviewed',fit:'Not reviewed',customerValidation:'Not validated',notes:'',source:'product_app',...extra};
+    const process={name,selected:false,demoStatus:'Not reviewed',fit:'Not reviewed',customerValidation:'Not validated',notes:'',source:'product_app',...extra};
+    process.id=extra.id||(process.source==='non_standard'?`APP-CUSTOM-${String(index+1).padStart(6,'0')}`:governedProcessId(process));
+    return process;
   }
   function processKey(process){
     const p=process||{};
-    return [String(p.product||''),String(p.erp||''),String(p.group||''),String(p.name||'')].join('::').toLowerCase();
+    return p.id?`id:${p.id}`:`descriptor:${descriptorKey(p)}`;
+  }
+  function findProcess(state,descriptor){
+    const rows=state&&state.processes||[],wantedId=descriptor&&descriptor.id||(descriptor&&descriptor.source!=='non_standard'?governedProcessId(descriptor):'');
+    return (wantedId&&rows.find(item=>item.id===wantedId))||rows.find(item=>descriptorKey(item)===descriptorKey(descriptor)&&item.source!=='legacy_process');
   }
   function ensureProcess(state,{product,name,group='',erp='',source='product_app',catalogVersion='',selected=false}){
-    const candidate={product,name,group,erp};
-    let process=(state.processes||[]).find(item=>processKey(item)===processKey(candidate));
-    if(!process&&erp)process=(state.processes||[]).find(item=>String(item.product||'')===String(product||'')&&String(item.name||'')===String(name||'')&&String(item.erp||'')===String(erp||''));
+    const candidate={product,name,group,erp,source,catalogVersion};
+    let process=findProcess(state,candidate);
     if(!process){
-      process=blankProcess(name,(state.processes||[]).length,{product,group,erp,source,catalogVersion,selected});
+      process=blankProcess(name,(state.processes||[]).length,{id:governedProcessId(candidate),product,group,erp,source,catalogVersion,selected});
       state.processes.push(process);
     }else{
       if(process.product===undefined)process.product=product;
@@ -73,9 +135,13 @@
       if(erp&&process.erp===undefined)process.erp=erp;
       if(source&&process.source===undefined)process.source=source;
       if(catalogVersion&&process.catalogVersion===undefined)process.catalogVersion=catalogVersion;
-      if(selected)process.selected=true;
+      if(selected){process.selected=true;process.historical=false;delete process.inactiveReason;}
     }
     return process;
+  }
+  function createCustomProcess(state,{product,name,group='Customer-specific',erp='',selected=true}={}){
+    const process=blankProcess(name,(state.processes||[]).length,{id:nextCustomProcessId(state),product,group,erp,source:'non_standard',selected});
+    state.processes.push(process);return process;
   }
   function setSelected(state,descriptor,selected){
     const process=ensureProcess(state,{...descriptor,selected:false});
@@ -94,17 +160,74 @@
     for(const process of state.processes||[])if(process.product==='MEP'&&process.erp===erp)process.selected=false;
     return state;
   }
+  function synchronizeAuthority(state){
+    const scope=state.solutionScope||{},architecture=state.architecture||{};
+    if(hasActiveProduct(state,'MEP')){
+      architecture.erp=text(scope.erp);
+      architecture.version=text(scope.erpVersion);
+    }
+    state.architecture=architecture;
+    return state;
+  }
+  function changeMepErpFamily(state,nextErp,{changedAt}={}){
+    state.solutionScope=state.solutionScope||{};state.architecture=state.architecture||{};state.processes=state.processes||[];
+    const prior=text(state.solutionScope.erp),next=text(nextErp);
+    if(prior===next)return {state,changed:false,prior,next,archivedProcessIds:[]};
+    const priorRows=state.processes.filter(process=>process.product==='MEP'&&text(process.erp)===prior),archivedProcessIds=priorRows.map(process=>process.id).filter(Boolean);
+    if(prior){
+      state.scopeHistory=state.scopeHistory||[];
+      state.scopeHistory.push({changedAt:changedAt||new Date().toISOString(),scope:{...state.solutionScope},processIds:archivedProcessIds,reason:'ERP family changed explicitly; prior ERP/version and application assessments retained as inactive history.'});
+    }
+    priorRows.forEach(process=>{process.selected=false;process.historical=true;process.inactiveReason=`ERP changed from ${prior} to ${next}`;});
+    state.solutionScope.erp=next;state.solutionScope.erpVersion='';state.architecture.erp=next;state.architecture.version='';
+    return {state,changed:true,prior,next,archivedProcessIds};
+  }
+  function canUseCustomerContext(solutionFitCustomerId,roiCustomerId){
+    return !!text(solutionFitCustomerId)&&text(solutionFitCustomerId)===text(roiCustomerId);
+  }
+  function applyGapProcessMetadata(gap,process){
+    gap.processId=process.id;gap.process=process.name||'';gap.product=process.product||'';gap.erp=process.erp||'';gap.group=process.group||'';gap.mappingStatus='mapped';
+    return gap;
+  }
+  function migrateGaps(state){
+    const seen=new Set();
+    for(const gap of state.gaps){
+      if(!isObject(gap))continue;
+      if(!text(gap.id)||seen.has(gap.id))gap.id=nextSequenceFromSet(seen,'GAP');
+      seen.add(gap.id);
+      for(const [key,value] of Object.entries({processId:'',product:'',erp:'',group:'',process:'',mappingStatus:'unassigned',impact:'',resolution:'',owner:'',targetDate:'',status:'Open'}))if(gap[key]===undefined)gap[key]=value;
+      const byId=gap.processId&&state.processes.find(process=>process.id===gap.processId);
+      if(byId){applyGapProcessMetadata(gap,byId);continue;}
+      gap.processId='';
+      if(!text(gap.process)){gap.mappingStatus='unassigned';continue;}
+      const matches=state.processes.filter(process=>text(process.name)===text(gap.process));
+      if(matches.length===1)applyGapProcessMetadata(gap,matches[0]);
+      else if(matches.length>1)gap.mappingStatus='Needs Review / Ambiguous Legacy Mapping';
+      else gap.mappingStatus='Needs Review / Unresolved Legacy Mapping';
+    }
+  }
   function migrateState(state){
     if(!isObject(state))state={};
-    state.opportunity=fillMissing(state.opportunity||{}, {customer:'',solutionEngineer:'',solutionEngineerId:'',stage:'',products:[],productsOther:'',goLive:'',users:'',locations:'',problem:'',outcome:'',businessOwnerName:'',businessOwnerTitle:'',businessOwnerEmail:'',businessOwnerPhone:'',technicalOwnerName:'',technicalOwnerTitle:'',technicalOwnerEmail:'',technicalOwnerPhone:''});
+    state.opportunity=fillMissing(state.opportunity||{}, {customer:'',stage:'',products:[],productsOther:'',goLive:'',users:'',locations:'',problem:'',outcome:'',businessOwnerName:'',businessOwnerTitle:'',businessOwnerEmail:'',businessOwnerPhone:'',technicalOwnerName:'',technicalOwnerTitle:'',technicalOwnerEmail:'',technicalOwnerPhone:''});
+    if(text(state.opportunity.solutionEngineer)&&!text(state.opportunity.legacySolutionEngineerDisplay))state.opportunity.legacySolutionEngineerDisplay=text(state.opportunity.solutionEngineer);
+    delete state.opportunity.solutionEngineer;
+    delete state.opportunity.solutionEngineerId;
     if(typeof state.opportunity.products==='string')state.opportunity.products=state.opportunity.products?[state.opportunity.products]:[];
     if(!Array.isArray(state.opportunity.products))state.opportunity.products=[];
     state.architecture=fillMissing(state.architecture||{}, {relationship:'',erp:'',version:'',otherSystems:'',integrationMethod:'',integrationOwner:'',integrationNotes:'',hasCustomizations:'',customizations:[]});
     if(!Array.isArray(state.architecture.customizations))state.architecture.customizations=[];
     state.partner=fillMissing(state.partner||{}, {involved:'',company:'',role:'',contactName:'',email:'',phone:'',title:''});
-    state.solutionScope=fillMissing(state.solutionScope||{}, {primaryProduct:'',additionalProducts:[],erp:'',erpVersion:'',catalogId:'',catalogVersion:'',catalogSource:'',selectedApps:[],packageMode:'custom'});
+    state.solutionScope=fillMissing(state.solutionScope||{}, {primaryProduct:'',additionalProducts:[],erp:'',erpVersion:'',catalogId:'',catalogVersion:'',catalogSource:'',selectedApps:[],selectedAppIds:[],packageMode:'custom'});
     if(!Array.isArray(state.solutionScope.additionalProducts))state.solutionScope.additionalProducts=[];
     if(!Array.isArray(state.solutionScope.selectedApps))state.solutionScope.selectedApps=[];
+    if(!Array.isArray(state.solutionScope.selectedAppIds))state.solutionScope.selectedAppIds=[];
+    if(!state.solutionScope.primaryProduct&&state.opportunity.products.length){state.solutionScope.primaryProduct=state.opportunity.products[0];state.solutionScope.additionalProducts=state.opportunity.products.slice(1);}
+    const scopedProducts=activeProducts(state);
+    if(scopedProducts.length)state.opportunity.products=scopedProducts;
+    if(scopedProducts.includes('MEP')){
+      if(!text(state.solutionScope.erp)&&text(state.architecture.erp))state.solutionScope.erp=text(state.architecture.erp);
+      if(!text(state.solutionScope.erpVersion)&&text(state.architecture.version))state.solutionScope.erpVersion=text(state.architecture.version);
+    }
     if(!Array.isArray(state.processes))state.processes=[];
     if(!Array.isArray(state.gaps))state.gaps=[];
     if(!Array.isArray(state.interfaces))state.interfaces=[];
@@ -115,24 +238,36 @@
     for(const name of LPN_ITEMS)if(state.lpnConfiguration[name]===undefined)state.lpnConfiguration[name]='Not answered';
     state.printing=fillMissing(state.printing||{}, {sites:'',labelCount:'',solution:'',notes:''});
     state.turnover=fillMissing(state.turnover||{}, TURNOVER_DEFAULTS);
-    state.ui=fillMissing(state.ui||{}, {solutionFitLayoutVersion:'6.9.40'});
-    const primary=state.solutionScope.primaryProduct||state.opportunity.products[0]||'';
-    state.processes.forEach((process,index)=>{
+    state.ui=fillMissing(state.ui||{}, {solutionFitLayoutVersion:'6.9.41'});
+    const referencedLegacyNames=new Set(state.gaps.map(gap=>text(gap&&gap.process)).filter(Boolean));
+    state.processes=state.processes.filter(process=>{
+      if(!isObject(process))return false;
+      const legacy=process.source==='legacy_process'||(!process.source&&!process.product&&LEGACY_GENERIC_NAMES.includes(process.name));
+      return !(legacy&&LEGACY_GENERIC_NAMES.includes(process.name)&&!hasAssessment(process)&&!referencedLegacyNames.has(text(process.name)));
+    });
+    const usedIds=new Set();
+    state.processes.forEach(process=>{
       if(!isObject(process))return;
-      if(process.id===undefined)process.id=`P-${String(index+1).padStart(3,'0')}`;
       if(process.selected===undefined)process.selected=false;
       if(process.demoStatus===undefined)process.demoStatus='Not reviewed';
       if(process.fit===undefined)process.fit='Not reviewed';
       if(process.customerValidation===undefined)process.customerValidation='Not validated';
       if(process.notes===undefined)process.notes='';
-      if(process.source===undefined)process.source='legacy_process';
-      if(process.product===undefined)process.product=process.source==='standard_app'?'MEP':primary;
+      if(process.source===undefined)process.source=process.product?'product_app':'legacy_process';
+      if(process.source==='legacy_process'){
+        process.product='';process.erp='';process.group=process.group||'LEGACY / UNCLASSIFIED HISTORICAL PROCESS';process.legacyUnclassified=true;
+      }
+      if(!text(process.id)||usedIds.has(process.id))process.id=process.source==='legacy_process'?nextSequenceFromSet(usedIds,'APP-LEGACY'):process.source==='non_standard'?nextSequenceFromSet(usedIds,'APP-CUSTOM'):governedProcessId(process);
+      if(usedIds.has(process.id))process.id=nextSequenceFromSet(usedIds,process.source==='legacy_process'?'APP-LEGACY':process.source==='non_standard'?'APP-CUSTOM':'APP-GOV-COLLISION');
+      usedIds.add(process.id);
     });
-    state.gaps.forEach(gap=>{
-      if(!isObject(gap))return;
-      for(const [key,value] of Object.entries({impact:'',resolution:'',owner:'',targetDate:'',status:'Open'}))if(gap[key]===undefined)gap[key]=value;
-    });
+    migrateGaps(state);
     state.interfaces.forEach(item=>{if(item.direction===undefined)item.direction='Bidirectional';if(item.trigger===undefined)item.trigger='Near real time';});
+    if(hasUnresolvedLegacy(state))state.legacy=fillMissing(state.legacy||{}, {status:'needs_review',label:'LEGACY / UNCLASSIFIED HISTORICAL PROCESS'});
+    else if(state.legacy&&state.legacy.status==='needs_review')state.legacy.status='historical';
+    synchronizeAuthority(state);
+    state.solutionScope.selectedAppIds=activeProcesses(state).filter(process=>process.product==='MEP').map(process=>process.id);
+    state.solutionScope.selectedApps=activeProcesses(state).filter(process=>process.product==='MEP').map(process=>process.name);
     return state;
   }
   function inventoryStats(state){
@@ -154,5 +289,5 @@
     return{total:required.length,complete:required.length-missing.length,missing:missing.map(item=>item[1])};
   }
 
-  return {INVENTORY_ITEMS,LPN_ITEMS,ANSWERS,DEMO_STATUSES,FIT_STATUSES,VALIDATION_STATUSES,CIP_CATALOG,EPP_CATALOG,TURNOVER_DEFAULTS,TURNOVER_REQUIRED,migrateState,ensureProcess,setSelected,applyStandardPackage,startCustomScope,processKey,inventoryStats,turnoverStats};
+  return {INVENTORY_ITEMS,LPN_ITEMS,ANSWERS,DEMO_STATUSES,FIT_STATUSES,VALIDATION_STATUSES,LEGACY_GENERIC_NAMES,CIP_CATALOG,EPP_CATALOG,TURNOVER_DEFAULTS,TURNOVER_REQUIRED,migrateState,migrateGaps,ensureProcess,createCustomProcess,setSelected,applyStandardPackage,startCustomScope,processKey,findProcess,governedProcessId,nextCustomProcessId,nextGapId,applyGapProcessMetadata,activeProducts,hasActiveProduct,activeProcesses,activeGaps,hasUnresolvedLegacy,synchronizeAuthority,changeMepErpFamily,canUseCustomerContext,inventoryStats,turnoverStats};
 });

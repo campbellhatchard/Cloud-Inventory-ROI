@@ -76,12 +76,12 @@ test('guided Solution Fit uses server persistence, eight ordered steps, and no b
 
 test('Professional Services turnover Word output is built from saved Solution Fit data',async()=>{
   const data=model.migrateState({
-    opportunity:{customer:'Northstar',solutionEngineer:'SE User',products:['CIP'],outcome:'Improve inventory accuracy'},
+    opportunity:{customer:'Northstar',products:['CIP'],outcome:'Improve inventory accuracy'},
     processes:[{name:'Cycle Count',product:'CIP',group:'Inventory execution',selected:true,demoStatus:'Demonstrated',fit:'Full fit',customerValidation:'Customer validated',notes:'Validated in workshop'}],
     turnover:{contractStatus:'Signed and available',projectManager:'Jordan Lee',systemAdminEmail:'admin@northstar.example',deliveryModel:'Cloud Inventory Professional Services',internalDeliveryContact:'Delivery Lead',projectStart:'2026-11-01',eapEdition:'Enterprise',environments:'2',authorizedDefinitions:'Cloud Inventory',authorizedLanguages:'English',customerDomain:'northstar.example',sowLink:'repository://signed-sow'}
   });
   const logo=fs.readFileSync(path.join(root,'public','ci-logo-full-color.png'));
-  const buffer=await buildSolutionFitTurnoverDocx({data,customerName:'Northstar',accountExecutive:'AE User',logoData:logo});
+  const buffer=await buildSolutionFitTurnoverDocx({data,customerName:'Northstar',accountExecutive:'AE User',primarySeName:'SE User',logoData:logo});
   assert.ok(buffer.length>5000);
   const zip=await JSZip.loadAsync(buffer);
   assert.ok(zip.file('[Content_Types].xml'));
@@ -95,7 +95,7 @@ test('Professional Services turnover Word output is built from saved Solution Fi
 test('turnover route reads the saved handoff and fails closed when required fields are missing',()=>{
   const route=read('src/routes/handoffs.js');
   assert.match(route,/router\.get\('\/:customerId\/export-docx'/);
-  assert.match(route,/SELECT data FROM handoffs WHERE customer_id=\$1 AND deleted_at IS NULL/);
+  assert.match(route,/SELECT h\.data,h\.primary_se_id,pse\.username primary_se_name FROM handoffs h/);
   assert.match(route,/SolutionFitState\.turnoverStats\(state\)/);
   assert.match(route,/if\(turnover\.missing\.length\)return res\.status\(409\)/);
   assert.match(route,/buildSolutionFitTurnoverDocx\(\{data:state/);

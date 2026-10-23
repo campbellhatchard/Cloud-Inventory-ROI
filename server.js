@@ -289,16 +289,16 @@ app.get('/api/companies', requireAuth, async (req, res) => {
   }
 });
 
-/* Lightweight list of assignable Solution Engineers + Admins, readable by any
+/* Lightweight list of assignable Solution Engineers, readable by any
    authenticated user (returns only id/username/role — no sensitive fields).
    Used to populate the Solution Fit "Solution Engineer" dropdown. */
 app.get('/api/solution-engineers', requireAuth, async (req, res) => {
   try {
     const { hasPermission, getTeamUsers } = require('./src/authorization');
     let rows;
-    if (hasPermission(req.user,'solution_fit_cross_account')) ({rows}=await db().query(`SELECT id,username,role,roles FROM users WHERE is_active=TRUE AND (role='se' OR 'se'=ANY(roles) OR role='admin' OR 'admin'=ANY(roles)) ORDER BY username`));
+    if (hasPermission(req.user,'solution_fit_cross_account')) ({rows}=await db().query(`SELECT id,username,role,roles FROM users WHERE is_active=TRUE AND (role='se' OR 'se'=ANY(COALESCE(roles,'{}'::text[]))) ORDER BY username`));
     else rows=await getTeamUsers(req.user.id,'se');
-    res.json(rows.map(r => ({ id: r.id, name: r.username, role: (r.roles||[]).includes('admin')?'admin':'se', roles:r.roles||[r.role] })));
+    res.json(rows.map(r => ({ id: r.id, name: r.username, role: 'se', roles:r.roles||[r.role] })));
   } catch (err) {
     console.error('List solution engineers error:', err.message);
     res.status(500).json({ error: 'Failed to load solution engineers.' });

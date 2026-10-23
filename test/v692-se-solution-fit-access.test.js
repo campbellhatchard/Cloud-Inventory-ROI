@@ -49,7 +49,7 @@ test('creation is explicit, preserves owner, assigns creating SE, and update can
   assert.match(route,/router\.post\('\/:customerId'/);assert.match(route,/primary_se_id\) VALUES/);assert.match(route,/isSe\?req\.user\.id:null/);
   assert.match(route,/customerOwner:access\.customer\.ownerId/);assert.match(route,/primarySeId:result\.row\.primary_se_id/);
   assert.match(route,/SOLUTION_FIT_NOT_CREATED/);assert.doesNotMatch(route,/ON CONFLICT \(customer_id\) DO UPDATE/);
-  assert.doesNotMatch(read('public/solution-fit.js'),/\/assignment'.*method:'PUT'/);
+  assert.match(read('public/solution-fit.js'),/\/assignment'.*method:'PUT'/s);
 });
 
 test('Solution Fit selector is searchable and offers explicit open/create actions',()=>{
@@ -76,7 +76,7 @@ test('Help and permanent governance state the isolated SE Solution Fit scope',()
 
 test('cross-account Solution Fit never reuses a different customer scenario context',()=>{
   const ui=read('public/solution-fit.js');
-  assert.match(ui,/sameScenarioCustomer=String\(window\.currentScenarioCustomerId/);
+  assert.match(ui,/sameScenarioCustomer=SF_MODEL\.canUseCustomerContext\(customerId,window\.currentScenarioCustomerId\)/);
   assert.match(ui,/if\(sameScenarioCustomer\)\{[\s\S]{0,300}getCurrentBuyCycleStageLabel[\s\S]{0,300}setVal\(S,'opportunity\.stage'/);
   assert.match(ui,/sameScenarioCustomer\?\(document\.getElementById\('why_act'\)/);
   assert.match(ui,/canUseSeChristie=String\(window\.currentScenarioCustomerId/);

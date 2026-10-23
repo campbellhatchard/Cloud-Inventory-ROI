@@ -7,6 +7,30 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.42', date: '2026-10-22', tag: 'solution-fit-inventory-ui',
+    title: 'Clearer General Inventory Configuration',
+    summary: 'Improves the Solution Fit General Inventory Configuration layout, readability, responsive behavior, note editing, and conditional LPN detail without changing its questions, values, persistence, readiness, authorization, outputs, or ROI behavior.',
+    highlights: [
+      'Inventory requirements use readable two-column cards on desktop and a single-column layout on smaller screens.',
+      'Native answer lists retain the exact governed answer choices with clear labels and keyboard focus treatment.',
+      'Add note and Edit note remain inline while answer and note changes continue saving to the authenticated server record.',
+      'LPN detail remains conditional on a Yes response and is visually connected to its governing question.',
+      'No database, ROI, readiness, authorization, evidence, output, or state-schema behavior changed.'
+    ]
+  },
+  {
+    version: '6.9.41', date: '2026-10-22', tag: 'solution-fit-stabilization',
+    title: 'Stable Solution Fit identity and workflow authority',
+    summary: 'Stabilizes Solution Fit application and gap identity, Primary SE assignment, MEP ERP configuration, multi-product behavior, legacy compatibility, and cross-customer isolation without changing ROI calculations.',
+    highlights: [
+      'New Solution Fits start clean and receive application rows only from governed product catalogs or deliberate custom scope.',
+      'Applications and gaps now retain stable server-persisted IDs; duplicate names no longer create ambiguous relationships.',
+      'Primary Solution Engineer is governed exclusively by the server assignment and eligible active SE users.',
+      'MEP ERP family and version are configured together, with explicit changes preserving prior ERP assessments as history.',
+      'MEP works as either the primary or an additional product, and Solution Fit defaults remain isolated to the exact ROI customer.'
+    ]
+  },
+  {
     version: '6.9.40', date: '2026-10-22', tag: 'solution-fit-scope-switch',
     title: 'Product-only Solution Fit setup and protected customer switching',
     summary: 'Removes duplicate MEP ERP/application entry from Create and Edit Scope, and adds a clear in-workspace Switch Customer flow that preserves authorization, saved data, and customer isolation.',

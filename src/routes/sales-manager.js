@@ -6,6 +6,7 @@ const { requireAuth, requireAnyRole } = require('../middleware/auth');
 const { hasPermission, customerScopeSql, scenarioAccess } = require('../authorization');
 const {evaluateLiveStageReadinessBatch,liveReadinessSummary}=require('../shared/stage-readiness-service');
 const {dedupeCurrentScenarioRows}=require('../shared/sales-manager-deals');
+const SolutionFitState=require('../../public/solution-fit-state');
 
 const router = express.Router();
 router.use(requireAuth, requireAnyRole('sales_manager', 'admin'));
@@ -16,8 +17,8 @@ const lower = value => text(value).toLowerCase();
 
 function solutionFit(handoff) {
   if (!handoff) return { level: 'Not Assessed', reasons: ['No Solution Fit assessment saved'] };
-  const data = handoff.data || {};
-  const gaps = Array.isArray(data.gaps) ? data.gaps : [];
+  const data = SolutionFitState.migrateState(JSON.parse(JSON.stringify(handoff.data || {})));
+  const gaps = SolutionFitState.activeGaps(data);
   const critical = gaps.filter(g => lower(g.priority).includes('must') || lower(g.severity).includes('critical') || lower(g.goLive) === 'yes');
   const unresolved = gaps.filter(g => !['closed','resolved','done'].includes(lower(g.status)));
   let level = 'Low Risk';

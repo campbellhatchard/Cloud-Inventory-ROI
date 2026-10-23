@@ -216,7 +216,7 @@ describe('HTTP API integration', { skip: HAS_DB ? false : 'DATABASE_URL not set 
     // Update with partial data → server computes readiness > 0.
     const put = await api('/api/handoffs/' + customerId, {
       method: 'PUT', token: adminToken,
-      body: { data: { opportunity: { customer: company, solutionEngineer: 'Jo', products: 'CIP' } } }
+      body: { data: { opportunity: { customer: company, solutionEngineer: 'Legacy Jo', products: 'CIP' } } }
     });
     assert.strictEqual(put.status, 200);
     assert.ok(typeof put.json.readiness === 'number' && put.json.readiness > 0, 'server should compute a readiness score');
@@ -224,7 +224,8 @@ describe('HTTP API integration', { skip: HAS_DB ? false : 'DATABASE_URL not set 
     // Re-fetch persists.
     const refetch = await api('/api/handoffs/' + customerId, { token: adminToken });
     assert.strictEqual(refetch.json.exists, true);
-    assert.strictEqual(refetch.json.data.opportunity.solutionEngineer, 'Jo');
+    assert.strictEqual(refetch.json.data.opportunity.solutionEngineer, undefined);
+    assert.strictEqual(refetch.json.data.opportunity.legacySolutionEngineerDisplay, 'Legacy Jo');
 
     // Cleanup the scenario (customer + handoff cascade as configured).
     if (saved.id) await api('/api/scenarios/' + saved.id, { method: 'DELETE', token: adminToken });
