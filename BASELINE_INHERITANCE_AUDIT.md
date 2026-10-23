@@ -1,21 +1,23 @@
-# v6.9.40 Pre-build Baseline Inheritance Audit
+# v6.9.42 Pre-build Baseline Inheritance Audit
 
 ## Authoritative parent
 
-- Archive: `cloud-inventory-roi-v6.9.39-render-ready.zip`
-- SHA-256: `071a32de3aa3b56f75fb13aa66d499d5ec40faba6abb79985bda711f5f2f287d`
-- Deployed parent commit: `3ad081be117574568d7608bdf952d1ef034924ca`
-- Developer source snapshot: `069f02b8ed42d78e21dd0b583acdb2a3c9274674`
-- Parent application version: `6.9.39`
-- Target application version: `6.9.40`
+- Developer parent archive: `cloud-inventory-roi-v6.9.41-render-ready.zip`
+- Developer parent SHA-256: `00c4bb8daf4e188824a1726fb81871454e9e491b3b2797c1246e2d7ea99934ec`
+- Materialized developer parent commit: `cfee9275b073fdb9f074a61daaf4460e87227ba2`
+- Deployed parent archive: `cloud-inventory-roi-v6.9.40-render-ready.zip`
+- Deployed parent SHA-256: `4cf004c42d4801720af0cd4a45cffb446aa5d12e04fbc11434244ef262c66a61`
+- Deployed parent commit: `212712ae890f74c09f4f439e4007b63b0c6a8dd9`
+- Parent application version: `6.9.41` (developer lineage) / `6.9.40` (deployed production)
+- Target application version: `6.9.42`
 
-The parent archive hash was verified before production source changed. The supplied developer snapshot was applied forward onto the exact deployed v6.9.39 commit so production-only release corrections and evidence remain intact.
+The supplied v6.9.42 package is cumulative over its v6.9.41 developer parent. Its cumulative v6.9.41 and v6.9.42 delta was applied forward onto the exact deployed v6.9.40 commit so production-only release corrections, safeguards, and evidence remain intact.
 
 ## Protected inheritance
 
 - ROI Model v2.8 / `modelVersion` 28 is unchanged.
 - Brand System, Application Knowledge, and Christie Persona remain v1.0.
-- The v6.9.39 guided Solution Fit, saved JSONB authority, MEP package behavior, application assessments, gaps, integrations, readiness, and Professional Services turnover DOCX remain intact.
+- The v6.9.40 guided Solution Fit, customer switching, saved JSONB authority, MEP package behavior, application assessments, gaps, integrations, readiness, and Professional Services turnover DOCX remain intact.
 - All Executive, Proposal, JPP, Stakeholder, Competitive, Prospect, Value History, Rep Confirmed, BuyCycle, Customer Email, Admin, Sales Manager, and authorization protections remain inherited.
 - The dedicated `solution_fit_cross_account` discovery permission remains separate from general ROI/customer authority.
 - Customers without ROI scenarios remain eligible for Solution Fit.
@@ -32,4 +34,4 @@ The parent archive hash was verified before production source changed. The suppl
 
 ## Authorized scope
 
-Correct the Solution Fit setup modal so it owns product scope only, and provide an explicit in-workspace Solution Fit customer switch with dirty-state protection, URL-backed identity, and cross-customer isolation. No other application function is authorized to change.
+Apply the cumulative v6.9.41 Solution Fit stabilization and v6.9.42 General Inventory Configuration presentation improvements. No other application function is authorized to change.

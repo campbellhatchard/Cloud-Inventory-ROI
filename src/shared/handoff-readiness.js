@@ -17,21 +17,39 @@
   }
 
   /* Compute readiness. Returns { miss:[{label,msg}], done:[{label}], score, status }. */
-  function readiness(state) {
+  function activeProducts(state) {
+    const scope=state.solutionScope||{},values=[];
+    if(scope.primaryProduct)values.push(scope.primaryProduct);
+    if(Array.isArray(scope.additionalProducts))values.push(...scope.additionalProducts);
+    if(!values.length&&Array.isArray(state.opportunity?.products))values.push(...state.opportunity.products);
+    return [...new Set(values.filter(Boolean))];
+  }
+
+  function processIsActive(state,process,products) {
+    if(!process||process.selected!==true||process.historical===true||process.source==='legacy_process')return false;
+    if(!products.includes(process.product))return false;
+    if(process.product==='MEP'&&String(process.erp||'')!==String(state.solutionScope?.erp||''))return false;
+    return true;
+  }
+
+  function readiness(state, options = {}) {
     state = state || {};
     const o = state.opportunity || {};
     const a = state.architecture || {};
     const p = state.partner || {};
     const processes = Array.isArray(state.processes) ? state.processes : [];
-    const gaps = Array.isArray(state.gaps) ? state.gaps : [];
+    const products=activeProducts(state);
+    const selected = processes.filter(process=>processIsActive(state,process,products));
+    const selectedIds=new Set(selected.map(process=>process.id).filter(Boolean));
+    const gaps = (Array.isArray(state.gaps) ? state.gaps : []).filter(gap=>!gap.historical&&(!gap.processId||selectedIds.has(gap.processId)));
 
     const miss = [], done = [];
     const req = (ok, label, msg = 'is missing.') => { (ok ? done : miss).push({ label, msg }); };
 
     /* Business context */
     req(!!o.customer, 'Customer / prospect');
-    req(!!o.solutionEngineer, 'Solution Engineer');
-    req(Array.isArray(o.products) ? o.products.length > 0 : !!o.products, 'Cloud Inventory product(s)');
+    req(!!options.primarySeId, 'Primary Solution Engineer', 'is not assigned through the governed Solution Fit assignment.');
+    req(products.length > 0, 'Cloud Inventory product(s)');
     req(!!o.locations, 'Locations / operating scope');
     req(!!o.users, 'Estimated users');
     req(!!o.problem, 'Business problem');
@@ -39,9 +57,16 @@
 
     /* Architecture */
     req(!!a.relationship, 'Deployment relationship');
-    req(!!a.erp, 'System of record / ERP');
-    const mepScope=state.solutionScope&&state.solutionScope.primaryProduct==='MEP';
-    if(!mepScope)req(!!a.version, 'ERP / system version');
+    const mepScope=products.includes('MEP');
+    if(mepScope){
+      const scope=state.solutionScope||{};
+      req(!!scope.erp, 'MEP ERP family');
+      req(!!scope.erpVersion, 'MEP ERP version', 'is required; use Unknown / To Be Confirmed when the customer has not confirmed it.');
+      req(selected.some(process=>process.product==='MEP'), 'MEP application scope', 'has no active governed MEP applications.');
+    }else{
+      req(!!a.erp, 'System of record / ERP');
+      req(!!a.version, 'ERP / system version');
+    }
     const standalone = a.relationship === 'Standalone';
     if (!standalone) {
       req(!!a.integrationMethod, 'Primary integration method');
@@ -57,7 +82,6 @@
     }
 
     /* Process scope + demo/fit capture */
-    const selected = processes.filter(x => x.selected);
     req(selected.length > 0, 'Process scope', 'has not been selected.');
     const notDemo = selected.filter(x => x.demoStatus === 'Not reviewed');
     req(notDemo.length === 0, 'Demo status', notDemo.length ? `is not captured for ${notDemo.map(x => x.name).join(', ')}.` : '');
@@ -65,6 +89,10 @@
     req(noFit.length === 0, 'Fit status', noFit.length ? `is not captured for ${noFit.map(x => x.name).join(', ')}.` : '');
     const noValidation=selected.filter(x=>!x.customerValidation||x.customerValidation==='Not validated'||x.customerValidation==='Validation pending');
     req(noValidation.length===0,'Customer validation',noValidation.length?`is not complete for ${noValidation.map(x=>x.name).join(', ')}.`:'');
+    const legacy=processes.filter(process=>process.source==='legacy_process'&&process.historical!==true);
+    req(legacy.length===0,'Legacy application mapping',legacy.length?'contains unclassified historical processes that must be intentionally upgraded to governed application scope.':'');
+    const ambiguous=gaps.filter(gap=>gap.mappingStatus==='Needs Review / Ambiguous Legacy Mapping');
+    req(ambiguous.length===0,'Legacy gap mapping',ambiguous.length?'contains ambiguous name-only gaps that require an explicit application selection.':'');
 
     /* Material gaps need enough detail to be estimable */
     const must = gaps.filter(materialGap);
@@ -90,5 +118,5 @@
     return { miss, done, score, status };
   }
 
-  return { readiness, materialGap };
+  return { readiness, materialGap, activeProducts, processIsActive };
 });

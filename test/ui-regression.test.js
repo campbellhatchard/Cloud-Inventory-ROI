@@ -188,21 +188,22 @@ test('Solution Fit provides rapid-entry defaults and exception controls', () => 
   assert.match(solutionFit, /Refresh known data/);
   assert.match(solutionFit, /Show missing only/);
   assert.match(solutionFit, /data-sfownerselect/);
-  assert.match(solutionFit, /sf-process-table/);
-  assert.match(solutionFit, /bulkDemo/);
+  assert.match(solutionFit, /sf-application-grid/);
+  assert.match(solutionFit, /data-sfpdemo/);
+  assert.doesNotMatch(solutionFit, /bulkDemo|bulkFit|renderChecklist|rerenderChecklist/);
   assert.match(solutionFit, /e\.key\.toLowerCase\(\)==='s'/);
   assert.match(solutionFit, /opportunity\.locations/);
 });
 
 test('Solution Fit readiness rejects an empty products array and accepts entered locations', () => {
   const state = {
-    opportunity: { customer:'Acme', solutionEngineer:'SE', products:[], locations:'3 sites', users:'25', problem:'Manual work', outcome:'Real-time visibility' },
+    opportunity: { customer:'Acme', products:[], locations:'3 sites', users:'25', problem:'Manual work', outcome:'Real-time visibility' },
     architecture: { relationship:'Standalone', erp:'SAP', version:'S/4' },
     partner: { involved:'No' },
     processes: [{ name:'Receiving', selected:true, demoStatus:'Demonstrated', fit:'Full fit' }],
     gaps: []
   };
-  const result = readiness(state);
+  const result = readiness(state,{primarySeId:'se-1'});
   assert.ok(result.miss.some(x => x.label === 'Cloud Inventory product(s)'));
   assert.ok(!result.miss.some(x => x.label === 'Locations / operating scope'));
 });

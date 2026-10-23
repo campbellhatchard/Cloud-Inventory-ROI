@@ -1,0 +1,32 @@
+{
+  "release": "6.9.42",
+  "generatedAt": "2026-10-23T02:42:22.502Z",
+  "databaseUrlPresent": false,
+  "databaseName": null,
+  "postgresqlVersion": "NOT TESTED",
+  "node": "v22.22.0",
+  "migration": {
+    "executed": false,
+    "exitCode": null,
+    "result": "NOT TESTED"
+  },
+  "command": "npm run test:postgres",
+  "suites": [
+    "test/routes.test.js",
+    "test/v653-postgres-integration.test.js",
+    "test/v663-postgres-authorization.test.js",
+    "test/v664-postgres-product-identity.test.js",
+    "test/v6930-postgres-value-application.test.js",
+    "test/v6934-postgres-customer-creation.test.js",
+    "test/v6935-postgres-ownership-transfer.test.js",
+    "test/v6936-postgres-admin-cleanup.test.js",
+    "test/v6937-postgres-roi-assumptions.test.js",
+    "test/v6941-postgres-solution-fit-stabilization.test.js"
+  ],
+  "passed": 0,
+  "failed": 0,
+  "skipped": 0,
+  "notTested": 10,
+  "durationMs": 0,
+  "result": "NOT TESTED"
+}

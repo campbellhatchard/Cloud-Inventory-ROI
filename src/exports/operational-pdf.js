@@ -1,6 +1,7 @@
 'use strict';
 
 const {buildTextPdf}=require('./executive-pdf');
+const SolutionFitState=require('../../public/solution-fit-state');
 
 const clean=value=>String(value==null?'':value).trim();
 const line=(label,value)=>`${label}: ${clean(value)||'Not yet established'}`;
@@ -27,17 +28,17 @@ function buildStakeholderPdf({company,stakeholders}){
   ]});
 }
 
-function solutionLines(data,kind){
-  const opportunity=data.opportunity||{},scope=data.solutionScope||{},architecture=data.architecture||{},processes=list(data.processes),gaps=list(data.gaps);
-  if(kind==='risk')return gaps.length?gaps.map((g,i)=>`${i+1}. ${clean(g.title||g.gap||g.description)||'Unresolved gap'} | Impact: ${clean(g.impact)||'Not assessed'} | Mitigation: ${clean(g.mitigation)||'Not defined'} | Owner: ${clean(g.owner)||'Not assigned'}`):['No saved Solution Fit gaps are recorded.'];
-  if(kind==='handoff')return [line('Solution engineer',opportunity.solutionEngineer),line('Primary product',scope.primaryProduct||list(opportunity.products)[0]),line('ERP / system of record',scope.erp||architecture.erp),line('Problem',opportunity.problem),line('Desired outcome',opportunity.outcome),...processes.map((p,i)=>`${i+1}. ${clean(p.name||p.process)||'Workflow'} | Fit: ${clean(p.fit||p.classification)||'Not assessed'} | Validation: ${clean(p.customerValidation)||'Not recorded'}`),...gaps.map((g,i)=>`Gap ${i+1}: ${clean(g.title||g.gap||g.description)||'Unresolved gap'} | ${clean(g.mitigation)||'Mitigation not defined'}`)];
+function solutionLines(data,kind,primarySeName){
+  const state=SolutionFitState.migrateState(JSON.parse(JSON.stringify(data||{}))),opportunity=state.opportunity||{},scope=state.solutionScope||{},architecture=state.architecture||{},processes=SolutionFitState.activeProcesses(state),gaps=SolutionFitState.activeGaps(state);
+  if(kind==='risk')return gaps.length?gaps.map(g=>`${clean(g.id)} · ${clean(g.process)||'Unassigned application'} | ${clean(g.gapDescription||g.need)||'Unresolved gap'} | Impact: ${clean(g.impact)||'Not assessed'} | Resolution: ${clean(g.resolution)||'Not defined'} | Owner: ${clean(g.owner)||'Not assigned'}`):['No saved active-scope Solution Fit gaps are recorded.'];
+  if(kind==='handoff')return [line('Primary Solution Engineer',primarySeName),line('Primary product',scope.primaryProduct||list(opportunity.products)[0]),line('ERP / system of record',scope.erp||architecture.erp),line('ERP version',scope.erpVersion||architecture.version),line('Problem',opportunity.problem),line('Desired outcome',opportunity.outcome),...processes.map((p,i)=>`${i+1}. ${clean(p.id)} · ${clean(p.name)||'Workflow'} | Fit: ${clean(p.fit)||'Not assessed'} | Validation: ${clean(p.customerValidation)||'Not recorded'}`),...gaps.map(g=>`${clean(g.id)} · ${clean(g.processId)||'Unassigned'} · ${clean(g.process)||'Application not assigned'} | ${clean(g.gapDescription||g.need)||'Unresolved gap'} | ${clean(g.resolution)||'Resolution not defined'}`)];
   return [line('Primary product',scope.primaryProduct||list(opportunity.products)[0]),line('ERP / system of record',scope.erp||architecture.erp),line('Business problem',opportunity.problem),line('Desired outcome',opportunity.outcome),...processes.map((p,i)=>`${i+1}. ${clean(p.name||p.process)||'Workflow'} | ${clean(p.fit||p.classification)||'Fit not assessed'} | ${clean(p.customerValidation)||'Customer validation not recorded'}`)];
 }
 
-function buildSolutionFitPdf(data,{kind='summary',customer='Customer'}={}){
+function buildSolutionFitPdf(data,{kind='summary',customer='Customer',primarySeName=''}={}){
   const internal=kind==='handoff';
   const title=kind==='risk'?'Solution Fit Risk Ledger':kind==='handoff'?'Internal Solution Handoff':'Solution Discovery and Demonstration Summary';
-  return buildTextPdf({title,subtitle:line('Customer',customer),audience:internal?'internal':'customer',sections:[{heading:kind==='risk'?'Gaps and mitigations':kind==='handoff'?'Saved handoff details':'Shared solution understanding',lines:solutionLines(data,kind)}]});
+  return buildTextPdf({title,subtitle:line('Customer',customer),audience:internal?'internal':'customer',sections:[{heading:kind==='risk'?'Gaps and mitigations':kind==='handoff'?'Saved handoff details':'Shared solution understanding',lines:solutionLines(data,kind,primarySeName)}]});
 }
 
 function buildCompetitivePdf({product,version,findings}){

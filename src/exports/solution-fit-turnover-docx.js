@@ -9,7 +9,7 @@ const SolutionFitState=require('../../public/solution-fit-state');
 
 const clean=(value,max=4000)=>String(value==null?'':value).replace(/[\u0000-\u001f]/g,' ').trim().slice(0,max);
 
-async function buildSolutionFitTurnoverDocx({data,customerName='',accountExecutive='',logoData}){
+async function buildSolutionFitTurnoverDocx({data,customerName='',accountExecutive='',primarySeName='',logoData}){
   const state=SolutionFitState.migrateState(JSON.parse(JSON.stringify(data||{})));
   const theme=brand.documentTheme('internal');
   const run=(value,opts={})=>new TextRun({text:clean(value),font:theme.font,size:theme.type.body,color:theme.body,...opts});
@@ -34,7 +34,7 @@ async function buildSolutionFitTurnoverDocx({data,customerName='',accountExecuti
   );
 
   children.push(heading('Account and business context'));
-  children.push(line('Account Executive',accountExecutive),line('Solution Engineer',state.opportunity.solutionEngineer),line('Opportunity stage',state.opportunity.stage));
+  children.push(line('Account Executive',accountExecutive),line('Primary Solution Engineer',primarySeName),line('Opportunity stage',state.opportunity.stage));
   children.push(line('Products',(state.opportunity.products||[]).join(', ')),line('Business problem',state.opportunity.problem),line('Desired business outcomes',state.opportunity.outcome));
   children.push(line('Business owner',[state.opportunity.businessOwnerName,state.opportunity.businessOwnerTitle].filter(Boolean).join(' · ')),line('Technical owner',[state.opportunity.technicalOwnerName,state.opportunity.technicalOwnerTitle].filter(Boolean).join(' · ')));
   children.push(line('Users',state.opportunity.users),line('Locations',state.opportunity.locations),line('Target go-live',state.opportunity.goLive));
@@ -46,10 +46,10 @@ async function buildSolutionFitTurnoverDocx({data,customerName='',accountExecuti
     for(const name of SolutionFitState.LPN_ITEMS)children.push(bullet(`${name}: ${state.lpnConfiguration[name]||'Not answered'}`));
   }
 
-  const selected=state.processes.filter(process=>process.selected);
+  const selected=SolutionFitState.activeProcesses(state),activeGaps=SolutionFitState.activeGaps(state);
   children.push(heading('Product and application scope'));
   children.push(line('MEP ERP family',state.solutionScope.erp),line('MEP scope approach',state.solutionScope.packageMode==='standard'?'Standard Package':'Custom scope'));
-  children.push(simpleTable(['Product / application','Demo status','Fit','Customer validation','Exceptions and evidence'],selected.map(process=>[[process.product,process.name].filter(Boolean).join(' · '),process.demoStatus,process.fit,process.customerValidation,process.notes]),[2500,1500,1300,1800,3000]));
+  children.push(simpleTable(['Product / application','Demo status','Fit','Customer validation','Exceptions and evidence'],selected.map(process=>[[process.product,process.erp,process.name,process.id].filter(Boolean).join(' · '),process.demoStatus,process.fit,process.customerValidation,process.notes]),[2500,1500,1300,1800,3000]));
 
   children.push(heading('Labels, integrations, and delivery constraints'));
   children.push(line('Sites needing label printing',state.printing.sites),line('Number of labels',state.printing.labelCount),line('Printing solution',state.printing.solution),line('Custom label requirements',state.printing.notes));
@@ -57,7 +57,7 @@ async function buildSolutionFitTurnoverDocx({data,customerName='',accountExecuti
   if(state.interfaces.length)children.push(simpleTable(['Source','Target','Object / purpose','Method','Owner'],state.interfaces.map(item=>[item.source,item.target,item.object,item.method,item.owner]),[1800,1800,2500,1700,1600]));
 
   children.push(heading('Gaps, exceptions, and actions'));
-  if(state.gaps.length)children.push(simpleTable(['Application / gap','Priority','Impact','Resolution / workaround','Owner / target','Status'],state.gaps.map(gap=>[[gap.process,gap.gapDescription||gap.need].filter(Boolean).join(' — '),gap.priority,gap.impact,gap.resolution,[gap.owner,gap.targetDate].filter(Boolean).join(' · '),gap.status]),[2300,1100,1800,2400,1700,1200]));
+  if(activeGaps.length)children.push(simpleTable(['Application / gap','Priority','Impact','Resolution / workaround','Owner / target','Status'],activeGaps.map(gap=>[[gap.id,gap.process,gap.gapDescription||gap.need].filter(Boolean).join(' — '),gap.priority,gap.impact,gap.resolution,[gap.owner,gap.targetDate].filter(Boolean).join(' · '),gap.status]),[2300,1100,1800,2400,1700,1200]));
   else children.push(paragraph('No gaps or exceptions have been recorded.'));
 
   const t=state.turnover;

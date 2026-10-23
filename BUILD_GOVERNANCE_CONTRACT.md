@@ -555,3 +555,19 @@ Create Solution Fit and Edit Scope may define only the primary and optional addi
 ## SOLUTION FIT CUSTOMER ISOLATION AND NAVIGATION INVARIANT
 
 Solution Fit customer selection must use its dedicated authorization and discovery contract and must not grant or mutate general ROI customer authority. Switching customers must protect unsaved work, clear the prior customer's complete UI and AI context before authoritative loading, reject stale asynchronous responses, and use reload-safe navigation state. A customer without an ROI scenario remains eligible, and one customer's ERP, application, assessment, progress, evidence, record IDs, or coaching context may never appear in another customer's workspace.
+
+## SOLUTION FIT STABLE IDENTITY INVARIANT
+
+Every governed, custom, and preserved legacy application and every gap must have a stable server-persisted ID. A gap relates to an application only through `processId`; display name, product label, ERP label, group label, array index, and description are presentation metadata and may never be treated as relational identity. A unique legacy name may be backfilled, but an ambiguous legacy name must remain unassigned and visibly require review.
+
+## SOLUTION FIT PRIMARY SE AUTHORITY INVARIANT
+
+`handoffs.primary_se_id` is the sole active Primary Solution Engineer authority. The browser must use the governed assignment service and display the assigned user's server-derived name. JSON display strings, current-user fallback, customer ownership, and authorship may not satisfy readiness or imply assignment. Only active users with an effective Solution Engineer role are eligible, including legitimate multi-role users, and reassignment may not rewrite historical actors.
+
+## SOLUTION FIT ERP EVIDENCE ISOLATION INVARIANT
+
+When MEP is anywhere in active product scope, ERP family and ERP version must be configured together in the Product and application scope workflow. Derived compatibility fields must be synchronized from that authority. An explicit ERP-family change may deactivate the prior ERP scope and reset the active version, but must preserve the prior version, application IDs, assessments, validation, notes, gaps, and history. Matching display names across ERP families may never transfer customer evidence.
+
+## SOLUTION FIT CLEAN INITIALIZATION AND ACTIVE-SCOPE INVARIANT
+
+A new Solution Fit begins with no legacy generic process rows. Active application rows originate only from the governed catalog or a deliberate custom application. Meaningful pre-catalog rows remain explicitly unclassified until an intentional upgrade; no product provenance may be fabricated. Readiness, Christie context, customer outputs, and PS turnover use only the current active products, current ERP, current applications, current gaps, and authoritative Primary SE while preserved inactive history remains available to internal history controls.
