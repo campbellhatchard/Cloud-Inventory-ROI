@@ -85,7 +85,7 @@ function createR2Storage({ env = process.env, fetchImpl = global.fetch, now = ()
   }
 
   async function request(method, key) {
-    const response = await fetchImpl(presign(method, key, DEFAULT_DOWNLOAD_TTL_SECONDS), { method });
+    const response = await fetchImpl(presign(method, key, DEFAULT_DOWNLOAD_TTL_SECONDS), { method, headers: { 'Accept-Encoding': 'identity' } });
     if (!response.ok) {
       const error = new Error(`Evidence object ${method} failed with status ${response.status}.`);
       error.statusCode = response.status;

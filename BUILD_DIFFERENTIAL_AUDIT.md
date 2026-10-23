@@ -34,6 +34,7 @@ Final inventory result: **19 files added, 21 files changed, 0 files removed**. D
 - Added executable regression coverage for delayed customer responses, reset, queued customer switches, withdrawn files, signed headers, and cleanup failures. The disposable PostgreSQL suite additionally checks expired versus renewed and ACTIVE evidence.
 - Real R2 certification now attempts to reuse the upload URL and requires rejection with HTTP 412 before checking the unchanged downloaded bytes.
 - Disposable PostgreSQL exposed a dependency-count defect: failed/pending uploads were counted as active Admin Cleanup dependencies. The query now requires `status='ACTIVE'` and no removal timestamp; the existing integration assertion remains unchanged.
+- Final deployed R2 certification exposed compressed HEAD responses without Content-Length and with a transformed weak ETag. Internal object metadata requests now send `Accept-Encoding: identity`, preserving the original stored size and ETag; a red-then-green regression reproduces the response transformation.
 
 ## Preserved authorities
 

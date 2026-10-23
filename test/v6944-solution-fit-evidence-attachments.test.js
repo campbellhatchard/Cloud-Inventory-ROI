@@ -238,3 +238,13 @@ test('withdrawing a waiting file during another upload prevents its upload', asy
   browser.validateState().queue.splice(1, 1); put.resolve({ ok: true }); await uploading;
   assert.deepEqual(initiated, ['one.pdf']);
 });
+
+test('object verification requests uncompressed metadata so file size and ETag remain authoritative', async () => {
+  const svc = storage.createR2Storage({ env: { STORAGE_MODE: 'S3', S3_ENDPOINT: 'https://example.r2.cloudflarestorage.com', S3_BUCKET: 'qa-private', S3_ACCESS_KEY_ID: 'test', S3_SECRET_ACCESS_KEY: 'test' },
+    fetchImpl: async (_url, options) => {
+      const identity = new Headers(options.headers).get('accept-encoding') === 'identity';
+      return { ok: true, status: 200, headers: new Headers(identity ? { 'content-length': '66', 'content-type': 'text/plain', etag: '"original"' } : { 'content-encoding': 'gzip', 'content-type': 'text/plain', etag: 'W/"compressed"' }) };
+    }
+  });
+  assert.deepEqual(await svc.verifyObject({ key: 'qa/compressible.txt' }), { sizeBytes: 66, contentType: 'text/plain', etag: 'original' });
+});
