@@ -7,6 +7,18 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.43', date: '2026-10-22', tag: 'corrective-reliability',
+    title: 'Atomic customer context and authoritative saved-state reliability',
+    summary: 'Corrects the defects confirmed in the deployed v6.9.42 role regression without adding the unbuilt attachment feature or changing ROI formulas, evidence methodology, authorization, or database schema.',
+    highlights: [
+      'Customer, scenario, Executive, Proposal, AI Help, and Christie responses are discarded when their originating workspace is no longer active.',
+      'Scenario saves return and immediately display the exact server-persisted ROI Model v2.8 projection; legacy models require deliberate upgrade review before saving.',
+      'Solution Fit readiness now includes complete inventory, Professional Services turnover, gap disposition, and saved-state authority, while read-only inspection remains side-effect free.',
+      'Selected application counts refresh from current scope, Three Whys show one microphone per field, and AI requests have bounded timeouts and active-context checks.',
+      'Sales Manager rows expose an opportunity reference so legitimate same-name opportunities are distinguishable.'
+    ]
+  },
+  {
     version: '6.9.42', date: '2026-10-22', tag: 'solution-fit-inventory-ui',
     title: 'Clearer General Inventory Configuration',
     summary: 'Improves the Solution Fit General Inventory Configuration layout, readability, responsive behavior, note editing, and conditional LPN detail without changing its questions, values, persistence, readiness, authorization, outputs, or ROI behavior.',

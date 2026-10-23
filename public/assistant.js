@@ -64,9 +64,20 @@
   var history  = assistantState.history || [];
   var lastFocusedField = null;   // most recently focused input id
   var busy = false;
+  var requestGeneration = 0;
+  function activeFieldId(){
+    var id=lastFocusedField||helpState.activeField||'';
+    if(!id)return'';
+    var node=document.getElementById(id);
+    if(!node||node.isConnected===false){lastFocusedField=null;helpState.activeField='';return'';}
+    return id;
+  }
+  window.clearAIFieldFocus=function(){lastFocusedField=null;helpState.activeField='';};
   window.resetCustomerAIContext = function(){
+    requestGeneration++;busy=false;
     window.CIAIState?.clear('assistant');window.CIAIState?.clear('internal_help');
     assistantState={history:[]};helpState={history:[],fields:{}};history=[];lastFocusedField=null;
+    var send=document.getElementById('asstSend');if(send)send.disabled=false;
     if(document.getElementById('asstBody')){renderConversation();renderPersistentChips();}
   };
 
@@ -77,8 +88,9 @@
     var pane = document.querySelector('.pane.active');
     if (pane && TAB_CONTEXT[pane.id]) lines.push(TAB_CONTEXT[pane.id]);
     // Last focused field
-    if (lastFocusedField && FIELD_LABELS[lastFocusedField]) {
-      lines.push('The most recently focused calculator field is: "' + FIELD_LABELS[lastFocusedField] + '" (id: ' + lastFocusedField + ').');
+    var focusedField=activeFieldId();
+    if (focusedField && FIELD_LABELS[focusedField]) {
+      lines.push('The most recently focused calculator field is: "' + FIELD_LABELS[focusedField] + '" (id: ' + focusedField + ').');
     }
     // Scenario / company in play
     var co  = (document.getElementById('companyName') || {}).value;
@@ -210,13 +222,13 @@
     renderPersistentChips();
   }
 
-  function helpFieldState(){var id=lastFocusedField||helpState.activeField||'__none__';helpState.fields=helpState.fields||{};helpState.fields[id]=helpState.fields[id]||{history:[],lastResponse:'',stale:false};return helpState.fields[id];}
+  function helpFieldState(){var id=activeFieldId()||'__none__';helpState.fields=helpState.fields||{};helpState.fields[id]=helpState.fields[id]||{history:[],lastResponse:'',stale:false};return helpState.fields[id];}
   function stateForMode(){ return mode === 'internal_help' ? helpFieldState() : assistantState; }
   function saveCurrent(){ var s=stateForMode(); s.history=history; s.lastResponse=history.filter(function(x){return x.role==='assistant';}).slice(-1)[0]?.content||''; if(window.CIAIState)window.CIAIState.save(mode,mode==='internal_help'?helpState:s); }
   function switchMode(next){ saveCurrent(); mode=next; history=(stateForMode().history||[]); document.getElementById('asstMode').classList.toggle('active',mode==='assistant');document.getElementById('helpMode').classList.toggle('active',mode==='internal_help');document.getElementById('asstTitle').textContent=mode==='internal_help'?'Internal Field Help':'Ask AI Help';renderConversation();renderPersistentChips(); }
   function clearCurrent(){ history=[]; var s=stateForMode();s.history=[];s.lastResponse='';s.stale=false;saveCurrent();renderConversation(); }
-  function fieldContext(){return window.CIInternalFieldContext.buildInternalFieldContext(lastFocusedField||helpState.activeField||'',document,{workspaces:WORKSPACE_IDS,labels:FIELD_LABELS});}
-  function currentContextObject(){if(mode==='internal_help')return fieldContext();var pane=document.querySelector('.pane.active')?.id||'';return{screen:WORKSPACE_IDS[pane]||pane,field:lastFocusedField||'',company:(document.getElementById('companyName')||{}).value||'',scenario:(document.getElementById('scenarioName')||{}).value||''};}
+  function fieldContext(){return window.CIInternalFieldContext.buildInternalFieldContext(activeFieldId(),document,{workspaces:WORKSPACE_IDS,labels:FIELD_LABELS});}
+  function currentContextObject(){if(mode==='internal_help')return fieldContext();var pane=document.querySelector('.pane.active')?.id||'';return{screen:WORKSPACE_IDS[pane]||pane,field:activeFieldId(),company:(document.getElementById('companyName')||{}).value||'',scenario:(document.getElementById('scenarioName')||{}).value||''};}
   function renderConversation(){var body=document.getElementById('asstBody'),ctx=document.getElementById('asstContext'),s=stateForMode();if(!body)return;if(ctx)ctx.innerHTML=mode==='internal_help'?(fieldContext().field?'<strong>'+esc(fieldContext().fieldLabel)+'</strong><span>'+esc(fieldContext().screen.replace('tab-',''))+'</span>':'<span>Focus a field for exact guidance.</span>'):'';if(!history.length){body.innerHTML='';renderWelcome();return;}body.innerHTML=(s.stale?'<div class="ai-stale">Information used for this AI response has changed. Refresh the analysis to incorporate the latest information.</div>':'')+history.map(function(m){return '<div class="asst-msg '+(m.role==='user'?'asst-user':'asst-bot')+'"><div class="asst-bubble">'+(m.role==='assistant'?mdToHtml(m.content):esc(m.content))+'</div></div>';}).join('');body.scrollTop=body.scrollHeight;}
 
   function renderWelcome() {
@@ -302,6 +314,8 @@
     if (sendBtn) sendBtn.disabled = true;
     var thinking = addMsg('bot', '<span class="asst-typing"><i></i><i></i><i></i></span>');
 
+    var requestId=++requestGeneration,workspaceToken=window.CIWorkspaceContext?.capture(),scenarioId=window._calcScenarioId||null,controller=typeof AbortController==='function'?new AbortController():null,timeout=setTimeout(function(){controller?.abort();},20000);
+    var requestCurrent=function(){return requestId===requestGeneration&&(!workspaceToken||window.CIWorkspaceContext?.isCurrent(workspaceToken))&&String(window._calcScenarioId||'')===String(scenarioId||'');};
     try {
       /* Build the system prompt fresh each time so it always has the
          current context (tab, focused field, company, guided mode). */
@@ -310,16 +324,20 @@
       var resp = await fetch('/api/ai-help', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller?.signal,
         body: JSON.stringify({
           question: q,
           workspaceId: contextObject.screen || '',
           focusedFieldId: contextObject.field || '',
-          scenarioId: window.currentScenarioId || null,
+          scenarioId: scenarioId,
           recentHelpConversation: history.slice(-10)
         })
       });
+      clearTimeout(timeout);
+      if(!requestCurrent())return;
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       var data = await resp.json();
+      if(!requestCurrent())return;
       var text = (data.content && data.content[0] && data.content[0].text) || '';
       if (!text) throw new Error('empty');
       if (thinking) thinking.remove();
@@ -327,11 +345,12 @@
       history.push({ role: 'assistant', content: text });
       s.context=contextObject;s.contextFingerprint=fp;s.stale=false;saveCurrent();
     } catch (e) {
+      if(!requestCurrent())return;
       if (thinking) thinking.remove();
-      addMsg('bot', '<span class="asst-err">Couldn\'t reach the assistant. Please try again.</span>');
+      addMsg('bot', '<span class="asst-err">'+(e.name==='AbortError'?'AI Help timed out. Please retry.':'Couldn\'t reach the assistant. Please try again.')+'</span>');
     } finally {
-      busy = false;
-      if (sendBtn) sendBtn.disabled = false;
+      clearTimeout(timeout);
+      if(requestId===requestGeneration){busy = false;if (sendBtn) sendBtn.disabled = false;}
     }
   }
 

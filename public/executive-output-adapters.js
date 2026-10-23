@@ -16,7 +16,7 @@ function storyHtml(story,{draft=false,audience='customer'}={}){
 }
 function renderStory(story,readiness){const status=readiness?.status;if(!['ready','review','draft_only'].includes(status))throw new Error('Executive readiness is unavailable.');const audience=status==='draft_only'?'internal':'customer',draft=status!=='ready';const el=document.getElementById('execDoc');if(el)el.innerHTML=`<div id="execPrintTarget">${storyHtml(story,{draft,audience})}</div>`;const drivers=(story.economics.activeDrivers||[]).slice(0,5),rows=drivers.map(d=>({label:d.label,val:Number(d.annualValue)||0}));if(typeof _execPopulateSidebar==='function')_execPopulateSidebar(rows,story.economics.annualBenefit,0);else{const side=document.getElementById('execSideBreakdown');if(side)side.innerHTML=drivers.length?'': '<div class="empty-state">No modeled value drivers yet.</div>';}renderExecutiveReadinessBanner?.();}
 function renderStoryError(){showExecutiveValueStoryUnavailable();}
-window.renderExec=async function(){if(!window._calcScenarioId){renderStoryError();return;}const el=document.getElementById('execDoc');if(el)el.innerHTML='<div class="card">Executive Value Story loading…</div>';try{if(window.persistThreeWhys&&!await window.persistThreeWhys())throw Error('The latest Three Whys could not be saved.');const [story,readiness]=await Promise.all([window.loadExecutiveValueStory(true),window.getExecutiveOutputReadiness('executive_view')]);renderStory(story,readiness);}catch(error){console.error('executive_web.failed_closed',{message:error?.message});renderStoryError();}};
+window.renderExec=async function(){const sid=window._calcScenarioId,token=window.CIWorkspaceContext?.capture();if(!sid){renderStoryError();return;}const isCurrent=()=>String(window._calcScenarioId||'')===String(sid)&&(!token||window.CIWorkspaceContext?.isCurrent(token));const el=document.getElementById('execDoc');if(el)el.innerHTML='<div class="card">Executive Value Story loading…</div>';try{if(window.persistThreeWhys&&!await window.persistThreeWhys())throw Error('The latest Three Whys could not be saved.');if(!isCurrent())return;const [story,readiness]=await Promise.all([window.loadExecutiveValueStory(true),window.getExecutiveOutputReadiness('executive_view')]);if(!isCurrent()||String(story?.meta?.scenarioId||'')!==String(sid))return;renderStory(story,readiness);}catch(error){if(!isCurrent()||error?.code==='STALE_WORKSPACE')return;console.error('executive_web.failed_closed',{message:error?.message});renderStoryError();}};
 function exportButton(kind,label,disabled){const btn=document.getElementById(kind==='pptx'?'pptxExportBtn':'pdfDownloadBtn');if(btn){btn.disabled=disabled;btn.dataset.originalLabel=btn.dataset.originalLabel||btn.innerHTML;if(disabled)btn.textContent=label;else btn.innerHTML=btn.dataset.originalLabel;}}
 const EXECUTIVE_EXPORT_TIMEOUT_MS=30000;
 function withExecutiveExportDeadline(label,task){
@@ -72,18 +72,22 @@ window.downloadPDF=async function(){
 window.exportExecutiveWord=async function(){const btn=document.getElementById('executiveWordBtn'),old=btn?.innerHTML;if(btn){btn.disabled=true;btn.textContent='Building Word…';}try{const gate=await prepareExecutiveOutput('docx');if(!gate.proceed)return;const qs=new URLSearchParams({internalDraft:String(Boolean(gate.draft)),reviewAcknowledged:String(gate.result?.status==='review')});const res=await fetch(`/api/scenarios/${encodeURIComponent(window._calcScenarioId)}/export-docx?${qs}`,{credentials:'same-origin',headers:{Accept:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}});if(!res.ok){let detail={};try{detail=await res.json();}catch(_){}throw new Error(detail.error||`Word request failed (${res.status}).`);}const blob=await res.blob(),customer=(window.executiveValueStory?.meta?.customer||'Prospect').replace(/[^a-z0-9]+/gi,'-');downloadBlob(blob,`Cloud-Inventory-ROI-${customer}-Business-Case-${new Date().toISOString().slice(0,10)}.docx`);document.getElementById('executiveWordRetry')?.remove();showToast?.('Word document created.');}catch(err){console.error('executive_docx.failed',{message:err.message});showOutputRetry('executiveWordRetry',err.message||'Word document could not be generated.','Retry',window.exportExecutiveWord);showToast?.(err.message||'Word document could not be generated.');}finally{if(btn){btn.disabled=false;btn.innerHTML=old||'Executive business case';}}};
 function showOutputRetry(id,message,label,handler){let box=document.getElementById(id);if(!box){box=document.createElement('div');box.id=id;box.className='proposal-review-notice';box.innerHTML=`<b>${esc(message)}</b> <button class="btn btn-secondary btn-sm" type="button">${esc(label)}</button>`;box.querySelector('button').onclick=handler;(document.getElementById('executiveReadinessBanner')||document.getElementById('proposalEditorWrap')||document.body).prepend(box);}}
 let proposalExportInFlight=null;
-async function prepareProposalFileExport(){
+async function prepareProposalFileExport(scenarioId,workspaceToken){
  if(!await window.flushProposalSave?.())throw new Error('The proposal could not be saved. Retry after confirming the save status.');
+ if(String(window._calcScenarioId||'')!==String(scenarioId||'')||(workspaceToken&&!window.CIWorkspaceContext?.isCurrent(workspaceToken)))throw new Error('The active customer changed. Reopen Proposal before exporting.');
  const local=window.getProposalOutputState?.()||{};
  if(local.saveFailed||local.conflict||local.dirty)throw new Error('Resolve proposal save issues before exporting.');
  return guardExecutiveOutput('proposal',{allowDraft:true});
 }
-async function requestProposalFile({format,label,gate,retryId,signal}){
+async function requestProposalFile({format,label,gate,retryId,signal,scenarioId,workspaceToken}){
  const endpoint=format==='pdf'?'/api/export/proposal-pdf':'/api/export/proposal-docx';
  const accept=format==='pdf'?'application/pdf':'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
- const res=await fetch(endpoint,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json',Accept:accept},body:JSON.stringify({scenarioId:window._calcScenarioId,internalDraft:gate.draft,reviewAcknowledged:gate.result?.status==='review'}),...(signal?{signal}:{})});
+ if(String(window._calcScenarioId||'')!==String(scenarioId||'')||(workspaceToken&&!window.CIWorkspaceContext?.isCurrent(workspaceToken)))throw new Error('The active customer changed. Reopen Proposal before exporting.');
+ const res=await fetch(endpoint,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json',Accept:accept},body:JSON.stringify({scenarioId,internalDraft:gate.draft,reviewAcknowledged:gate.result?.status==='review'}),...(signal?{signal}:{})});
  if(!res.ok){let detail={};try{detail=await res.json();}catch(_){}throw new Error(detail.error||`${label} request failed (${res.status}).`);}
- const blob=await res.blob(),customer=(window.executiveValueStory?.meta?.customer||'Customer').replace(/[^a-z0-9]+/gi,'-'),extension=format==='pdf'?'pdf':'docx';
+ const blob=await res.blob();
+ if(String(window._calcScenarioId||'')!==String(scenarioId||'')||(workspaceToken&&!window.CIWorkspaceContext?.isCurrent(workspaceToken)))throw new Error('The active customer changed. Reopen Proposal before exporting.');
+ const customer=(window.executiveValueStory?.meta?.customer||'Customer').replace(/[^a-z0-9]+/gi,'-'),extension=format==='pdf'?'pdf':'docx';
  downloadBlob(blob,`Cloud-Inventory-${gate.draft?'Internal-Draft-Proposal':'Proposal'}-${customer}-${new Date().toISOString().slice(0,10)}.${extension}`);
  document.getElementById(retryId)?.remove();
  console.info(`proposal_${format}.client_completed`,{bytes:blob.size});
@@ -93,16 +97,17 @@ async function proposalFileExport({format,buttonId,retryId}){
  if(proposalExportInFlight){showToast?.('A Proposal export is already in progress.');return proposalExportInFlight;}
  const btn=document.getElementById(buttonId),old=btn?.innerHTML,label=format==='pdf'?'PDF':'Word';
  proposalExportInFlight=(async()=>{
+  const scenarioId=window._calcScenarioId,workspaceToken=window.CIWorkspaceContext?.capture();
   if(btn){btn.disabled=true;btn.textContent=`Preparing ${label}…`;}
   try{
    /* Saving, readiness evaluation, and the user's governed readiness choice
       are preflight steps. A human review decision must never consume the
       bounded network/PDF generation deadline. */
-   const gate=await prepareProposalFileExport();
+   const gate=await prepareProposalFileExport(scenarioId,workspaceToken);
    if(!gate?.proceed)return;
    if(btn)btn.textContent=`Building ${label}…`;
-   console.info(`proposal_${format}.client_started`,{scenarioId:window._calcScenarioId,draft:Boolean(gate.draft)});
-   await withExecutiveExportDeadline(`Proposal ${label}`,signal=>requestProposalFile({format,label,gate,retryId,signal}));
+   console.info(`proposal_${format}.client_started`,{scenarioId,draft:Boolean(gate.draft)});
+   await withExecutiveExportDeadline(`Proposal ${label}`,signal=>requestProposalFile({format,label,gate,retryId,signal,scenarioId,workspaceToken}));
   }catch(err){
    const message=err.name==='AbortError'||err.name==='ExportTimeoutError'?`Proposal ${label} generation timed out. You can continue working and retry.`:(err.message||`Proposal ${label} could not be generated.`);
    console.error(`proposal_${format}.failed`,{message});

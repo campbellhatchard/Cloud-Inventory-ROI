@@ -708,6 +708,10 @@ router.post('/', async (req, res) => {
       rows[0].repAssessedStage=parseBuyCycleStage(sourceGovernance?.rep_assessed_stage,officialStage);
       rows[0].outcome=sourceGovernance?.outcome||null;
       rows[0].opportunityProfile=opportunityProfile;
+      /* The response carries the exact projection that was persisted. The
+         browser must adopt this object after save rather than continuing to
+         display a pre-save calculation from a stale tab or model version. */
+      rows[0].data=dataWithMetrics;
 
       return { row: rows[0], recomputeDiscrepancy, adminOnBehalfOwner };
     });

@@ -571,3 +571,23 @@ When MEP is anywhere in active product scope, ERP family and ERP version must be
 ## SOLUTION FIT CLEAN INITIALIZATION AND ACTIVE-SCOPE INVARIANT
 
 A new Solution Fit begins with no legacy generic process rows. Active application rows originate only from the governed catalog or a deliberate custom application. Meaningful pre-catalog rows remain explicitly unclassified until an intentional upgrade; no product provenance may be fabricated. Readiness, Christie context, customer outputs, and PS turnover use only the current active products, current ERP, current applications, current gaps, and authoritative Primary SE while preserved inactive history remains available to internal history controls.
+
+## ATOMIC CUSTOMER WORKSPACE INVARIANT
+
+Every asynchronous customer, scenario, Executive, Proposal, AI Help, Christie, Discovery, and output operation must be bound to the customer/scenario workspace generation that initiated it. Changing customer or scenario invalidates all earlier generations. A response from an invalidated generation may not update browser state, rendered content, AI memory, saved context, output bytes, or readiness presentation, even when the response succeeds after the switch.
+
+## CLIENT/SERVER ROI PARITY INVARIANT
+
+The browser and server must use ROI Model v2.8 through the shared ROI engine. A scenario save response must include the exact authoritative projection persisted by the server, and the browser must adopt that projection before presenting save success. A legacy model may not be silently saved through a v2.8 server projection; it requires the governed upgrade review and a deliberate new version.
+
+## SOLUTION FIT COMPLETE READINESS INVARIANT
+
+Solution Fit readiness must be computed from the saved active product/application assessments, General Inventory Configuration when applicable, required Professional Services turnover fields, resolved or accepted gap dispositions, stable application/gap identity, authoritative Primary SE, and clean saved state. A selected-application count or progress indicator must be recomputed from current state after every scope or assessment change. Unsaved or incomplete work may not display Ready to hand off.
+
+## SIDE-EFFECT-FREE READ INVARIANT
+
+Opening, switching to, or inspecting an existing record must not schedule an autosave, change governed fields, create a new version, write an audit event, or alter authorship. Suggested defaults and governed-data synchronization may be displayed during a read, but mutation requires an explicit authorized edit path followed by the normal authenticated save.
+
+## BOUNDED AI CONTEXT INVARIANT
+
+AI Help and Christie requests must use the active scenario/opportunity identity, have a bounded client deadline, and discard stale responses after a workspace change. AI state must be scoped to the exact opportunity rather than the browser session. A timeout or unavailable provider must produce a safe retry path and may never write governed application data.
