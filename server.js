@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   server.js  —  Cloud Inventory ROI Builder  v6.9.30
+   server.js  —  Cloud Inventory ROI Builder  v6.9.44
    Database-backed multi-user edition — production hardened
 
    Security layers applied (Phase 10):
@@ -92,6 +92,10 @@ app.get('/handoff-readiness.js', (req, res) => {
 const PROD = process.env.NODE_ENV === 'production';
 const APP_URL = getAppUrl();
 const APP_VERSION = require('./package.json').version;
+const STORAGE_CONNECT_ORIGINS = (() => {
+  try { return process.env.S3_ENDPOINT ? [new URL(process.env.S3_ENDPOINT).origin] : []; }
+  catch (_) { return []; }
+})();
 
 const ANTHROPIC_MODEL    = process.env.ANTHROPIC_MODEL    || 'claude-sonnet-4-6';
 const ANTHROPIC_BASE_URL = process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com';
@@ -122,7 +126,7 @@ app.use(helmet({
       styleSrc:       ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc:        ["'self'", 'https://fonts.gstatic.com'],
       imgSrc:         ["'self'", 'data:'],           // data: for logo fallbacks
-      connectSrc:     ["'self'", 'https://api.anthropic.com', 'https://cdn.jsdelivr.net'], // jsdelivr: pptxgenjs fallback only
+      connectSrc:     ["'self'", 'https://api.anthropic.com', 'https://cdn.jsdelivr.net', ...STORAGE_CONNECT_ORIGINS], // private R2 direct uploads use the configured origin
       frameSrc:       ["'none'"],
       objectSrc:      ["'none'"],
       upgradeInsecureRequests: PROD ? [] : null      // HTTPS-only in production
@@ -230,6 +234,7 @@ app.use('/api/maps', mapsRouter);
 const stakeholdersRouter = require('./src/routes/stakeholders');
 app.use('/api/stakeholders', stakeholdersRouter);
 const handoffsRouter = require('./src/routes/handoffs');
+app.use('/api/handoffs', require('./src/routes/solution-fit-attachments'));
 app.use('/api/handoffs', handoffsRouter);
 app.use('/api/solution-fit/customers', require('./src/routes/solution-fit-customers'));
 app.use('/api/solution-fit/catalog', require('./src/routes/solution-fit-catalog'));
@@ -1896,6 +1901,10 @@ function startCleanupTimer() {
       const total = s.rowCount + t.rowCount + p.rowCount;
       if (total > 0) {
         console.log(`[cleanup] Expired: ${s.rowCount} sessions, ${t.rowCount} reset tokens, ${p.rowCount} purge tokens.`);
+      }
+      const evidence = await require('./src/jobs/attachmentCleanup').cleanupStaleSolutionFitEvidence();
+      if (!evidence.skipped && (evidence.stalePending || evidence.deletionRetries)) {
+        console.log(`[cleanup] Solution Fit evidence reconciled: stale=${evidence.stalePending}, delete-retries=${evidence.deletionRetries}.`);
       }
     } catch(err) {
       console.error('[cleanup] Error:', err.message);

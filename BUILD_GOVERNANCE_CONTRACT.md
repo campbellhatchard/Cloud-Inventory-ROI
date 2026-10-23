@@ -412,6 +412,10 @@ Any registered customer-facing Web or Preview output in Draft Only state must vi
 
 A controlled production pilot cannot be classified GREEN when a registered PostgreSQL integration suite is skipped or NOT TESTED. Release certification requires a clean non-production PostgreSQL database, all migrations, all database integration suites, zero database test failures, and zero database skips. Automated tests must never use the production customer database.
 
+## 0.37 PRIVATE SOLUTION FIT EVIDENCE INVARIANT
+
+Solution Fit evidence is a server-authoritative record associated with the saved customer, saved Solution Fit, and a governed stable context identity. Evidence may never be stored only in browser state, embedded as base64 in Solution Fit JSON, associated by display name or array index, or exposed through a permanent public object URL. Private object access must be short-lived and authorized through the current Solution Fit capability. An attachment becomes active only after the server verifies the uploaded object. Individual removal must preserve uploader/remover audit history and must not remove another attachment with the same filename.
+
 ---
 ## SE SOLUTION FIT DISCOVERABILITY INVARIANT
 

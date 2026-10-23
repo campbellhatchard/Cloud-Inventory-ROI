@@ -117,9 +117,17 @@ test('Sales Manager makes legitimate same-name opportunities visibly distinct',(
   assert.ok((source.match(/Opportunity \$\{opportunityRef\(d\)\}/g)||[]).length>=3);
 });
 
-test('release remains correction-only with no v6.9.43 attachment feature or migration',()=>{
+test('v6.9.43 remains certified as attachment-free while a later governed evidence release is explicit',()=>{
   const migrations=fs.readdirSync(path.join(root,'migrations')).filter(name=>name.endsWith('.sql'));
-  assert.equal(migrations.length,44);
+  const version=JSON.parse(read('package.json')).version;
   assert.equal(fs.existsSync(path.join(root,'test','v6943-solution-fit-evidence-attachments.test.js')),false);
-  assert.doesNotMatch(read('public/solution-fit.js'),/type="file"|upload attachment|attachment gallery/i);
+  assert.match(read('RELEASE_MANIFEST_v6.9.43.md'),/attachment\/evidence-upload prompt is not included/i);
+  if(version==='6.9.43'){
+    assert.equal(migrations.length,44);
+    assert.doesNotMatch(read('public/solution-fit.js'),/type="file"|upload attachment|attachment gallery/i);
+  }else{
+    assert.ok(migrations.includes('045_solution_fit_evidence_attachments.sql'));
+    assert.equal(fs.existsSync(path.join(root,'test','v6944-solution-fit-evidence-attachments.test.js')),true);
+    assert.equal(fs.existsSync(path.join(root,'public','solution-fit-evidence.js')),true);
+  }
 });

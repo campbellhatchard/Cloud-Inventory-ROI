@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "6.9.43",
+  "release": "6.9.44",
   "tests": [
     {"invariant":"Customer Business Case","path":"test/release-integrity.test.js"},
     {"invariant":"customer-safe payload","path":"test/release-integrity.test.js"},
@@ -63,5 +63,8 @@
     ,{"invariant":"v6.9.40 product-only Solution Fit setup, protected in-workspace customer switching and cross-customer isolation","path":"test/v6940-solution-fit-scope-switch.test.js"}
     ,{"invariant":"v6.9.41 stable Solution Fit application/gap identity, Primary SE authority, ERP evidence isolation, multi-product MEP and cross-customer isolation","path":"test/v6941-solution-fit-stabilization.test.js"}
     ,{"invariant":"v6.9.42 Solution Fit inventory UI preserves governed questions, answers, persistence, responsive accessibility and conditional LPN behavior","path":"test/v6942-solution-fit-inventory-ui.test.js"}
+    ,{"invariant":"v6.9.44 private server-authoritative multi-file Solution Fit evidence lifecycle, stable context identity, authorization and storage isolation","path":"test/v6944-solution-fit-evidence-attachments.test.js"}
+    ,{"invariant":"v6.9.44 PostgreSQL and private object-storage Solution Fit evidence lifecycle","path":"test/v6944-postgres-solution-fit-evidence.test.js"}
+    ,{"invariant":"v6.9.44 real Cloudflare R2 PUT, HEAD, GET and DELETE lifecycle","path":"test/v6944-r2-integration.test.js"}
   ]
 }

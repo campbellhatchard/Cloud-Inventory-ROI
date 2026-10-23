@@ -1,4 +1,47 @@
-# v6.9.43 Differential Audit
+# v6.9.44 Differential Audit
+
+## Exact comparison
+
+The final source was compared by SHA-256 file inventory with a fresh extraction of `cloud-inventory-roi-v6.9.43-render-ready.zip` (`0ebdcb89683996a693ae4089533cfcd93b6a27e5e5ef2ec5e7b65e7d87e61d2a`). No baseline files were removed.
+
+Final inventory result: **19 files added, 21 files changed, 0 files removed**. Dependency directories, Git metadata, and temporary QA logs were excluded from the inventory.
+
+## Authorized additions
+
+- Forward-only migration 045 extends the existing `handoff_attachments` table; it does not create a parallel attachment store.
+- One canonical private R2/S3 presigning service, one authenticated attachment route module, and one reconciliation job.
+- One compact Solution Fit evidence UI for general, application/process, gap, and stable integration contexts.
+- Multiple files, mobile camera selection, photo preview, sequential optimization/upload, caption/category metadata, authenticated open/download, metadata edit, and individual audited removal.
+- PostgreSQL, fake-private-object-store, real credential-gated R2, image optimization, security, and inherited Solution Fit regression tests.
+- v6.9.44 lineage, environment contract, CI evidence paths, release manifest, QA/readiness evidence, and permanent-test entries.
+
+## Authorized modifications
+
+- `server.js` mounts the attachment API, permits only the configured R2 origin in `connect-src`, and schedules bounded reconciliation.
+- `public/solution-fit.js`, `public/index.html`, and `public/style.css` integrate compact evidence controls without replacing Solution Fit state or navigation.
+- Admin Cleanup counts active attachment dependencies.
+- Version, lineage, Application Knowledge, governance, Render, and release-runner files are synchronized to v6.9.44.
+
+## Explicitly unchanged
+
+## Deployment reconciliation and targeted corrections — 2026-10-23
+
+- Applied forward to exact production parent `18c7bb2015223a8c956570719fe03d7caea04d10`; recorded this deployed Git lineage separately from the supplied archive lineage.
+- Restored `public/style.css` directly from the checksum-verified v6.9.44 archive after detecting corrupted content in the interrupted transfer. Relative to production this stylesheet adds eight lines; it does not replace the prior styles.
+- Upload signatures now bind the approved Content-Type and mandatory `If-None-Match: *`, preventing replacement of an existing verified object with a reused PUT URL. The browser receives those required signed headers.
+- Evidence loading and all asynchronous modal actions retain their initiating customer/context generation. Customer changes reset metadata and cancel queued work; removing a waiting file prevents its upload.
+- Reconciliation atomically claims expired pending rows before object deletion, respects renewed upload expiry, and retains failed deletions for retry. Activation and retry renewal fail if another operation already removed the row.
+- Added executable regression coverage for delayed customer responses, reset, queued customer switches, withdrawn files, signed headers, and cleanup failures. The disposable PostgreSQL suite additionally checks expired versus renewed and ACTIVE evidence.
+- Real R2 certification now attempts to reuse the upload URL and requires rejection with HTTP 412 before checking the unchanged downloaded bytes.
+- Disposable PostgreSQL exposed a dependency-count defect: failed/pending uploads were counted as active Admin Cleanup dependencies. The query now requires `status='ACTIVE'` and no removal timestamp; the existing integration assertion remains unchanged.
+
+## Preserved authorities
+
+ROI Model v2.8, economic formulas, native currency, Prospect/Rep evidence semantics, Value History, Buyer Evidence, BuyCycle, customer/scenario authorization, SE cross-account Solution Fit scope, Executive/Proposal authority, outputs, Brand System, and Christie Persona are unchanged. PS Turnover evidence ZIP/appendix generation is deferred.
+
+---
+
+# Historical v6.9.43 Differential Audit (prior release)
 
 ## Authorized correction scope
 

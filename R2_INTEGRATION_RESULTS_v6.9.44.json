@@ -1,0 +1,22 @@
+{
+  "release": "6.9.44",
+  "generatedAt": "2026-10-23T20:22:17.076Z",
+  "endpointHost": null,
+  "bucket": null,
+  "region": "auto",
+  "credentialsPresent": false,
+  "command": "npm run test:r2",
+  "operations": [
+    "PUT",
+    "HEAD",
+    "GET",
+    "DELETE"
+  ],
+  "executed": false,
+  "passed": 0,
+  "failed": 0,
+  "skipped": 0,
+  "notTested": 1,
+  "durationMs": 0,
+  "result": "NOT TESTED"
+}
