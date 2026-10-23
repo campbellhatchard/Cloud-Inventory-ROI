@@ -1,3 +1,33 @@
+# v6.9.44 Differential Audit
+
+## Exact comparison
+
+The final source was compared by SHA-256 file inventory with a fresh extraction of `cloud-inventory-roi-v6.9.43-render-ready.zip` (`0ebdcb89683996a693ae4089533cfcd93b6a27e5e5ef2ec5e7b65e7d87e61d2a`). No baseline files were removed.
+
+Final inventory result: **19 files added, 21 files changed, 0 files removed**. Dependency directories, Git metadata, and temporary QA logs were excluded from the inventory.
+
+## Authorized additions
+
+- Forward-only migration 045 extends the existing `handoff_attachments` table; it does not create a parallel attachment store.
+- One canonical private R2/S3 presigning service, one authenticated attachment route module, and one reconciliation job.
+- One compact Solution Fit evidence UI for general, application/process, gap, and stable integration contexts.
+- Multiple files, mobile camera selection, photo preview, sequential optimization/upload, caption/category metadata, authenticated open/download, metadata edit, and individual audited removal.
+- PostgreSQL, fake-private-object-store, real credential-gated R2, image optimization, security, and inherited Solution Fit regression tests.
+- v6.9.44 lineage, environment contract, CI evidence paths, release manifest, QA/readiness evidence, and permanent-test entries.
+
+## Authorized modifications
+
+- `server.js` mounts the attachment API, permits only the configured R2 origin in `connect-src`, and schedules bounded reconciliation.
+- `public/solution-fit.js`, `public/index.html`, and `public/style.css` integrate compact evidence controls without replacing Solution Fit state or navigation.
+- Admin Cleanup counts active attachment dependencies.
+- Version, lineage, Application Knowledge, governance, Render, and release-runner files are synchronized to v6.9.44.
+
+## Explicitly unchanged
+
+ROI Model v2.8, economic formulas, native currency, Prospect/Rep evidence semantics, Value History, Buyer Evidence, BuyCycle, customer/scenario authorization, SE cross-account Solution Fit scope, Executive/Proposal authority, outputs, Brand System, and Christie Persona are unchanged. PS Turnover evidence ZIP/appendix generation is deferred.
+
+---
+
 # v6.9.43 Differential Audit
 
 ## Authorized correction scope

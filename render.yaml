@@ -34,6 +34,21 @@ services:
       - key: NODE_ENV
         value: production
 
+      # Private Solution Fit evidence storage. Credentials are entered in
+      # Render and are never exposed to the browser or committed to source.
+      - key: STORAGE_MODE
+        value: S3
+      - key: S3_ENDPOINT
+        value: https://eaca76ebb7eb4baa41e6b69405f46708.r2.cloudflarestorage.com
+      - key: S3_BUCKET
+        value: cloud-inventory-discovery-staging
+      - key: S3_REGION
+        value: auto
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
+
       # Render prompts for these values during the first Blueprint sync.
       - key: BOOTSTRAP_ADMIN_USERNAME
         sync: false

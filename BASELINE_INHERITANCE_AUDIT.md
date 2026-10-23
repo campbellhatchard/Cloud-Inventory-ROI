@@ -56,3 +56,20 @@ This build corrects only the 14 defects confirmed by the Product Owner deployed 
 ## SE Solution Fit Scope
 
 Sales Engineers retain cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario, or opportunity access.
+# v6.9.44 authoritative baseline addendum
+
+- Exact parent archive: `cloud-inventory-roi-v6.9.43-render-ready.zip`
+- Verified SHA-256: `0ebdcb89683996a693ae4089533cfcd93b6a27e5e5ef2ec5e7b65e7d87e61d2a`
+- Baseline application: `6.9.43`
+- Target application: `6.9.44`
+- ROI authority: ROI Model v2.8 / modelVersion 28, unchanged
+- Brand/Application Knowledge/Christie authorities: 1.0 / 1.0 / 1.0
+- Baseline migration level: 044; target adds forward-only migration 045
+- Active Solution Fit path: `public/solution-fit.js` → `/api/handoffs` → `src/routes/handoffs.js` → saved `handoffs` record
+- Existing attachment foundation: `handoff_attachments` from migration 027 and Admin Cleanup dependency count; no baseline storage service, evidence routes, or attachment UI
+- Preserved: all v6.9.43 customer-context, saved ROI, Solution Fit readiness, alert, export, authorization, output, evidence, and AI timeout protections
+- Explicitly deferred: PS Turnover evidence ZIP and document/photo appendix
+
+SE Solution Fit Scope: Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.
+
+---

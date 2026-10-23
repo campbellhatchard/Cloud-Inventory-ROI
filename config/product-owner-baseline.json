@@ -1,11 +1,11 @@
 {
-  "release": "6.9.43",
-  "parentVersion": "6.9.42",
-  "parentArchive": "cloud-inventory-roi-v6.9.42-render-ready.zip",
-  "parentSha256": "df37636c660c0e4349fbcb2e99db074c7706fdd00a705eaf6d50ad224614a96b",
-  "parentCommit": "a4a34de7238d82232fd6395e6fb6f57c42f2b51d",
-  "deployedParentVersion": "6.9.42",
-  "deployedParentCommit": "46af1f156f4852551c4714ac6660df790a1b3709",
-  "deployedParentArchive": "cloud-inventory-roi-v6.9.42-render-ready.zip",
-  "deployedParentSha256": "df37636c660c0e4349fbcb2e99db074c7706fdd00a705eaf6d50ad224614a96b"
+  "release": "6.9.44",
+  "parentVersion": "6.9.43",
+  "parentArchive": "cloud-inventory-roi-v6.9.43-render-ready.zip",
+  "parentSha256": "0ebdcb89683996a693ae4089533cfcd93b6a27e5e5ef2ec5e7b65e7d87e61d2a",
+  "parentCommit": null,
+  "deployedParentVersion": "6.9.43",
+  "deployedParentCommit": "18c7bb2015223a8c956570719fe03d7caea04d10",
+  "deployedParentArchive": "cloud-inventory-roi-v6.9.43-render-ready.zip",
+  "deployedParentSha256": "0ebdcb89683996a693ae4089533cfcd93b6a27e5e5ef2ec5e7b65e7d87e61d2a"
 }

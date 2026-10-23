@@ -104,6 +104,7 @@
     clearTimeout(saveTimer);
     document.getElementById('sfScopeWizard')?.remove();
     document.getElementById('sfCustomerSwitchDialog')?.remove();
+    document.getElementById('solutionFitEvidenceModal')?.remove();
     S=blankState();customerId=custId||null;customerName='';canWrite=false;exists=false;dirty=false;
     primarySeId=null;primarySeName='';additionalSeIds=[];
     capabilities={canView:false,canEdit:false,canCreate:false,canRestore:false};
@@ -145,6 +146,8 @@
       await loadKnownStakeholders();
       if(generation!==workspaceLoadGeneration)return false;
       if(!exists){renderGateState(data.removedRecoverable?'removed':'not-created',data);return false;}
+      await window.SolutionFitEvidence?.load?.({customerId:custId,canWrite,onChange:()=>{ if(loadState==='ready')renderApp(); }});
+      if(generation!==workspaceLoadGeneration)return false;
       await applyKnownData({ mutate:false, save:false });
       if(generation!==workspaceLoadGeneration)return false;
       loadState='ready';
@@ -564,6 +567,7 @@
   function hasActiveProduct(product){return SF_MODEL.hasActiveProduct(S,product);}
   function activeProcesses(){return SF_MODEL.activeProcesses(S);}
   function activeGaps(){return SF_MODEL.activeGaps(S);}
+  function evidenceControls(type,id,label){return window.SolutionFitEvidence?.controls?.(type,id,label)||'';}
   function applicationAssessmentComplete(process){
     return process.selected&&process.demoStatus!=='Not reviewed'&&process.fit!=='Not reviewed'&&process.customerValidation!=='Not validated'&&process.customerValidation!=='Validation pending'&&(!['Partial fit','Gap'].includes(process.fit)||String(process.notes||'').trim());
   }
@@ -598,6 +602,7 @@
           ${lastEditedByName ? `<span class="sf-last-edit">Last updated by ${esc(lastEditedByName)}${lastEditedAt?' · '+new Date(lastEditedAt).toLocaleString():''}</span>` : ''}
         </div>
         <div class="sf-topbar-actions">
+          ${evidenceControls('GENERAL_SOLUTION_FIT','','General Solution Fit evidence')}
           <button class="btn btn-ghost btn-sm sf-topbar-btn" data-sfaction="switchCustomer">⇄ Switch Customer</button>
           ${canUseSeChristie?'<button class="btn btn-ghost btn-sm sf-topbar-btn" data-sfaction="askChristie">Ask Christie</button>':''}
           ${canWrite?'<button class="btn btn-ghost btn-sm sf-topbar-btn" data-sfaction="editScope">Edit Scope</button>':''}
@@ -851,6 +856,7 @@
     const process=findProcess(product,item),selected=!!process?.selected,index=process?S.processes.indexOf(process):-1;
     const locked=product==='MEP'&&currentScope().packageMode==='standard'&&item.standardPackage;
     const gapCount=process?S.gaps.filter(gap=>gap.processId===process.id).length:0;
+    const evidence=process?`<div class="sf-application-evidence">${evidenceControls('APPLICATION_PROCESS',process.id,`${process.name} evidence`)}</div>`:'';
     const assessment=selected?`<div class="sf-inline-assessment">
       <div class="sf-field"><label>Demo status</label><select data-sfpdemo="${index}">${SF_MODEL.DEMO_STATUSES.map(value=>`<option ${process.demoStatus===value?'selected':''}>${esc(value)}</option>`).join('')}</select></div>
       <div class="sf-field"><label>Fit</label><select data-sfpfit="${index}">${SF_MODEL.FIT_STATUSES.map(value=>`<option ${process.fit===value?'selected':''}>${esc(value)}</option>`).join('')}</select></div>
@@ -858,12 +864,12 @@
       <div class="sf-field sf-assessment-note"><label>Exceptions and notes</label><input data-sfpnote="${index}" value="${esc(process.notes)}" class="${['Partial fit','Gap'].includes(process.fit)&&!String(process.notes||'').trim()?'sf-required-input':''}" placeholder="${['Partial fit','Gap'].includes(process.fit)?'Describe the anticipated change, exception, or workaround (required)':'Evidence, exception, or customer note'}"></div>
       <div class="sf-assessment-status"><span class="${applicationAssessmentComplete(process)?'complete':''}">${applicationAssessmentComplete(process)?'Assessment complete':'Assessment needs attention'}</span>${gapCount?`<span>${gapCount} linked gap${gapCount===1?'':'s'}</span>`:''}${['Partial fit','Gap'].includes(process.fit)?`<button type="button" class="btn btn-ghost btn-sm" data-sfaction="gapFromProcess" data-process-index="${index}">Manage gap action</button>`:''}</div>
     </div>`:'';
-    return `<article class="sf-application-card ${selected?'selected':''} ${item.standardPackage?'package':''}"><label class="sf-application-choice"><input type="checkbox" data-sfappselect="1" data-product="${product}" data-name="${esc(item.name)}" data-group="${esc(item.group||'')}" data-erp="${esc(item.erp||'')}" data-source="${esc(item.source||'product_app')}" ${selected?'checked':''} ${locked?'disabled':''}><span><strong>${esc(item.name)}</strong><small>${esc(item.group||product)}</small>${locked?'<em>Package baseline · remains selected</em>':''}</span>${product==='MEP'?`<span class="sf-app-kind ${item.standardPackage?'standard':'custom'}">${item.standardPackage?'Standard Package':'Additional'}</span>`:''}</label>${assessment}</article>`;
+    return `<article class="sf-application-card ${selected?'selected':''} ${item.standardPackage?'package':''}"><label class="sf-application-choice"><input type="checkbox" data-sfappselect="1" data-product="${product}" data-name="${esc(item.name)}" data-group="${esc(item.group||'')}" data-erp="${esc(item.erp||'')}" data-source="${esc(item.source||'product_app')}" ${selected?'checked':''} ${locked?'disabled':''}><span><strong>${esc(item.name)}</strong><small>${esc(item.group||product)}</small>${locked?'<em>Package baseline · remains selected</em>':''}</span>${product==='MEP'?`<span class="sf-app-kind ${item.standardPackage?'standard':'custom'}">${item.standardPackage?'Standard Package':'Additional'}</span>`:''}</label>${assessment}${evidence}</article>`;
   }
   function renderStoredProcessCard(process){
     const index=S.processes.indexOf(process),selected=!!process.selected;
     const legacy=process.source==='legacy_process';
-    return `<article class="sf-application-card ${selected?'selected':''}"><label class="sf-application-choice"><input type="checkbox" data-sfpsel="${index}" ${selected?'checked':''}><span><strong>${esc(process.name)}</strong><small>${esc(process.group||'Existing Solution Fit record')}</small><em>Preserved from the saved record · ID ${esc(process.id)}</em></span><span class="sf-app-kind custom">${legacy?'LEGACY / UNCLASSIFIED HISTORICAL PROCESS':'Customer-specific'}</span></label>${selected?`<div class="sf-inline-assessment"><div class="sf-field"><label>Demo status</label><select data-sfpdemo="${index}">${SF_MODEL.DEMO_STATUSES.map(value=>`<option ${process.demoStatus===value?'selected':''}>${esc(value)}</option>`).join('')}</select></div><div class="sf-field"><label>Fit</label><select data-sfpfit="${index}">${SF_MODEL.FIT_STATUSES.map(value=>`<option ${process.fit===value?'selected':''}>${esc(value)}</option>`).join('')}</select></div><div class="sf-field"><label>Customer validation</label><select data-sfpvalidation="${index}">${SF_MODEL.VALIDATION_STATUSES.map(value=>`<option ${process.customerValidation===value?'selected':''}>${esc(value)}</option>`).join('')}</select></div><div class="sf-field sf-assessment-note"><label>Exceptions and notes</label><input data-sfpnote="${index}" value="${esc(process.notes)}" placeholder="Evidence, exception, or customer note"></div>${['Partial fit','Gap'].includes(process.fit)?`<button type="button" class="btn btn-ghost btn-sm" data-sfaction="gapFromProcess" data-process-index="${index}">Manage gap action</button>`:''}</div>`:''}</article>`;
+    return `<article class="sf-application-card ${selected?'selected':''}"><label class="sf-application-choice"><input type="checkbox" data-sfpsel="${index}" ${selected?'checked':''}><span><strong>${esc(process.name)}</strong><small>${esc(process.group||'Existing Solution Fit record')}</small><em>Preserved from the saved record · ID ${esc(process.id)}</em></span><span class="sf-app-kind custom">${legacy?'LEGACY / UNCLASSIFIED HISTORICAL PROCESS':'Customer-specific'}</span></label>${selected?`<div class="sf-inline-assessment"><div class="sf-field"><label>Demo status</label><select data-sfpdemo="${index}">${SF_MODEL.DEMO_STATUSES.map(value=>`<option ${process.demoStatus===value?'selected':''}>${esc(value)}</option>`).join('')}</select></div><div class="sf-field"><label>Fit</label><select data-sfpfit="${index}">${SF_MODEL.FIT_STATUSES.map(value=>`<option ${process.fit===value?'selected':''}>${esc(value)}</option>`).join('')}</select></div><div class="sf-field"><label>Customer validation</label><select data-sfpvalidation="${index}">${SF_MODEL.VALIDATION_STATUSES.map(value=>`<option ${process.customerValidation===value?'selected':''}>${esc(value)}</option>`).join('')}</select></div><div class="sf-field sf-assessment-note"><label>Exceptions and notes</label><input data-sfpnote="${index}" value="${esc(process.notes)}" placeholder="Evidence, exception, or customer note"></div><div class="sf-assessment-status">${['Partial fit','Gap'].includes(process.fit)?`<button type="button" class="btn btn-ghost btn-sm" data-sfaction="gapFromProcess" data-process-index="${index}">Manage gap action</button>`:''}</div></div>`:''}<div class="sf-application-evidence">${evidenceControls('APPLICATION_PROCESS',process.id,`${process.name} evidence`)}</div></article>`;
   }
   function renderProductScope(){
     const products=selectedProducts(),catalog=productCatalog(activeScopeProduct),query=scopeSearch.trim().toLowerCase();
@@ -927,7 +933,7 @@
       + '<button class="btn btn-primary btn-sm" data-sfaction="addGap">+ Capture gap</button>'
       + '</div>'
       + '<div id="sfGapList">' + (currentGaps.length ? currentGaps.map(function(g){return renderGapCard(g);}).join('') : '<div class="sf-empty-state"><p>No gaps captured. If all selected processes are demonstrated and full fit, that is a valid outcome.</p></div>') + '</div>'
-      + (historicalGaps.length?'<details class="sf-catalog-group"><summary>Historical / inactive gaps ('+historicalGaps.length+')</summary><div class="sf-muted">Preserved for history and excluded from current readiness and outputs.</div>'+historicalGaps.map(function(g){return '<div class="sf-history-row"><strong>'+esc(g.id)+'</strong> · '+esc(g.process||'Unassigned application')+' · '+esc(g.gapDescription||g.need||'No description')+'</div>';}).join('')+'</details>':'');
+      + (historicalGaps.length?'<details class="sf-catalog-group"><summary>Historical / inactive gaps ('+historicalGaps.length+')</summary><div class="sf-muted">Preserved for history and excluded from current readiness and outputs.</div>'+historicalGaps.map(function(g){return '<div class="sf-history-row"><strong>'+esc(g.id)+'</strong> · '+esc(g.process||'Unassigned application')+' · '+esc(g.gapDescription||g.need||'No description')+evidenceControls('GAP',g.id,`Historical gap ${g.id} evidence`)+'</div>';}).join('')+'</details>':'');
   }
   function renderGapCard(g){
     var deep=materialGap(g), open=openGapId===g.id;
@@ -944,6 +950,7 @@
       + '<span class="sf-gap-need">' + esc(g.need||'Requirement not entered') + '</span>'
       + '<span class="sf-gap-owner">' + esc(g.owner?`Owner: ${g.owner}`:'Owner not assigned') + '</span>'
       + '<div class="sf-gap-actions">'
+      + evidenceControls('GAP',g.id,`Gap ${g.id} evidence`)
       + '<button class="btn btn-ghost btn-sm" data-sfgaptoggle="' + g.id + '">' + (open?'Close':'Details') + '</button>'
       + '<button class="btn btn-danger btn-sm" data-sfgapdel="' + esc(g.id) + '" title="Delete gap">&#215;</button>'
       + '</div></div>'
@@ -992,7 +999,7 @@
       + '<div class="sf-card-head"><h3>Additional interfaces</h3><button class="btn btn-ghost btn-sm" data-sfaction="addInterface">+ Add interface</button></div>'
       + '<div class="sf-table-wrap">'
       + (hasInterfaces
-        ? '<table class="sf-table"><thead><tr><th style="width:70px">ID</th><th>Source</th><th>Target</th><th>Object / purpose</th><th style="width:140px">Method</th><th style="width:130px">Direction</th><th style="width:130px">Frequency</th><th style="width:120px">Owner</th><th style="width:36px"></th></tr></thead>'
+        ? '<table class="sf-table"><thead><tr><th style="width:70px">ID</th><th>Source</th><th>Target</th><th>Object / purpose</th><th style="width:140px">Method</th><th style="width:130px">Direction</th><th style="width:130px">Frequency</th><th style="width:120px">Owner</th><th style="width:150px">Evidence</th><th style="width:36px"></th></tr></thead>'
           + '<tbody id="sfIntBody">' + S.interfaces.map(function(it,idx){return renderIntRow(it,idx);}).join('') + '</tbody></table>'
         : '<div class="sf-empty-state" id="sfIntBody"><p>No additional interfaces recorded. The primary integration is captured in Context &rarr; Architecture.</p></div>')
       + '</div></div>'
@@ -1016,6 +1023,7 @@
       + '<td><select class="sf-table-input" data-sfifield="direction">'+['Bidirectional','Inbound to CI','Outbound from CI','TBD'].map(function(x){return '<option '+(x===it.direction?'selected':'')+'>'+x+'</option>';}).join('')+'</select></td>'
       + '<td><select class="sf-table-input" data-sfifield="trigger">'+['Near real time','Scheduled batch','On demand','TBD'].map(function(x){return '<option '+(x===it.trigger?'selected':'')+'>'+x+'</option>';}).join('')+'</select></td>'
       + '<td><select class="sf-table-input" data-sfifield="owner">'+['Cloud Inventory','Customer','Partner','Shared','TBD'].map(function(x){return '<option '+(x===it.owner?'selected':'')+'>'+x+'</option>';}).join('')+'</select></td>'
+      + '<td>'+evidenceControls('INTEGRATION',it.id,`Integration ${it.id} evidence`)+'</td>'
       + '<td><button class="btn btn-danger btn-sm" data-sfintdel="'+idx+'" title="Delete">&#215;</button></td>'
       + '</tr>';
   }
@@ -1276,6 +1284,7 @@
   }
 
   function wireBindings(){
+    window.SolutionFitEvidence?.wire?.(document.getElementById('sfApp'));
     /* Section accordions (context tab) */
     document.querySelectorAll('[data-sftoggle]').forEach(function(el) {
       el.addEventListener('click', function() {
@@ -1340,7 +1349,7 @@
     document.querySelectorAll('[data-sfappselect]').forEach(el=>el.addEventListener('change',()=>toggleApplication(el)));
     /* gaps */
     document.querySelectorAll('[data-sfgaptoggle]').forEach(el=>el.onclick=()=>{ openGapId = openGapId===el.dataset.sfgaptoggle?null:el.dataset.sfgaptoggle; rerenderGaps(); });
-    document.querySelectorAll('[data-sfgapdel]').forEach(el=>el.onclick=()=>{ if(confirm('Delete this gap?')){ const index=S.gaps.findIndex(gap=>gap.id===el.dataset.sfgapdel);if(index>=0)S.gaps.splice(index,1); rerenderGaps(); scheduleSave(); } });
+    document.querySelectorAll('[data-sfgapdel]').forEach(el=>el.onclick=()=>{ const gapId=el.dataset.sfgapdel;if(window.SolutionFitEvidence?.matching?.('GAP',gapId).length){window.AppAlerts?.warning?.('Remove the evidence attached to this gap before deleting the gap.');return;}if(confirm('Delete this gap?')){ const index=S.gaps.findIndex(gap=>gap.id===gapId);if(index>=0)S.gaps.splice(index,1); rerenderGaps(); scheduleSave(); } });
     document.querySelectorAll('[data-sfgfield]').forEach(el=>el.addEventListener('input',e=>{ const g=S.gaps.find(x=>x.id===el.dataset.sfgid); if(g){
       if(el.dataset.sfgfield==='processId'){
         const process=S.processes.find(item=>item.id===e.target.value);
@@ -1350,7 +1359,7 @@
     } }));
     /* interfaces */
     document.querySelectorAll('[data-sfifield]').forEach(el=>el.addEventListener('input',e=>{ const row=el.closest('[data-sfint]'); const it=S.interfaces[+row.dataset.sfint]; if(it){ it[el.dataset.sfifield]=e.target.value; scheduleSave(); } }));
-    document.querySelectorAll('[data-sfintdel]').forEach(el=>el.onclick=()=>{ S.interfaces.splice(+el.dataset.sfintdel,1); rerenderIntegration(); scheduleSave(); });
+    document.querySelectorAll('[data-sfintdel]').forEach(el=>el.onclick=()=>{const item=S.interfaces[+el.dataset.sfintdel];if(item?.id&&window.SolutionFitEvidence?.matching?.('INTEGRATION',item.id).length){window.AppAlerts?.warning?.('Remove the evidence attached to this interface before deleting the interface.');return;}S.interfaces.splice(+el.dataset.sfintdel,1); rerenderIntegration(); scheduleSave(); });
     /* actions */
     if (!sfActionsDelegated) {
       sfActionsDelegated = true;

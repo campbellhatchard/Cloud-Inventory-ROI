@@ -7,6 +7,18 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.44', date: '2026-10-23', tag: 'solution-fit-evidence',
+    title: 'Private Solution Fit evidence and attachments',
+    summary: 'Adds secure, server-authoritative photo and document evidence to the saved Solution Fit without changing ROI calculations, assessment identity, authorization scope, or Professional Services output behavior.',
+    highlights: [
+      'Authorized users can attach multiple photos or documents to the overall Solution Fit, a stable application, a stable gap, or a stable integration.',
+      'Mobile camera capture, existing photo selection, desktop multi-file upload, captions, categories, and per-file progress are supported.',
+      'Large photos are optimized in the browser before upload; the server independently verifies file type and size before evidence becomes active.',
+      'Private Cloudflare R2 objects use short-lived signed upload and download access; storage credentials never enter the browser.',
+      'Individual removal is audited, deletion failures are retried, customer reassignment preserves evidence, and Admin Cleanup reports active attachment dependencies.'
+    ]
+  },
+  {
     version: '6.9.43', date: '2026-10-22', tag: 'corrective-reliability',
     title: 'Atomic customer context and authoritative saved-state reliability',
     summary: 'Corrects the defects confirmed in the deployed v6.9.42 role regression without adding the unbuilt attachment feature or changing ROI formulas, evidence methodology, authorization, or database schema.',
