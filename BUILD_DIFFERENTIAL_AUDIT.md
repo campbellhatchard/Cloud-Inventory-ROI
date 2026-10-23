@@ -33,6 +33,7 @@ Final inventory result: **19 files added, 21 files changed, 0 files removed**. D
 - Reconciliation atomically claims expired pending rows before object deletion, respects renewed upload expiry, and retains failed deletions for retry. Activation and retry renewal fail if another operation already removed the row.
 - Added executable regression coverage for delayed customer responses, reset, queued customer switches, withdrawn files, signed headers, and cleanup failures. The disposable PostgreSQL suite additionally checks expired versus renewed and ACTIVE evidence.
 - Real R2 certification now attempts to reuse the upload URL and requires rejection with HTTP 412 before checking the unchanged downloaded bytes.
+- Disposable PostgreSQL exposed a dependency-count defect: failed/pending uploads were counted as active Admin Cleanup dependencies. The query now requires `status='ACTIVE'` and no removal timestamp; the existing integration assertion remains unchanged.
 
 ## Preserved authorities
 
