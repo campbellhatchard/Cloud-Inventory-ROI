@@ -52,23 +52,28 @@ function createR2Storage({ env = process.env, fetchImpl = global.fetch, now = ()
     if (!config.available) throw new StorageUnavailableError();
   }
 
-  function presign(method, key, expiresSeconds) {
+  function presign(method, key, expiresSeconds, requiredHeaders = {}) {
     assertAvailable();
     const instant = now();
     const timestamp = amzDate(instant);
     const day = dateStamp(instant);
     const scope = `${day}/${config.region}/s3/aws4_request`;
     const endpoint = new URL(config.endpoint);
+    const headers = { host: endpoint.host };
+    for (const [name, value] of Object.entries(requiredHeaders)) headers[name.toLowerCase()] = trim(value).replace(/\s+/g, ' ');
+    const names = Object.keys(headers).sort();
+    const signedHeaders = names.join(';');
+    const canonicalHeaders = names.map(name => `${name}:${headers[name]}\n`).join('');
     const path = `/${encode(config.bucket)}/${canonicalKey(key)}`;
     const params = {
       'X-Amz-Algorithm': 'AWS4-HMAC-SHA256',
       'X-Amz-Credential': `${config.accessKeyId}/${scope}`,
       'X-Amz-Date': timestamp,
       'X-Amz-Expires': String(expiresSeconds),
-      'X-Amz-SignedHeaders': 'host'
+      'X-Amz-SignedHeaders': signedHeaders
     };
     const canonicalQuery = Object.keys(params).sort().map(name => `${encode(name)}=${encode(params[name])}`).join('&');
-    const canonicalRequest = [method, path, canonicalQuery, `host:${endpoint.host}\n`, 'host', 'UNSIGNED-PAYLOAD'].join('\n');
+    const canonicalRequest = [method, path, canonicalQuery, canonicalHeaders, signedHeaders, 'UNSIGNED-PAYLOAD'].join('\n');
     const stringToSign = ['AWS4-HMAC-SHA256', timestamp, scope, sha256(canonicalRequest)].join('\n');
     const kDate = hmac(`AWS4${config.secretAccessKey}`, day);
     const kRegion = hmac(kDate, config.region);
@@ -92,7 +97,10 @@ function createR2Storage({ env = process.env, fetchImpl = global.fetch, now = ()
   return Object.freeze({
     isAvailable: () => config.available,
     publicConfig: () => ({ mode: config.mode, endpointHost: config.endpoint ? new URL(config.endpoint).host : '', bucket: config.bucket, region: config.region, available: config.available }),
-    createUploadUrl: async ({ key, expiresSeconds = DEFAULT_UPLOAD_TTL_SECONDS }) => ({ url: presign('PUT', key, expiresSeconds), expiresSeconds }),
+    createUploadUrl: async ({ key, contentType, expiresSeconds = DEFAULT_UPLOAD_TTL_SECONDS }) => {
+      const requiredHeaders = { ...(contentType ? { 'Content-Type': contentType } : {}), 'If-None-Match': '*' };
+      return { url: presign('PUT', key, expiresSeconds, requiredHeaders), expiresSeconds, requiredHeaders };
+    },
     createDownloadUrl: async ({ key, expiresSeconds = DEFAULT_DOWNLOAD_TTL_SECONDS }) => ({ url: presign('GET', key, expiresSeconds), expiresSeconds }),
     verifyObject: async ({ key }) => {
       const response = await request('HEAD', key);

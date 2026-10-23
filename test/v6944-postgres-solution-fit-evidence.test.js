@@ -24,7 +24,10 @@ else describe('v6.9.44 governed Solution Fit evidence against disposable Postgre
   before(async () => {
     objectServer = await listen(http.createServer(async (req, res) => {
       const key = new URL(req.url, 'http://localhost').pathname;
-      if (req.method === 'PUT') { const body = await collect(req); objects.set(key, { body, contentType: String(req.headers['content-type'] || 'application/octet-stream') }); res.writeHead(200, { ETag: '"qa-etag"' }); return res.end(); }
+      if (req.method === 'PUT') {
+        if (req.headers['if-none-match'] === '*' && objects.has(key)) { res.writeHead(412); return res.end(); }
+        const body = await collect(req); objects.set(key, { body, contentType: String(req.headers['content-type'] || 'application/octet-stream') }); res.writeHead(200, { ETag: '"qa-etag"' }); return res.end();
+      }
       const object = objects.get(key);
       if (req.method === 'HEAD') { if (!object) { res.writeHead(404); return res.end(); } res.writeHead(200, { 'Content-Length': object.body.length, 'Content-Type': object.contentType, ETag: '"qa-etag"' }); return res.end(); }
       if (req.method === 'GET') { if (!object) { res.writeHead(404); return res.end(); } res.writeHead(200, { 'Content-Length': object.body.length, 'Content-Type': object.contentType }); return res.end(object.body); }
@@ -129,5 +132,24 @@ else describe('v6.9.44 governed Solution Fit evidence against disposable Postgre
     assert.equal(preview.status, 200, JSON.stringify(preview.json));
     const fit = preview.json.records?.handoffs?.find(row => row.id === ids.handoff) || preview.json.handoffs?.find(row => row.id === ids.handoff);
     assert.ok(fit); assert.equal(fit.dependencies.solutionFitAttachments, 2);
+  });
+
+  test('cleanup preserves renewed and active uploads while atomically removing expired pending evidence', async () => {
+    const body = { contextType: 'GENERAL_SOLUTION_FIT', originalFilename: 'expired.jpg', contentType: 'image/jpeg', sizeBytes: 3 };
+    const expired = await api(`/api/handoffs/${ids.customer.id}/attachments/initiate`, { method: 'POST', token: seToken, body });
+    const renewed = await api(`/api/handoffs/${ids.customer.id}/attachments/initiate`, { method: 'POST', token: seToken, body });
+    assert.equal(expired.status, 201); assert.equal(renewed.status, 201);
+    await db.query(`UPDATE handoff_attachments SET created_at=NOW()-INTERVAL '25 hours',upload_expires_at=NOW()-INTERVAL '1 hour' WHERE id=$1`, [expired.json.attachmentId]);
+    await db.query(`UPDATE handoff_attachments SET created_at=NOW()-INTERVAL '25 hours' WHERE id=$1`, [renewed.json.attachmentId]);
+    await db.query(`UPDATE handoff_attachments SET created_at=NOW()-INTERVAL '25 hours',upload_expires_at=NOW()-INTERVAL '1 hour' WHERE id=$1`, [ids.two]);
+    const { cleanupStaleSolutionFitEvidence } = require('../src/jobs/attachmentCleanup');
+    await cleanupStaleSolutionFitEvidence();
+    const rows = (await db.query('SELECT id,status,deletion_status FROM handoff_attachments WHERE id=ANY($1::uuid[])', [[expired.json.attachmentId, renewed.json.attachmentId, ids.two]])).rows;
+    assert.equal(rows.find(row => row.id === expired.json.attachmentId).status, 'REMOVED');
+    assert.equal(rows.find(row => row.id === expired.json.attachmentId).deletion_status, 'DELETED');
+    assert.equal(rows.find(row => row.id === renewed.json.attachmentId).status, 'PENDING');
+    assert.equal(rows.find(row => row.id === ids.two).status, 'ACTIVE');
+    const complete = await api(`/api/handoffs/${ids.customer.id}/attachments/${expired.json.attachmentId}/complete`, { method: 'POST', token: seToken, body: {} });
+    assert.equal(complete.status, 404);
   });
 });

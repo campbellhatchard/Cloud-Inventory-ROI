@@ -21,6 +21,14 @@
     ['GAP_EVIDENCE', 'Gap evidence'], ['DESIGN_REFERENCE', 'Design reference'], ['OTHER', 'Other']
   ];
   const state = { customerId: '', canWrite: false, solutionFitId: '', storageAvailable: false, attachments: [], queue: [], context: null, onChange: null };
+  let workspaceGeneration = 0, loadRevision = 0, modalGeneration = 0, uploading = false;
+  function operationContext() { return { customerId: state.customerId, generation: workspaceGeneration, modal: modalGeneration, context: { ...state.context } }; }
+  function current(operation) { return operation.generation === workspaceGeneration && operation.customerId === state.customerId && operation.modal === modalGeneration; }
+  function assertCurrent(operation) { if (!current(operation)) { const error = new Error('The evidence workspace changed.'); error.code = 'STALE_EVIDENCE_CONTEXT'; throw error; } }
+  function reset() {
+    workspaceGeneration += 1; loadRevision += 1; close();
+    Object.assign(state, { customerId: '', canWrite: false, solutionFitId: '', storageAvailable: false, attachments: [], onChange: null });
+  }
 
   function esc(value) { return String(value == null ? '' : value).replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c])); }
   function canonicalContentType(file) {
@@ -40,6 +48,8 @@
   function matching(type, id) { const key = contextKey(type, id); return state.attachments.filter(item => contextKey(item.contextType, item.contextId) === key); }
 
   async function load({ customerId, canWrite, onChange } = {}) {
+    if (String(customerId || '') !== state.customerId) reset();
+    const revision = ++loadRevision;
     state.customerId = String(customerId || ''); state.canWrite = canWrite === true; state.onChange = typeof onChange === 'function' ? onChange : state.onChange;
     state.attachments = []; state.solutionFitId = ''; state.storageAvailable = false;
     if (!state.customerId || !root?.apiFetch) return state;
@@ -47,11 +57,12 @@
       const response = await root.apiFetch(`/api/handoffs/${encodeURIComponent(state.customerId)}/attachments`);
       if (!response?.ok) throw new Error(await responseError(response, 'Evidence could not be loaded.'));
       const payload = await response.json();
+      if (revision !== loadRevision) return state;
       state.attachments = Array.isArray(payload.attachments) ? payload.attachments : [];
       state.solutionFitId = payload.solutionFitId || '';
       state.storageAvailable = payload.storage?.available === true;
     } catch (error) {
-      notify('error', error.message || 'Evidence could not be loaded.');
+      if (revision === loadRevision) notify('error', error.message || 'Evidence could not be loaded.');
     }
     return state;
   }
@@ -92,11 +103,12 @@
       ${unavailable}
       <section class="sf-evidence-existing-list"><h4>Saved evidence</h4>${existingRows()}</section>
       ${state.canWrite && state.storageAvailable ? `<section class="sf-evidence-chooser"><div><button type="button" class="btn btn-primary" data-evidence-camera>Take photo</button><button type="button" class="btn btn-secondary" data-evidence-choose>Choose photo / file</button></div><p>JPEG and PNG images up to 5 MB after automatic optimization. PDF, DOCX, XLSX, and PPTX up to 25 MB.</p><input type="file" data-evidence-camera-input accept="image/*" capture="environment" hidden><input type="file" data-evidence-file-input accept="${ACCEPT}" multiple hidden></section>${queueRows()}` : ''}
-      <footer><button type="button" class="btn btn-ghost" data-evidence-close>Close</button>${state.canWrite && state.storageAvailable ? '<button type="button" class="btn btn-primary" data-evidence-upload '+(state.queue.length ? '' : 'disabled')+'>Upload ready files</button>' : ''}</footer>
+      <footer><button type="button" class="btn btn-ghost" data-evidence-close>Close</button>${state.canWrite && state.storageAvailable ? '<button type="button" class="btn btn-primary" data-evidence-upload '+(state.queue.length && !uploading ? '' : 'disabled')+'>Upload ready files</button>' : ''}</footer>
     </div>`;
   }
 
   function open(contextType, contextId, label) {
+    close();
     state.context = { type: contextType || 'GENERAL_SOLUTION_FIT', id: contextId || '', label: label || 'Solution Fit evidence' };
     state.queue = [];
     let overlay = root.document.getElementById('solutionFitEvidenceModal');
@@ -105,8 +117,8 @@
   }
 
   function revokePreview(item) { if (item?.previewUrl) { root?.URL?.revokeObjectURL?.(item.previewUrl); item.previewUrl = ''; } }
-  function close() { root?.document?.getElementById('solutionFitEvidenceModal')?.remove(); state.queue.forEach(revokePreview); state.queue = []; }
-  function renderModal() { const overlay = root.document.getElementById('solutionFitEvidenceModal'); if (!overlay) return; overlay.innerHTML = modalHtml(); wireModal(overlay); }
+  function close() { modalGeneration += 1; uploading = false; root?.document?.getElementById?.('solutionFitEvidenceModal')?.remove(); state.queue.forEach(revokePreview); state.queue = []; state.context = null; }
+  function renderModal() { const overlay = root?.document?.getElementById?.('solutionFitEvidenceModal'); if (!overlay || !state.context) return; overlay.innerHTML = modalHtml(); wireModal(overlay); }
 
   function addFiles(fileList) {
     for (const file of Array.from(fileList || [])) {
@@ -139,62 +151,81 @@
     } finally { bitmap.close?.(); }
   }
 
-  async function uploadOne(item) {
+  async function uploadOne(item, operation) {
+    assertCurrent(operation);
     const unsupported = fileTypeError(item.file);
     if (unsupported) throw new Error(unsupported);
     item.state = 'Optimizing'; item.message = canonicalContentType(item.file).startsWith('image/') && item.file.size > IMAGE_LIMIT ? 'Optimizing photo…' : 'Preparing…'; renderModal();
     const optimized = await optimizeImage(item.file);
+    assertCurrent(operation);
     if (optimized.file !== item.file) { revokePreview(item); item.previewUrl = root?.URL?.createObjectURL?.(optimized.file) || ''; }
     item.file = optimized.file;
     const contentType = canonicalContentType(item.file);
     if (!contentType) throw new Error('This file type is not supported.');
     item.state = 'Uploading'; item.message = 'Uploading…'; renderModal();
-    const initiate = await root.apiFetch(`/api/handoffs/${encodeURIComponent(state.customerId)}/attachments/initiate`, { method: 'POST', body: JSON.stringify({ contextType: state.context.type, contextId: state.context.id || null, originalFilename: item.file.name, contentType, sizeBytes: item.file.size, caption: item.caption, evidenceCategory: item.category }) });
+    const initiate = await root.apiFetch(`/api/handoffs/${encodeURIComponent(operation.customerId)}/attachments/initiate`, { method: 'POST', body: JSON.stringify({ contextType: operation.context.type, contextId: operation.context.id || null, originalFilename: item.file.name, contentType, sizeBytes: item.file.size, caption: item.caption, evidenceCategory: item.category }) });
+    assertCurrent(operation);
     if (!initiate?.ok) throw new Error(await responseError(initiate, 'Evidence could not be uploaded. Please try again.'));
     const session = await initiate.json();
+    assertCurrent(operation);
     const put = await root.fetch(session.uploadUrl, { method: 'PUT', headers: session.requiredHeaders || { 'Content-Type': contentType }, body: item.file });
+    assertCurrent(operation);
     if (!put.ok) throw new Error('The secure file upload did not complete. Please retry.');
-    const complete = await root.apiFetch(`/api/handoffs/${encodeURIComponent(state.customerId)}/attachments/${encodeURIComponent(session.attachmentId)}/complete`, { method: 'POST', body: '{}' });
+    const complete = await root.apiFetch(`/api/handoffs/${encodeURIComponent(operation.customerId)}/attachments/${encodeURIComponent(session.attachmentId)}/complete`, { method: 'POST', body: '{}' });
+    assertCurrent(operation);
     if (!complete?.ok) throw new Error(await responseError(complete, 'Evidence could not be verified. Please retry.'));
     item.state = 'Complete'; item.message = optimized.optimized ? `Complete · optimized from ${formatBytes(optimized.originalSize)} to ${formatBytes(item.file.size)}` : 'Complete';
   }
 
   async function uploadQueue(button) {
+    if (uploading) return;
+    const operation = operationContext(); uploading = true;
     button.disabled = true;
-    for (const item of state.queue) {
-      if (item.state === 'Complete') continue;
-      try { await uploadOne(item); }
-      catch (error) { item.state = 'Failed'; item.message = error.message || 'Upload failed. Retry.'; renderModal(); }
+    for (const item of [...state.queue]) {
+      if (!current(operation)) return;
+      if (!state.queue.includes(item) || item.state === 'Complete') continue;
+      try { await uploadOne(item, operation); }
+      catch (error) { if (!current(operation)) return; item.state = 'Failed'; item.message = error.message || 'Upload failed. Retry.'; renderModal(); }
     }
-    await load({ customerId: state.customerId, canWrite: state.canWrite, onChange: state.onChange });
+    if (!current(operation)) return;
+    await load({ customerId: operation.customerId, canWrite: state.canWrite, onChange: state.onChange });
+    if (!current(operation)) return;
+    uploading = false;
     renderModal(); state.onChange?.();
     const failures = state.queue.filter(item => item.state === 'Failed').length;
     if (failures) notify('error', `${failures} evidence file${failures === 1 ? '' : 's'} could not be uploaded. Review each file and retry.`); else notify('success', 'Evidence uploaded.');
   }
 
   async function openAttachment(id) {
+    const operation = operationContext();
     const target = root.open('about:blank', '_blank');
     if (target) { try { target.opener = null; target.document.title = 'Opening evidence…'; } catch (_) {} }
-    const response = await root.apiFetch(`/api/handoffs/${encodeURIComponent(state.customerId)}/attachments/${encodeURIComponent(id)}/download`);
+    const response = await root.apiFetch(`/api/handoffs/${encodeURIComponent(operation.customerId)}/attachments/${encodeURIComponent(id)}/download`);
+    if (!current(operation)) { target?.close?.(); return; }
     if (!response?.ok) { target?.close?.(); return notify('error', await responseError(response, 'Evidence could not be opened.')); }
     const payload = await response.json();
+    if (!current(operation)) { target?.close?.(); return; }
     if (target) target.location.replace(payload.url); else root.location.assign(payload.url);
   }
 
   async function editAttachment(id) {
+    const operation = operationContext();
     const item = state.attachments.find(row => row.id === id); if (!item) return;
     const caption = root.prompt('Caption / description', item.caption || ''); if (caption == null) return;
     const category = root.prompt('Category: PHOTO, DOCUMENT, CUSTOMER_EVIDENCE, DEMO_EVIDENCE, GAP_EVIDENCE, DESIGN_REFERENCE, OTHER (or blank)', item.evidenceCategory || ''); if (category == null) return;
-    const response = await root.apiFetch(`/api/handoffs/${encodeURIComponent(state.customerId)}/attachments/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ caption, evidenceCategory: category.trim().toUpperCase() }) });
+    const response = await root.apiFetch(`/api/handoffs/${encodeURIComponent(operation.customerId)}/attachments/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ caption, evidenceCategory: category.trim().toUpperCase() }) });
+    if (!current(operation)) return;
     if (!response?.ok) return notify('error', await responseError(response, 'Evidence details could not be saved.'));
-    await load({ customerId: state.customerId, canWrite: state.canWrite, onChange: state.onChange }); renderModal(); state.onChange?.(); notify('success', 'Evidence details updated.');
+    await load({ customerId: operation.customerId, canWrite: state.canWrite, onChange: state.onChange }); if (!current(operation)) return; renderModal(); state.onChange?.(); notify('success', 'Evidence details updated.');
   }
 
   async function removeAttachment(id) {
+    const operation = operationContext();
     const item = state.attachments.find(row => row.id === id); if (!item || !root.confirm(`Remove “${item.originalFilename}”? The audit record will be preserved.`)) return;
-    const response = await root.apiFetch(`/api/handoffs/${encodeURIComponent(state.customerId)}/attachments/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    const response = await root.apiFetch(`/api/handoffs/${encodeURIComponent(operation.customerId)}/attachments/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (!current(operation)) return;
     if (!response?.ok) return notify('error', await responseError(response, 'Evidence could not be removed.'));
-    await load({ customerId: state.customerId, canWrite: state.canWrite, onChange: state.onChange }); renderModal(); state.onChange?.(); notify('success', 'Evidence removed.');
+    await load({ customerId: operation.customerId, canWrite: state.canWrite, onChange: state.onChange }); if (!current(operation)) return; renderModal(); state.onChange?.(); notify('success', 'Evidence removed.');
   }
 
   function wireModal(overlay) {
@@ -218,5 +249,5 @@
     });
   }
 
-  return { load, controls, wire, open, matching, optimizeImage, canonicalContentType, fileTypeError, validateState: () => ({ ...state, attachments: [...state.attachments] }), IMAGE_LIMIT, IMAGE_TARGET, ACCEPT };
+  return { load, reset, controls, wire, open, matching, optimizeImage, canonicalContentType, fileTypeError, validateState: () => ({ ...state, attachments: [...state.attachments] }), IMAGE_LIMIT, IMAGE_TARGET, ACCEPT };
 });

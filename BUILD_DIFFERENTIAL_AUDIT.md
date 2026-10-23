@@ -24,11 +24,23 @@ Final inventory result: **19 files added, 21 files changed, 0 files removed**. D
 
 ## Explicitly unchanged
 
+## Deployment reconciliation and targeted corrections — 2026-10-23
+
+- Applied forward to exact production parent `18c7bb2015223a8c956570719fe03d7caea04d10`; recorded this deployed Git lineage separately from the supplied archive lineage.
+- Restored `public/style.css` directly from the checksum-verified v6.9.44 archive after detecting corrupted content in the interrupted transfer. Relative to production this stylesheet adds eight lines; it does not replace the prior styles.
+- Upload signatures now bind the approved Content-Type and mandatory `If-None-Match: *`, preventing replacement of an existing verified object with a reused PUT URL. The browser receives those required signed headers.
+- Evidence loading and all asynchronous modal actions retain their initiating customer/context generation. Customer changes reset metadata and cancel queued work; removing a waiting file prevents its upload.
+- Reconciliation atomically claims expired pending rows before object deletion, respects renewed upload expiry, and retains failed deletions for retry. Activation and retry renewal fail if another operation already removed the row.
+- Added executable regression coverage for delayed customer responses, reset, queued customer switches, withdrawn files, signed headers, and cleanup failures. The disposable PostgreSQL suite additionally checks expired versus renewed and ACTIVE evidence.
+- Real R2 certification now attempts to reuse the upload URL and requires rejection with HTTP 412 before checking the unchanged downloaded bytes.
+
+## Preserved authorities
+
 ROI Model v2.8, economic formulas, native currency, Prospect/Rep evidence semantics, Value History, Buyer Evidence, BuyCycle, customer/scenario authorization, SE cross-account Solution Fit scope, Executive/Proposal authority, outputs, Brand System, and Christie Persona are unchanged. PS Turnover evidence ZIP/appendix generation is deferred.
 
 ---
 
-# v6.9.43 Differential Audit
+# Historical v6.9.43 Differential Audit (prior release)
 
 ## Authorized correction scope
 

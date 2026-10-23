@@ -19,7 +19,7 @@ Do not expose either credential through browser configuration, logs, reports, or
 
 ## Private R2 bucket CORS
 
-Allow only the deployed Cloud Inventory origin (currently `https://cloud-inventory-roi.onrender.com`) for `PUT`, `GET`, and `HEAD`. Allow the `Content-Type` request header, expose `ETag`, and use a bounded cache age. Do not enable a public bucket URL.
+Allow only the deployed Cloud Inventory origin (currently `https://cloud-inventory-roi.onrender.com`) for `PUT`, `GET`, and `HEAD`. Allow the `Content-Type` and `If-None-Match` request headers, expose `ETag`, and use a bounded cache age. Do not enable a public bucket URL.
 
 ## Deployment
 
@@ -49,6 +49,7 @@ Allow only the deployed Cloud Inventory origin (currently `https://cloud-invento
 
 - Interrupt an upload; confirm no ACTIVE evidence and retry does not duplicate the record.
 - Expire/reissue an upload session.
+- Reuse an upload URL after successful upload: R2 must reject replacement with HTTP 412, and the originally verified object must remain unchanged.
 - Attempt wrong customer, Solution Fit, process, gap, attachment, file type, executable, zero-byte, and oversized requests; all must fail safely.
 - Remove an attachment while simulating object-delete failure; confirm metadata records RETRY and reconciliation later deletes only that object.
 - Temporarily remove R2 configuration; confirm Solution Fit remains usable and evidence shows the unavailable message.

@@ -149,3 +149,92 @@ test('attachment routes are mounted ahead of base handoff routes and storage fai
   assert.match(server, /STORAGE_CONNECT_ORIGINS/);
   assert.match(server, /cleanupStaleSolutionFitEvidence/);
 });
+
+test('upload signatures require create-only writes and bind the approved content type', async () => {
+  const svc = storage.createR2Storage({ env: { STORAGE_MODE: 'S3', S3_ENDPOINT: 'https://example.r2.cloudflarestorage.com', S3_BUCKET: 'qa-private', S3_ACCESS_KEY_ID: 'test', S3_SECRET_ACCESS_KEY: 'test' } });
+  const image = await svc.createUploadUrl({ key: 'evidence/image.jpg', contentType: 'image/jpeg' });
+  const document = await svc.createUploadUrl({ key: 'evidence/image.jpg', contentType: 'application/pdf' });
+  assert.equal(new URL(image.url).searchParams.get('X-Amz-SignedHeaders'), 'content-type;host;if-none-match');
+  assert.deepEqual(image.requiredHeaders, { 'Content-Type': 'image/jpeg', 'If-None-Match': '*' });
+  assert.notEqual(new URL(image.url).searchParams.get('X-Amz-Signature'), new URL(document.url).searchParams.get('X-Amz-Signature'));
+});
+
+function deferred() { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; }
+function evidencePayload(customer) { return { ok: true, json: async () => ({ solutionFitId: `fit-${customer}`, storage: { available: true }, attachments: [{ id: customer, caption: `private-${customer}` }] }) }; }
+
+test('late evidence responses cannot replace another customer workspace', async () => {
+  const pending = { A: deferred(), B: deferred() };
+  const browser = require('../public/solution-fit-evidence').createForRoot({ apiFetch: url => pending[url.includes('/A/') ? 'A' : 'B'].promise });
+  const first = browser.load({ customerId: 'A', canWrite: true });
+  const second = browser.load({ customerId: 'B', canWrite: false });
+  pending.B.resolve(evidencePayload('B')); await second;
+  pending.A.resolve(evidencePayload('A')); await first;
+  const state = browser.validateState();
+  assert.equal(state.customerId, 'B'); assert.equal(state.solutionFitId, 'fit-B');
+  assert.equal(state.canWrite, false); assert.deepEqual(state.attachments.map(row => row.id), ['B']);
+});
+
+test('reset invalidates evidence immediately before the next customer finishes loading', async () => {
+  const response = deferred();
+  const browser = require('../public/solution-fit-evidence').createForRoot({ apiFetch: () => response.promise });
+  const loading = browser.load({ customerId: 'A', canWrite: true });
+  browser.reset(); response.resolve(evidencePayload('A')); await loading;
+  assert.equal(browser.validateState().customerId, '');
+  assert.deepEqual(browser.validateState().attachments, []);
+});
+
+test('switching customers cancels the old upload queue and never completes into the new customer', async () => {
+  const put = deferred(), putStarted = deferred(); const calls = []; const listeners = {};
+  const button = { disabled: false, addEventListener: (_event, fn) => { listeners.upload = fn; } };
+  const overlay = { innerHTML: '', remove() {}, querySelectorAll: () => [], querySelector: selector => selector === '[data-evidence-upload]' ? button : null };
+  const browser = require('../public/solution-fit-evidence').createForRoot({
+    document: { getElementById: () => overlay },
+    apiFetch: async url => { calls.push(url); return url.endsWith('/initiate') ? { ok: true, json: async () => ({ uploadUrl: 'https://storage.invalid/test', attachmentId: 'one' }) } : evidencePayload(url.includes('/A/') ? 'A' : 'B'); },
+    fetch: () => { putStarted.resolve(); return put.promise; }
+  });
+  await browser.load({ customerId: 'A', canWrite: true }); browser.open('GENERAL_SOLUTION_FIT');
+  for (const name of ['one.pdf', 'two.pdf']) browser.validateState().queue.push({ file: new File(['pdf'], name, { type: 'application/pdf' }), caption: '', category: 'DOCUMENT', state: 'Ready' });
+  const uploading = listeners.upload({ currentTarget: button }); await putStarted.promise;
+  await browser.load({ customerId: 'B', canWrite: true }); put.resolve({ ok: true }); await uploading;
+  assert.equal(calls.filter(url => url.endsWith('/initiate')).length, 1);
+  assert.equal(calls.some(url => url.endsWith('/complete')), false);
+  assert.equal(browser.validateState().customerId, 'B'); assert.equal(browser.validateState().solutionFitId, 'fit-B');
+  assert.equal(browser.validateState().queue.length, 0);
+});
+
+test('stale evidence cleanup claims expired metadata before deletion and retains failed deletes for retry', async () => {
+  const vm = require('node:vm'); const queries = [];
+  const row = { id: 'stale', storage_key: 'private/stale' }; let deleted = false;
+  const source = fs.readFileSync(path.join(root, 'src/jobs/attachmentCleanup.js'), 'utf8');
+  const context = { module: { exports: {} }, require: name => name === '../db' ? { query: async (sql, params) => {
+    queries.push({ sql, params });
+    if (queries.length === 1) return { rows: [row], rowCount: 1 };
+    if (sql.startsWith('SELECT')) return { rows: [row] };
+    return { rows: [], rowCount: 1 };
+  } } : { getEvidenceStorage: () => ({ isAvailable: () => true, deleteObject: async () => {
+    assert.match(queries[0].sql, /UPDATE handoff_attachments/);
+    assert.match(queries[0].sql, /upload_expires_at/);
+    assert.match(queries[0].sql, /FOR UPDATE SKIP LOCKED/);
+    deleted = true; throw new Error('storage unavailable');
+  } }) } };
+  vm.runInNewContext(source, context);
+  const result = await context.module.exports.cleanupStaleSolutionFitEvidence();
+  assert.equal(deleted, true); assert.equal(result.deletionRetries, 0);
+  assert.equal(queries.some(entry => /deletion_status='DELETED'/.test(entry.sql)), false);
+  assert.equal(queries.some(entry => /deletion_status='RETRY'/.test(entry.sql)), true);
+});
+
+test('withdrawing a waiting file during another upload prevents its upload', async () => {
+  const put = deferred(), started = deferred(); const initiated = []; let uploadHandler;
+  const button = { addEventListener: (_event, fn) => { uploadHandler = fn; } };
+  const overlay = { remove() {}, querySelectorAll: () => [], querySelector: selector => selector === '[data-evidence-upload]' ? button : null };
+  const browser = require('../public/solution-fit-evidence').createForRoot({ document: { getElementById: () => overlay },
+    apiFetch: async (url, options) => { if (url.endsWith('/initiate')) { initiated.push(JSON.parse(options.body).originalFilename); return { ok: true, json: async () => ({ uploadUrl: 'https://storage.invalid/qa', attachmentId: 'qa' }) }; } return evidencePayload('A'); },
+    fetch: () => { started.resolve(); return put.promise; }
+  });
+  await browser.load({ customerId: 'A', canWrite: true }); browser.open('GENERAL_SOLUTION_FIT');
+  for (const name of ['one.pdf', 'withdrawn.pdf']) browser.validateState().queue.push({ file: new File(['pdf'], name, { type: 'application/pdf' }), caption: '', category: 'DOCUMENT', state: 'Ready' });
+  const uploading = uploadHandler({ currentTarget: button }); await started.promise;
+  browser.validateState().queue.splice(1, 1); put.resolve({ ok: true }); await uploading;
+  assert.deepEqual(initiated, ['one.pdf']);
+});

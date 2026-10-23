@@ -48,6 +48,15 @@ The release runner records route integration as NOT TESTED when `DATABASE_URL` i
 
 ## Required certification after deployment
 
+## Deployment verification update — 2026-10-23
+
+- Re-ran the complete local test suite and cumulative release gates on Windows with Node 22.22.0 and npm. Zero executable gate failures; all 28 output artifacts validated.
+- New regression tests first reproduced the unsigned overwrite constraint, late customer response, stale reset, queued customer switch, cleanup failure handling, and withdrawn-file defect, then passed after targeted corrections.
+- Local PostgreSQL and real R2 results remain explicitly NOT TESTED. Disposable PostgreSQL certification runs in GitHub Actions; real R2 is validated inside Render without exporting credentials.
+- Historical environment and counts above describe the supplied package. Fresh machine evidence is in the current release result JSON files; authenticated desktop and real mobile checks require separate evidence.
+
+## Remaining deployed workflow checks
+
 Run migration 045 and `npm run test:postgres` against a clean non-production PostgreSQL database. Configure the private R2 bucket and CORS, run `npm run test:r2`, then complete the authenticated desktop and real mobile workflows in `DEPLOYMENT_VALIDATION_v6.9.44.md`.
 
 RED — Release blocker remains

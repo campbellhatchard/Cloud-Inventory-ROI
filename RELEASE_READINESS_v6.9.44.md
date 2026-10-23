@@ -24,6 +24,12 @@ ROI Model v2.8/modelVersion 28, Brand System v1.0, Application Knowledge v1.0, C
 
 ## Known limitations
 
+## Deployment reconciliation — 2026-10-23
+
+Pre-deployment review corrections enforce create-only signed object uploads, customer-bound evidence loading/actions, and atomic expired-upload cleanup. The corrupted transferred stylesheet was restored from the verified supplied archive. Current local Node 22 cumulative gates have zero failures; PostgreSQL/R2 and authenticated deployed/mobile certification remain separate required evidence. Product Owner approval is not inferred from these local results.
+
+## Known limitations (retained)
+
 - HEIC/HEIF decoding/optimization is not supported; users receive JPEG/PNG guidance.
 - Malware scanning is not present. File allowlisting, private storage, non-executable delivery, size/type verification, and authorization are enforced, and the lifecycle permits a scanner to be inserted later.
 - R2 CORS is external bucket configuration and must be set before direct browser PUT works.

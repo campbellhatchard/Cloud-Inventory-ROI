@@ -102,6 +102,7 @@
   /* ── Server load / save ─────────────────────────────────────────── */
   function clearWorkspaceForLoad(custId){
     clearTimeout(saveTimer);
+    window.SolutionFitEvidence?.reset?.();
     document.getElementById('sfScopeWizard')?.remove();
     document.getElementById('sfCustomerSwitchDialog')?.remove();
     document.getElementById('solutionFitEvidenceModal')?.remove();

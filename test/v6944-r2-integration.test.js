@@ -19,10 +19,12 @@ test('real private R2 PUT, HEAD, GET, and DELETE lifecycle', { skip: blocked }, 
   const payload = Buffer.from(`Cloud Inventory v6.9.44 R2 QA ${id}`, 'utf8');
   let uploaded = false;
   try {
-    const upload = await storage.createUploadUrl({ key, expiresSeconds: 120 });
-    const put = await fetch(upload.url, { method: 'PUT', headers: { 'Content-Type': 'text/plain' }, body: payload });
+    const upload = await storage.createUploadUrl({ key, contentType: 'text/plain', expiresSeconds: 120 });
+    const put = await fetch(upload.url, { method: 'PUT', headers: upload.requiredHeaders, body: payload });
     assert.equal(put.ok, true, `R2 PUT failed with ${put.status}`);
     uploaded = true;
+    const overwrite = await fetch(upload.url, { method: 'PUT', headers: upload.requiredHeaders, body: Buffer.from('unverified replacement') });
+    assert.equal(overwrite.status, 412, 'a reused upload URL must not overwrite verified evidence');
     const metadata = await storage.verifyObject({ key });
     assert.equal(metadata.sizeBytes, payload.length);
     assert.equal(metadata.contentType, 'text/plain');
