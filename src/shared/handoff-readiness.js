@@ -32,6 +32,34 @@
     return true;
   }
 
+  const INVENTORY_ITEMS=Object.freeze([
+    'Lot Numbers','FIFO, LIFO, FEFO, etc.','Serial Numbers','LPNs / Handling Units / Packing Units',
+    'Zones','Specialized Storage Areas','Defined Pick Sequence','Job','Ownership','Country of Origin'
+  ]);
+  const TURNOVER_REQUIRED=Object.freeze([
+    ['contractStatus','Contract review'],['projectManager','Project Manager'],['systemAdminEmail','System Administrator email'],
+    ['deliveryModel','Delivery model'],['internalDeliveryContact','Internal delivery contact'],['projectStart','Project start'],
+    ['eapEdition','Customer edition'],['environments','Number of environments'],['authorizedDefinitions','Authorized solution definitions'],
+    ['authorizedLanguages','Authorized languages'],['customerDomain','Customer email domain'],['sowLink','Signed order form and SOW']
+  ]);
+  const present=value=>value!==undefined&&value!==null&&String(value).trim()!=='';
+  function inventoryStats(state,products){
+    const applicable=products.some(product=>product==='CIP'||product==='MEP');
+    if(!applicable)return{applicable:false,total:0,answered:0};
+    const answered=INVENTORY_ITEMS.filter(name=>{
+      const answer=state.inventoryConfiguration?.[name]?.answer;
+      return present(answer)&&answer!=='Not answered';
+    }).length;
+    return{applicable:true,total:INVENTORY_ITEMS.length,answered};
+  }
+  function turnoverStats(state,products){
+    const required=TURNOVER_REQUIRED.slice();
+    if(products.includes('MEP'))required.push(['mepLicenseId','MEP License ID']);
+    if(products.includes('EPP'))required.push(['eppDeployment','EPP deployment'],['eppLicenseId','EPP License ID']);
+    const missing=required.filter(([key])=>!present(state.turnover?.[key]));
+    return{total:required.length,complete:required.length-missing.length,missing};
+  }
+
   function readiness(state, options = {}) {
     state = state || {};
     const o = state.opportunity || {};
@@ -93,6 +121,12 @@
     req(legacy.length===0,'Legacy application mapping',legacy.length?'contains unclassified historical processes that must be intentionally upgraded to governed application scope.':'');
     const ambiguous=gaps.filter(gap=>gap.mappingStatus==='Needs Review / Ambiguous Legacy Mapping');
     req(ambiguous.length===0,'Legacy gap mapping',ambiguous.length?'contains ambiguous name-only gaps that require an explicit application selection.':'');
+    const inventory=inventoryStats(state,products);
+    req(!inventory.applicable||inventory.answered===inventory.total,'General inventory configuration',inventory.applicable?`has ${inventory.total-inventory.answered} unanswered item${inventory.total-inventory.answered===1?'':'s'}.`:'');
+    const turnover=turnoverStats(state,products);
+    req(turnover.complete===turnover.total,'Professional Services turnover',turnover.missing.length?`is missing ${turnover.missing.map(item=>item[1]).join(', ')}.`:'');
+    const unresolved=gaps.filter(gap=>!['Resolved','Accepted exception'].includes(String(gap.status||'Open')));
+    req(unresolved.length===0,'Gap disposition',unresolved.length?`has ${unresolved.length} unresolved gap${unresolved.length===1?'':'s'}.`:'');
 
     /* Material gaps need enough detail to be estimable */
     const must = gaps.filter(materialGap);
@@ -118,5 +152,5 @@
     return { miss, done, score, status };
   }
 
-  return { readiness, materialGap, activeProducts, processIsActive };
+  return { readiness, materialGap, activeProducts, processIsActive, inventoryStats, turnoverStats };
 });

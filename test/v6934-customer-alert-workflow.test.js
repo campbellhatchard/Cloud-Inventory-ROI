@@ -177,7 +177,8 @@ test('no-customer state never renders false zero economics', () => {
 
 test('customer reset clears every material cross-customer context', () => {
   const source = read('public/customer-switcher.js');
-  const reset = source.match(/function resetCustomerContext\(\)[\s\S]*?}\n async function perform/)?.[0] || '';
+  const reset = source.match(/function resetCustomerContext(?:\(\)|\(options=\{\}\))[\s\S]*?}\n async function perform/)?.[0] || '';
+  assert.match(reset, /CIWorkspaceContext\?\.begin\(\)/, 'a full reset must invalidate the prior workspace generation');
   for (const marker of ['_activeCustomerMeta=null', '_calcScenarioId=null', 'discoveryScenarioId=null', 'latestSubmittedEvidence=null', 'clearProposalContext', 'resetCustomerAIContext']) {
     assert.match(reset, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }

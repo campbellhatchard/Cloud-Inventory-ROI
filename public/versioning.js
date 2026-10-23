@@ -15,6 +15,14 @@
 async function saveScenarioWithVersion(skipDialog) {
   const v = getVals(), r = calcROI(v);
 
+  /* The server persists ROI Model v2.8. A legacy scenario must use the
+     existing explicit upgrade review before any save, so the user never sees
+     v2.7 economics while the server stores v2.8 economics. */
+  if (Number(v.modelVersion || window._roiModelVersion || 27) < 28) {
+    previewRoiModelUpgrade();
+    return null;
+  }
+
   const missingCompany  = !v.company || !v.company.trim() || v.company.trim() === 'Prospect';
   const missingScenario = !v.name    || !v.name.trim()    || v.name.trim() === 'Unnamed scenario';
 

@@ -968,6 +968,14 @@ async function _doSave(v, dataBlob, baseId, note) {
     window._appliedValueDrafts = {};
     window._scenarioLoaded = true;
     window.invalidateExecutiveValueStory?.();
+    if (saved.data && typeof loadFromObject === 'function') {
+      window._roiModelVersion = Number(saved.data.modelVersion) || 28;
+      window._explicitRecoveryInputs = Array.isArray(saved.data.explicitRecoveryInputs) ? saved.data.explicitRecoveryInputs.slice() : [];
+      window._loadingScenarioCurrency = true;
+      loadFromObject(saved.data);
+      window._loadingScenarioCurrency = false;
+      recalc();
+    }
     showToast(`Saved v${saved.version} — "${saved.name}"`);
     /* Only now — after a confirmed successful save — is the form clean. */
     if (typeof clearAllWorkingDirty === 'function') clearAllWorkingDirty();
@@ -995,6 +1003,12 @@ async function loadScenario(id, options = {}) {
     if (window._calcScenarioId && typeof persistThreeWhys === 'function') {
       await persistThreeWhys();
     }
+    const workspaceToken = options.workspaceToken || window.CIWorkspaceContext?.begin({
+      customerId: options.customerId || null,
+      scenarioId: id
+    });
+    const workspaceCurrent = () => !workspaceToken || window.CIWorkspaceContext?.isCurrent(workspaceToken);
+    if (!workspaceCurrent()) return false;
     if (typeof clearProposalContext === 'function') clearProposalContext();
     let scenario = savedScenarios.find(x => x.id === id);
     let inputs   = null;
@@ -1002,8 +1016,10 @@ async function loadScenario(id, options = {}) {
     /* Scenario selection must load the authoritative server record rather
        than a possibly stale in-memory copy from an earlier customer view. */
     const resp = await apiFetch('/api/scenarios/' + id);
+    if (!workspaceCurrent()) return false;
     if (!resp || !resp.ok) { window._workspaceLoading=false; showToast('Could not load scenario.'); return false; }
     fullData = await resp.json();
+    if (!workspaceCurrent()) return false;
     inputs = fullData.data;
     window._roiModelVersion = Number(inputs && inputs.modelVersion) || 27;
     window._explicitRecoveryInputs = Array.isArray(inputs && inputs.explicitRecoveryInputs) ? inputs.explicitRecoveryInputs.slice() : [];
@@ -1013,6 +1029,7 @@ async function loadScenario(id, options = {}) {
     updateCurrentBuyCycleStageDisplay(true);
     if (scenario) scenario.inputs = inputs;
     await fetchScenarios();
+    if (!workspaceCurrent()) return false;
     if (!inputs) { window._workspaceLoading=false; showToast('Scenario data not found.'); return false; }
     /* Establish scenario identity and its customer-level feature flags before
        loadFromObject recalculates ROI. Previously the prior customer's flag
@@ -1038,6 +1055,7 @@ async function loadScenario(id, options = {}) {
         if (typeof applyFieldInventoryState === 'function') applyFieldInventoryState(window._hasFieldInventory);
       }
     }
+    if (!workspaceCurrent()) return false;
     window._loadingScenarioCurrency=true;
     if (typeof loadFromObject === 'function') loadFromObject(inputs);
     window._loadingScenarioCurrency=false;
@@ -1056,15 +1074,20 @@ async function loadScenario(id, options = {}) {
        tab can attach to it. */
     window.currentScenarioCustomerId = cid;
     window._sfSelectedCustomerId = cid;
+    window._currentCustomerId = cid;
+    if (workspaceToken && !window.CIWorkspaceContext?.commit(workspaceToken,{customerId:cid,scenarioId:id})) return false;
     window.persistActiveCustomerContext?.({id:cid,name:fullData.company||inputs.company||scenario?.company||''},id);
     if(cid&&(!window._activeCustomerMeta||window._activeCustomerMeta.id!==cid)){
-      try{const mr=await apiFetch('/api/customer-switcher?customerId='+encodeURIComponent(cid)+'&state=all&limit=1');if(mr&&mr.ok){const md=await mr.json();window._activeCustomerMeta=(md.items||[])[0]||null;window.applyCustomerPermissionMode?.(window._activeCustomerMeta);}}catch(_){}
+      try{const mr=await apiFetch('/api/customer-switcher?customerId='+encodeURIComponent(cid)+'&state=all&limit=1');if(mr&&mr.ok){const md=await mr.json();if(!workspaceCurrent())return false;window._activeCustomerMeta=(md.items||[])[0]||null;window.applyCustomerPermissionMode?.(window._activeCustomerMeta);}}catch(_){}
     }
     /* Reset + reattach discovery session to THIS scenario — prevents a
        prospect link from a previously-loaded customer being reused.    */
     if (typeof resetDiscoveryForScenario === 'function') await resetDiscoveryForScenario(id);
+    if (!workspaceCurrent()) return false;
     if (typeof loadAuthoritativeProposal === 'function') await loadAuthoritativeProposal(id);
+    if (!workspaceCurrent()) return false;
     if (typeof renderProofPoints === 'function') await renderProofPoints(inputs.industry);
+    if (!workspaceCurrent()) return false;
     showToast('Loaded — "' + (scenario?.name || inputs.name || 'scenario') + '"');
     const targetTab = options.preserveWorkspace ? (options.targetTab || 'calc') : 'calc';
     switchTab(targetTab);

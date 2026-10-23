@@ -145,10 +145,9 @@
       await loadKnownStakeholders();
       if(generation!==workspaceLoadGeneration)return false;
       if(!exists){renderGateState(data.removedRecoverable?'removed':'not-created',data);return false;}
-      const governedChanges=await applyKnownData({ mutate:false, save:false });
+      await applyKnownData({ mutate:false, save:false });
       if(generation!==workspaceLoadGeneration)return false;
       loadState='ready';
-      if(governedChanges&&canWrite)scheduleSave();
       return true;
     } catch (e) { if(generation!==workspaceLoadGeneration)return false;console.error('loadHandoff error:', e.message); renderGateState('error','Check your connection and try again.'); return false; }
   }
@@ -255,8 +254,8 @@
     if(sameScenarioCustomer){
       const governedStage=window.getCurrentBuyCycleStageLabel?.() || 'Stage 2 — Define Economic Consequences';
       /* The BuyCycle stage is governed application state, not optional prefill. */
-      if(String(S.opportunity.stage||'')!==String(governedStage)){setVal(S,'opportunity.stage',governedStage);changed++;}
-      knownSources['opportunity.stage']='Buyer Evidence';
+      if(String(S.opportunity.stage||'')===String(governedStage))knownSources['opportunity.stage']='Buyer Evidence';
+      else if(mutate){setVal(S,'opportunity.stage',governedStage);knownSources['opportunity.stage']='Buyer Evidence';changed++;}
     }
     add('opportunity.locations', v.fieldLocations > 0 ? `${v.fieldLocations} field location${v.fieldLocations===1?'':'s'}` : '', 'Calculator');
     add('opportunity.problem', whyAct, 'Executive narrative');
@@ -338,6 +337,7 @@
     if (!canWrite) return;
     dirty = true;
     setSaveState('saving');
+    refreshSolutionFitProgress();
     clearTimeout(saveTimer);
     saveTimer = setTimeout(saveHandoff, 800);
   }
@@ -352,8 +352,9 @@
       const r = await resp.json();
       exists = true; dirty = false;
       setSaveState('saved');
-      /* Reflect the server's authoritative readiness. */
+      /* Reflect the server's authoritative readiness and saved-state status. */
       renderReadinessBar(r.readiness, r.status);
+      refreshSolutionFitProgress();
       return true;
     } catch (e) { console.error('saveHandoff error:', e.message); setSaveState('error'); return false; }
   }
@@ -645,10 +646,12 @@
     const missing = Array.isArray(miss) ? miss : current.miss;
     const completed = current.done.length;
     const total = completed + current.miss.length;
-    const label = status==='ready' ? 'Ready to hand off'
-                : status==='conditional' ? 'Conditional — some items still open'
+    const effectiveStatus=dirty&&status==='ready'?'not_ready':status;
+    const label = dirty ? 'Not ready — unsaved changes'
+                : effectiveStatus==='ready' ? 'Ready to hand off'
+                : effectiveStatus==='conditional' ? 'Conditional — some items still open'
                 : 'Not ready — key fields missing';
-    const barColor = status==='ready' ? 'var(--green)' : status==='conditional' ? '#D97706' : 'var(--red)';
+    const barColor = effectiveStatus==='ready' ? 'var(--green)' : effectiveStatus==='conditional' ? '#D97706' : 'var(--red)';
     const blocker = missing && missing.length
       ? `<span class="sf-rbar-blocker">${missing.length} item${missing.length!==1?'s':''} to resolve</span>`
       : '';
@@ -664,6 +667,15 @@
     /* Also mirror save state label here */
     const sm = $('sfSaveStateMini');
     if (sm) setSaveState(_lastSaveState || '');
+  }
+
+  function refreshSolutionFitProgress(){
+    const app=$('sfApp');if(!app||loadState!=='ready')return;
+    const r=computeReadiness();
+    renderReadinessBar(r.score,r.status,r.miss);
+    const current=app.querySelector('.sf-progress-summary');
+    if(current){const shell=document.createElement('div');shell.innerHTML=renderProgressSummary(r);current.replaceWith(shell.firstElementChild);}
+    WORKFLOW.forEach(([key])=>{const button=app.querySelector(`[data-sftab="${key}"]`);if(!button)return;const complete=workflowState(key);button.classList.toggle('complete',complete);button.classList.toggle('attention',!complete);const state=button.querySelector('.sf-workflow-state');if(state)state.textContent=complete?'✓':'!';});
   }
 
   let _lastSaveState = '';
@@ -1400,6 +1412,7 @@
         ?(stats.applicable?`${stats.answered} of ${stats.total} answered`:'Not applicable')
         :(stats.applicable?`${stats.answered}/${stats.total}`:'N/A');
     });
+    refreshSolutionFitProgress();
   }
   function wireLpnBindings(root){
     root.querySelectorAll('[data-sflpn]').forEach(el=>{el.onchange=()=>{
@@ -1415,10 +1428,10 @@
     if(!canWrite)disableInputs();
   }
 
-  function rerenderScope(){ const pane=document.querySelector('[data-sfpane="scope"]'); if(pane){pane.innerHTML=renderProductScope(); wireBindings(); if(!canWrite)disableInputs();} }
-  function rerenderConfiguration(){ const pane=document.querySelector('[data-sfpane="configuration"]'); if(pane){pane.innerHTML=renderInventoryConfiguration(); wireBindings(); if(!canWrite)disableInputs();} }
-  function rerenderGaps(){ const pane=document.querySelector('[data-sfpane="gaps"]'); if(pane){pane.innerHTML=renderGaps(); wireBindings(); if(!canWrite)disableInputs();} }
-  function rerenderIntegration(){ const pane=document.querySelector('[data-sfpane="integration"]'); if(pane){pane.innerHTML=renderIntegration(); wireBindings(); if(!canWrite)disableInputs();} }
+  function rerenderScope(){ const pane=document.querySelector('[data-sfpane="scope"]'); if(pane){pane.innerHTML=renderProductScope(); wireBindings(); if(!canWrite)disableInputs();} refreshSolutionFitProgress(); }
+  function rerenderConfiguration(){ const pane=document.querySelector('[data-sfpane="configuration"]'); if(pane){pane.innerHTML=renderInventoryConfiguration(); wireBindings(); if(!canWrite)disableInputs();} refreshSolutionFitProgress(); }
+  function rerenderGaps(){ const pane=document.querySelector('[data-sfpane="gaps"]'); if(pane){pane.innerHTML=renderGaps(); wireBindings(); if(!canWrite)disableInputs();} refreshSolutionFitProgress(); }
+  function rerenderIntegration(){ const pane=document.querySelector('[data-sfpane="integration"]'); if(pane){pane.innerHTML=renderIntegration(); wireBindings(); if(!canWrite)disableInputs();} refreshSolutionFitProgress(); }
 
   async function handleAction(a,sourceEl){
     /* Print and copy are allowed for everyone with read access (AEs included). */

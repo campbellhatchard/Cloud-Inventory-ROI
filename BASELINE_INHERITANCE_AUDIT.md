@@ -1,37 +1,58 @@
-# v6.9.42 Pre-build Baseline Inheritance Audit
+# Baseline Inheritance Audit — v6.9.43
 
-## Authoritative parent
+## Exact authoritative source
 
-- Developer parent archive: `cloud-inventory-roi-v6.9.41-render-ready.zip`
-- Developer parent SHA-256: `00c4bb8daf4e188824a1726fb81871454e9e491b3b2797c1246e2d7ea99934ec`
-- Materialized developer parent commit: `cfee9275b073fdb9f074a61daaf4460e87227ba2`
-- Deployed parent archive: `cloud-inventory-roi-v6.9.40-render-ready.zip`
-- Deployed parent SHA-256: `4cf004c42d4801720af0cd4a45cffb446aa5d12e04fbc11434244ef262c66a61`
-- Deployed parent commit: `212712ae890f74c09f4f439e4007b63b0c6a8dd9`
-- Parent application version: `6.9.41` (developer lineage) / `6.9.40` (deployed production)
-- Target application version: `6.9.42`
+- Parent archive: `cloud-inventory-roi-v6.9.42-render-ready.zip`
+- Parent SHA-256: `df37636c660c0e4349fbcb2e99db074c7706fdd00a705eaf6d50ad224614a96b`
+- Materialized developer baseline commit: `a4a34de7238d82232fd6395e6fb6f57c42f2b51d`
+- Deployed production parent commit: `46af1f156f4852551c4714ac6660df790a1b3709`
+- Baseline application/package/lineage version: `6.9.42`
+- Target version: `6.9.43`
 
-The supplied v6.9.42 package is cumulative over its v6.9.41 developer parent. Its cumulative v6.9.41 and v6.9.42 delta was applied forward onto the exact deployed v6.9.40 commit so production-only release corrections, safeguards, and evidence remain intact.
+The named archive was hashed, opened directly, and extracted into a fresh workspace. The v6.9.43 corrective delta was applied forward onto the exact deployed v6.9.42 production commit so production-only release corrections, safeguards, and evidence remain intact. No earlier archive, abandoned worktree, prototype, or unbuilt attachment feature was substituted.
 
-## Protected inheritance
+## Protected authorities
 
-- ROI Model v2.8 / `modelVersion` 28 is unchanged.
-- Brand System, Application Knowledge, and Christie Persona remain v1.0.
-- The v6.9.40 guided Solution Fit, customer switching, saved JSONB authority, MEP package behavior, application assessments, gaps, integrations, readiness, and Professional Services turnover DOCX remain intact.
-- All Executive, Proposal, JPP, Stakeholder, Competitive, Prospect, Value History, Rep Confirmed, BuyCycle, Customer Email, Admin, Sales Manager, and authorization protections remain inherited.
-- The dedicated `solution_fit_cross_account` discovery permission remains separate from general ROI/customer authority.
-- Customers without ROI scenarios remain eligible for Solution Fit.
-- No browser local or session storage is introduced.
+- ROI Model: v2.8 / `modelVersion` 28, unchanged.
+- Brand System: v1.0, unchanged.
+- Application Knowledge: v1.0, unchanged.
+- Christie Persona: v1.0, unchanged.
+- Database migration level: 44 migrations through `044_admin_bulk_cleanup.sql`.
+- Output Registry: `src/shared/output-registry.js`, with every v6.9.42 active-output contract preserved.
+- Permanent regression inventory: the complete cumulative production test registry, preserved and extended monotonically.
 
-## Verified starting architecture
+## Active production paths inherited from v6.9.42
 
-- Setup modal and main-workflow owner: `public/solution-fit.js`.
-- Saved state model: `public/solution-fit-state.js` over the authenticated `handoffs.data` JSONB record.
-- Create authority: `POST /api/handoffs/:customerId`.
-- Update authority: `PUT /api/handoffs/:customerId`.
-- Dedicated customer discovery: `GET /api/solution-fit/customers`.
-- Authorization owners: `src/authorization.js`, `src/routes/handoffs.js`, and `src/routes/solution-fit-customers.js`.
+- Customer/scenario workspace: `public/customer-switcher.js` and the governed scenario loader in `public/app.js`.
+- ROI calculations: shared ROI Model v2.8 authority in `src/shared/roi-engine.js`, with server projection and persistence in the scenario route/service layer.
+- Executive and Proposal outputs: canonical Executive source/readiness services and registered customer/internal output builders.
+- Christie and field help: governed AI endpoints plus browser state in the current active workspace.
+- Solution Fit: `public/solution-fit.js` through authenticated `/api/handoffs` routes and server-owned handoff persistence.
+- Sales Manager: canonical opportunity projection and stage/readiness services.
 
-## Authorized scope
+## v6.9.42 protections that must remain
 
-Apply the cumulative v6.9.41 Solution Fit stabilization and v6.9.42 General Inventory Configuration presentation improvements. No other application function is authorized to change.
+- Server-owned ROI Model v2.8 formulas, overlap rules, field-inventory behavior, native currency, and null-versus-zero semantics.
+- Immutable Prospect submission evidence and deliberate, individual value application.
+- Buyer evidence, Rep Confirmed provenance, Value History, and historical-scenario immutability.
+- Cross-account SE Solution Fit access without expanding general customer/opportunity authority.
+- Solution Fit server persistence, governed/custom process IDs, saved-state output authority, and PS turnover gates.
+- Executive/Proposal canonical source, readiness classification, internal-draft branding, and commercial-note exclusion.
+- JPP saved-state authority, Stakeholder saved-context authority, Customer Business Case frozen publication, and Customer Email fact locking.
+- Brand System v1.0, Application Knowledge v1.0, Christie Persona v1.0, output registry, lineage controls, and permanent-test monotonicity.
+
+## v6.9.42 certification evidence inherited as evidence only
+
+- Full automated suite: 728 passed, 0 failed, 3 skipped.
+- Focused v6.9.42 suite: 163 passed, 0 failed, 0 skipped.
+- Production locks: 379 passed, 0 failed, 0 skipped.
+- Output runtime matrix: all 28 active output IDs passed.
+- GitHub Node 22/PostgreSQL 16 certification and the live Render deployment succeeded for production commit `46af1f156f4852551c4714ac6660df790a1b3709`.
+
+## Authorized v6.9.43 correction boundary
+
+This build corrects only the 14 defects confirmed by the Product Owner deployed v6.9.42 role-based regression: atomic customer/scenario/output/AI context, strict client/server ROI parity, Solution Fit readiness and app-count accuracy, side-effect-free Solution Fit reads, Three Whys microphone de-duplication, bounded Christie requests, field-help cleanup, Sales Manager row identity clarity, and the related version/evidence updates. No attachment/evidence-upload feature from the unbuilt v6.9.43 prompt is included.
+
+## SE Solution Fit Scope
+
+Sales Engineers retain cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario, or opportunity access.

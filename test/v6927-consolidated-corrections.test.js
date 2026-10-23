@@ -50,7 +50,7 @@ test('all current ROI fields restored with correct decimal-to-percent mapping',(
 
 test('Solution Fit stage, Christie stakeholder context, guided mode and AI stale state are deterministic',()=>{
  const fit=read('public/solution-fit.js'),coach=read('public/deal-coach.js'),gate=read('public/customer-gate.js'),help=read('public/prospect-assistant.js');
- assert.match(fit,/governedChanges=await applyKnownData/);assert.doesNotMatch(fit,/if\(mutate&&String\(S\.opportunity\.stage/);
+ assert.match(fit,/await applyKnownData\(\{ mutate:false, save:false \}\)/);assert.doesNotMatch(fit,/governedChanges=await applyKnownData/);assert.doesNotMatch(fit,/if\(mutate&&String\(S\.opportunity\.stage/);
  assert.match(coach,/await loadStageReadiness\(\);await Promise\.all/);assert.match(coach,/a=governed\.length\?governed:loaded/);
  assert.match(gate,/guidedToggleChk/);assert.match(help,/f\.stale=f\.contextFingerprint!==fp/g);
 });
