@@ -10,6 +10,7 @@ The exact supplied v6.9.45 ZIP was verified with SHA-256 `dece15e61fab898350166e
 - Used an ASCII-safe HTTP download filename for valid Unicode customer names while preserving customer content inside the package.
 - Added eight red-then-green turnover regressions. The final v6.9.45 plus inherited v6.9.44 focused run passed 39 tests with zero failures. Full local Node 22 execution had zero failures; database integration remains a separate disposable CI run, and real R2 checks use only the QA object prefix.
 - Retained previous pretest coverage and updated the new R2 package check to use the preserved signed-upload header contract.
+- Disposable PostgreSQL CI exposed two supplied fixture defects. Restored the already-deployed ordering of the immutable-history assertion before later deliberate scenario edits, preserving every assertion; represented the new Sales Manager fixture with the schema's valid legacy `rep` role and governed `sales_manager` role array. Production schema and application behavior are unchanged by these test-fixture corrections.
 
 The supplied package and historical pre-deployment reports are preserved as provenance. The final deployment receipt records exact commits, CI results, migration verification and the live health response; no Product Owner readiness designation is assigned by the agent.
 
