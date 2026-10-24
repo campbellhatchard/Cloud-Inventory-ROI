@@ -3,7 +3,7 @@
   "parentVersion": "6.9.44",
   "parentArchive": "cloud-inventory-roi-v6.9.44-render-ready.zip",
   "parentSha256": "6bd4f6a2f51037c5b794d2f5ae2d5d29fd1516f49008b2fc1f23a520de770df9",
-  "parentCommit": "d133998e94308845cfb1356bc968084effcf51c1",
+  "parentCommit": null,
   "roiModelVersion": 28,
   "brandSystemVersion": "1.0",
   "applicationKnowledgeVersion": "1.0",
