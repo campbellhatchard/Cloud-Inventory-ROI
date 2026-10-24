@@ -1,7 +1,5 @@
 # QA Results — Cloud Inventory ROI v6.9.29
 
-SE Solution Fit Scope: Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.
-
 The release gates were executed under the supported Node 22 runtime before packaging.
 
 ## Environment

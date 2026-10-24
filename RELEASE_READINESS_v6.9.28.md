@@ -17,12 +17,10 @@
 - Live AI persistence/governance is NOT TESTED.
 - Actual deployed browser download controls and console/network state are NOT TESTED.
 
-SE Solution Fit Scope: Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.
-
 ## Packaging decision
 
 At the Product Owner's later explicit direction, a v6.9.28 corrective deployment-candidate ZIP may be created from this source state. The archive is not a GREEN certification and must retain this readiness report plus the machine evidence showing PostgreSQL as NOT TESTED. Direct production deployment accepts the database and deployed-browser risks listed above.
 
 ## Release recommendation
 
-Product Owner decision pending. The evidence gaps above remain explicit and must be closed or accepted by the Product Owner.
+RED — Release blockers remain

@@ -4,8 +4,7 @@
 
 - Parent archive: `cloud-inventory-roi-v6.9.32-render-ready.zip`
 - Parent SHA-256: `b22f9196ba9a1ed9eb94d53aa91d8325ed26f370e8de6d453a4015a74646fc6e`
-- Exact deployed GitHub parent commit: `ae933586fca8966b49b04b05e5539b62ad30d7a7`
-- Developer source snapshot: `7e5a076471695da9034c8c9ea5c40fdef4e446b9`
+- Exact parent source/deployed commit: `7e5a076471695da9034c8c9ea5c40fdef4e446b9`
 - Application version: `6.9.33`
 - ROI Model: v2.8 / modelVersion 28 (unchanged)
 - Brand System / Application Knowledge / Christie: v1.0 (unchanged)
@@ -29,9 +28,3 @@ No timeout value was increased. Proposal facts, customer-safe content, Internal 
 - `POSTGRES_INTEGRATION_RESULTS_v6.9.33.json`
 
 The Product Owner owns final release classification after deployment validation.
-
-
-> SE Solution Fit Scope:
-> Sales Engineers have cross-account access to all active customers for
-> Solution Fit discovery/create/view/edit only. This does not confer general
-> cross-account customer, scenario or opportunity access.

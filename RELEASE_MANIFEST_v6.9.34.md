@@ -4,8 +4,7 @@
 
 - Parent archive: `cloud-inventory-roi-v6.9.33-render-ready.zip`
 - Parent SHA-256: `181197394a3af5898edf0194da2b5188b93b681dd07ae54bc8c14d273b6a6f88`
-- Deployed GitHub parent commit: `e580a8f5696e705855805883529241e25144acc8`
-- Developer source snapshot: `e26c0da511ac3339c65849cd1bee158c4ad8c237`
+- Exact extracted baseline commit: `e26c0da511ac3339c65849cd1bee158c4ad8c237`
 - Application version: `6.9.34`
 - ROI Model: v2.8 / modelVersion 28 (unchanged)
 - Brand System / Application Knowledge / Christie: v1.0 (unchanged)
@@ -33,8 +32,3 @@ No ROI methodology, evidence model, migration, output generator, or unrelated fe
 - `QA_RESULTS_v6.9.34.md`
 
 The Product Owner owns final release classification after deployment validation.
-
-> SE Solution Fit Scope:
-> Sales Engineers have cross-account access to all active customers for
-> Solution Fit discovery/create/view/edit only. This does not confer general
-> cross-account customer, scenario or opportunity access.

@@ -1,6 +1,6 @@
 {
   "release": "6.9.22",
-  "generatedAt": "2026-10-02T15:38:55.186Z",
+  "generatedAt": "2026-10-02T15:28:13.083Z",
   "results": [
     {
       "outputId": "competitive-docx",
@@ -11,7 +11,7 @@
       "passed": true,
       "audience": "internal",
       "artifactValidated": true,
-      "durationMs": 35,
+      "durationMs": 65,
       "error": null
     },
     {
@@ -23,7 +23,7 @@
       "passed": true,
       "audience": "internal",
       "artifactValidated": true,
-      "durationMs": 4,
+      "durationMs": 5,
       "error": null
     },
     {
@@ -35,7 +35,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 6,
+      "durationMs": 5,
       "error": null
     },
     {
@@ -47,7 +47,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 13,
+      "durationMs": 21,
       "error": null
     },
     {
@@ -59,7 +59,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 42,
+      "durationMs": 54,
       "error": null
     },
     {
@@ -71,7 +71,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 30,
+      "durationMs": 42,
       "error": null
     },
     {
@@ -83,7 +83,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 25,
+      "durationMs": 42,
       "error": null
     },
     {
@@ -95,7 +95,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 2,
+      "durationMs": 5,
       "error": null
     },
     {
@@ -107,7 +107,7 @@
       "passed": true,
       "audience": "internal",
       "artifactValidated": true,
-      "durationMs": 1,
+      "durationMs": 2,
       "error": null
     },
     {
@@ -131,7 +131,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 9,
+      "durationMs": 12,
       "error": null
     },
     {
@@ -167,7 +167,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 11,
+      "durationMs": 21,
       "error": null
     },
     {
@@ -179,7 +179,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 2,
+      "durationMs": 3,
       "error": null
     },
     {
@@ -227,7 +227,7 @@
       "passed": true,
       "audience": "internal",
       "artifactValidated": true,
-      "durationMs": 11,
+      "durationMs": 13,
       "error": null
     },
     {
@@ -239,7 +239,7 @@
       "passed": true,
       "audience": "internal",
       "artifactValidated": true,
-      "durationMs": 6,
+      "durationMs": 12,
       "error": null
     },
     {
@@ -251,7 +251,7 @@
       "passed": true,
       "audience": "internal",
       "artifactValidated": true,
-      "durationMs": 1,
+      "durationMs": 0,
       "error": null
     },
     {
@@ -287,7 +287,7 @@
       "passed": true,
       "audience": "internal",
       "artifactValidated": true,
-      "durationMs": 1,
+      "durationMs": 2,
       "error": null
     },
     {
@@ -299,7 +299,7 @@
       "passed": true,
       "audience": "internal",
       "artifactValidated": true,
-      "durationMs": 4,
+      "durationMs": 7,
       "error": null
     }
   ]

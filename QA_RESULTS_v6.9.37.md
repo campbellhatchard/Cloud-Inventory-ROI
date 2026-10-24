@@ -8,10 +8,10 @@ All locally executable focused tests pass with zero failures. Complete release-g
 
 | Gate | Passed | Failed | Skipped | Result |
 |---|---:|---:|---:|---|
-| Full test suite | 704 | 0 | 3 | PASS; database cases NOT TESTED |
-| v6.9.37 + Build 1 + Build 2 + UI + ROI + runtime | 113 | 0 | 1 | PASS; PostgreSQL case NOT TESTED |
+| Full test suite | 664 | 0 | 3 | PASS; database cases NOT TESTED |
+| v6.9.37 + Build 1 + Build 2 + UI + ROI + runtime | 112 | 0 | 1 | PASS; PostgreSQL case NOT TESTED |
 | Active output runtime matrix | 28 | 0 | 0 | PASS; registry check plus 27 real active outputs |
-| Production locks | 355 | 0 | 0 | PASS |
+| Production locks | 315 | 0 | 0 | PASS |
 | Brand tests | 19 | 0 | 0 | PASS |
 
 The v6.9.37 tests validate exact authoritative totals, driver reconciliation, relevant-input filtering, multi-input semantics, accurate provenance, null versus zero, decimal values, USD/GBP, Ready/Review/Draft classification, long PDF content, saved/dirty-state behavior, routes, output registration, and absence of a second ROI engine.
@@ -31,10 +31,3 @@ A six-page GBP fixture was generated with a long customer/scenario identity, mix
 ## Decision authority
 
 No release colour or Production Ready claim is assigned. Final classification belongs to the Product Owner after PostgreSQL and deployed interactive validation.
-
-## SE Solution Fit Scope
-
-Sales Engineers have cross-account access to all active customers for
-Solution Fit discovery/create/view/edit only. This does not confer general
-cross-account customer, scenario or opportunity access.
-

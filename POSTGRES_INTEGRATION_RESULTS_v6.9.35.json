@@ -1,6 +1,6 @@
 {
   "release": "6.9.35",
-  "generatedAt": "2026-10-08T20:43:19.848Z",
+  "generatedAt": "2026-10-08T20:30:00.000Z",
   "databaseUrlPresent": false,
   "databaseName": null,
   "postgresqlVersion": "NOT TESTED",
@@ -10,7 +10,7 @@
     "exitCode": null,
     "result": "NOT TESTED"
   },
-  "command": "npm run test:postgres",
+  "command": "node --test --test-concurrency=1 test/routes.test.js test/v653-postgres-integration.test.js test/v663-postgres-authorization.test.js test/v664-postgres-product-identity.test.js test/v6930-postgres-value-application.test.js test/v6934-postgres-customer-creation.test.js test/v6935-postgres-ownership-transfer.test.js",
   "suites": [
     "test/routes.test.js",
     "test/v653-postgres-integration.test.js",
@@ -22,8 +22,8 @@
   ],
   "passed": 0,
   "failed": 0,
-  "skipped": 0,
+  "skipped": 7,
   "notTested": 7,
-  "durationMs": 0,
+  "durationMs": 812,
   "result": "NOT TESTED"
 }

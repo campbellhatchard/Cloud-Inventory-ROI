@@ -4,7 +4,7 @@
 
 - Parent archive: `cloud-inventory-roi-v6.9.20-render-ready.zip`
 - Parent SHA-256: `8bc77f0e374e378faea8f0a887760524c4f6b4df1b3bcb16a6ceeac1591719d5`
-- Parent commit: `9b7500133df9494204d17a0647587a62b51836c5`
+- Parent commit: `d0bfb30b76eb21b56c75bbb10ef3e9eb36a679c3`
 - Target release: `6.9.21`
 
 ## Corrective scope

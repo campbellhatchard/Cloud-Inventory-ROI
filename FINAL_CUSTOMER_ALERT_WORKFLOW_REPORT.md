@@ -6,7 +6,7 @@ v6.9.34 replaces transient browser-only customer creation with one validated ser
 
 ## 2. Baseline
 
-The build started only from `cloud-inventory-roi-v6.9.33-render-ready.zip`, SHA-256 `181197394a3af5898edf0194da2b5188b93b681dd07ae54bc8c14d273b6a6f88`. The deployed GitHub parent is `e580a8f5696e705855805883529241e25144acc8`; the developer source snapshot is retained separately as `e26c0da511ac3339c65849cd1bee158c4ad8c237`.
+The build started only from `cloud-inventory-roi-v6.9.33-render-ready.zip`, SHA-256 `181197394a3af5898edf0194da2b5188b93b681dd07ae54bc8c14d273b6a6f88`. The untouched extraction was committed as `e26c0da511ac3339c65849cd1bee158c4ad8c237` before production edits.
 
 ## 3. Existing Customer Creation Architecture
 

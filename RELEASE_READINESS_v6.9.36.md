@@ -8,10 +8,10 @@ The Advanced Admin Bulk Cleanup & Date Filtering implementation is complete in s
 
 - All executed release gates: PASS.
 - Failed executed gates: 0.
-- Full cumulative application suite: 690 passed, 0 failed, 2 skipped.
-- v6.9.36 focused suite: 100 passed, 0 failed, 1 skipped.
+- Full application suite: 650 passed, 0 failed, 2 skipped.
+- v6.9.36 focused suite: 99 passed, 0 failed, 1 skipped.
 - v6.9.35 ownership-transfer suite: 89 passed, 0 failed.
-- Production locks: 341 passed, 0 failed.
+- Production locks: 301 passed, 0 failed.
 - Active output registry: all 25 active production outputs executed and passed.
 - Lineage, brand, application-knowledge, migration-schema compatibility, syntax, and version checks: PASS.
 
@@ -26,9 +26,6 @@ The Advanced Admin Bulk Cleanup & Date Filtering implementation is complete in s
 ## Release blockers if found during validation
 
 Incorrect filter membership; ambiguous date semantics; Remove All affecting an unreviewed row; immutable evidence deletion; ownership/history changes on restore; unauthorized removal; current-scenario corruption; migration failure; PostgreSQL test failure; or v6.9.35 ownership-transfer regression must stop deployment.
-
-SE Solution Fit Scope:
-Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.
 
 ## Product Owner decision
 

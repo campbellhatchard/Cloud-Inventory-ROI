@@ -19,9 +19,3 @@
 9. Confirm an unauthenticated direct request to `/api/export/proposal-pdf` remains rejected.
 
 Record browser console/network evidence and visually inspect the downloaded PDF. Final deployment classification belongs to the Product Owner.
-
-
-> SE Solution Fit Scope:
-> Sales Engineers have cross-account access to all active customers for
-> Solution Fit discovery/create/view/edit only. This does not confer general
-> cross-account customer, scenario or opportunity access.

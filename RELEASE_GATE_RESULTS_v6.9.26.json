@@ -4,11 +4,11 @@
     "archive": "cloud-inventory-roi-v6.9.25-render-ready.zip",
     "sha256": "e946d2170675053022d68acfba16205829387b7e304a0da28eadeb8959c09113"
   },
-  "generatedAt": "2026-10-03T14:12:43.268Z",
+  "generatedAt": "2026-10-03T02:14:33.951Z",
   "environment": {
     "node": "v24.19.0",
-    "npm": "11.9.0",
-    "platform": "linux-x64",
+    "npm": "10.9.4",
+    "platform": "win32-x64",
     "databaseAvailable": false,
     "databaseIntegrationRequired": false,
     "nodeEnv": "test"
@@ -23,7 +23,7 @@
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 1260
+      "durationMs": 5815
     },
     {
       "name": "database-migrations",
@@ -54,11 +54,11 @@
       "command": "npm test",
       "executed": true,
       "exitCode": 0,
-      "passed": 597,
+      "passed": 588,
       "failed": 0,
       "skipped": 2,
       "notTested": 0,
-      "durationMs": 2388
+      "durationMs": 6006
     },
     {
       "name": "v6926-regression-hardening",
@@ -69,18 +69,18 @@
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 391
+      "durationMs": 1073
     },
     {
       "name": "production-locks",
       "command": "npm run test:production-locks",
       "executed": true,
       "exitCode": 0,
-      "passed": 248,
+      "passed": 239,
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 1418
+      "durationMs": 3569
     },
     {
       "name": "routes",
@@ -91,7 +91,7 @@
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 266
+      "durationMs": 888
     },
     {
       "name": "brand-tests",
@@ -102,7 +102,7 @@
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 330
+      "durationMs": 1135
     },
     {
       "name": "lineage",
@@ -113,7 +113,7 @@
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 56
+      "durationMs": 123
     },
     {
       "name": "active-output-audit",
@@ -124,7 +124,7 @@
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 66
+      "durationMs": 151
     },
     {
       "name": "brand-assets",
@@ -135,7 +135,7 @@
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 54
+      "durationMs": 105
     },
     {
       "name": "application-knowledge",
@@ -146,7 +146,7 @@
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 54
+      "durationMs": 117
     },
     {
       "name": "active-output-runtime-matrix",
@@ -157,7 +157,7 @@
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 570,
+      "durationMs": 1009,
       "outputResults": [
         {
           "outputId": "competitive-docx",
@@ -168,7 +168,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 38,
+          "durationMs": 68,
           "error": null
         },
         {
@@ -180,7 +180,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 29,
+          "durationMs": 50,
           "error": null
         },
         {
@@ -192,7 +192,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 6,
+          "durationMs": 8,
           "error": null
         },
         {
@@ -204,7 +204,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 13,
+          "durationMs": 22,
           "error": null
         },
         {
@@ -216,7 +216,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 39,
+          "durationMs": 61,
           "error": null
         },
         {
@@ -228,7 +228,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 22,
+          "durationMs": 35,
           "error": null
         },
         {
@@ -240,7 +240,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 25,
+          "durationMs": 50,
           "error": null
         },
         {
@@ -252,7 +252,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 3,
+          "durationMs": 5,
           "error": null
         },
         {
@@ -264,7 +264,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 18,
+          "durationMs": 21,
           "error": null
         },
         {
@@ -276,7 +276,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 14,
+          "durationMs": 22,
           "error": null
         },
         {
@@ -288,7 +288,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 8,
+          "durationMs": 12,
           "error": null
         },
         {
@@ -300,7 +300,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 15,
+          "durationMs": 25,
           "error": null
         },
         {
@@ -312,7 +312,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 7,
+          "durationMs": 10,
           "error": null
         },
         {
@@ -324,7 +324,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 12,
+          "durationMs": 20,
           "error": null
         },
         {
@@ -336,7 +336,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 16,
+          "durationMs": 22,
           "error": null
         },
         {
@@ -348,7 +348,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 1,
+          "durationMs": 3,
           "error": null
         },
         {
@@ -372,7 +372,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 13,
+          "durationMs": 22,
           "error": null
         },
         {
@@ -384,7 +384,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 12,
+          "durationMs": 19,
           "error": null
         },
         {
@@ -396,7 +396,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 6,
+          "durationMs": 8,
           "error": null
         },
         {
@@ -408,7 +408,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 14,
+          "durationMs": 20,
           "error": null
         },
         {
@@ -420,7 +420,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 15,
+          "durationMs": 19,
           "error": null
         },
         {
@@ -432,7 +432,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 15,
+          "durationMs": 21,
           "error": null
         },
         {
@@ -444,7 +444,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 19,
+          "durationMs": 24,
           "error": null
         },
         {
@@ -456,7 +456,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 6,
+          "durationMs": 8,
           "error": null
         }
       ]
@@ -464,7 +464,7 @@
   ],
   "postgresIntegration": {
     "release": "6.9.26",
-    "generatedAt": "2026-10-03T14:12:43.267Z",
+    "generatedAt": "2026-10-03T02:14:33.949Z",
     "databaseUrlPresent": false,
     "databaseName": null,
     "postgresqlVersion": "NOT TESTED",

@@ -30,9 +30,6 @@
 - Rep-only, SE-only, and Sales Leader without Admin: direct preview/impact/execute/restore requests return 403.
 - No role receives additional Customer, Scenario, Solution Fit, or evidence access.
 
-SE Solution Fit Scope:
-Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.
-
 ## Protected-data checks
 
 After QA parent removal and restore, verify PostgreSQL still contains the same immutable Prospect submissions/answers, ROI Value History and Rep Confirmed events, Buyer Evidence/stage history, ROI snapshots, ownership-transfer events, and audit records. Confirm external share/Prospect links were not silently reactivated.

@@ -50,6 +50,7 @@
   let lastEditedByName = '', lastEditedAt = '';
   let pendingCreate = false, customerSearchTimer = null, customerPickerController = null;
   let workspaceLoadGeneration = 0, customerSwitchCoordinator = null;
+  let turnoverPackagePreview = null, turnoverPackageBusy = false, turnoverPreviewRevision = 0;
 
   const SOLUTION_TEMPLATES = {
     field: {
@@ -75,6 +76,7 @@
     if (list.includes('Other') && o.productsOther) out.push(o.productsOther);
     return out.length ? out.join(', ') : '—';
   }
+  function sfFormatBytes(value){const n=Number(value||0);if(n<1024)return `${n} B`;if(n<1048576)return `${Math.round(n/1024)} KB`;if(n<1073741824)return `${(n/1048576).toFixed(1)} MB`;return `${(n/1073741824).toFixed(2)} GB`;}
   /* Format an owner block: "Name, Title (email · phone)". */
   function fmtOwner(o, k) {
     const name = o[k+'Name'], title = o[k+'Title'], email = o[k+'Email'], phone = o[k+'Phone'];
@@ -110,6 +112,7 @@
     primarySeId=null;primarySeName='';additionalSeIds=[];
     capabilities={canView:false,canEdit:false,canCreate:false,canRestore:false};
     knownSources={};knownStakeholders=[];lastEditedByName='';lastEditedAt='';openGapId=null;
+    turnoverPackagePreview=null;turnoverPackageBusy=false;turnoverPreviewRevision++;
     activeTab='context';activeScopeProduct='MEP';scopeSearch='';scopeFilter='all';loadState='idle';
   }
   async function loadHandoff(custId) {
@@ -147,7 +150,9 @@
       await loadKnownStakeholders();
       if(generation!==workspaceLoadGeneration)return false;
       if(!exists){renderGateState(data.removedRecoverable?'removed':'not-created',data);return false;}
-      await window.SolutionFitEvidence?.load?.({customerId:custId,canWrite,onChange:()=>{ if(loadState==='ready')renderApp(); }});
+      await window.SolutionFitEvidence?.load?.({customerId:custId,canWrite,onChange:async()=>{ await loadTurnoverPackagePreview();if(loadState==='ready')renderApp(); }});
+      if(generation!==workspaceLoadGeneration)return false;
+      await loadTurnoverPackagePreview();
       if(generation!==workspaceLoadGeneration)return false;
       await applyKnownData({ mutate:false, save:false });
       if(generation!==workspaceLoadGeneration)return false;
@@ -157,6 +162,21 @@
   }
 
   async function safeError(resp){try{const b=await resp.json();return b&&b.error?b.error:'';}catch(_){return '';}}
+
+  async function loadTurnoverPackagePreview(){
+    const selectedCustomer=customerId,generation=workspaceLoadGeneration,revision=++turnoverPreviewRevision;
+    turnoverPackagePreview=null;
+    if(!selectedCustomer)return null;
+    try{
+      const response=await apiFetch(`/api/handoffs/${encodeURIComponent(selectedCustomer)}/turnover-package/preview`);
+      if(response?.ok){
+        const preview=await response.json();
+        if(generation!==workspaceLoadGeneration||selectedCustomer!==customerId||revision!==turnoverPreviewRevision)return null;
+        turnoverPackagePreview=preview;
+      }
+    }catch(_){/* output action reports the actionable server error */}
+    return turnoverPackagePreview;
+  }
 
   /* Tolerate handoffs saved under the previous field shapes (no data loss). */
   function migrateState(s) {
@@ -1032,6 +1052,8 @@
   /* ── Tab 5: Readiness + handoff documents ───────────────────────── */
   function renderReadinessTab(r){
     const turnover=SF_MODEL.turnoverStats(S),turnoverReady=turnover.complete===turnover.total;
+    const packageSummary=turnoverPackagePreview?.summary||{totalEvidenceFiles:window.SolutionFitEvidence?.validateState?.().attachments?.length||0,totalEvidenceSizeBytes:0};
+    const pendingCount=Number(turnoverPackagePreview?.pendingAttachmentCount||0);
     return `<div class="sf-step-intro"><div><span class="sf-step-kicker">Step 8</span><h2>Readiness and documents</h2><p>Generate outputs only from the successfully saved server record. The Professional Services turnover document also requires all turnover fields.</p></div></div><div class="sf-card">
       <div class="sf-readiness-head">
         <div class="sf-score-big">${r.score}%</div>
@@ -1057,11 +1079,13 @@
         : 'Internal handoff — includes fit classification, gaps, ownership, assumptions, and unresolved readiness items for Services scoping.'}</p>
       <div class="btn-row" style="margin-top:0;">
         <button class="btn btn-primary btn-sm" data-sfaction="printDoc">🖨 Print / Save as PDF</button>
-        <button class="btn btn-primary btn-sm" data-sfaction="turnoverDoc" ${turnoverReady?'':'disabled'}>Generate PS Turnover Word</button>
+        <button class="btn btn-primary btn-sm" data-sfaction="turnoverDoc" ${turnoverReady&&!turnoverPackageBusy?'':'disabled'}>PS Turnover Document</button>
+        <button class="btn btn-primary btn-sm" data-sfaction="turnoverPackage" ${turnoverReady&&!turnoverPackageBusy?'':'disabled'}>${turnoverPackageBusy?'Preparing turnover package…':'Download PS Turnover Package'}</button>
         <button class="btn btn-ghost btn-sm" data-sfaction="copyDoc">Copy text</button>
         <button class="btn btn-ghost btn-sm" onclick="printRiskLedger()" title="Print a prospect-facing risk ledger showing gaps and mitigations — share before procurement asks">📋 Risk ledger</button>
       </div>
       ${turnoverReady?'':`<p class="sf-doc-note">Complete ${turnover.missing.length} required turnover field${turnover.missing.length===1?'':'s'} before generating the Word document: ${esc(turnover.missing.slice(0,4).join(', '))}${turnover.missing.length>4?'…':''}</p>`}
+      <div class="sf-turnover-package-summary" aria-live="polite"><strong>PS Turnover Package</strong><span>1 Turnover Document</span><span>${packageSummary.totalEvidenceFiles} Evidence File${packageSummary.totalEvidenceFiles===1?'':'s'}</span><span>1 Attachment Manifest</span><span>Total evidence size: ${esc(sfFormatBytes(packageSummary.totalEvidenceSizeBytes))}</span>${pendingCount?`<em>${pendingCount} evidence upload${pendingCount===1?' is':'s are'} incomplete and will not be included.</em>`:''}${!packageSummary.totalEvidenceFiles?'<em>No supporting evidence attachments were captured.</em>':''}</div>
       <div class="sf-doc-preview" id="sfDocPreview">${S.handoffType==='customer'?customerDoc():internalDoc()}</div>
     </div>`;
   }
@@ -1205,6 +1229,28 @@
     if(stats.missing.length){window.showToast?.(`Complete the required turnover fields first: ${stats.missing.join(', ')}.`);return;}
     if(!customerId||!window.deServerDownload){window.showToast?.('Professional Services turnover Word service is unavailable.');return;}
     return window.deServerDownload(`/api/handoffs/${encodeURIComponent(customerId)}/export-docx?kind=turnover`,'Cloud-Inventory-PS-Turnover.docx','Professional Services Turnover');
+  }
+
+  async function downloadTurnoverPackage(){
+    if(turnoverPackageBusy)return false;
+    const selectedCustomer=customerId,generation=workspaceLoadGeneration;
+    const isCurrent=()=>generation===workspaceLoadGeneration&&selectedCustomer===customerId;
+    if(!selectedCustomer||!await flushSolutionFitSave()||!isCurrent())return false;
+    await loadTurnoverPackagePreview();
+    if(!isCurrent())return false;
+    if(turnoverPackagePreview&&!turnoverPackagePreview.turnoverReady){window.showToast?.(`Complete the required turnover fields first: ${(turnoverPackagePreview.missingTurnoverFields||[]).join(', ')}.`);return false;}
+    const evidenceState=window.SolutionFitEvidence?.validateState?.()||{};
+    const browserPending=(evidenceState.queue||[]).filter(item=>!['Complete'].includes(item.state)).length;
+    const serverPending=Number(turnoverPackagePreview?.pendingAttachmentCount||0);
+    const pending=Math.max(browserPending,serverPending);
+    if(pending&&!window.confirm(`${pending} evidence upload${pending===1?' is':'s are'} still in progress or incomplete and will not be included. Continue with the current saved evidence?`))return false;
+    if(!customerId||!window.deServerDownload){window.showToast?.('Professional Services turnover package service is unavailable.');return false;}
+    turnoverPackageBusy=true;renderApp();
+    try{
+      return await window.deServerDownload(`/api/handoffs/${encodeURIComponent(selectedCustomer)}/turnover-package`,'Cloud-Inventory-PS-Turnover.zip','Professional Services Turnover Package',{accept:'application/zip',types:['application/zip','application/x-zip-compressed','application/octet-stream'],timeoutMs:300000,isCurrent});
+    }finally{
+      if(isCurrent()){turnoverPackageBusy=false;await loadTurnoverPackagePreview();if(isCurrent())renderApp();}
+    }
   }
 
   function setDocType(type){
@@ -1447,6 +1493,7 @@
     /* Print and copy are allowed for everyone with read access (AEs included). */
     if(a==='printDoc'){ await printHandoffDoc(); return; }
     if(a==='turnoverDoc'){ await downloadTurnoverDoc(); return; }
+    if(a==='turnoverPackage'){ await downloadTurnoverPackage(); return; }
     if(a==='copyDoc'){ copyDocText(); return; }
     if(a==='switchCustomer'){await requestCustomerSwitch();return;}
     /* All other actions mutate state → require write access. */
@@ -1491,7 +1538,7 @@
     document.querySelectorAll('#sfApp [data-sfgapdel], #sfApp [data-sfintdel]').forEach(el=>{ el.style.display='none'; });
     document.querySelectorAll('#sfApp [data-sfaction]').forEach(el=>{
       const a=el.dataset.sfaction;
-      if(a!=='printDoc' && a!=='copyDoc' && a!=='turnoverDoc' && a!=='switchCustomer') el.style.display='none';
+      if(a!=='printDoc' && a!=='copyDoc' && a!=='turnoverDoc' && a!=='turnoverPackage' && a!=='switchCustomer') el.style.display='none';
     });
   }
 

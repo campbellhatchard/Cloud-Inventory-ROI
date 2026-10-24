@@ -6,11 +6,11 @@ The correction-only source is complete for the confirmed v6.9.42 regression defe
 
 ## Local certification
 
-All 22 executable local gates completed under Node v22.22.0 with zero failures. The full suite passed 728 tests with 3 database-dependent skips; the focused v6.9.43 suite passed 141; production locks passed 379; Brand passed 19; and every one of the 28 active outputs passed its production-owner runtime smoke. Machine counts are authoritative in `RELEASE_GATE_RESULTS_v6.9.43.json`.
+All executable local gates completed with zero failures. The full suite passed 688 tests with 3 database-dependent skips; the focused v6.9.43 suite passed 141; production locks passed 339; Brand passed 19; and every one of the 28 active outputs passed its production-owner runtime smoke. Machine counts are authoritative in `RELEASE_GATE_RESULTS_v6.9.43.json`.
 
 ## Outstanding certification
 
-- GitHub Node 22/PostgreSQL 16 CI execution: pending.
+- Node 22 CI execution: pending. Local clean production `npm ci` passed under Node v24.19.0/npm v10.9.4.
 - Disposable PostgreSQL/HTTP integration: `NOT TESTED` locally without a safe `DATABASE_URL`.
 - Authenticated browser regression against deployed v6.9.43: pending deployment.
 

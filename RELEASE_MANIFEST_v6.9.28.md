@@ -4,8 +4,7 @@
 
 - Parent archive: `cloud-inventory-roi-v6.9.27-render-ready.zip`
 - Parent SHA-256: `19854f115ea21330e9ba595e8433a2350dc495513a451da1512a63e0fc6b78b1`
-- Production parent Git commit: `ea6feb7be2b46e4f0f846984545f4aa89c1d6956`
-- Developer source snapshot: `4cbc0ed3c9047fe3b5f1efec0ba508a24387ec62`
+- Parent Git commit: `4cbc0ed3c9047fe3b5f1efec0ba508a24387ec62`
 - Target release: `6.9.28`
 
 ## Corrective scope
@@ -24,8 +23,6 @@
 - ROI Model v2.8 / modelVersion 28; no formula or overlap change.
 - Brand System v1.0, Application Knowledge v1.0, and Christie Persona v1.0.
 - Immutable Prospect submissions, explicit per-value application, Value History, Rep Confirmed, BuyCycle, native currency, role/capability rules, and registered output owners.
-
-SE Solution Fit Scope: Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.
 
 ## Certification state
 

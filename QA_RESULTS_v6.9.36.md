@@ -8,15 +8,15 @@ All locally executable release gates passed with zero failures. Database-depende
 
 | Gate | Passed | Failed | Skipped | Result |
 |---|---:|---:|---:|---|
-| Full cumulative test suite | 690 | 0 | 2 | PASS |
-| v6.9.36 Admin cleanup | 100 | 0 | 1 | PASS with PostgreSQL case skipped |
+| Full test suite | 650 | 0 | 2 | PASS |
+| v6.9.36 Admin cleanup | 99 | 0 | 1 | PASS with PostgreSQL case skipped |
 | v6.9.35 ownership transfer | 89 | 0 | 0 | PASS |
 | v6.9.34 workflow | 71 | 0 | 0 | PASS |
 | v6.9.33 correction | 35 | 0 | 0 | PASS |
 | v6.9.32 evidence consistency | 51 | 0 | 0 | PASS |
 | v6.9.31 corrective suite | 99 | 0 | 0 | PASS |
 | v6.9.30 value authority | 31 | 0 | 0 | PASS |
-| Production locks | 341 | 0 | 0 | PASS |
+| Production locks | 301 | 0 | 0 | PASS |
 | Brand tests | 19 | 0 | 0 | PASS |
 | Output runtime matrix | 26 | 0 | 0 | PASS; all 25 active outputs executed |
 
@@ -34,9 +34,6 @@ These items require a disposable non-production database and authorized browser 
 ## Functional coverage added
 
 Tests cover UTC half-open dates, quick ranges, open bounds, invalid ranges, combined filters, current Owner versus Created By, stable ID selection, exact preview snapshots, one-use previews, typed confirmation, stale fingerprints, atomic soft removal, dependency expansion, protected evidence, recovery, reassigned owner preservation, Admin-only authorization, empty state, accessible controls, and preservation of v6.9.35 ownership transfer.
-
-SE Solution Fit Scope:
-Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.
 
 ## Decision authority
 

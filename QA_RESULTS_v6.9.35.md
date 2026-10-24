@@ -5,8 +5,8 @@
 | Gate | Passed | Failed | Skipped / Not tested |
 |---|---:|---:|---:|
 | Focused ownership + authorization + migration + UI + switcher + ROI | 89 | 0 | 0 |
-| Full inherited application suite | 679 | 0 | 2 database-dependent skips |
-| Production regression locks | 330 | 0 | 0 |
+| Full inherited application suite | 674 | 0 | 2 database-dependent skips |
+| Production regression locks | 291 | 0 | 0 |
 | Active output runtime matrix | 26 | 0 | 0 |
 | Brand System | 19 | 0 | 0 |
 | Focused ownership PostgreSQL suite | 0 | 0 | 1 NOT TESTED |
@@ -22,13 +22,8 @@ The real PostgreSQL suite additionally covers HTTP authorization, migrations, ac
 
 ## Environmental limits
 
-No safe non-production `DATABASE_URL` exists in this workspace. PostgreSQL work is therefore truthfully **NOT TESTED**, not passed. A fresh locked `npm ci --no-audit --no-fund` completed successfully under Node v24.19.0, with the expected engine warning because the application remains pinned to Node 22. Exact Node 22 execution and disposable PostgreSQL certification remain CI gates. The production database was never used for automated tests.
+No safe non-production `DATABASE_URL` exists in this workspace. PostgreSQL work is therefore truthfully **NOT TESTED**, not passed. A fresh `npm ci` is also NOT TESTED because an npm CLI/network install path is unavailable; executable tests used the bundled Node v24.19.0 runtime with an existing production dependency installation. The application remains pinned to Node 22 for Render, so exact Node 22 execution is a CI/deployment gate. The production database was never used.
 
 v6.9.35 is not deployed, so live Admin/Rep/Manager/SE browser acceptance and future email-delivery observation remain NOT TESTED. Follow `DEPLOYMENT_VALIDATION_v6.9.35.md` after disposable CI database certification and deployment.
 
 The Product Owner assigns the final release classification.
-
-> SE Solution Fit Scope:
-> Sales Engineers have cross-account access to all active customers for
-> Solution Fit discovery/create/view/edit only. This does not confer general
-> cross-account customer, scenario or opportunity access.

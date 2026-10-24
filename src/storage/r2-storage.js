@@ -84,8 +84,8 @@ function createR2Storage({ env = process.env, fetchImpl = global.fetch, now = ()
     return `${endpoint.origin}${path}?${query}`;
   }
 
-  async function request(method, key) {
-    const response = await fetchImpl(presign(method, key, DEFAULT_DOWNLOAD_TTL_SECONDS), { method, headers: { 'Accept-Encoding': 'identity' } });
+  async function request(method, key, options = {}) {
+    const response = await fetchImpl(presign(method, key, DEFAULT_DOWNLOAD_TTL_SECONDS), { method, signal: options.signal, headers: { 'Accept-Encoding': 'identity' } });
     if (!response.ok) {
       const error = new Error(`Evidence object ${method} failed with status ${response.status}.`);
       error.statusCode = response.status;
@@ -102,9 +102,19 @@ function createR2Storage({ env = process.env, fetchImpl = global.fetch, now = ()
       return { url: presign('PUT', key, expiresSeconds, requiredHeaders), expiresSeconds, requiredHeaders };
     },
     createDownloadUrl: async ({ key, expiresSeconds = DEFAULT_DOWNLOAD_TTL_SECONDS }) => ({ url: presign('GET', key, expiresSeconds), expiresSeconds }),
-    verifyObject: async ({ key }) => {
-      const response = await request('HEAD', key);
+    verifyObject: async ({ key, signal }) => {
+      const response = await request('HEAD', key, { signal });
       return {
+        sizeBytes: Number(response.headers.get('content-length') || 0),
+        contentType: trim(response.headers.get('content-type')).split(';')[0].toLowerCase(),
+        etag: trim(response.headers.get('etag')).replace(/^"|"$/g, '')
+      };
+    },
+    getObjectStream: async ({ key, signal }) => {
+      const response = await request('GET', key, { signal });
+      if (!response.body) throw new Error('Evidence object returned no readable content.');
+      return {
+        stream: response.body,
         sizeBytes: Number(response.headers.get('content-length') || 0),
         contentType: trim(response.headers.get('content-type')).split(';')[0].toLowerCase(),
         etag: trim(response.headers.get('etag')).replace(/^"|"$/g, '')

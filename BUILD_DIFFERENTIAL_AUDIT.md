@@ -1,3 +1,18 @@
+# v6.9.45 Deployment Reconciliation
+
+The exact supplied v6.9.45 ZIP was verified with SHA-256 `dece15e61fab898350166e5279a3c5eb53d522218e3d6ba2158ee4aa6c8aea31` and imported forward from live commit `d133998e94308845cfb1356bc968084effcf51c1`. Existing files missing from the archive were retained. No production credentials or dependency directories are included.
+
+- Preserved deployed v6.9.44 upload immutability, signed Content-Type, uncompressed R2 metadata, evidence workspace generation guards, atomic cleanup and deletion retries, active attachment dependency counting, timestamp fingerprints, and the existing behavioral regressions. Six inherited regressions failed against the raw imported source and all 18 passed after reconciliation.
+- Kept `npm start` and `npm run migrate` in the existing Render Blueprint, matching the Product Owner's deployment instruction and live settings. No migration was added or changed.
+- Corrected final ZIP member allocation to account for generated suffixes and case collisions, preserving every manifest member's bytes.
+- Bound turnover previews, download initiation, completed bytes and UI recovery to their originating customer/workspace generation; older previews cannot replace newer ones.
+- Propagated request cancellation through storage reads, registered response cleanup before generation, and cleaned late results. Observed and raced archive/output failures immediately, closed streams before deleting partial ZIPs, aborted pending object requests, and discarded late streams.
+- Used an ASCII-safe HTTP download filename for valid Unicode customer names while preserving customer content inside the package.
+- Added eight red-then-green turnover regressions. The final v6.9.45 plus inherited v6.9.44 focused run passed 39 tests with zero failures. Full local Node 22 execution had zero failures; database integration remains a separate disposable CI run, and real R2 checks use only the QA object prefix.
+- Retained previous pretest coverage and updated the new R2 package check to use the preserved signed-upload header contract.
+
+The supplied package and historical pre-deployment reports are preserved as provenance. The final deployment receipt records exact commits, CI results, migration verification and the live health response; no Product Owner readiness designation is assigned by the agent.
+
 # v6.9.44 Differential Audit
 
 ## Exact comparison
@@ -24,25 +39,11 @@ Final inventory result: **19 files added, 21 files changed, 0 files removed**. D
 
 ## Explicitly unchanged
 
-## Deployment reconciliation and targeted corrections — 2026-10-23
-
-- Applied forward to exact production parent `18c7bb2015223a8c956570719fe03d7caea04d10`; recorded this deployed Git lineage separately from the supplied archive lineage.
-- Restored `public/style.css` directly from the checksum-verified v6.9.44 archive after detecting corrupted content in the interrupted transfer. Relative to production this stylesheet adds eight lines; it does not replace the prior styles.
-- Upload signatures now bind the approved Content-Type and mandatory `If-None-Match: *`, preventing replacement of an existing verified object with a reused PUT URL. The browser receives those required signed headers.
-- Evidence loading and all asynchronous modal actions retain their initiating customer/context generation. Customer changes reset metadata and cancel queued work; removing a waiting file prevents its upload.
-- Reconciliation atomically claims expired pending rows before object deletion, respects renewed upload expiry, and retains failed deletions for retry. Activation and retry renewal fail if another operation already removed the row.
-- Added executable regression coverage for delayed customer responses, reset, queued customer switches, withdrawn files, signed headers, and cleanup failures. The disposable PostgreSQL suite additionally checks expired versus renewed and ACTIVE evidence.
-- Real R2 certification now attempts to reuse the upload URL and requires rejection with HTTP 412 before checking the unchanged downloaded bytes.
-- Disposable PostgreSQL exposed a dependency-count defect: failed/pending uploads were counted as active Admin Cleanup dependencies. The query now requires `status='ACTIVE'` and no removal timestamp; the existing integration assertion remains unchanged.
-- Final deployed R2 certification exposed compressed HEAD responses without Content-Length and with a transformed weak ETag. Internal object metadata requests now send `Accept-Encoding: identity`, preserving the original stored size and ETag; a red-then-green regression reproduces the response transformation.
-
-## Preserved authorities
-
 ROI Model v2.8, economic formulas, native currency, Prospect/Rep evidence semantics, Value History, Buyer Evidence, BuyCycle, customer/scenario authorization, SE cross-account Solution Fit scope, Executive/Proposal authority, outputs, Brand System, and Christie Persona are unchanged. PS Turnover evidence ZIP/appendix generation is deferred.
 
 ---
 
-# Historical v6.9.43 Differential Audit (prior release)
+# v6.9.43 Differential Audit
 
 ## Authorized correction scope
 
@@ -70,22 +71,35 @@ This build starts from the verified v6.9.42 archive and corrects only the fourte
 - Solution Fit state schema, application/gap identity, MEP catalog/package behavior, outputs, and authenticated persistence.
 - Executive/Proposal canonical source/readiness, draft classification, and commercial-note exclusion.
 - Output Registry ownership, Brand System v1.0, Application Knowledge v1.0, Christie Persona v1.0, and permanent-test monotonicity.
-- The deployed Render build command, pre-deploy migration command, `npm start` command, PostgreSQL database, environment variables, historical certification evidence, cumulative pretest hooks, timestamp fingerprint correction, and ownership-transfer regression ordering.
 
-## Deferred by scope
-
-No file upload, evidence attachment, attachment gallery, new product feature, new ROI formula, authorization expansion, or browser-local authoritative storage is included.
-
-## Migrations
+## Data and database impact
 
 No migration or schema change is introduced. The migration inventory remains 44 files through `044_admin_bulk_cleanup.sql`.
 
-## Packaging reconciliation
+## Explicit exclusions
 
-- The supplied archive was based on v6.9.42 developer parent `a4a34de7238d82232fd6395e6fb6f57c42f2b51d`; the exact production parent is `46af1f156f4852551c4714ac6660df790a1b3709`.
-- The v6.9.43 corrective delta was applied forward to that deployed production commit.
-- Historical evidence rewrites, removed cumulative test hooks, the removed pre-deploy migration command, the alternate start command, and unrelated regression reversions were rejected as packaging regressions.
+No file upload, evidence attachment, attachment gallery, new product feature, new ROI formula, authorization expansion, or browser-local authoritative storage is included.
 
-## Unresolved certification
+---
 
-- Disposable PostgreSQL integration and live Render role-based validation remain mandatory until CI and deployment complete.
+# v6.9.45 Differential Audit
+
+## Authorized additions
+
+- One canonical server-side PS turnover model over saved `handoffs` state and active `handoff_attachments` rows.
+- One read-only repeatable-read snapshot service using the existing Solution Fit authorization boundary.
+- One streaming turnover package builder, RFC 4180 manifest generator, collision-safe/sanitized ZIP paths, R2 object preflight, and selected image previews.
+- One registered `solution-turnover-package` runtime output and permanent unit, PostgreSQL, R2, security, failure, performance, and output-owner tests.
+- v6.9.45 release evidence, foundation map, deployment checklist, and machine-generated gate artifacts.
+
+## Authorized modifications
+
+- The approved turnover Word builder now consumes the canonical model and adds evidence references, a compact manifest, and up to two document-quality previews per stable context.
+- The handoff route delegates Word/ZIP generation to shared services and records package generation metadata without storing package contents.
+- The R2 abstraction adds authenticated object streaming with abort support.
+- The Solution Fit readiness panel adds server-authoritative package counts, pending-upload warnings, save-before-output, progress, failure recovery, and ZIP download support.
+- The shared server-download helper accepts governed PDF, DOCX, PPTX, and ZIP media types.
+
+## Explicitly unchanged
+
+No database migration, second evidence repository, browser-local authority, ROI formula, Prospect evidence rule, Customer ownership rule, SE capability, Solution Fit stable identity, attachment upload workflow, public output, or customer-facing classification was changed.

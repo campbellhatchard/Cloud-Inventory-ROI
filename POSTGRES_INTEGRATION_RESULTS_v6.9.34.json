@@ -1,6 +1,6 @@
 {
   "release": "6.9.34",
-  "generatedAt": "2026-10-08T16:32:39.268Z",
+  "generatedAt": "2026-10-08",
   "databaseUrlPresent": false,
   "databaseName": null,
   "postgresqlVersion": "NOT TESTED",
@@ -21,8 +21,9 @@
   ],
   "passed": 0,
   "failed": 0,
-  "skipped": 0,
+  "skipped": 1,
   "notTested": 6,
-  "durationMs": 0,
-  "result": "NOT TESTED"
+  "durationMs": 156,
+  "result": "NOT TESTED",
+  "reason": "No safe DATABASE_URL is available in this workspace. The v6.9.34 suite is wired into test:postgres for disposable PostgreSQL CI execution."
 }

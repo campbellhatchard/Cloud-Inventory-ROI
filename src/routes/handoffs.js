@@ -17,6 +17,9 @@ const { readiness } = require('../shared/handoff-readiness');
 const { solutionFitAccess, hasPermission, rolesOf } = require('../authorization');
 const {buildSolutionFitPdf}=require('../exports/operational-pdf');
 const {buildSolutionFitTurnoverDocx}=require('../exports/solution-fit-turnover-docx');
+const {buildPhotoPreviews,buildPSTurnoverPackage,EvidenceUnavailableError}=require('../exports/solution-fit-turnover-package');
+const {loadPSTurnoverModel,TurnoverAccessError}=require('../services/ps-turnover-service');
+const {getEvidenceStorage}=require('../storage/r2-storage');
 const SolutionFitState=require('../../public/solution-fit-state');
 const {safeFile}=require('../shared/output-brand');
 const fs=require('fs');
@@ -25,23 +28,72 @@ const path=require('path');
 const router = express.Router();
 router.use(requireAuth);
 
+const logoPath=path.join(__dirname,'../../public/ci-logo-full-color.png');
+function turnoverFailure(res,error,fallback){
+  if(error instanceof TurnoverAccessError)return res.status(error.status).json({error:error.message,code:error.code});
+  if(error instanceof EvidenceUnavailableError)return res.status(error.status).json({error:'One or more evidence files could not be retrieved. Retry the turnover output.',code:error.code});
+  return res.status(error.status||500).json({error:fallback});
+}
+
 router.get('/:customerId/export-docx',async(req,res)=>{
   try{
     if(req.query.kind!=='turnover')return res.status(400).json({error:'Unsupported Solution Fit Word output.'});
-    const access=await loadAccessibleCustomer(req.params.customerId,req.user,'read');
-    if(!access.ok)return res.status(access.code).json({error:access.error});
-    const {rows}=await query(`SELECT h.data,h.primary_se_id,pse.username primary_se_name FROM handoffs h LEFT JOIN users pse ON pse.id=h.primary_se_id WHERE h.customer_id=$1 AND h.deleted_at IS NULL`,[req.params.customerId]);
-    if(!rows.length)return res.status(409).json({error:'Save the Solution Fit before creating the turnover document.'});
-    const state=normalizeHandoffData(rows[0].data||{});
-    const turnover=SolutionFitState.turnoverStats(state);
+    const {model,turnover}=await loadPSTurnoverModel({customerId:req.params.customerId,user:req.user});
     if(turnover.missing.length)return res.status(409).json({error:`Complete the required turnover fields before generating Word: ${turnover.missing.join(', ')}.`});
-    const owner=access.customer.ownerId?await query(`SELECT username FROM users WHERE id=$1`,[access.customer.ownerId]):{rows:[]};
-    const logoPath=path.join(__dirname,'../../public/ci-logo-full-color.png');
-    const buffer=await buildSolutionFitTurnoverDocx({data:state,customerName:access.customer.name,accountExecutive:owner.rows[0]?.username||'',primarySeName:rows[0].primary_se_name||'',logoData:fs.readFileSync(logoPath)});
+    const previews=await buildPhotoPreviews(model,getEvidenceStorage());
+    const buffer=await buildSolutionFitTurnoverDocx({model,previews,logoData:fs.readFileSync(logoPath)});
     res.set('Content-Type','application/vnd.openxmlformats-officedocument.wordprocessingml.document');res.set('Cache-Control','private, no-store');
-    res.set('Content-Disposition',`attachment; filename="Cloud-Inventory-PS-Turnover-${safeFile(access.customer.name)}-${new Date().toISOString().slice(0,10)}.docx"`);
+    res.set('Content-Disposition',`attachment; filename="Cloud-Inventory-PS-Turnover-${safeFile(model.customerName)}-${new Date().toISOString().slice(0,10)}.docx"`);
     res.send(buffer);
-  }catch(error){console.error('solution_fit_turnover_docx.failed',{errorId:`solution-turnover-${Date.now().toString(36)}`,message:error.message});res.status(500).json({error:'Professional Services turnover Word document could not be generated.'});}
+  }catch(error){console.error('solution_fit_turnover_docx.failed',{errorId:`solution-turnover-${Date.now().toString(36)}`,attachmentId:error.attachmentId||null,message:error.message});turnoverFailure(res,error,'Professional Services turnover Word document could not be generated.');}
+});
+
+router.get('/:customerId/turnover-package/preview',async(req,res)=>{
+  try{
+    const {model,turnover,savedAt}=await loadPSTurnoverModel({customerId:req.params.customerId,user:req.user});
+    res.set('Cache-Control','private, no-store');
+    res.json({
+      solutionFitId:model.solutionFitId,
+      savedAt,
+      turnoverReady:turnover.missing.length===0,
+      missingTurnoverFields:turnover.missing,
+      pendingAttachmentCount:model.pendingAttachmentCount,
+      summary:model.summary,
+      classification:model.classification
+    });
+  }catch(error){console.error('solution_fit_turnover_preview.failed',{customerId:req.params.customerId,userId:req.user.id,message:error.message});turnoverFailure(res,error,'Professional Services turnover package details could not be loaded.');}
+});
+
+router.get('/:customerId/turnover-package',async(req,res)=>{
+  const started=Date.now();
+  let generated,stream,cleanupPromise;
+  const controller=new AbortController();
+  const cleanup=()=>generated?(cleanupPromise||=(Promise.resolve().then(()=>generated.cleanup?.()).catch(()=>{}))):Promise.resolve();
+  res.once('close',()=>{if(!res.writableFinished)controller.abort();if(stream)stream.destroy();else cleanup();});
+  if(res.destroyed)controller.abort();
+  try{
+    const {model,turnover}=await loadPSTurnoverModel({customerId:req.params.customerId,user:req.user});
+    if(controller.signal.aborted)return;
+    if(turnover.missing.length)return res.status(409).json({error:`Complete the required turnover fields before generating the package: ${turnover.missing.join(', ')}.`});
+    const phaseLog=[];
+    generated=await buildPSTurnoverPackage({model,storage:getEvidenceStorage(),logoData:fs.readFileSync(logoPath),signal:controller.signal,onPhase:phase=>phaseLog.push({phase,atMs:Date.now()-started})});
+    if(res.destroyed){await cleanup();return;}
+    await log({userId:req.user.id,action:'handoff.turnover_package_generated',entityType:'handoff',entityId:model.solutionFitId,detail:{customerId:req.params.customerId,includedAttachmentIds:generated.includedAttachmentIds,evidenceCount:generated.evidenceCount,sizeBytes:generated.sizeBytes,durationMs:Date.now()-started,phases:phaseLog},ipAddress:req.ip});
+    if(res.destroyed){await cleanup();return;}
+    res.set('Content-Type','application/zip');
+    res.set('Content-Length',String(generated.sizeBytes));
+    res.set('Content-Disposition',`attachment; filename="${generated.filename}"`);
+    res.set('Cache-Control','private, no-store');
+    stream=fs.createReadStream(generated.filePath);
+    stream.once('close',cleanup);
+    stream.on('error',error=>{console.error('solution_fit_turnover_package.stream_failed',{customerId:req.params.customerId,message:error.message});if(res.destroyed)return;if(!res.headersSent)turnoverFailure(res,error,'Professional Services turnover package could not be downloaded.');else res.destroy(error);});
+    stream.pipe(res);
+  }catch(error){
+    await cleanup();
+    if(res.destroyed)return;
+    console.error('solution_fit_turnover_package.failed',{errorId:`solution-turnover-package-${Date.now().toString(36)}`,customerId:req.params.customerId,userId:req.user.id,attachmentId:error.attachmentId||null,durationMs:Date.now()-started,message:error.message});
+    turnoverFailure(res,error,'Professional Services turnover package could not be generated.');
+  }
 });
 
 router.get('/:customerId/export-pdf',async(req,res)=>{

@@ -3,12 +3,11 @@
 ## Machine gates
 
 - Production dependency installation: PASS
-- ROI engine: 34 passed, 0 failed
-- Full application TAP suites: 638 passed, 0 failed, 2 skipped
+- Full application suite: 611 passed, 0 failed, 2 skipped
 - v6.9.32 focused Prospect evidence suite: 51 passed, 0 failed, 0 skipped
 - v6.9.31 inherited correction suite: 99 passed, 0 failed, 0 skipped
 - v6.9.30 protected Prospect workflow suite: 31 passed, 0 failed, 0 skipped
-- Production locks: 289 passed, 0 failed, 0 skipped
+- Production locks: 262 passed, 0 failed, 0 skipped
 - Brand tests: 19 passed, 0 failed, 0 skipped
 - Output runtime: 26 passed, 0 failed; 25 of 25 active outputs executed and validated
 - Lineage, active-output audit, generated brand assets, and generated Application Knowledge: PASS
@@ -26,8 +25,3 @@ Discovery and Calculator are verified to call the same summary and message autho
 ROI Model v2.8 tests passed, including contribution margin, overlap controls, no fabricated dollars, percentage units, contract behavior, and version gating. Prospect values remain individually applied, immutable submission boundaries remain intact, and missing verified events are not synthesized.
 
 Machine evidence is in `RELEASE_GATE_RESULTS_v6.9.32.json`, `OUTPUT_RUNTIME_RESULTS_v6.9.32.json`, and `POSTGRES_INTEGRATION_RESULTS_v6.9.32.json`.
-
-> SE Solution Fit Scope:
-> Sales Engineers have cross-account access to all active customers for
-> Solution Fit discovery/create/view/edit only. This does not confer general
-> cross-account customer, scenario or opportunity access.

@@ -6,9 +6,9 @@ The Customer-Facing ROI Assumptions & Results Summary is complete in source and 
 
 ## Passed locally
 
-- Focused v6.9.37/regression suite: 113 passed, 0 failed, 1 database test skipped as NOT TESTED.
-- Full application suite: 704 passed, 0 failed, 3 database-dependent skips.
-- Production locks: 355 passed, 0 failed.
+- Focused v6.9.37/regression suite: 112 passed, 0 failed, 1 database test skipped as NOT TESTED.
+- Full application suite: 664 passed, 0 failed, 3 database-dependent skips.
+- Production locks: 315 passed, 0 failed.
 - Brand tests: 19 passed, 0 failed.
 - Active Output Registry: all 27 active production outputs executed and passed in the focused run.
 - New Web and PDF production owners executed successfully.
@@ -26,10 +26,3 @@ All locally executable release gates passed. The machine evidence records zero f
 ## Product Owner decision
 
 No final readiness colour is assigned by this build. The package must complete the mandatory non-production PostgreSQL and deployment-validation steps before the Product Owner makes the release decision.
-
-## SE Solution Fit Scope
-
-Sales Engineers have cross-account access to all active customers for
-Solution Fit discovery/create/view/edit only. This does not confer general
-cross-account customer, scenario or opportunity access.
-

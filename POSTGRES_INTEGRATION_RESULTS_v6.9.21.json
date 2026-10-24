@@ -1,15 +1,11 @@
 {
   "release": "6.9.21",
-  "generatedAt": "2026-10-02T14:26:18.295Z",
+  "generatedAt": "2026-10-02T14:12:16.980Z",
   "databaseUrlPresent": false,
   "databaseName": null,
   "postgresqlVersion": "NOT TESTED",
   "node": "v24.19.0",
-  "migration": {
-    "executed": false,
-    "exitCode": null,
-    "result": "NOT TESTED"
-  },
+  "migration": {"executed":false,"exitCode":null,"result":"NOT TESTED"},
   "command": "npm run test:postgres",
   "suites": [
     "test/routes.test.js",

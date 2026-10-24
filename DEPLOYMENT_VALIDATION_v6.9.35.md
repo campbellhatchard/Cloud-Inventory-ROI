@@ -24,8 +24,3 @@ Verify scenario/version IDs, ROI values, Prospect submissions, Value History and
 Verify blank reason, same owner, inactive/non-Rep target, duplicate same-name Customer under the target, and a stale preview all fail without partial mutation. Review database/audit logs using non-sensitive identifiers only.
 
 The Product Owner records the final deployment outcome.
-
-> SE Solution Fit Scope:
-> Sales Engineers have cross-account access to all active customers for
-> Solution Fit discovery/create/view/edit only. This does not confer general
-> cross-account customer, scenario or opportunity access.

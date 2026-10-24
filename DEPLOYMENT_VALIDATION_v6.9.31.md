@@ -18,8 +18,3 @@
 8. Complete the normal authentication, ROI, Prospect, Value History, Solution Fit, JPP, Executive/Proposal, customer document, AI/Christie, and email smoke checklist.
 
 The Product Owner assigns final release classification after this live validation.
-
-> SE Solution Fit Scope:
-> Sales Engineers have cross-account access to all active customers for
-> Solution Fit discovery/create/view/edit only. This does not confer general
-> cross-account customer, scenario or opportunity access.

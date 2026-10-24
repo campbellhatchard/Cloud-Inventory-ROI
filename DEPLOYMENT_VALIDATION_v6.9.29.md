@@ -1,7 +1,5 @@
 # Deployment Validation — v6.9.29
 
-SE Solution Fit Scope: Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.
-
 ## Before deployment
 
 1. Review `RELEASE_GATE_RESULTS_v6.9.29.json` and require zero local gate failures.

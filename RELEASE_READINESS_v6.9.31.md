@@ -11,8 +11,3 @@ The local engineering gate is complete:
 - 25 of 25 active outputs executed and validated.
 
 Live Render validation remains the Product Owner's final control. It should use the original Sales Manager data and original credential-manager browser profile. This repository does not self-assign a production-ready state or final readiness color.
-
-> SE Solution Fit Scope:
-> Sales Engineers have cross-account access to all active customers for
-> Solution Fit discovery/create/view/edit only. This does not confer general
-> cross-account customer, scenario or opportunity access.

@@ -9,9 +9,9 @@ All locally executable corrective and permanent regression gates pass with zero 
 | Gate | Passed | Failed | Skipped / Not Tested | Result |
 |---|---:|---:|---:|---|
 | v6.9.38 focused ROI, UI, and calculation regression | 47 | 0 | 0 | PASS |
-| Exact package full-test script | 667 | 0 | 3 skipped | PASS; database cases remain NOT TESTED |
-| All repository test files, sequential | 743 | 0 | 8 skipped | PASS; database cases remain NOT TESTED |
-| Production locks | 318 | 0 | 0 | PASS |
+| Exact package full-test script | 666 | 0 | 3 skipped | PASS; database cases remain NOT TESTED |
+| All repository test files, sequential | 742 | 0 | 8 skipped | PASS; database cases remain NOT TESTED |
+| Production locks | 317 | 0 | 0 | PASS |
 | Brand tests | 19 | 0 | 0 | PASS |
 | Active output runtime matrix | 28 | 0 | 0 | PASS; registry check plus 27 production outputs |
 

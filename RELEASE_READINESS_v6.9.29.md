@@ -1,7 +1,5 @@
 # Release Readiness — Cloud Inventory ROI v6.9.29
 
-SE Solution Fit Scope: Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.
-
 ## Corrective scope
 
 The five confirmed recurring defects are addressed at their shared authority boundaries rather than by adding screen-specific patches. ROI Model v2.8 and all governed evidence, role, and output behavior remain unchanged.

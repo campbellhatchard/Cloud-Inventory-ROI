@@ -61,8 +61,6 @@ This visual QA used deterministic production-builder fixtures. It does not repla
 - Browser console/network monitoring and actual download controls on deployed v6.9.28
 - Post-deployment same-scenario cross-format reconciliation
 
-SE Solution Fit Scope: Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.
-
 ## QA conclusion
 
 Local source, calculation, output-owner, and rendered-artifact gates pass with zero local failures. Certification is incomplete because database and deployed-browser gates are mandatory and NOT TESTED.

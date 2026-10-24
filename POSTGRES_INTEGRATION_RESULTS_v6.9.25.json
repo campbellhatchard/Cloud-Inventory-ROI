@@ -1,6 +1,6 @@
 {
   "release": "6.9.25",
-  "generatedAt": "2026-10-02T23:41:28.208Z",
+  "generatedAt": "2026-10-02T23:18:54.151Z",
   "databaseUrlPresent": false,
   "databaseName": null,
   "postgresqlVersion": "NOT TESTED",
@@ -22,5 +22,6 @@
   "skipped": 0,
   "notTested": 4,
   "durationMs": 0,
-  "result": "NOT TESTED"
+  "result": "NOT TESTED",
+  "reason": "No safe disposable DATABASE_URL was available; CI PostgreSQL 16 certification remains mandatory."
 }

@@ -1,15 +1,24 @@
+# Deployment Inheritance Audit — v6.9.45
+
+The Product Owner supplied `cloud-inventory-roi-v6.9.45-render-ready.zip`; its verified SHA-256 is `dece15e61fab898350166e5279a3c5eb53d522218e3d6ba2158ee4aa6c8aea31`. It was extracted separately and overlaid on the exact live Git parent `d133998e94308845cfb1356bc968084effcf51c1`. The remote backup tag is `production-before-v6.9.45`. Git metadata, environment files, dependencies and the ZIP were excluded; existing historical files absent from the package were retained.
+
+Inherited authorities remain ROI Model v2.8 / modelVersion 28, Brand System v1.0, Application Knowledge v1.0 and Christie Persona v1.0. The migration inventory remains 45 files through migration 045; no schema change is introduced. All previous output owners remain and the supplied release adds the internal PS turnover package owner, for 29 active owners.
+
+The supplied package predates deployed v6.9.44 corrections. Forward reconciliation preserves signed create-only uploads, original object metadata, customer-bound evidence operations, atomic expired-upload cleanup, truthful deletion retries, active dependency counts, timestamp fingerprints, and their existing regressions. Render retains Node 22, `npm start`, its existing build command and migration pre-deploy command. New turnover-package review corrections and test evidence are recorded in `BUILD_DIFFERENTIAL_AUDIT.md`. Production PostgreSQL is never used for automated tests; deployed browser acceptance and physical mobile acceptance remain distinct from local/CI checks.
+
+Historical audit follows.
+
 # Baseline Inheritance Audit — v6.9.43
 
 ## Exact authoritative source
 
 - Parent archive: `cloud-inventory-roi-v6.9.42-render-ready.zip`
 - Parent SHA-256: `df37636c660c0e4349fbcb2e99db074c7706fdd00a705eaf6d50ad224614a96b`
-- Materialized developer baseline commit: `a4a34de7238d82232fd6395e6fb6f57c42f2b51d`
-- Deployed production parent commit: `46af1f156f4852551c4714ac6660df790a1b3709`
+- Materialized baseline commit: `a4a34de7238d82232fd6395e6fb6f57c42f2b51d`
 - Baseline application/package/lineage version: `6.9.42`
 - Target version: `6.9.43`
 
-The named archive was hashed, opened directly, and extracted into a fresh workspace. The v6.9.43 corrective delta was applied forward onto the exact deployed v6.9.42 production commit so production-only release corrections, safeguards, and evidence remain intact. No earlier archive, abandoned worktree, prototype, or unbuilt attachment feature was substituted.
+The named archive was hashed, opened directly, extracted into a fresh workspace, and committed before production changes. No earlier archive, branch, reconstructed source, abandoned v6.9.43 worktree, prototype, or unbuilt attachment feature was substituted.
 
 ## Protected authorities
 
@@ -19,7 +28,7 @@ The named archive was hashed, opened directly, and extracted into a fresh worksp
 - Christie Persona: v1.0, unchanged.
 - Database migration level: 44 migrations through `044_admin_bulk_cleanup.sql`.
 - Output Registry: `src/shared/output-registry.js`, with every v6.9.42 active-output contract preserved.
-- Permanent regression inventory: the complete cumulative production test registry, preserved and extended monotonically.
+- Permanent regression inventory: the complete cumulative v6.9.42 test registry, preserved and extended monotonically.
 
 ## Active production paths inherited from v6.9.42
 
@@ -43,11 +52,11 @@ The named archive was hashed, opened directly, and extracted into a fresh worksp
 
 ## v6.9.42 certification evidence inherited as evidence only
 
-- Full automated suite: 728 passed, 0 failed, 3 skipped.
+- Full automated suite: 688 passed, 0 failed, 3 skipped.
 - Focused v6.9.42 suite: 163 passed, 0 failed, 0 skipped.
-- Production locks: 379 passed, 0 failed, 0 skipped.
+- Production locks: 339 passed, 0 failed, 0 skipped.
 - Output runtime matrix: all 28 active output IDs passed.
-- GitHub Node 22/PostgreSQL 16 certification and the live Render deployment succeeded for production commit `46af1f156f4852551c4714ac6660df790a1b3709`.
+- Disposable PostgreSQL/HTTP integration and authenticated deployed-browser certification were not executed in the local v6.9.42 package and must not be represented as passed by inheritance.
 
 ## Authorized v6.9.43 correction boundary
 
@@ -73,3 +82,20 @@ Sales Engineers retain cross-account access to all active customers for Solution
 SE Solution Fit Scope: Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.
 
 ---
+
+# v6.9.45 authoritative baseline addendum
+
+- Exact parent archive: `cloud-inventory-roi-v6.9.44-render-ready.zip`
+- Verified SHA-256: `6bd4f6a2f51037c5b794d2f5ae2d5d29fd1516f49008b2fc1f23a520de770df9`
+- Materialized baseline commit: `dbfcbcb`
+- Baseline application: `6.9.44`
+- Target application: `6.9.45`
+- ROI authority: ROI Model v2.8 / modelVersion 28, unchanged
+- Brand/Application Knowledge/Christie authorities: 1.0 / 1.0 / 1.0, unchanged
+- Database migration level: 045, unchanged; no v6.9.45 migration
+- Authoritative evidence repository: existing `handoff_attachments`; no second turnover attachment table
+- Active Solution Fit path: `public/solution-fit.js` → authenticated handoff routes → saved `handoffs` state
+- Private evidence path: authenticated attachment metadata → `src/storage/r2-storage.js` → private R2 object
+- Preserved: all v6.9.44 upload, stable-context, authorization, removal, reconciliation, Customer reassignment, Admin Cleanup, ROI, output, and AI protections
+
+The v6.9.45 change boundary is limited to consuming saved Solution Fit state and active governed attachments through one canonical turnover model, enhancing the existing internal Word output, and generating an on-demand manifest/ZIP. Generated packages are not persisted as a second source of truth.

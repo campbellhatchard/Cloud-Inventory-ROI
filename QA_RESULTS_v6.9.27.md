@@ -29,5 +29,3 @@ Local corrective-build validation completed with zero executed-test failures.
 Validation used Node.js v24.19.0 on Windows. The local runtime did not provide npm and no safe `DATABASE_URL` was supplied. Tests were therefore executed directly from the locked package scripts using the baseline dependency set. Dependency installation and PostgreSQL integration remain mandatory in CI/Render staging and are not represented as passing here.
 
 Final production readiness classification belongs to the Product Owner.
-
-SE Solution Fit Scope: Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.

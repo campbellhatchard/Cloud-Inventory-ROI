@@ -17,8 +17,3 @@
 7. Reload and switch away/back to confirm the applied provenance and count persist.
 
 Final deployment readiness remains a Product Owner decision.
-
-> SE Solution Fit Scope:
-> Sales Engineers have cross-account access to all active customers for
-> Solution Fit discovery/create/view/edit only. This does not confer general
-> cross-account customer, scenario or opportunity access.

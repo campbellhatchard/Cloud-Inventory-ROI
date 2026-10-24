@@ -20,6 +20,7 @@ const COMMANDS = [
   command('postgres-integration', 'npm run test:postgres', npm('run', 'test:postgres'), { databaseOnly: true }),
   command('r2-integration', 'npm run test:r2', npm('run', 'test:r2'), { r2Only: true }),
   command('full-test-suite', 'npm test', npm('test')),
+  command('v6945-ps-turnover-evidence', 'npm run test:v6945', npm('run', 'test:v6945')),
   command('v6944-solution-fit-evidence', 'npm run test:v6944', npm('run', 'test:v6944')),
   command('v6943-live-regression-corrections', 'npm run test:v6943', npm('run', 'test:v6943')),
   command('v6942-solution-fit-inventory-ui', 'npm run test:v6942', npm('run', 'test:v6942')),
@@ -88,7 +89,7 @@ function writePostgresResult(gates) {
   const suite = gates.find(gate => gate.name === 'postgres-integration');
   const identity = databaseIdentity();
   const available = identity.databaseUrlPresent;
-  const suites = ['test/routes.test.js', 'test/v653-postgres-integration.test.js', 'test/v663-postgres-authorization.test.js', 'test/v664-postgres-product-identity.test.js', 'test/v6930-postgres-value-application.test.js', 'test/v6934-postgres-customer-creation.test.js', 'test/v6935-postgres-ownership-transfer.test.js', 'test/v6936-postgres-admin-cleanup.test.js', 'test/v6937-postgres-roi-assumptions.test.js', 'test/v6941-postgres-solution-fit-stabilization.test.js', 'test/v6944-postgres-solution-fit-evidence.test.js'];
+  const suites = ['test/routes.test.js', 'test/v653-postgres-integration.test.js', 'test/v663-postgres-authorization.test.js', 'test/v664-postgres-product-identity.test.js', 'test/v6930-postgres-value-application.test.js', 'test/v6934-postgres-customer-creation.test.js', 'test/v6935-postgres-ownership-transfer.test.js', 'test/v6936-postgres-admin-cleanup.test.js', 'test/v6937-postgres-roi-assumptions.test.js', 'test/v6941-postgres-solution-fit-stabilization.test.js', 'test/v6944-postgres-solution-fit-evidence.test.js', 'test/v6945-postgres-ps-turnover.test.js'];
   const notTested = available ? Number(suite?.notTested || 0) : suites.length;
   const result = { release, generatedAt: new Date().toISOString(), ...identity, node: process.version,
     migration: { executed: Boolean(available && migration?.executed), exitCode: available ? migration?.exitCode : null, result: available ? (migration?.exitCode === 0 ? 'PASS' : 'FAIL') : 'NOT TESTED' },
@@ -102,8 +103,9 @@ function writeR2Result(gates) {
   const suite = gates.find(gate => gate.name === 'r2-integration');
   const config = storageConfig(process.env);
   const available = config.available;
-  const notTested = available ? Number(suite?.notTested || 0) : 1;
-  const result = { release, generatedAt: new Date().toISOString(), endpointHost: config.endpoint ? new URL(config.endpoint).host : null, bucket: config.bucket || null, region: config.region || null, credentialsPresent: available, command: 'npm run test:r2', operations: ['PUT', 'HEAD', 'GET', 'DELETE'], executed: Boolean(available && suite?.executed), passed: available ? Number(suite?.passed || 0) : 0, failed: available ? Number(suite?.failed || 0) : 0, skipped: available ? Number(suite?.skipped || 0) : 0, notTested, durationMs: Number(suite?.durationMs || 0), result: available && suite?.exitCode === 0 && !suite.skipped && !notTested ? 'PASS' : available ? 'FAIL' : 'NOT TESTED' };
+  const suites = ['test/v6944-r2-integration.test.js', 'test/v6945-r2-turnover-package.test.js'];
+  const notTested = available ? Number(suite?.notTested || 0) : suites.length;
+  const result = { release, generatedAt: new Date().toISOString(), endpointHost: config.endpoint ? new URL(config.endpoint).host : null, bucket: config.bucket || null, region: config.region || null, credentialsPresent: available, command: 'npm run test:r2', suites, operations: ['PUT', 'HEAD', 'GET', 'DELETE', 'PS Turnover ZIP stream'], executed: Boolean(available && suite?.executed), passed: available ? Number(suite?.passed || 0) : 0, failed: available ? Number(suite?.failed || 0) : 0, skipped: available ? Number(suite?.skipped || 0) : 0, notTested, durationMs: Number(suite?.durationMs || 0), result: available && suite?.exitCode === 0 && !suite.skipped && !notTested ? 'PASS' : available ? 'FAIL' : 'NOT TESTED' };
   fs.writeFileSync(path.join(root, `R2_INTEGRATION_RESULTS_v${release}.json`), JSON.stringify(result, null, 2) + '\n');
   return result;
 }

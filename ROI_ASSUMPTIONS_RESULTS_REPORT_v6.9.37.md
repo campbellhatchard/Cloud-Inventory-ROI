@@ -6,7 +6,7 @@ v6.9.37 adds an authenticated customer-facing **ROI Assumptions & Results Summar
 
 ## 2. Authoritative Baseline
 
-The package parent is `cloud-inventory-roi-v6.9.36-render-ready.zip`, SHA-256 `17edbfff2bcd94e0a165a4e9771a940e96447846761fdf2e3036b39d2bc09128`. The candidate is applied forward from the exact deployed v6.9.36 GitHub baseline `2b3a5b5231e445a32071ecfb9581e3067ce15c6e`; the developer source snapshot `ad9ad813191bef9601376a19e4728e9dcb9506a5` is retained separately for traceability. v6.9.35 ownership reassignment and v6.9.36 cleanup/recovery are preserved.
+The only parent is `cloud-inventory-roi-v6.9.36-render-ready.zip`, SHA-256 `17edbfff2bcd94e0a165a4e9771a940e96447846761fdf2e3036b39d2bc09128`, committed immediately after extraction as `ad9ad813191bef9601376a19e4728e9dcb9506a5`. v6.9.35 ownership reassignment and v6.9.36 cleanup/recovery are preserved.
 
 ## 3. Existing ROI Authority
 
@@ -109,7 +109,7 @@ v6.9.36 Admin Cleanup tests remain in the focused and permanent suites. The focu
 
 ## 23. Full Regression Results
 
-The corrected focused suite completed 113 passed, 0 failed, 1 PostgreSQL skip. The complete suite completed 704 passed, 0 failed, 3 database-dependent skips. Production locks completed 355 passed, 0 failed; Brand tests completed 19 passed, 0 failed; all 27 active outputs executed and passed. Routes, lineage, generated assets/knowledge, and output audit passed. Counts overlap because permanent gates deliberately repeat critical controls. Machine evidence is stored in `RELEASE_GATE_RESULTS_v6.9.37.json`.
+The focused suite completed 112 passed, 0 failed, 1 PostgreSQL skip. The complete suite completed 664 passed, 0 failed, 3 database-dependent skips. Production locks completed 315 passed, 0 failed; Brand tests completed 19 passed, 0 failed; all 27 active outputs executed and passed. Routes, lineage, generated assets/knowledge, and output audit passed. Counts overlap because permanent gates deliberately repeat critical controls. Machine evidence is stored in `RELEASE_GATE_RESULTS_v6.9.37.json`.
 
 ## 24. Performance
 

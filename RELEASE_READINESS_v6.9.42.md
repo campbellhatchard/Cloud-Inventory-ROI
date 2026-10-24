@@ -6,7 +6,7 @@ The source implements the approved General Inventory Configuration presentation 
 
 ## Local certification
 
-All 22 locally executable gates passed under Node v22.22.0. The full suite recorded 728 passed / 0 failed / 3 skipped; the focused v6.9.42 gate recorded 163 / 0 / 0; production locks recorded 379 / 0 / 0; Brand recorded 19 / 0 / 0; and the runtime matrix recorded 29 / 0 / 0 with passing results for all 28 active output IDs.
+All 22 locally executable gates passed under Node v22.22.0. The full suite recorded 688 passed / 0 failed / 3 skipped; the focused v6.9.42 gate recorded 163 / 0 / 0; production locks recorded 339 / 0 / 0; Brand recorded 19 / 0 / 0; and the runtime matrix recorded 29 / 0 / 0 with passing results for all 28 active output IDs.
 
 ## Outstanding certification
 

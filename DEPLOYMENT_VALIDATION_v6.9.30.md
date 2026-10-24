@@ -11,8 +11,3 @@ After deployment, verify `/health` reports `6.9.30`, sign in with an authorized 
 7. Smoke-test customer switching, Calculator, Executive outputs, Proposal, JPP, Stakeholder Map, Solution Fit, Competitive outputs, Methodology, Impact Map, Role One-Pager, Customer Business Case, Prospect preview, and Customer Value Email.
 
 Final production classification remains the Product Owner's decision after CI and live Render validation.
-
-> SE Solution Fit Scope:
-> Sales Engineers have cross-account access to all active customers for
-> Solution Fit discovery/create/view/edit only. This does not confer general
-> cross-account customer, scenario or opportunity access.

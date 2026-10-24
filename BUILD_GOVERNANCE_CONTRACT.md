@@ -416,6 +416,10 @@ A controlled production pilot cannot be classified GREEN when a registered Postg
 
 Solution Fit evidence is a server-authoritative record associated with the saved customer, saved Solution Fit, and a governed stable context identity. Evidence may never be stored only in browser state, embedded as base64 in Solution Fit JSON, associated by display name or array index, or exposed through a permanent public object URL. Private object access must be short-lived and authorized through the current Solution Fit capability. An attachment becomes active only after the server verifies the uploaded object. Individual removal must preserve uploader/remover audit history and must not remove another attachment with the same filename.
 
+## 0.38 PS TURNOVER EVIDENCE PACKAGE INVARIANT
+
+Solution Fit remains the sole owner of Professional Services turnover evidence. Every PS Turnover document, manifest, and evidence ZIP must be generated server-side from one canonical saved Solution Fit model and the exact ACTIVE attachment snapshot for that Solution Fit and customer. Stable process, gap, integration, and attachment identities—not display names—govern grouping and isolation. Removed, pending, failed, abandoned, cross-customer, and cross-fit evidence must never enter an output. The ZIP must contain the authoritative private object bytes, use sanitized collision-safe paths, and fail closed if any active object cannot be retrieved; a partial archive may never be presented as complete. The Word document and CSV manifest must describe the same attachment set. Authorization must use the current Solution Fit capability, generated artifacts must remain Internal Use Only, and storage credentials, private keys, and presigned URLs may not appear in any output or client log.
+
 ---
 ## SE SOLUTION FIT DISCOVERABILITY INVARIANT
 

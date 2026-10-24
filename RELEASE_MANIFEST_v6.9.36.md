@@ -4,8 +4,7 @@
 
 - Parent: `cloud-inventory-roi-v6.9.35-render-ready.zip`
 - Parent SHA-256: `666727f7e4a6e762b8fd91435cb1edf7d52bd6f46c333f0c634ea575e17392db`
-- Deployed production parent commit: `b64a9294e86505bd50eee5c935499f6bf4992645`
-- Developer source snapshot: `3a31e89cf845ed57806152e220ea944c59f2d49a`
+- Exact extracted baseline commit: `3a31e89cf845ed57806152e220ea944c59f2d49a`
 - Target: `6.9.36`
 - ROI Model: v2.8 / `modelVersion` 28, unchanged
 - Brand System, Application Knowledge, Christie Persona: v1.0, unchanged
@@ -21,9 +20,6 @@ Migration `044_admin_bulk_cleanup.sql` adds nullable creator attribution for new
 ## Evidence and calculation authority
 
 No ROI formula, economic semantic, Prospect submission, Value History, Rep Confirmed, Buyer Evidence, output, or customer-facing content authority changed. Cleanup uses soft removal and preserves immutable evidence and historical identities.
-
-SE Solution Fit Scope:
-Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.
 
 ## Certification evidence
 

@@ -5,7 +5,6 @@
 - Parent: `cloud-inventory-roi-v6.9.42-render-ready.zip`
 - Parent SHA-256: `df37636c660c0e4349fbcb2e99db074c7706fdd00a705eaf6d50ad224614a96b`
 - Materialized parent commit: `a4a34de7238d82232fd6395e6fb6f57c42f2b51d`
-- Deployed production parent: `6.9.42` at `46af1f156f4852551c4714ac6660df790a1b3709`
 - Target: `6.9.43`
 - ROI Model authority: v2.8 / `modelVersion` 28, unchanged
 - Brand System, Application Knowledge, and Christie Persona: v1.0, unchanged

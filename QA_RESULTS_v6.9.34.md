@@ -1,10 +1,5 @@
 # v6.9.34 QA Results
 
-> SE Solution Fit Scope:
-> Sales Engineers have cross-account access to all active customers for
-> Solution Fit discovery/create/view/edit only. This does not confer general
-> cross-account customer, scenario or opportunity access.
-
 ## Result summary
 
 All executable local gates passed with zero failures.
@@ -12,9 +7,8 @@ All executable local gates passed with zero failures.
 | Gate | Passed | Failed | Skipped / Not tested |
 |---|---:|---:|---:|
 | Focused customer/context/alert + switcher/UI/ROI | 71 | 0 | 0 |
-| Full inherited application suite | 650 | 0 | 2 database-only skips |
-| Production regression locks | 301 | 0 | 0 |
-| v6.9.33 Proposal export lock | 35 | 0 | 0 |
+| Full inherited application suite | 645 | 0 | 2 database-only skips |
+| Production regression locks | 262 | 0 | 0 |
 | Active output runtime matrix | 26 | 0 | 0 |
 | Brand System tests | 19 | 0 | 0 |
 | Version consistency | 1 | 0 | 0 |
@@ -39,7 +33,7 @@ The output runtime matrix executed all 25 active output IDs plus its registry-co
 
 ## Environment limitations
 
-No safe `DATABASE_URL` or local PostgreSQL service was available. The new real HTTP/PostgreSQL suite, `test/v6934-postgres-customer-creation.test.js`, is registered in `test:postgres` but is truthfully recorded as NOT TESTED locally. An independent fresh production-dependency install passed, but the local runtime was Node 24; the supported Node 22 and PostgreSQL 16 certification remains the responsibility of the mandatory GitHub Actions gate.
+No safe `DATABASE_URL` or local PostgreSQL service was available. The new real HTTP/PostgreSQL suite, `test/v6934-postgres-customer-creation.test.js`, is registered in `test:postgres` but is truthfully recorded as NOT TESTED locally. The npm CLI was also unavailable, so tests used the bundled Node runtime and the installed production dependencies; a fresh `npm ci` gate is NOT TESTED in this workspace.
 
 The deployed site still runs the prior release while this package is being built. Pre-change browser behavior was reproduced against v6.9.33. Post-change browser and refresh/logout/login persistence certification must occur after v6.9.34 is deployed.
 

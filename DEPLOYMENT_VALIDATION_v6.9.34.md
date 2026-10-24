@@ -1,10 +1,5 @@
 # v6.9.34 Deployment Validation
 
-> SE Solution Fit Scope:
-> Sales Engineers have cross-account access to all active customers for
-> Solution Fit discovery/create/view/edit only. This does not confer general
-> cross-account customer, scenario or opportunity access.
-
 ## Before deployment
 
 - Deploy only `cloud-inventory-roi-v6.9.34-render-ready.zip` or its validated Git commit.

@@ -15,8 +15,7 @@ No ROI, evidence, authorization, role, output, migration, or persistence methodo
 
 - Archive: `cloud-inventory-roi-v6.9.30-render-ready.zip`
 - SHA-256: `7fc2308848fc1a1a5d5c80964824ddad6e2e3b05a91083c975619247aeb4cdea`
-- Deployed GitHub parent commit: `d3d848f6e6e58b15f4117456095b37b79ae220ae`
-- Developer source snapshot: `ca96786c35e793ab5839299c8a80366a22ab66c2`
+- Exact extracted baseline commit: `ca96786c35e793ab5839299c8a80366a22ab66c2`
 - Baseline version: `6.9.30`
 - Target version: `6.9.31`
 - ROI authority: ROI Model v2.8 / `modelVersion` 28

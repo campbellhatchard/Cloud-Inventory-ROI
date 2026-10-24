@@ -1,14 +1,14 @@
 {
   "release": "6.9.33",
-  "generatedAt": "2026-10-06T18:35:00.391Z",
-  "databaseUrlPresent": false,
-  "databaseName": null,
-  "postgresqlVersion": "NOT TESTED",
-  "node": "v24.19.0",
+  "generatedAt": "2026-10-06T16:34:19.364Z",
+  "databaseUrlPresent": true,
+  "databaseName": "cloud_inventory_test",
+  "postgresqlVersion": "PostgreSQL 16.14, compiled by Visual C++ build 1944, 64-bit",
+  "node": "v22.22.0",
   "migration": {
-    "executed": false,
-    "exitCode": null,
-    "result": "NOT TESTED"
+    "executed": true,
+    "exitCode": 0,
+    "result": "PASS"
   },
   "command": "npm run test:postgres",
   "suites": [
@@ -18,10 +18,10 @@
     "test/v664-postgres-product-identity.test.js",
     "test/v6930-postgres-value-application.test.js"
   ],
-  "passed": 0,
+  "passed": 23,
   "failed": 0,
   "skipped": 0,
-  "notTested": 5,
-  "durationMs": 0,
-  "result": "NOT TESTED"
+  "notTested": 0,
+  "durationMs": 177183,
+  "result": "PASS"
 }

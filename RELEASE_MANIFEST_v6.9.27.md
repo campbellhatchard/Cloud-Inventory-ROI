@@ -4,8 +4,7 @@
 
 - Parent archive: `cloud-inventory-roi-v6.9.26-render-ready.zip`
 - Parent SHA-256: `1b6ffd73e9c7210abad8defc0fb1f8460a314eb1823bdb38a44442d247e3ed0a`
-- Production parent Git commit: `79b1efee047346214b327cfebc8563c1a509570a`
-- Developer source snapshot: `424476d2e7caf2b98b772378ea3105a88d87e8ad`
+- Parent Git commit: `424476d2e7caf2b98b772378ea3105a88d87e8ad`
 - Target release: `6.9.27`
 
 ## Scope
@@ -29,7 +28,3 @@ Migration 040 removes orphan Joint Project Plan scenario references, adds the sc
 - Production locks: 249 passed, 0 failed.
 - Active output runtime: all 25 active outputs passed their production-builder smoke.
 - PostgreSQL integration and dependency installation: NOT TESTED locally; required in CI/staging.
-
-## Authorization boundary
-
-SE Solution Fit Scope: Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.

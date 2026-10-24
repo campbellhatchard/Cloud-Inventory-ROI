@@ -34,10 +34,3 @@ Stop rollout for any economic mismatch, provenance inflation, overlap mismatch, 
 ## Validation status
 
 This deployment checklist is **PENDING**. It was not executed against Render during the local build. Product Owner approval is required after completion.
-
-## SE Solution Fit Scope
-
-Sales Engineers have cross-account access to all active customers for
-Solution Fit discovery/create/view/edit only. This does not confer general
-cross-account customer, scenario or opportunity access.
-

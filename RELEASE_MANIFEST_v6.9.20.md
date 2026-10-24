@@ -1,6 +1,6 @@
 # Cloud Inventory ROI v6.9.20 Release Manifest
 
-Corrective release built from the exact v6.9.19 production Git state, archived as `Cloud-Inventory-ROI-v6.9.19-Exact-Deployed-Source-1c42d3c.zip` (SHA-256 `80f1efb7552f01071c987809b313409059fa8476fde5a55c4fb5b22df98074f5`, Git commit `1c42d3c1e150c9318eebc11dd45b11bb5c493c72`).
+Corrective release built from `cloud-inventory-roi-v6.9.19-render-ready.zip` (SHA-256 `bbae47120385894a19affa0f081b559e460be1c37f998775de21e4f6566384f1`, Git commit `2fb945a05dd8d3f7c81b58536c23fe1870df3e23`).
 
 This release bounds the complete Executive PDF and PowerPoint workflows with client and server timeouts, restores export controls with actionable retry errors, and collapses legacy Sales Engineer labels into one canonical profile badge.
 

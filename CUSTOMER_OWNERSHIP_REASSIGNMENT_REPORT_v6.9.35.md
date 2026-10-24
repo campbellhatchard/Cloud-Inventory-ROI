@@ -8,8 +8,7 @@ v6.9.35 adds one Admin-only operation that transfers a Customer's current operat
 
 - Parent: `cloud-inventory-roi-v6.9.34-render-ready.zip`
 - SHA-256: `6c0458c45541fb0cf955bb0d6c460c9bcd65acede98ceade148e33a914acdb08`
-- Deployed production parent commit: `9fcbce9a527d2565f95f6c70e6cefe9581a9e50d`
-- Developer source snapshot: `9cf1e0c12e8ecf64f687db2772fcd8bdf08cba18`
+- Exact extracted baseline commit: `9cf1e0c12e8ecf64f687db2772fcd8bdf08cba18`
 - Target: v6.9.35
 - ROI Model: v2.8 / modelVersion 28, unchanged
 
@@ -99,12 +98,12 @@ Executable role/authorization tests passed for Admin, Admin multi-role, Rep, Sal
 ## 19. Full Regression Results
 
 - Focused ownership/authorization/migration/UI/switcher/ROI gate: 89 passed, 0 failed, 0 skipped.
-- Full inherited application gate: 679 passed, 0 failed, 2 database-dependent skips.
-- Production regression locks: 330 passed, 0 failed, 0 skipped.
+- Full inherited application gate: 674 passed, 0 failed, 2 database-dependent skips.
+- Production regression locks: 291 passed, 0 failed, 0 skipped.
 - Active output runtime matrix: 26 passed, including 25 active outputs, 0 failed.
 - Brand System gate: 19 passed, 0 failed.
 - PostgreSQL suites: 0 passed, 0 failed, 7 suites NOT TESTED (no safe database).
-- Fresh locked `npm ci --no-audit --no-fund`: passed under Node v24.19.0 with the expected engine warning. Exact configured Node 22 execution remains a CI/deployment gate.
+- Fresh `npm ci`: NOT TESTED because an npm CLI/network install path is unavailable in this workspace; tests used bundled Node v24.19.0 and the previously installed production dependency set. Exact configured Node 22 execution remains a CI/deployment gate.
 
 ## 20. Files Changed
 

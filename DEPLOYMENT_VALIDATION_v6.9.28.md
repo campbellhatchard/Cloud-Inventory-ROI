@@ -2,7 +2,7 @@
 
 ## Current state
 
-The corrective-candidate archive has been supplied and independently validated for controlled deployment. GitHub Actions PostgreSQL certification and deployed-browser validation remain pending. v6.9.28 has not yet been deployed.
+Not executed. v6.9.28 has not been packaged or deployed because the governing build prompt requires PostgreSQL integration, browser regression, and final verification before packaging.
 
 ## Required staging procedure
 
@@ -30,8 +30,6 @@ The corrective-candidate archive has been supplied and independently validated f
 - Prospect modal contrast/focus while tours or Help overlays are active
 - AI generation, explicit save/accept, persistence, provenance, and no cross-customer leakage
 
-SE Solution Fit Scope: Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.
-
 ## Result
 
-PENDING — require the isolated GitHub Actions PostgreSQL gate and post-deployment browser validation. No production database is used for pre-deployment certification.
+BLOCKED — no safe PostgreSQL URL and no deployed v6.9.28 runtime were available in this build environment.

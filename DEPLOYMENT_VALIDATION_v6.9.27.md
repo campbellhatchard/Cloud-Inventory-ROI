@@ -20,5 +20,3 @@
 - Audit purge GET must only display confirmation; deletion occurs only after the POST confirmation.
 
 This document is a deployment checklist, not evidence that live Render validation has already occurred.
-
-SE Solution Fit Scope: Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.

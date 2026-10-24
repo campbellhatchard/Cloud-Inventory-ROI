@@ -13,7 +13,7 @@ The focused gate covers exact questions and answer values, deterministic state r
 
 ## Complete local release-runner evidence
 
-The machine-generated runner completed under Node v22.22.0 and npm 11.9.0. All 22 executable gates passed; 2 database-dependent gates were correctly recorded NOT TESTED. Command-level totals are 2,201 passed, 0 failed, and 5 skipped; these totals overlap because permanent protections run in multiple focused gates. The full suite recorded 728 passed / 0 failed / 3 skipped, production locks 379 / 0 / 0, Brand 19 / 0 / 0, and the output matrix 29 / 0 / 0 with 28/28 active output results passed.
+The machine-generated runner completed under Node v22.22.0 and npm 10.9.4. All 22 executable gates passed; 2 database-dependent gates were correctly recorded NOT TESTED. Command-level totals are 2,119 passed, 0 failed, and 5 skipped; these totals overlap because permanent protections run in multiple focused gates. The full suite recorded 688 passed / 0 failed / 3 skipped, production locks 339 / 0 / 0, Brand 19 / 0 / 0, and the output matrix 29 / 0 / 0 with 28/28 active output results passed.
 
 ## Interactive status
 

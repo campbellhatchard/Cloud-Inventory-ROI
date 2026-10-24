@@ -2,11 +2,11 @@
 
 ## Current result
 
-The machine-generated local release runner completed with no failed executable gate. The full application command recorded 728 TAP tests passed, 0 failed, and 3 skipped; it also completed the inherited legacy ROI assertions. The focused v6.9.40 Solution Fit scope/switch gate passed 72 tests, with 0 failures and 0 skips.
+The machine-generated local release runner completed with no failed executable gate. The full application command recorded 688 TAP tests passed, 0 failed, and 3 skipped; it also completed the inherited legacy ROI assertions. The focused v6.9.40 Solution Fit scope/switch gate passed 72 tests, with 0 failures and 0 skips.
 
 ## Independent release gates
 
-- Production locks: 379 passed, 0 failed, 0 skipped.
+- Production locks: 339 passed, 0 failed, 0 skipped.
 - v6.9.39 Solution Fit inheritance gate: 84 passed, 0 failed, 0 skipped.
 - Routes: exit code 0; this legacy command does not emit TAP counters.
 - Brand: 19 passed, 0 failed, 0 skipped.

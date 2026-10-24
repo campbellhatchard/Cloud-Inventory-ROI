@@ -4,11 +4,11 @@
     "archive": "cloud-inventory-roi-v6.9.37-render-ready.zip",
     "sha256": "ea4c0b157743514f0f30b4ab57076fa2423082150fa07806f2bbee52427fe7da"
   },
-  "generatedAt": "2026-10-12T19:23:25.749Z",
+  "generatedAt": "2026-10-12T18:53:46.102Z",
   "environment": {
     "node": "v24.19.0",
-    "npm": "11.9.0",
-    "platform": "linux-x64",
+    "npm": "NOT TESTED",
+    "platform": "win32-x64",
     "databaseAvailable": false,
     "databaseIntegrationRequired": false,
     "nodeEnv": "test"
@@ -25,7 +25,7 @@
       "notTested": 1,
       "durationMs": 0,
       "result": "NOT TESTED",
-      "reason": "Dependency installation is reserved for the clean CI checkout."
+      "reason": "npm is not installed in the local desktop runtime."
     },
     {
       "name": "postgres-integration",
@@ -44,26 +44,26 @@
       "name": "full-test-suite",
       "command": "npm test (exact package script executed command-by-command)",
       "notTested": 0,
-      "passed": 667,
+      "passed": 666,
       "failed": 0,
       "skipped": 3,
       "legacyAssertionChecksPassed": 149,
       "executed": true,
       "exitCode": 0,
-      "durationMs": 2552,
+      "durationMs": 5982,
       "result": "PASS"
     },
     {
       "name": "production-locks",
       "command": "npm run test:production-locks (exact package script executed command-by-command)",
       "notTested": 0,
-      "passed": 318,
+      "passed": 317,
       "failed": 0,
       "skipped": 0,
       "legacyAssertionChecksPassed": 0,
       "executed": true,
       "exitCode": 0,
-      "durationMs": 1530,
+      "durationMs": 3318,
       "result": "PASS"
     },
     {
@@ -76,7 +76,7 @@
       "legacyAssertionChecksPassed": 0,
       "executed": true,
       "exitCode": 0,
-      "durationMs": 143,
+      "durationMs": 320,
       "result": "NOT TESTED"
     },
     {
@@ -89,7 +89,7 @@
       "legacyAssertionChecksPassed": 0,
       "executed": true,
       "exitCode": 0,
-      "durationMs": 285,
+      "durationMs": 352,
       "result": "PASS"
     },
     {
@@ -102,7 +102,7 @@
       "legacyAssertionChecksPassed": 0,
       "executed": true,
       "exitCode": 0,
-      "durationMs": 72,
+      "durationMs": 128,
       "result": "PASS"
     },
     {
@@ -115,7 +115,7 @@
       "legacyAssertionChecksPassed": 0,
       "executed": true,
       "exitCode": 0,
-      "durationMs": 81,
+      "durationMs": 154,
       "result": "PASS"
     },
     {
@@ -128,7 +128,7 @@
       "legacyAssertionChecksPassed": 0,
       "executed": true,
       "exitCode": 0,
-      "durationMs": 60,
+      "durationMs": 132,
       "result": "PASS"
     },
     {
@@ -141,7 +141,7 @@
       "legacyAssertionChecksPassed": 0,
       "executed": true,
       "exitCode": 0,
-      "durationMs": 66,
+      "durationMs": 178,
       "result": "PASS"
     },
     {
@@ -154,13 +154,13 @@
       "legacyAssertionChecksPassed": 0,
       "executed": true,
       "exitCode": 0,
-      "durationMs": 676,
+      "durationMs": 864,
       "result": "PASS"
     }
   ],
   "postgresIntegration": {
     "release": "6.9.38",
-    "generatedAt": "2026-10-12T19:23:25.749Z",
+    "generatedAt": "2026-10-12T18:53:46.102Z",
     "databaseUrlPresent": false,
     "databaseName": null,
     "postgresqlVersion": "NOT TESTED",
@@ -194,7 +194,7 @@
     "executedGatesPassed": true,
     "failedGates": [],
     "databaseDependentTests": "NOT TESTED",
-    "dependencyInstall": "NOT TESTED — clean CI only",
+    "dependencyInstall": "NOT TESTED — npm unavailable",
     "productionClassification": "UNASSIGNED — Product Owner decision after CI and Render validation"
   }
 }

@@ -6,7 +6,7 @@ The Solution Fit setup dialog now defines product scope only for MEP, CIP, and E
 
 ## 2. Authoritative Baseline
 
-The build started from `cloud-inventory-roi-v6.9.39-render-ready.zip`, verified at SHA-256 `071a32de3aa3b56f75fb13aa66d499d5ec40faba6abb79985bda711f5f2f287d`. Its developer source snapshot `069f02b8ed42d78e21dd0b583acdb2a3c9274674` was applied forward to the deployed parent commit `3ad081be117574568d7608bdf952d1ef034924ca`.
+The build started only from `cloud-inventory-roi-v6.9.39-render-ready.zip`, verified at SHA-256 `071a32de3aa3b56f75fb13aa66d499d5ec40faba6abb79985bda711f5f2f287d`, materialized as commit `069f02b8ed42d78e21dd0b583acdb2a3c9274674`.
 
 ## 3. Existing Setup Architecture
 
@@ -62,7 +62,7 @@ NOT TESTED locally. The package was not deployed during this build, and no safe 
 
 ## 16. Automated Test Results
 
-The dedicated v6.9.40 gate passed 72 tests with 0 failures and 0 skips. The full application command passed 728 tests with 0 failures and 3 skips; production locks passed 379/379; Brand passed 19/19; and the active output runtime matrix passed 29/29. Machine evidence is recorded in `RELEASE_GATE_RESULTS_v6.9.40.json`.
+The dedicated v6.9.40 gate passed 72 tests with 0 failures and 0 skips. The full application command passed 688 tests with 0 failures and 3 skips; production locks passed 339/339; Brand passed 19/19; and the active output runtime matrix passed 29/29. Machine evidence is recorded in `RELEASE_GATE_RESULTS_v6.9.40.json`.
 
 ## 17. PostgreSQL / Persistence Results
 

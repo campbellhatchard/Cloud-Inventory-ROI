@@ -6,7 +6,7 @@ The focused source change is implemented: setup owns product scope only, the mai
 
 ## Local certification
 
-Complete for all locally executable gates. The full application command passed 728 tests with 0 failures and 3 skips. The dedicated v6.9.40 gate passed 72/72, production locks passed 379/379, Brand passed 19/19, and the active output matrix passed 29/29 while producing a successful result for all 28 active registry outputs.
+Complete for all locally executable gates. The full application command passed 688 tests with 0 failures and 3 skips. The dedicated v6.9.40 gate passed 72/72, production locks passed 339/339, Brand passed 19/19, and the active output matrix passed 29/29 while producing a successful result for all 28 active registry outputs.
 
 ## Outstanding certification
 

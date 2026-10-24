@@ -26,8 +26,3 @@ The Codex in-app Chromium browser ran against v6.9.31 and the disposable databas
 - Chrome, Edge, Safari/WebKit, and a third-party credential manager profile were not available and are not claimed.
 
 Machine evidence is in `RELEASE_GATE_RESULTS_v6.9.31.json`, `POSTGRES_INTEGRATION_RESULTS_v6.9.31.json`, and `OUTPUT_RUNTIME_RESULTS_v6.9.31.json`.
-
-> SE Solution Fit Scope:
-> Sales Engineers have cross-account access to all active customers for
-> Solution Fit discovery/create/view/edit only. This does not confer general
-> cross-account customer, scenario or opportunity access.

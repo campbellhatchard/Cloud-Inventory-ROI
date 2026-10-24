@@ -11,5 +11,3 @@
 - Live Render role-based regression: pending deployment.
 
 No GREEN/YELLOW/RED classification is assigned by this build. The Product Owner should classify the release after PostgreSQL CI and live Render validation.
-
-SE Solution Fit Scope: Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.

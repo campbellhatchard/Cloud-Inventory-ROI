@@ -92,11 +92,16 @@ test('Professional Services turnover Word output is built from saved Solution Fi
   assert.match(documentXml,/CONFIDENTIAL/);
 });
 
-test('turnover route reads the saved handoff and fails closed when required fields are missing',()=>{
+test('turnover route uses the canonical saved-handoff loader and fails closed when required fields are missing',()=>{
   const route=read('src/routes/handoffs.js');
+  const service=read('src/services/ps-turnover-service.js');
+  const turnoverRoute=route.slice(route.indexOf("router.get('/:customerId/export-docx'"),route.indexOf("router.get('/:customerId/turnover-package/preview'"));
   assert.match(route,/router\.get\('\/:customerId\/export-docx'/);
-  assert.match(route,/SELECT h\.data,h\.primary_se_id,pse\.username primary_se_name FROM handoffs h/);
-  assert.match(route,/SolutionFitState\.turnoverStats\(state\)/);
+  assert.match(route,/loadPSTurnoverModel\(\{customerId:req\.params\.customerId,user:req\.user\}\)/);
   assert.match(route,/if\(turnover\.missing\.length\)return res\.status\(409\)/);
-  assert.match(route,/buildSolutionFitTurnoverDocx\(\{data:state/);
+  assert.match(route,/buildSolutionFitTurnoverDocx\(\{model,previews,logoData:/);
+  assert.doesNotMatch(turnoverRoute,/SELECT h\.data,h\.primary_se_id,pse\.username primary_se_name FROM handoffs h/);
+  assert.match(service,/FROM handoffs h/);
+  assert.match(service,/SolutionFitState\.turnoverStats\(model\.state\)/);
+  assert.match(service,/SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY/);
 });

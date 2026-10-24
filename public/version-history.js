@@ -7,6 +7,18 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.45', date: '2026-10-23', tag: 'ps-turnover-evidence',
+    title: 'Professional Services turnover evidence package',
+    summary: 'Connects the saved Solution Fit evidence repository to the internal Professional Services turnover document, manifest, and downloadable evidence package without changing ROI calculations or Solution Fit readiness.',
+    highlights: [
+      'The PS Turnover Word document now includes an evidence summary, stable application and gap groupings, selected photo previews, and complete attachment references.',
+      'A server-authorized package download includes PS-Turnover.docx, Attachment-Manifest.csv, and every active evidence file from the saved Solution Fit snapshot.',
+      'Private R2 files stream through the server into a transient ZIP; storage secrets and presigned URLs are not written into the document or manifest.',
+      'Removed and incomplete evidence is excluded, duplicate filenames are collision-safe, unsafe paths are sanitized, and same-name applications remain isolated by stable context.',
+      'Package generation blocks unsaved Solution Fit changes, reports progress and failures, and leaves readiness scoring unchanged.'
+    ]
+  },
+  {
     version: '6.9.44', date: '2026-10-23', tag: 'solution-fit-evidence',
     title: 'Private Solution Fit evidence and attachments',
     summary: 'Adds secure, server-authoritative photo and document evidence to the saved Solution Fit without changing ROI calculations, assessment identity, authorization scope, or Professional Services output behavior.',

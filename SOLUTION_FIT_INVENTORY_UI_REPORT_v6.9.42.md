@@ -9,7 +9,6 @@ The General Inventory Configuration step now presents the existing ten requireme
 - Parent archive: `cloud-inventory-roi-v6.9.41-render-ready.zip`
 - Verified SHA-256: `00c4bb8daf4e188824a1726fb81871454e9e491b3b2797c1246e2d7ea99934ec`
 - Materialized parent commit: `cfee9275b073fdb9f074a61daaf4460e87227ba2`
-- Deployed production parent: `6.9.40` at `212712ae890f74c09f4f439e4007b63b0c6a8dd9`
 - Target: `6.9.42`
 - ROI Model v2.8 / modelVersion 28: unchanged
 
