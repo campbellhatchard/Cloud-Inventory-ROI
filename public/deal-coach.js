@@ -43,7 +43,7 @@
   async function saveRepAssessment(stage){if(!window._calcScenarioId||!canEditAssessment(_stageReadiness)||_stageReadiness?.currentStageNumber===7)return;const r=await apiFetch('/api/stage-readiness/'+window._calcScenarioId,{method:'PUT',body:JSON.stringify({repAssessedStage:Number(stage)})});if(!r||!r.ok){showToast?.('Rep Assessment could not be updated.');return;}_stageReadiness=await r.json();document.getElementById('coachAssessmentModal')?.remove();showToast?.('Rep Assessment updated. The official Current BuyCycle Stage did not change.');render();}
   function discoveryEvidence(){
     if(typeof discoveryAnswers==='undefined')return [];
-    let questions=[]; try{questions=typeof getDiscoveryQuestions==='function'?getDiscoveryQuestions(values().industry).flatMap(s=>s.questions||[]):[];}catch(_){}
+    let questions=[]; try{questions=typeof getApplicableQuestionnaire==='function'?getApplicableQuestionnaire(values().industry,{hasFieldInventory:!!window._hasFieldInventory}).flatMap(s=>s.questions||[]):typeof getDiscoveryQuestions==='function'?getDiscoveryQuestions(values().industry).flatMap(s=>s.questions||[]):[];}catch(_){}
     return Object.keys(discoveryAnswers).filter(k=>!k.endsWith('_by')&&String(discoveryAnswers[k]||'').trim()).map(id=>{
       const q=questions.find(x=>x.id===id); return {question:q?.text||id,answer:String(discoveryAnswers[id]),evidenceClass:discoveryAnswers[id+'_by']==='prospect'?'Customer-Confirmed Fact':'Needs Customer Validation',enteredBy:discoveryAnswers[id+'_by']||'rep'};
     }).slice(0,40);

@@ -105,3 +105,25 @@ No file upload, evidence attachment, attachment gallery, new product feature, ne
 ## Explicitly unchanged
 
 No database migration, second evidence repository, browser-local authority, ROI formula, Prospect evidence rule, Customer ownership rule, SE capability, Solution Fit stable identity, attachment upload workflow, public output, or customer-facing classification was changed.
+
+---
+
+# v6.9.46 Differential Audit
+
+## Exact comparison
+
+The correction starts from `cloud-inventory-roi-v6.9.45-render-ready(1).zip`, SHA-256 `dece15e61fab898350166e5279a3c5eb53d522218e3d6ba2158ee4aa6c8aea31`, materialized as untouched baseline commit `6adf41b`. No prior release or reconstructed branch was used.
+
+## Authorized corrections
+
+- Added a canonical, backward-compatible Executive Narrative projection and routed the Executive Value Story through it.
+- Unified Prospect, Discovery, evidence review, and Impact Map applicability through the existing governed questionnaire source.
+- Classified package rows by stable governed catalog identity while preserving independent custom and legacy records.
+- Reconciled server-confirmed ACTIVE evidence into the visible saved list, removed completed queue items, and enforced single-flight uploads.
+- Added a null-preserving read-time scenario financial summary used by both Saved Scenarios and Compare.
+- Added a structured Solution Fit application-label formatter that removes only repeated semantic context.
+- Added focused semantic artifact and behavior regression coverage for all six defects and the existing Deal Coach timeout fallback.
+
+## Explicitly unchanged
+
+ROI Model v2.8 formulas, overlap rules, native currency, immutable Prospect submissions, Value History, Rep Confirmed, Buyer Evidence, BuyCycle, authorization roles/capabilities, SE cross-account Solution Fit boundary, attachment storage architecture, PS Turnover authority, customer-facing output classifications, Brand System v1.0, Application Knowledge v1.0, and Christie Persona v1.0 are unchanged. No database migration is introduced.

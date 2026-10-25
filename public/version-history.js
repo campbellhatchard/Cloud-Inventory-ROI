@@ -7,6 +7,18 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.46', date: '2026-10-24', tag: 'regression-stabilization',
+    title: 'Cross-surface consistency and release stabilization',
+    summary: 'Corrects six defects found in the v6.9.45 live regression without changing ROI Model v2.8, evidence provenance, authorization, or customer-output governance.',
+    highlights: [
+      'Executive and Proposal formats now resolve the Three Why narrative from one canonical saved story projection with legacy compatibility.',
+      'MEP Standard Package applications retain their governed identity and no longer reappear as customer-specific applications.',
+      'Prospect, internal Discovery, and Impact Map use the same applicable questionnaire and Field Inventory rules.',
+      'Server-confirmed evidence leaves the upload queue and the upload action disables when no ready or failed files remain.',
+      'Saved Scenarios and Compare consume one null-preserving legacy financial summary, while gap labels use distinct structured context tokens.'
+    ]
+  },
+  {
     version: '6.9.45', date: '2026-10-23', tag: 'ps-turnover-evidence',
     title: 'Professional Services turnover evidence package',
     summary: 'Connects the saved Solution Fit evidence repository to the internal Professional Services turnover document, manifest, and downloadable evidence package without changing ROI calculations or Solution Fit readiness.',

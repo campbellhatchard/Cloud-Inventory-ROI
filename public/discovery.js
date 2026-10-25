@@ -535,6 +535,11 @@ function getProspectQuestions(industry, options) {
   }
   return base;
 }
+/* All surfaces that represent the governed customer discovery universe use
+   this selector. Rep-only coaching questions remain outside that universe. */
+function getApplicableQuestionnaire(industry, options) {
+  return getProspectQuestions(industry, options || {});
+}
 if(typeof buildQuestionnaireRoiRegistry==='function')window.QUESTIONNAIRE_ROI_REGISTRY=buildQuestionnaireRoiRegistry({...DISC_QUESTIONS,_ve:[VE_CORE_QUESTIONS],_context:Object.values(INDUSTRY_CONTEXT),_field:[FIELD_INVENTORY_QUESTIONS],_service:[SERVICE_ECONOMICS_QUESTIONS]});
 
 /* ─────────────────────────────────────────
@@ -638,7 +643,7 @@ function setDiscoveryAnswer(id, value, enteredBy = 'rep') {
 
   /* Sync to calculator field if this question maps to one */
   const industry = document.getElementById('industry')?.value || 'default';
-  const qs = getDiscoveryQuestions(industry);
+  const qs = getApplicableQuestionnaire(industry,{hasFieldInventory:!!window._hasFieldInventory});
   const q  = qs.flatMap(s => s.questions).find(q => q.id === id);
   const num = parseFloat(String(value || '').replace(/[^0-9.]/g, ''));
 
@@ -867,7 +872,7 @@ function renderDiscoveryTab() {
   /* ── BUG FIX: pass hasFieldInventory so the field inventory section
      appears when the rep has enabled it on the calculator. ── */
   var hasFieldInventory = !!(window._hasFieldInventory);
-  var qs  = getDiscoveryQuestions(industry, {hasFieldInventory: hasFieldInventory});
+  var qs  = getApplicableQuestionnaire(industry, {hasFieldInventory: hasFieldInventory});
   var ind = (typeof IND !== 'undefined' && IND[industry]) ? IND[industry].label : 'General';
 
   /* Hard gate: a prospect link must belong to a customer */
@@ -1137,7 +1142,7 @@ function handleDiscInput(id, value, enteredBy) {
 
 function updateDiscoveryProgress() {
   var industry=(document.getElementById('industry')||{}).value||'default';
-  var qs=getDiscoveryQuestions(industry,{hasFieldInventory:!!window._hasFieldInventory}).flatMap(function(s){return s.questions;});
+  var qs=getApplicableQuestionnaire(industry,{hasFieldInventory:!!window._hasFieldInventory}).flatMap(function(s){return s.questions;});
   var answered=qs.filter(function(q){return discoveryAnswers[q.id]&&String(discoveryAnswers[q.id]).trim();}).length;
   var synced=qs.filter(function(q){return q.sync&&discoveryAnswers[q.id]&&String(discoveryAnswers[q.id]).trim();}).length;
   var total=qs.length,pct=total?Math.round(answered/total*100):0;
@@ -1176,7 +1181,7 @@ async function extractFiguresFromContext(questionId) {
 
   var answerText = qEl.value || '';
   var industry = (document.getElementById('industry') || {}).value || 'default';
-  var qs = getDiscoveryQuestions(industry);
+  var qs = getApplicableQuestionnaire(industry,{hasFieldInventory:!!window._hasFieldInventory});
   var q  = qs.flatMap(function(s){ return s.questions; }).find(function(x){ return x.id === questionId; });
   var questionText = q ? q.text : '';
 

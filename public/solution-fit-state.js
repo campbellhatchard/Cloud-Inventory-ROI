@@ -119,6 +119,15 @@
     const p=process||{};
     return p.id?`id:${p.id}`:`descriptor:${descriptorKey(p)}`;
   }
+  function catalogIdentity(process){
+    const p=process||{};
+    return p.source==='non_standard'||p.source==='legacy_process'?processKey(p):`governed:${governedProcessId(p)}`;
+  }
+  function formatApplicationContext(process){
+    const p=process||{},tokens=[p.product,p.erp,p.group,p.name],seen=new Set(),out=[];
+    for(const token of tokens){const value=text(token);if(!value)continue;const semantic=value.toLocaleLowerCase();if(seen.has(semantic))continue;seen.add(semantic);out.push(value);}
+    return out.join(' · ')||text(p.name);
+  }
   function findProcess(state,descriptor){
     const rows=state&&state.processes||[],wantedId=descriptor&&descriptor.id||(descriptor&&descriptor.source!=='non_standard'?governedProcessId(descriptor):'');
     return (wantedId&&rows.find(item=>item.id===wantedId))||rows.find(item=>descriptorKey(item)===descriptorKey(descriptor)&&item.source!=='legacy_process');
@@ -289,5 +298,5 @@
     return{total:required.length,complete:required.length-missing.length,missing:missing.map(item=>item[1])};
   }
 
-  return {INVENTORY_ITEMS,LPN_ITEMS,ANSWERS,DEMO_STATUSES,FIT_STATUSES,VALIDATION_STATUSES,LEGACY_GENERIC_NAMES,CIP_CATALOG,EPP_CATALOG,TURNOVER_DEFAULTS,TURNOVER_REQUIRED,migrateState,migrateGaps,ensureProcess,createCustomProcess,setSelected,applyStandardPackage,startCustomScope,processKey,findProcess,governedProcessId,nextCustomProcessId,nextGapId,applyGapProcessMetadata,activeProducts,hasActiveProduct,activeProcesses,activeGaps,hasUnresolvedLegacy,synchronizeAuthority,changeMepErpFamily,canUseCustomerContext,inventoryStats,turnoverStats};
+  return {INVENTORY_ITEMS,LPN_ITEMS,ANSWERS,DEMO_STATUSES,FIT_STATUSES,VALIDATION_STATUSES,LEGACY_GENERIC_NAMES,CIP_CATALOG,EPP_CATALOG,TURNOVER_DEFAULTS,TURNOVER_REQUIRED,migrateState,migrateGaps,ensureProcess,createCustomProcess,setSelected,applyStandardPackage,startCustomScope,processKey,catalogIdentity,formatApplicationContext,findProcess,governedProcessId,nextCustomProcessId,nextGapId,applyGapProcessMetadata,activeProducts,hasActiveProduct,activeProcesses,activeGaps,hasUnresolvedLegacy,synchronizeAuthority,changeMepErpFamily,canUseCustomerContext,inventoryStats,turnoverStats};
 });

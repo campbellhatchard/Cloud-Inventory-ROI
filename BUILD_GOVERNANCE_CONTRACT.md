@@ -599,3 +599,23 @@ Opening, switching to, or inspecting an existing record must not schedule an aut
 ## BOUNDED AI CONTEXT INVARIANT
 
 AI Help and Christie requests must use the active scenario/opportunity identity, have a bounded client deadline, and discard stale responses after a workspace change. AI state must be scoped to the exact opportunity rather than the browser session. A timeout or unavailable provider must produce a safe retry path and may never write governed application data.
+
+## CANONICAL EXECUTIVE NARRATIVE INVARIANT
+
+Why Change, Why Now, and Why Cloud Inventory must be persisted and resolved as one canonical Executive Narrative projection. Legacy field names remain compatibility mirrors only. Executive Web, PDF, Word, PowerPoint, Proposal Preview, Proposal PDF, and Proposal Word must consume the same Executive Value Story semantics; a presenter may format but may not select a competing narrative source or replace a present sibling with `To validate`.
+
+## APPLICABLE QUESTIONNAIRE IDENTITY INVARIANT
+
+Prospect questionnaire, internal Discovery, Prospect evidence review, and Impact Map must use the same governed applicability selector and stable question IDs whenever they represent the same customer discovery scope. Field Inventory visibility is determined once from the active scenario. A count may not hide an ID mismatch, and immutable historical answers remain readable without rewriting their submission.
+
+## SERVER-CONFIRMED EVIDENCE STATE INVARIANT
+
+Solution Fit upload completion means the server returned an ACTIVE attachment. That server response updates the authoritative visible evidence collection, the completed local item leaves the upload queue, and no upload action remains available without a READY or failed-retry item. In-flight upload is single-flight, completion is idempotent by attachment ID, and evidence counts derive only from server-confirmed ACTIVE attachments.
+
+## CANONICAL SCENARIO FINANCIAL SUMMARY INVARIANT
+
+Saved Scenarios and Compare must consume one null-preserving read-time financial summary over each saved scenario version. Compatibility aliases may interpret an existing authoritative legacy value but may not recompute ROI, upgrade the saved model, or turn an absent value into zero. ROI Model v2.8 remains the only calculation authority for current scenarios.
+
+## SOLUTION FIT CATALOG CLASSIFICATION AND LABEL INVARIANT
+
+A governed package application and its persisted assessment share one catalog identity derived from product, ERP, group, and application name. A genuine customer-specific application retains its independent stable ID and classification. Presentation labels are composed from structured context with duplicate semantic tokens removed; labels and names are never relational identity.
