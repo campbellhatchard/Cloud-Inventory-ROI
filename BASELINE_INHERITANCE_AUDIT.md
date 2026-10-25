@@ -99,3 +99,36 @@ SE Solution Fit Scope: Sales Engineers have cross-account access to all active c
 - Preserved: all v6.9.44 upload, stable-context, authorization, removal, reconciliation, Customer reassignment, Admin Cleanup, ROI, output, and AI protections
 
 The v6.9.45 change boundary is limited to consuming saved Solution Fit state and active governed attachments through one canonical turnover model, enhancing the existing internal Word output, and generating an on-demand manifest/ZIP. Generated packages are not persisted as a second source of truth.
+
+# v6.9.46 Baseline Inheritance Audit
+
+## Authoritative parent
+
+- Archive: `cloud-inventory-roi-v6.9.45-render-ready(1).zip`
+- SHA-256: `dece15e61fab898350166e5279a3c5eb53d522218e3d6ba2158ee4aa6c8aea31`
+- Parent application version: `6.9.45`
+- Baseline Git commit: `6adf41b`
+
+The exact requested filename was restored as a byte-for-byte copy of the supplied v6.9.45 release archive before extraction. The hash above was calculated before any source change. The untouched extraction was committed as the release baseline.
+
+## Preserved authorities
+
+- ROI Model v2.8 / `modelVersion 28`
+- Brand System v1.0
+- Application Knowledge v1.0
+- Christie Persona v1.0
+- PostgreSQL migrations and authorization boundaries
+- immutable Prospect submission and Value History provenance
+- SE cross-account Solution Fit authorization
+- JPP and Solution Fit saved-state output authority
+- Executive/Proposal readiness and audience classification
+- Output Registry and true-runtime certification controls
+- v6.9.45 Solution Fit evidence and PS Turnover architecture
+
+## Correction scope
+
+Only REG-6945-01 through REG-6945-06 are in production-code scope. REG-6945-D1 remains an investigation result with no behavioral change unless a deterministic defect is proven. No ROI formula, evidence boundary, role permission, or unrelated workflow is authorized to change.
+
+## Pre-change evidence
+
+See `V6_9_46_DEFECT_REPRODUCTION_MATRIX.md` and `LIVE_REGRESSION_v6.9.45_2026-10-24.md`.

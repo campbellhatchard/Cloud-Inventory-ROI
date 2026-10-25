@@ -38,6 +38,8 @@ const { sendProblem, problem } = require('../shared/api-problem');
 const { scenarioDisplayValue, historicalSnapshotMatches } = require('../shared/scenario-input-storage');
 const { loadProspectEvidenceReview } = require('../shared/prospect-evidence-review');
 const { applyRoiValueEvent } = require('../shared/roi-value-application');
+const { persistExecutiveNarrative } = require('../shared/executive-narrative');
+const { scenarioFinancialSummary } = require('../shared/scenario-financial-summary');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -168,6 +170,7 @@ const LIST_COLS = `
   s.version_note, s.created_at, s.updated_at,
   s.outcome, s.outcome_reason, s.realized_value, s.outcome_at,
   s.customer_id,
+  s.data AS financial_source,
   (s.data->>'annualBenefit')::numeric AS annual_benefit,
   COALESCE((s.data->>'totalContractRoi')::numeric,(s.data->>'roi')::numeric) AS roi,
   (s.data->>'npv3')::numeric          AS npv3,
@@ -200,11 +203,29 @@ function presentScenario(row) {
     outcome_at: legacyOutcomeAt,
     buy_cycle_outcome: governedOutcome,
     opportunity_profile: opportunityProfile,
+    financial_source: financialSource,
     ...scenario
   } = row;
+  const financial=scenarioFinancialSummary(financialSource||{},{scenarioVersion:row.version});
   const stage = parseBuyCycleStage(row.current_buy_cycle_stage, BUYCYCLE_MIN_STAGE);
   return {
     ...scenario,
+    annual_benefit:financial.annualCustomerBenefit,
+    roi:financial.contractROI,
+    npv3:financial.NPV,
+    npv5:financial.NPV,
+    payback:financial.paybackMonths,
+    total_contract_benefit:financial.totalContractBenefit,
+    total_contract_investment:financial.modeledCustomerInvestment,
+    total_contract_net_benefit:financial.netEconomicBenefit,
+    total_contract_roi:financial.contractROI,
+    total_contract_npv:financial.NPV,
+    contract_payback:financial.paybackMonths,
+    contract_months:financial.contractTermMonths,
+    annual_subscription:financial.annualSubscription,
+    one_time_costs:financial.oneTimeCosts,
+    revenue:financial.revenue,
+    users:financial.users,
     legacyOutcome: legacyOutcome || null,
     legacyOutcomeReason: legacyOutcomeReason || null,
     legacyOutcomeAt: legacyOutcomeAt || null,
@@ -482,12 +503,13 @@ router.patch('/:id/narrative', async (req, res) => {
     const target=await query('SELECT id,base_id FROM scenarios WHERE base_id=$1 AND is_current=TRUE AND deleted_at IS NULL',[access.base_id]);if(!target.rows.length)return res.status(404).json({error:'Current scenario not found.'});
     const submitted=await query(`SELECT a.question_id,a.answer_text,s.id submission_id,s.submission_number,s.submitted_at,s.source_scenario_id,s.source_scenario_version FROM discovery_submissions s JOIN discovery_submission_answers a ON a.submission_id=s.id WHERE s.id=(SELECT id FROM discovery_submissions WHERE base_id=$1 ORDER BY submitted_at DESC,submission_number DESC LIMIT 1)`,[access.base_id]);
     narrative.threeWhysMeta=normalizeNarrativeMeta(narrative,body.threeWhysMeta,submitted.rows);
+    const narrativeProjection=persistExecutiveNarrative({},narrative,narrative.threeWhysMeta);
     const { rows } = await query(
       `WITH current_target AS (SELECT id FROM scenarios WHERE id=$2 AND is_current=TRUE AND deleted_at IS NULL)
        UPDATE scenarios s SET data = s.data || $1::jsonb, updated_at = NOW()
        FROM current_target t WHERE s.id=t.id
        RETURNING s.id, s.updated_at`,
-      [JSON.stringify(narrative), target.rows[0].id]
+      [JSON.stringify(narrativeProjection), target.rows[0].id]
     );
     if (!rows.length) return res.status(404).json({ error: 'Scenario not found or access denied.' });
     res.set('Cache-Control','no-store');
@@ -611,7 +633,7 @@ router.post('/', async (req, res) => {
       let authoritativeRoiData;
       let recomputeDiscrepancy = null;
       try {
-        authoritativeRoiData=projectScenarioData(data);
+        authoritativeRoiData=persistExecutiveNarrative(projectScenarioData(data),data,data.threeWhysMeta||{});
         /* Detect drift vs. what the client sent (>$1 or >0.5% considered drift) */
         const clientBenefit = Number(data.annualBenefit) || 0;
         if (clientBenefit > 0 && Math.abs(clientBenefit - authoritativeRoiData.annualBenefit) > Math.max(1, clientBenefit * 0.005)) {

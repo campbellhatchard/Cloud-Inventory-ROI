@@ -4,6 +4,7 @@ const crypto=require('crypto');
 const {calcROI}=require('./roi-engine');
 const {evaluateRoiMaturity}=require('./roi-maturity');
 const {resolveApproved}=require('./customer-proof-catalog');
+const {resolveExecutiveNarrative}=require('./executive-narrative');
 const text=v=>String(v==null?'':v).trim(),list=v=>Array.isArray(v)?v:[];
 const NARRATIVE_STATUS={customer_discovery:'Customer supported',customer_validated:'Customer supported',rep_authored:'Rep authored — validate',ai_draft:'AI draft — review and validate',historical_unknown:'Needs validation'};
 const semantic=(value,meta={},kind='customer')=>{const v=text(value),source=text(meta.source)||(v?'historical_unknown':'empty');let status=v?(text(meta.validationStatus)||NARRATIVE_STATUS[source]||'Needs validation'):'To validate';if(kind==='vendor'&&source==='customer_validated')status='Cloud Inventory position — reviewed';return{value:v||'To validate',status,source,validationStatus:status,updatedAt:text(meta.updatedAt)};};
@@ -15,12 +16,12 @@ function buildExecutiveValueStory({scenario,governance={},stakeholders=[],discov
  const data=scenario?.data||{},roi=calcROI(data),maturity=evaluateRoiMaturity({scenarioData:data,evidence:governance.evidence||{},stakeholders}),evidenceRows=list(discovery),answers=evidenceRows.filter(a=>a.is_latest!==false&&text(a.answer)).map(a=>({id:text(a.question_id),text:text(a.answer),status:['prospect','prospect_submission'].includes(a.entered_by)?'Customer confirmed':'Assumption — validate'}));
  const customerFacts=answers.filter(a=>a.status==='Customer confirmed'),fit=safeSolutionFit(solutionFit),selectedIds=list(data.customerProofSelection),proof=resolveApproved(selectedIds),resolved=new Set(proof.map(p=>p.id)),unavailableProofIds=selectedIds.filter(id=>!resolved.has(id));
  const steps=list(jointProjectPlan?.milestones).filter(m=>m&&m.status!=='done'&&text(m.task||m.title)).slice().sort((a,b)=>text(a.dueDate||a.due_date).localeCompare(text(b.dueDate||b.due_date))).map(m=>({milestone:text(m.task||m.title),owner:ownerLabel(m.owner),dueDate:text(m.dueDate||m.due_date),status:'Customer provided'}));
- const meta=data.threeWhysMeta||{},prospectAnswers=new Map(answers.filter(a=>a.status==='Customer confirmed').map(a=>[a.id,a.text])),whyChangeEvidence=prospectAnswers.get('ve5')||prospectAnswers.get('ve6')||'',whyNowEvidence=prospectAnswers.get('ve2')||'';
+ const narrative=resolveExecutiveNarrative(data),prospectAnswers=new Map(answers.filter(a=>a.status==='Customer confirmed').map(a=>[a.id,a.text])),whyChangeEvidence=prospectAnswers.get('ve5')||prospectAnswers.get('ve6')||'',whyNowEvidence=prospectAnswers.get('ve2')||'';
  const verifiedMeta=(value,m)=>{if(m?.source!=='customer_discovery')return m;const row=evidenceRows.find(a=>String(a.submission_id)===String(m.discoverySubmissionId)&&String(a.question_id)===String(m.questionId));const iso=v=>{const d=new Date(v);return Number.isFinite(d.getTime())?d.toISOString():'';};const valid=row&&String(row.source_scenario_id||'')===String(m.sourceScenarioId||'')&&Number(row.source_scenario_version)===Number(m.sourceScenarioVersion)&&Number(row.submission_number)===Number(m.submissionNumber)&&iso(row.submitted_at||row.updated_at)===iso(m.submittedAt)&&sameEvidence(value,row.answer);return valid?m:{...m,source:'historical_unknown',validationStatus:'Needs validation',provenanceVerification:'failed'};};
  const whys={
-  whyChange:semantic(text(data.threeWhysAct)||whyChangeEvidence,text(data.threeWhysAct)?verifiedMeta(text(data.threeWhysAct),meta.whyChange):{source:'historical_unknown',validationStatus:'Needs validation'}),
-  whyNow:semantic(text(data.threeWhysNow)||whyNowEvidence,text(data.threeWhysNow)?verifiedMeta(text(data.threeWhysNow),meta.whyNow):{source:'historical_unknown',validationStatus:'Needs validation'}),
-  whyCloudInventory:semantic(data.threeWhysCi,meta.whyCloudInventory,'vendor')
+  whyChange:semantic(narrative.whyChange.value||whyChangeEvidence,narrative.whyChange.value?verifiedMeta(narrative.whyChange.value,narrative.whyChange.meta):{source:'historical_unknown',validationStatus:'Needs validation'}),
+  whyNow:semantic(narrative.whyNow.value||whyNowEvidence,narrative.whyNow.value?verifiedMeta(narrative.whyNow.value,narrative.whyNow.meta):{source:'historical_unknown',validationStatus:'Needs validation'}),
+  whyCloudInventory:semantic(narrative.whyCloudInventory.value,narrative.whyCloudInventory.meta,'vendor')
  };
  const activeDrivers=maturity.activeDrivers.slice().sort((a,b)=>b.annualValue-a.annualValue).map(d=>({key:d.key,label:d.label,annualValue:d.annualValue,status:d.customerSupported?'Customer provided':'Assumption — validate',customerSupported:d.customerSupported,supportReason:d.supportReason,fieldSupport:d.fieldSupport}));
  /* The revision identifies material customer-facing facts only. Consumer and

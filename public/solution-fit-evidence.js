@@ -51,7 +51,7 @@
     if (String(customerId || '') !== state.customerId) reset();
     const revision = ++loadRevision;
     state.customerId = String(customerId || ''); state.canWrite = canWrite === true; state.onChange = typeof onChange === 'function' ? onChange : state.onChange;
-    state.attachments = []; state.solutionFitId = ''; state.storageAvailable = false;
+    state.solutionFitId = ''; state.storageAvailable = false;
     if (!state.customerId || !root?.apiFetch) return state;
     try {
       const response = await root.apiFetch(`/api/handoffs/${encodeURIComponent(state.customerId)}/attachments`);
@@ -96,6 +96,20 @@
       <button type="button" class="btn btn-ghost btn-sm" data-evidence-queue-remove="${index}" ${item.state === 'Uploading' || item.state === 'Optimizing' ? 'disabled' : ''}>Remove</button>
     </article>`).join('')}</section>`;
   }
+  function hasUploadableQueue(queue=state.queue) { return queue.some(item=>['Ready','Failed'].includes(item.state)); }
+  function reconcileCompletedQueue(queue=state.queue) {
+    const remaining=[];
+    for(const item of queue){if(item.state==='Complete')revokePreview(item);else remaining.push(item);}
+    return remaining;
+  }
+  function acceptCompletedAttachment(item,payload,attachments=state.attachments) {
+    const attachment=payload?.attachment;
+    if(!attachment?.id)throw new Error('The server did not confirm active evidence.');
+    const index=attachments.findIndex(row=>String(row.id)===String(attachment.id));
+    if(index>=0)attachments[index]=attachment;else attachments.push(attachment);
+    item.attachmentId=attachment.id;item.state='Complete';
+    return attachment;
+  }
 
   function modalHtml() {
     const unavailable = !state.storageAvailable && state.canWrite ? '<div class="sf-evidence-unavailable" role="alert">Evidence storage is temporarily unavailable. The Solution Fit can still be completed and saved.</div>' : '';
@@ -103,7 +117,7 @@
       ${unavailable}
       <section class="sf-evidence-existing-list"><h4>Saved evidence</h4>${existingRows()}</section>
       ${state.canWrite && state.storageAvailable ? `<section class="sf-evidence-chooser"><div><button type="button" class="btn btn-primary" data-evidence-camera>Take photo</button><button type="button" class="btn btn-secondary" data-evidence-choose>Choose photo / file</button></div><p>JPEG and PNG images up to 5 MB after automatic optimization. PDF, DOCX, XLSX, and PPTX up to 25 MB.</p><input type="file" data-evidence-camera-input accept="image/*" capture="environment" hidden><input type="file" data-evidence-file-input accept="${ACCEPT}" multiple hidden></section>${queueRows()}` : ''}
-      <footer><button type="button" class="btn btn-ghost" data-evidence-close>Close</button>${state.canWrite && state.storageAvailable ? '<button type="button" class="btn btn-primary" data-evidence-upload '+(state.queue.length && !uploading ? '' : 'disabled')+'>Upload ready files</button>' : ''}</footer>
+      <footer><button type="button" class="btn btn-ghost" data-evidence-close>Close</button>${state.canWrite && state.storageAvailable ? '<button type="button" class="btn btn-primary" data-evidence-upload '+(hasUploadableQueue()&&!uploading ? '' : 'disabled')+'>Upload ready files</button>' : ''}</footer>
     </div>`;
   }
 
@@ -174,26 +188,30 @@
     const complete = await root.apiFetch(`/api/handoffs/${encodeURIComponent(operation.customerId)}/attachments/${encodeURIComponent(session.attachmentId)}/complete`, { method: 'POST', body: '{}' });
     assertCurrent(operation);
     if (!complete?.ok) throw new Error(await responseError(complete, 'Evidence could not be verified. Please retry.'));
-    item.state = 'Complete'; item.message = optimized.optimized ? `Complete · optimized from ${formatBytes(optimized.originalSize)} to ${formatBytes(item.file.size)}` : 'Complete';
+    const completedPayload = await complete.json();
+    assertCurrent(operation);
+    acceptCompletedAttachment(item,completedPayload); item.message = optimized.optimized ? `Complete · optimized from ${formatBytes(optimized.originalSize)} to ${formatBytes(item.file.size)}` : 'Complete';
   }
 
   async function uploadQueue(button) {
     if (uploading) return;
     const operation = operationContext(); uploading = true;
     button.disabled = true;
-    for (const item of [...state.queue]) {
+    try {
+      for (const item of [...state.queue]) {
+        if (!current(operation)) return;
+        if (!state.queue.includes(item) || !['Ready', 'Failed'].includes(item.state)) continue;
+        try { await uploadOne(item, operation); }
+        catch (error) { if (!current(operation)) return; item.state = 'Failed'; item.message = error.message || 'Upload failed. Retry.'; renderModal(); }
+      }
       if (!current(operation)) return;
-      if (!state.queue.includes(item) || item.state === 'Complete') continue;
-      try { await uploadOne(item, operation); }
-      catch (error) { if (!current(operation)) return; item.state = 'Failed'; item.message = error.message || 'Upload failed. Retry.'; renderModal(); }
-    }
-    if (!current(operation)) return;
-    await load({ customerId: operation.customerId, canWrite: state.canWrite, onChange: state.onChange });
-    if (!current(operation)) return;
-    uploading = false;
-    renderModal(); state.onChange?.();
-    const failures = state.queue.filter(item => item.state === 'Failed').length;
-    if (failures) notify('error', `${failures} evidence file${failures === 1 ? '' : 's'} could not be uploaded. Review each file and retry.`); else notify('success', 'Evidence uploaded.');
+      state.queue = reconcileCompletedQueue(state.queue);
+      await load({ customerId: operation.customerId, canWrite: state.canWrite, onChange: state.onChange });
+      if (!current(operation)) return;
+      state.onChange?.();
+      const failures = state.queue.filter(item => item.state === 'Failed').length;
+      if (failures) notify('error', `${failures} evidence file${failures === 1 ? '' : 's'} could not be uploaded. Review each file and retry.`); else notify('success', 'Evidence uploaded.');
+    } finally { if (current(operation)) { uploading = false; renderModal(); } }
   }
 
   async function openAttachment(id) {
@@ -249,5 +267,5 @@
     });
   }
 
-  return { load, reset, controls, wire, open, matching, optimizeImage, canonicalContentType, fileTypeError, validateState: () => ({ ...state, attachments: [...state.attachments] }), IMAGE_LIMIT, IMAGE_TARGET, ACCEPT };
+  return { load, reset, controls, wire, open, matching, optimizeImage, canonicalContentType, fileTypeError, hasUploadableQueue, reconcileCompletedQueue, acceptCompletedAttachment, validateState: () => ({ ...state, attachments: [...state.attachments] }), IMAGE_LIMIT, IMAGE_TARGET, ACCEPT };
 });

@@ -16,7 +16,7 @@ const INPUT_FIELDS=Object.freeze([
 const PRESENTATION_FIELDS=Object.freeze([
   'name','company','rep','industry','competitor','execAudience','solution','currency','prospectLogoDataUrl',
   'confidence','threeWhysAct','threeWhysCi','threeWhysNow','threeWhysMeta','fieldStates','fieldProvenance',
-  'explicitRecoveryInputs'
+  'executiveNarrative','explicitRecoveryInputs'
 ]);
 
 const pick=(source,fields)=>Object.fromEntries(fields.filter(key=>Object.prototype.hasOwnProperty.call(source,key)).map(key=>[key,source[key]]));

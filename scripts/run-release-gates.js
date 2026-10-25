@@ -8,18 +8,25 @@ const release = require('../package.json').version;
 const lineage = require('../release-lineage.json');
 const { storageConfig } = require('../src/storage/r2-storage');
 const LOCAL_PNPM = process.env.RELEASE_PACKAGE_MANAGER === 'pnpm';
+const DIRECT_NODE = process.env.RELEASE_PACKAGE_MANAGER === 'direct-node';
 const NPM_CLI = process.env.RELEASE_PACKAGE_MANAGER_CLI || process.env.npm_execpath || path.join(path.dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js');
-const npm = (...args) => [process.execPath, [NPM_CLI, ...args]];
+const npm = (...args) => {
+  if (!DIRECT_NODE) return [process.execPath, [NPM_CLI, ...args]];
+  const script = args[0] === 'run' ? args[1] : args[0] === 'test' ? 'test' : null;
+  if (!script) return [process.execPath, ['-e', 'process.exit(64)']];
+  return [process.execPath, ['scripts/run-node-package-script.js', script]];
+};
 const dependencyInstall = LOCAL_PNPM ? npm('install', '--prod', '--lockfile=false') : npm('ci', '--omit=dev', '--no-audit', '--no-fund');
 
 function command(name, display, invocation, options = {}) { return [name, display, invocation[0], invocation[1], options]; }
 
 const COMMANDS = [
-  command('production-dependencies', 'npm ci --omit=dev --no-audit --no-fund', dependencyInstall),
+  command('production-dependencies', 'npm ci --omit=dev --no-audit --no-fund', dependencyInstall, { dependencyOnly: true }),
   command('database-migrations', 'npm run migrate', npm('run', 'migrate'), { databaseOnly: true }),
   command('postgres-integration', 'npm run test:postgres', npm('run', 'test:postgres'), { databaseOnly: true }),
   command('r2-integration', 'npm run test:r2', npm('run', 'test:r2'), { r2Only: true }),
   command('full-test-suite', 'npm test', npm('test')),
+  command('v6946-release-stabilization', 'npm run test:v6946', npm('run', 'test:v6946')),
   command('v6945-ps-turnover-evidence', 'npm run test:v6945', npm('run', 'test:v6945')),
   command('v6944-solution-fit-evidence', 'npm run test:v6944', npm('run', 'test:v6944')),
   command('v6943-live-regression-corrections', 'npm run test:v6943', npm('run', 'test:v6943')),
@@ -51,6 +58,7 @@ function parseOutput(output = '') {
 }
 
 function npmVersion() {
+  if (DIRECT_NODE) return 'NOT AVAILABLE — direct Node script fallback';
   const result = spawnSync(process.execPath, [NPM_CLI, '--version'], { encoding: 'utf8', shell: false });
   return String(result.stdout || '').trim() || 'NOT TESTED';
 }
@@ -116,6 +124,10 @@ function run() {
   const hasR2 = storageConfig(process.env).available;
   const gates = [];
   for (const [name, display, bin, args, options] of COMMANDS) {
+    if (options.dependencyOnly && DIRECT_NODE) {
+      gates.push({ name, command: display, executed: false, exitCode: null, passed: 0, failed: 0, skipped: 0, notTested: 1, durationMs: 0, result: 'NOT TESTED', note: 'npm is unavailable in this local execution environment; dependency modules were load-checked separately.' });
+      continue;
+    }
     if ((options.databaseOnly && !hasDatabase) || (options.r2Only && !hasR2)) {
       const mandatory = options.databaseOnly && requireDatabase;
       gates.push({ name, command: display, executed: false, exitCode: mandatory ? 1 : null, passed: 0, failed: mandatory ? 1 : 0, skipped: 0, notTested: 1, durationMs: 0, result: 'NOT TESTED' });
@@ -139,7 +151,7 @@ function run() {
     }
     process.stdout.write(`\n[${name}] ${resultLabel} (${Date.now() - started}ms)\n`);
     if (exitCode !== 0 && exitCode !== null) process.stdout.write(output.slice(-12000));
-    gates.push({ name, command: display, executedCommand: name === 'production-dependencies' && LOCAL_PNPM ? 'pnpm install --prod --lockfile=false' : display, executed: true, exitCode, passed: counts.passed, failed: counts.failed + (exitCode !== 0 && exitCode !== null && counts.failed === 0 ? 1 : 0), skipped: counts.skipped, notTested, durationMs: Date.now() - started, result: resultLabel, ...(name === 'active-output-runtime-matrix' ? { outputResults } : {}) });
+    gates.push({ name, command: display, executedCommand: DIRECT_NODE && (display.startsWith('npm run ')||display==='npm test') ? `node scripts/run-node-package-script.js ${name==='full-test-suite'?'test':display.replace(/^npm run /,'')}` : name === 'production-dependencies' && LOCAL_PNPM ? 'pnpm install --prod --lockfile=false' : display, executed: true, exitCode, passed: counts.passed, failed: counts.failed + (exitCode !== 0 && exitCode !== null && counts.failed === 0 ? 1 : 0), skipped: counts.skipped, notTested, durationMs: Date.now() - started, result: resultLabel, ...(name === 'active-output-runtime-matrix' ? { outputResults } : {}) });
   }
   const postgres = writePostgresResult(gates);
   if (requireDatabase && (postgres.result !== 'PASS' || postgres.skipped || postgres.notTested)) {
