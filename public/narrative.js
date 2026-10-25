@@ -29,6 +29,10 @@ async function persistThreeWhys(){
         if(!resp?.ok)throw Error('Narrative autosave failed');
         const result=await resp.json();
         if(window._calcScenarioId===scenarioId&&result.id)window._calcScenarioId=result.id;
+        if(window._calcScenarioId===scenarioId){
+          threeWhys.act=clean(result.threeWhysAct);threeWhys.ci=clean(result.threeWhysCi);threeWhys.now=clean(result.threeWhysNow);
+          for(const key of ['act','ci','now']){const el=document.getElementById('why_'+key);if(el)el.value=threeWhys[key];}
+        }
         if(result.threeWhysMeta)threeWhysMeta=result.threeWhysMeta;
         window.clearNarrativeDirty?.();renderThreeWhyStatus();
         if(status&&!aiGenerating)status.textContent='✓ Narrative saved';

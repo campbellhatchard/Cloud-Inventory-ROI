@@ -16,6 +16,8 @@
   const PRODUCT_LABELS = {MEP:'Mobile Enterprise Platform (MEP)',CIP:'Cloud Inventory Platform',EPP:'Enterprise Printing Platform (EPP)'};
   const SF_MODEL = window.SolutionFitState;
   if (!SF_MODEL) throw new Error('Solution Fit state contract is unavailable.');
+  const SF_PRESENTATION=window.SolutionFitPresentation;
+  if(!SF_PRESENTATION)throw new Error('Solution Fit presentation contract is unavailable.');
   const SF_SCOPE = window.SolutionFitScope;
   if (!SF_SCOPE) throw new Error('Solution Fit scope contract is unavailable.');
   const WORKFLOW = [
@@ -51,6 +53,7 @@
   let pendingCreate = false, customerSearchTimer = null, customerPickerController = null;
   let workspaceLoadGeneration = 0, customerSwitchCoordinator = null;
   let turnoverPackagePreview = null, turnoverPackageBusy = false, turnoverPreviewRevision = 0;
+  let lastSaveError = '', customApplicationSubmitting = false;
 
   const SOLUTION_TEMPLATES = {
     field: {
@@ -107,6 +110,7 @@
     window.SolutionFitEvidence?.reset?.();
     document.getElementById('sfScopeWizard')?.remove();
     document.getElementById('sfCustomerSwitchDialog')?.remove();
+    document.getElementById('sfCustomApplicationDialog')?.remove();
     document.getElementById('solutionFitEvidenceModal')?.remove();
     S=blankState();customerId=custId||null;customerName='';canWrite=false;exists=false;dirty=false;
     primarySeId=null;primarySeName='';additionalSeIds=[];
@@ -369,10 +373,11 @@
     if (!canWrite) return true;
     if (!customerId) return false;
     try {
+      lastSaveError = '';
       const resp = await apiFetch('/api/handoffs/' + encodeURIComponent(customerId), {
         method: 'PUT', body: JSON.stringify({ data: S })
       });
-      if (!resp || !resp.ok) { setSaveState('error'); return false; }
+      if (!resp || !resp.ok) { lastSaveError=(await safeError(resp))||'Solution Fit could not be saved. Retry when the connection is restored.';setSaveState('error'); return false; }
       const r = await resp.json();
       exists = true; dirty = false;
       setSaveState('saved');
@@ -380,7 +385,7 @@
       renderReadinessBar(r.readiness, r.status);
       refreshSolutionFitProgress();
       return true;
-    } catch (e) { console.error('saveHandoff error:', e.message); setSaveState('error'); return false; }
+    } catch (e) { lastSaveError='Solution Fit could not be saved. Check your connection and retry.';console.error('saveHandoff error:', e.message); setSaveState('error'); return false; }
   }
   async function flushSolutionFitSave(){clearTimeout(saveTimer);if(!canWrite)return true;if(!dirty)return true;const ok=await saveHandoff();if(!ok&&typeof showToast==='function')showToast('Solution Fit changes could not be saved. Resolve the save issue before creating customer output.');return ok;}
   function setSaveState(state) {
@@ -567,6 +572,41 @@
     root.querySelector('[data-sfscope="save"]').onclick=commitScope;
   }
   function closeScopeWizard(){document.getElementById('sfScopeWizard')?.remove();scopeDraft=null;document.querySelector('[data-sfaction="editScope"],[data-sfgate="create"]')?.focus();}
+  function closeCustomApplicationModal(){
+    if(customApplicationSubmitting)return false;
+    document.getElementById('sfCustomApplicationDialog')?.remove();
+    document.querySelector('[data-sfaction="addProcess"]')?.focus();
+    return true;
+  }
+  function openCustomApplicationModal(){
+    const existing=document.getElementById('sfCustomApplicationDialog');
+    if(existing){existing.querySelector('[data-sfcustom-name]')?.focus();return existing;}
+    const overlay=document.createElement('div');
+    overlay.id='sfCustomApplicationDialog';overlay.className='sf-scope-overlay';overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-labelledby','sfCustomApplicationTitle');
+    overlay.innerHTML=`<section class="sf-switch-dialog sf-custom-application-dialog"><header><div><div class="sf-gate-kicker">Customer-specific scope</div><h2 id="sfCustomApplicationTitle">Add customer-specific application</h2></div><button class="sf-scope-close" type="button" data-sfcustom-cancel aria-label="Close">×</button></header><div class="sf-switch-body"><p>Add only an application or process that is not already represented in the governed catalog.</p><div class="sf-field"><label for="sfCustomApplicationName">Application name</label><input id="sfCustomApplicationName" data-sfcustom-name maxlength="180" autocomplete="off" placeholder="Enter the customer-specific application or process"></div><div class="sf-scope-error" data-sfcustom-error role="alert"></div></div><footer><button class="btn btn-ghost" type="button" data-sfcustom-cancel>Cancel</button><button class="btn btn-primary" type="button" data-sfcustom-submit>Add Application</button></footer></section>`;
+    document.body.appendChild(overlay);
+    overlay.querySelectorAll('[data-sfcustom-cancel]').forEach(button=>button.addEventListener('click',closeCustomApplicationModal));
+    overlay.querySelector('[data-sfcustom-submit]').addEventListener('click',submitCustomApplicationModal);
+    overlay.querySelector('[data-sfcustom-name]').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();submitCustomApplicationModal();}});
+    overlay.addEventListener('click',event=>{if(event.target===overlay)closeCustomApplicationModal();});
+    overlay.querySelector('[data-sfcustom-name]').focus();
+    return overlay;
+  }
+  async function submitCustomApplicationModal(){
+    const modal=document.getElementById('sfCustomApplicationDialog');if(!modal||customApplicationSubmitting)return false;
+    const input=modal.querySelector('[data-sfcustom-name]'),error=modal.querySelector('[data-sfcustom-error]'),name=SF_PRESENTATION.normalizeCustomApplicationName(input?.value);
+    if(!name){error.textContent='Application name is required.';input?.focus();return false;}
+    customApplicationSubmitting=true;error.textContent='';modal.querySelectorAll('button,input').forEach(control=>control.disabled=true);
+    const wasDirty=dirty,created=SF_MODEL.createCustomProcess(S,{name,product:activeScopeProduct,erp:activeScopeProduct==='MEP'?currentScope().erp:'',group:'Customer-specific',source:'non_standard',selected:true});
+    syncSolutionScope();dirty=true;setSaveState('saving');clearTimeout(saveTimer);
+    const saved=await saveHandoff();
+    if(!saved){
+      const index=S.processes.findIndex(process=>String(process.id)===String(created.id));if(index>=0)S.processes.splice(index,1);
+      syncSolutionScope();dirty=wasDirty;error.textContent=lastSaveError||'Application could not be saved. Retry when the connection is restored.';
+      modal.querySelectorAll('button,input').forEach(control=>control.disabled=false);input?.focus();customApplicationSubmitting=false;return false;
+    }
+    customApplicationSubmitting=false;document.getElementById('sfCustomApplicationDialog')?.remove();rerenderScope();window.showToast?.(`${name} was added and saved.`);return true;
+  }
   async function commitScope(){
     const d=scopeDraft;let candidate;
     try{candidate=SF_SCOPE.applyProductScope(S,d).state;}catch(error){d.error=error.message;renderScopeWizard();return;}
@@ -751,12 +791,12 @@
 
     /* Primary SE is the governed handoffs.primary_se_id assignment, never a JSON display string. */
     const user=currentUser(),selfId=String(user.id||''),canAssignOthers=!!capabilities.canAssign;
-    const assignable=canAssignOthers?_seList:_seList.filter(candidate=>String(candidate.id)===selfId);
-    const currentSeMissing=primarySeId&&!_seList.some(candidate=>String(candidate.id)===String(primarySeId));
+    const primaryPresentation=SF_PRESENTATION.primarySePresentation({candidates:_seList,primarySeId,primarySeName,viewerId:selfId,canAssignOthers});
+    const assignable=primaryPresentation.assignable,currentSeMissing=primaryPresentation.includeCurrentAssignment;
     const seOpts = ['<option value="">Not Assigned</option>',...(currentSeMissing?[`<option value="${esc(primarySeId)}" selected>${esc(primarySeName||'Assigned user unavailable')} (current)</option>`]:[])].concat(
       assignable.map(candidate => `<option value="${esc(candidate.id)}" ${String(primarySeId||'')===String(candidate.id)?'selected':''}>${esc(candidate.name)}</option>`)
     ).join('');
-    const assignmentLocked=!canAssignOthers&&!!primarySeId&&String(primarySeId)!==selfId;
+    const assignmentLocked=primaryPresentation.assignmentLocked;
     const seField = `<div class="sf-field" data-sfmissing="${!primarySeId}"><label>Primary Solution Engineer <span class="sf-field-source">Governed assignment</span></label><select data-sfassignment="primary" ${assignmentLocked?'disabled':''}>${seOpts}</select>${assignmentLocked?'<small>Only an Admin can reassign another Solution Engineer.</small>':''}</div>`;
 
     /* Products checkboxes + Other. */
@@ -1515,7 +1555,7 @@
       SF_MODEL.applyGapProcessMetadata(gap,p);S.gaps.push(gap);
       openGapId=S.gaps.at(-1).id;activeTab='gaps';scheduleSave();renderApp();return;
     }
-    if(a==='addProcess'){ const n=prompt('Customer-specific application or process name:'); if(n&&n.trim()){ SF_MODEL.createCustomProcess(S,{name:n.trim(),product:activeScopeProduct,erp:activeScopeProduct==='MEP'?currentScope().erp:'',group:'Customer-specific',selected:true}); syncSolutionScope();rerenderScope(); scheduleSave(); } }
+    if(a==='addProcess'){openCustomApplicationModal();}
     else if(a==='addGap'){ S.gaps.push(newGap({})); openGapId=S.gaps.at(-1).id; rerenderGaps(); scheduleSave(); }
     else if(a==='addInterface'){ S.interfaces.push({id:nextIntId(),source:'',target:'',object:'',method:'TBD',direction:'Bidirectional',trigger:'Near real time',volume:'',owner:'TBD'}); rerenderIntegration(); scheduleSave(); }
     else if(a==='addCustomization'){ S.architecture.customizations.push(blankCustomization()); const pane=document.querySelector('[data-sfpane="context"]'); if(pane){pane.innerHTML=renderContext(); wireBindings();} scheduleSave(); }
@@ -1603,6 +1643,7 @@
   }
   document.addEventListener('keydown',e=>{
     if(e.key!=='Escape')return;
+    if(document.getElementById('sfCustomApplicationDialog')){e.preventDefault();closeCustomApplicationModal();return;}
     if(document.getElementById('sfScopeWizard')){e.preventDefault();closeScopeWizard();return;}
     document.getElementById('sfCustomerSwitchDialog')?.remove();
   });
@@ -1621,6 +1662,7 @@
   });
   window.printRiskLedger = printRiskLedger;
   window.flushSolutionFitSave = flushSolutionFitSave;
+  window.SolutionFitCorrective=Object.freeze({openCustomApplicationModal,closeCustomApplicationModal,submitCustomApplicationModal});
 
   /* Expose entry point for the tab switch. */
   window.initSolutionFit = initSolutionFit;

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "6.9.46",
+  "release": "6.9.47",
   "tests": [
     {"invariant":"Customer Business Case","path":"test/release-integrity.test.js"},
     {"invariant":"customer-safe payload","path":"test/release-integrity.test.js"},
@@ -70,5 +70,7 @@
     ,{"invariant":"v6.9.45 PostgreSQL saved-state, role authorization, customer reassignment and exact Solution Fit evidence isolation","path":"test/v6945-postgres-ps-turnover.test.js"}
     ,{"invariant":"v6.9.45 real private R2 evidence retrieval and unchanged PS Turnover ZIP bytes","path":"test/v6945-r2-turnover-package.test.js"}
     ,{"invariant":"v6.9.46 canonical story, application identity, questionnaire parity, evidence state, scenario summaries, structured labels and Deal Coach timeout fallback","path":"test/v6946-release-stabilization.test.js"}
+    ,{"invariant":"v6.9.47 explicit Executive narrative clearing, governed customer-specific application modal and authoritative Primary SE display","path":"test/v6947-corrective-release.test.js"}
+    ,{"invariant":"v6.9.47 PostgreSQL narrative persistence, custom application identity and Primary SE reload","path":"test/v6947-postgres-corrective.test.js"}
   ]
 }

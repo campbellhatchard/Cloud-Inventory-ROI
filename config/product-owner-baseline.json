@@ -1,7 +1,7 @@
 {
-  "release": "6.9.46",
-  "parentVersion": "6.9.45",
-  "parentArchive": "cloud-inventory-roi-v6.9.45-render-ready(1).zip",
-  "parentSha256": "dece15e61fab898350166e5279a3c5eb53d522218e3d6ba2158ee4aa6c8aea31",
+  "release": "6.9.47",
+  "parentVersion": "6.9.46",
+  "parentArchive": "cloud-inventory-roi-v6.9.46-render-ready.zip",
+  "parentSha256": "7C7E582588B8C01AF7B612C7DF4642D6089F4767541118A2B5422542BF06EE72",
   "parentCommit": null
 }

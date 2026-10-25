@@ -38,7 +38,7 @@ const { sendProblem, problem } = require('../shared/api-problem');
 const { scenarioDisplayValue, historicalSnapshotMatches } = require('../shared/scenario-input-storage');
 const { loadProspectEvidenceReview } = require('../shared/prospect-evidence-review');
 const { applyRoiValueEvent } = require('../shared/roi-value-application');
-const { persistExecutiveNarrative } = require('../shared/executive-narrative');
+const { persistExecutiveNarrative, resolveExecutiveNarrative } = require('../shared/executive-narrative');
 const { scenarioFinancialSummary } = require('../shared/scenario-financial-summary');
 
 const router = express.Router();
@@ -80,6 +80,7 @@ function normalizeNarrativeMeta(narrative,requestedMeta={},submittedAnswers=[]){
   const submitted=new Map(submittedAnswers.map(a=>[String(a.question_id),a]));
   const evidence={whyChange:submitted.get('ve5')||submitted.get('ve6')||null,whyNow:submitted.get('ve2')||null},out={};
   for(const [field,key] of Object.entries(WHY_META_KEYS)){
+    if(!Object.prototype.hasOwnProperty.call(narrative,field))continue;
     const value=String(narrative[field]||'').trim(),requested=requestedMeta?.[key]||{},reference=evidence[key],matches=key!=='whyCloudInventory'&&value&&reference&&sameValue(value,String(reference.answer_text||reference.answer||'').trim());
     const source=!value?'empty':matches?'customer_discovery':requested.source==='ai_draft'?'ai_draft':requested.source==='historical_unknown'?'historical_unknown':'rep_authored';
     out[key]={source,validationStatus:source==='customer_discovery'?'Customer supported':source==='ai_draft'?'AI draft — review and validate':source==='empty'?'To validate':'Needs validation',updatedAt:new Date().toISOString(),...(source==='customer_discovery'?{discoverySubmissionId:reference.submission_id,submissionNumber:Number(reference.submission_number),questionId:String(reference.question_id),submittedAt:reference.submitted_at,sourceScenarioId:reference.source_scenario_id||null,sourceScenarioVersion:reference.source_scenario_version==null?null:Number(reference.source_scenario_version)}:{})};
@@ -489,33 +490,38 @@ router.get('/:id/versions', async (req, res) => {
    ═══════════════════════════════════════ */
 router.patch('/:id/narrative', async (req, res) => {
   const body = req.body || {};
-  const narrative = {
-    threeWhysAct: typeof body.threeWhysAct === 'string' ? body.threeWhysAct.trim() : '',
-    threeWhysCi:  typeof body.threeWhysCi  === 'string' ? body.threeWhysCi.trim()  : '',
-    threeWhysNow: typeof body.threeWhysNow === 'string' ? body.threeWhysNow.trim() : ''
-  };
-  if ([narrative.threeWhysAct,narrative.threeWhysCi,narrative.threeWhysNow].some(value => value.length > 8000)) {
+  const narrative = {};
+  for(const field of Object.keys(WHY_META_KEYS)){
+    if(!Object.prototype.hasOwnProperty.call(body,field))continue;
+    if(body[field]!==null&&typeof body[field]!=='string')return res.status(400).json({error:'Narrative fields must contain text or an explicit null clear.'});
+    narrative[field]=body[field]===null?null:body[field].trim()||null;
+  }
+  if (!Object.keys(narrative).length) return res.status(400).json({ error: 'At least one narrative field must be supplied.' });
+  if (Object.values(narrative).some(value => value!==null&&value.length > 8000)) {
     return res.status(400).json({ error: 'Narrative sections must be 8,000 characters or fewer.' });
   }
 
   try {
     const access=await authorizedScenario(req.user,req.params.id,'edit');if(access.error)return res.status(access.status).json({error:access.error});
-    const target=await query('SELECT id,base_id FROM scenarios WHERE base_id=$1 AND is_current=TRUE AND deleted_at IS NULL',[access.base_id]);if(!target.rows.length)return res.status(404).json({error:'Current scenario not found.'});
+    const target=await query('SELECT id,base_id,data FROM scenarios WHERE base_id=$1 AND is_current=TRUE AND deleted_at IS NULL',[access.base_id]);if(!target.rows.length)return res.status(404).json({error:'Current scenario not found.'});
     const submitted=await query(`SELECT a.question_id,a.answer_text,s.id submission_id,s.submission_number,s.submitted_at,s.source_scenario_id,s.source_scenario_version FROM discovery_submissions s JOIN discovery_submission_answers a ON a.submission_id=s.id WHERE s.id=(SELECT id FROM discovery_submissions WHERE base_id=$1 ORDER BY submitted_at DESC,submission_number DESC LIMIT 1)`,[access.base_id]);
     narrative.threeWhysMeta=normalizeNarrativeMeta(narrative,body.threeWhysMeta,submitted.rows);
-    const narrativeProjection=persistExecutiveNarrative({},narrative,narrative.threeWhysMeta);
+    const narrativeProjection=persistExecutiveNarrative(target.rows[0].data||{},narrative,narrative.threeWhysMeta);
+    const governedProjection={executiveNarrative:narrativeProjection.executiveNarrative,threeWhysAct:narrativeProjection.threeWhysAct,threeWhysCi:narrativeProjection.threeWhysCi,threeWhysNow:narrativeProjection.threeWhysNow,threeWhysMeta:narrativeProjection.threeWhysMeta};
     const { rows } = await query(
       `WITH current_target AS (SELECT id FROM scenarios WHERE id=$2 AND is_current=TRUE AND deleted_at IS NULL)
        UPDATE scenarios s SET data = s.data || $1::jsonb, updated_at = NOW()
        FROM current_target t WHERE s.id=t.id
-       RETURNING s.id, s.updated_at`,
-      [JSON.stringify(narrativeProjection), target.rows[0].id]
+       RETURNING s.id, s.updated_at, s.data`,
+      [JSON.stringify(governedProjection), target.rows[0].id]
     );
     if (!rows.length) return res.status(404).json({ error: 'Scenario not found or access denied.' });
     res.set('Cache-Control','no-store');
+    const authoritative=resolveExecutiveNarrative(rows[0].data||{});
     res.json({ saved: true, id: rows[0].id, updatedAt: rows[0].updated_at,
-      threeWhysAct:narrative.threeWhysAct, threeWhysCi:narrative.threeWhysCi,
-      threeWhysNow:narrative.threeWhysNow, threeWhysMeta:narrative.threeWhysMeta });
+      executiveNarrative:rows[0].data?.executiveNarrative||null,
+      threeWhysAct:authoritative.whyChange.value||null, threeWhysCi:authoritative.whyCloudInventory.value||null,
+      threeWhysNow:authoritative.whyNow.value||null, threeWhysMeta:rows[0].data?.threeWhysMeta||{} });
   } catch (err) {
     console.error('Autosave scenario narrative error:', err.message);
     res.status(500).json({ error: 'Failed to save executive narrative.' });

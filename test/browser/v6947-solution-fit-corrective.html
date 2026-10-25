@@ -1,0 +1,45 @@
+<!doctype html><html><head><meta charset="utf-8"><title>RUNNING v6.9.47 browser corrective test</title><link rel="stylesheet" href="../../public/style.css"></head><body>
+<main><h1>v6.9.47 browser corrective test</h1><pre id="result">RUNNING</pre><div id="sfGate"></div><div id="sfApp"></div></main>
+<script src="../../public/solution-fit-state.js"></script>
+<script src="../../public/solution-fit-scope.js"></script>
+<script src="../../public/solution-fit-presentation.js"></script>
+<script src="../../public/handoff-readiness.js"></script>
+<script>
+'use strict';
+const packageNames=['Cycle Count - Directed','Inventory Transfer','Inventory Inquiry','Inventory Issue','Inventory Reclassification','Inventory Adjustment Negative','Inventory Adjustment Positive','Lot Status Update','Pack Confirmation','Pick Confirmation','Purchase Order Receipt','Receipt Routing','RMA Returns','Ship Confirmation','Inventory Cart Transfer'];
+const processes=packageNames.map((name,index)=>({id:`APP-GOV-${index+1}`,product:'MEP',erp:'JDE',group:'JDE',name,source:'standard_app',selected:true,demoStatus:'Not reviewed',fit:'Not reviewed',customerValidation:'Not validated',notes:''}));
+let persistedPayload=null,putCount=0;
+let serverData={opportunity:{customer:'Browser QA Customer',products:['MEP']},solutionScope:{primaryProduct:'MEP',additionalProducts:[],erp:'JDE',packageMode:'standard',selectedAppIds:processes.map(item=>item.id),selectedApps:packageNames},architecture:{erp:'JDE'},processes,gaps:[],interfaces:[],inventoryConfiguration:{},turnover:{}};
+const response=(body,status=200)=>({ok:status>=200&&status<300,status,json:async()=>body});
+window._sfSelectedCustomerId='customer-6947';window.currentScenarioCustomerId='customer-6947';
+window.ciAuth={getUser:()=>({id:'se-b',role:'se',roles:['se'],roleKeys:['se']})};window.showToast=()=>{};window.switchTab=()=>{};window.getVals=()=>({});window.discoveryAnswers={};
+window.SolutionFitEvidence={load:async()=>{},controls:()=>'',wire:()=>{},validateState:()=>({queue:[]}),matching:()=>[]};
+window.apiFetch=async(path,options={})=>{
+ if(path==='/api/handoffs/customer-6947'&&(!options.method||options.method==='GET'))return response({exists:true,customerName:'Browser QA Customer',primarySeId:'se-a',primarySeName:'SE-A',additionalSeIds:[],capabilities:{canView:true,canEdit:true,canCreate:false,canAssign:false},data:JSON.parse(JSON.stringify(serverData))});
+ if(path==='/api/handoffs/customer-6947'&&options.method==='PUT'){putCount++;persistedPayload=JSON.parse(options.body);serverData=JSON.parse(JSON.stringify(persistedPayload.data));return response({readiness:40,status:'not_ready'});}
+ if(path==='/api/solution-engineers')return response([{id:'se-a',name:'SE-A'},{id:'se-b',name:'SE-B'}]);
+ if(path==='/api/solution-fit/catalog/mep-standard-apps')return response({catalogId:'mep-standard-apps',catalogVersion:'2026-08',source:'browser fixture',erps:{JDE:packageNames},standardPackages:{JDE:packageNames}});
+ if(path.startsWith('/api/stakeholders'))return response([]);
+ if(path.endsWith('/turnover-package/preview'))return response({turnoverReady:false,missingTurnoverFields:[],pendingAttachmentCount:0,summary:{},classification:{}});
+ return response({},404);
+};
+function check(value,message){if(!value)throw new Error(message);}
+</script>
+<script src="../../public/solution-fit.js"></script>
+<script>
+(async()=>{try{
+ await window.initSolutionFit();
+ const assignment=document.querySelector('[data-sfassignment="primary"]');check(assignment,'Primary SE control missing');check(assignment.value==='se-a','SE-B viewer did not see SE-A assignment');check(assignment.disabled,'Cross-account SE assignment control should remain read-only');check(assignment.selectedOptions[0].textContent.includes('SE-A'),'Assigned SE label missing');
+ document.querySelector('[data-sfaction="addProcess"]').click();check(document.getElementById('sfCustomApplicationDialog'),'Custom application modal did not open');document.querySelector('[data-sfcustom-cancel]').click();check(!document.getElementById('sfCustomApplicationDialog'),'Cancel did not close modal');check(putCount===0,'Cancel created or saved a record');
+ window.SolutionFitCorrective.openCustomApplicationModal();let modal=document.getElementById('sfCustomApplicationDialog');await window.SolutionFitCorrective.submitCustomApplicationModal();check(modal.querySelector('[data-sfcustom-error]').textContent.includes('required'),'Blank name was not rejected');
+ modal.querySelector('[data-sfcustom-name]').value='  QA Custom Application One  ';const first=window.SolutionFitCorrective.submitCustomApplicationModal(),duplicate=window.SolutionFitCorrective.submitCustomApplicationModal();check(await duplicate===false,'Double submit was not rejected');check(await first===true,'Valid custom application was not saved');check(putCount===1,'Valid application did not produce exactly one save');
+ const firstId=persistedPayload.data.processes.at(-1).id;check(persistedPayload.data.processes.at(-1).name==='QA Custom Application One','Application name was not trimmed');check(/^APP-CUSTOM-/.test(firstId),'Stable custom identity missing');
+ window.SolutionFitCorrective.openCustomApplicationModal();modal=document.getElementById('sfCustomApplicationDialog');modal.querySelector('[data-sfcustom-name]').value='QA Custom Application Two';check(await window.SolutionFitCorrective.submitCustomApplicationModal()===true,'Second custom application was not saved');
+ check(persistedPayload.data.processes.filter(item=>item.source==='standard_app').length===15,'Standard Package count changed');check(persistedPayload.data.processes.filter(item=>item.source==='non_standard').length===2,'Two custom applications were not classified as non-standard');check(persistedPayload.data.processes.length===17,'15 standard + 2 custom did not equal 17');check(new Set(persistedPayload.data.processes.map(item=>item.id)).size===17,'Application identities are not unique');
+ const firstCard=[...document.querySelectorAll('.sf-application-card')].find(card=>card.textContent.includes('QA Custom Application One'));check(firstCard,'Saved custom application card missing');
+ const setControl=(selector,value,eventName='change')=>{const control=firstCard.querySelector(selector);check(control,`Missing assessment control ${selector}`);control.value=value;control.dispatchEvent(new Event(eventName,{bubbles:true}));};
+ setControl('[data-sfpdemo]','Demonstrated');setControl('[data-sfpfit]','Full fit');setControl('[data-sfpvalidation]','Customer validated');setControl('[data-sfpnote]','Validated with the customer.','input');check(await window.flushSolutionFitSave()===true,'Custom application assessment was not saved');
+ await window.initSolutionFit();const reloaded=serverData.processes.find(item=>item.id===firstId);check(reloaded,'Stable custom application ID was not preserved on reload');check(reloaded.demoStatus==='Demonstrated'&&reloaded.fit==='Full fit'&&reloaded.customerValidation==='Customer validated'&&reloaded.notes==='Validated with the customer.','Assessment did not remain attached after reload');check(serverData.processes.filter(item=>item.source==='standard_app').length===15&&serverData.processes.filter(item=>item.source==='non_standard').length===2,'Reload changed standard/custom counts');
+ document.title='PASS v6.9.47 browser corrective test';document.getElementById('result').textContent='PASS\nPrimary SE display: PASS\nModal open/cancel/validation: PASS\nServer-confirmed single submit: PASS\n15 standard + 2 custom = 17: PASS\nAssessment persistence after reload: PASS';
+}catch(error){document.title='FAIL v6.9.47 browser corrective test';document.getElementById('result').textContent='FAIL\n'+error.stack;console.error(error);}})();
+</script></body></html>

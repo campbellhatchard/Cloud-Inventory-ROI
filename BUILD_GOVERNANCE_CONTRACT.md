@@ -619,3 +619,15 @@ Saved Scenarios and Compare must consume one null-preserving read-time financial
 ## SOLUTION FIT CATALOG CLASSIFICATION AND LABEL INVARIANT
 
 A governed package application and its persisted assessment share one catalog identity derived from product, ERP, group, and application name. A genuine customer-specific application retains its independent stable ID and classification. Presentation labels are composed from structured context with duplicate semantic tokens removed; labels and names are never relational identity.
+
+## EXPLICIT CANONICAL NARRATIVE CLEAR INVARIANT
+
+For Why Change, Why Now, and Why Cloud Inventory, an omitted PATCH property means preserve the saved canonical value; a present nonblank property means replace it; and a present blank or `null` property means persist an explicit canonical unestablished state. Once a canonical field exists, its intentional clear outranks every legacy mirror and mutable Discovery fallback. Presentation may resolve that unestablished state to `To validate`, but may not persist the presentation phrase or resurrect stale text. Save success may be shown only after the client adopts the server-returned canonical state.
+
+## APPLICATION-NATIVE CUSTOMER-SPECIFIC APPLICATION INVARIANT
+
+Customer-specific Solution Fit application creation must use an accessible application-owned dialog, not browser `prompt()`, `alert()`, or `confirm()`. Cancel and invalid input create nothing; accepted names are trimmed; repeat activation is single-flight; and the dialog closes only after authenticated server persistence succeeds. Every created row keeps an independent stable ID, a non-standard classification, and all assessment, gap, and evidence relationships across reload without changing governed Standard Package rows.
+
+## PRIMARY SE DISPLAY COMPLETENESS INVARIANT
+
+Every authorized Solution Fit surface must display the identity represented by authoritative `handoffs.primary_se_id`, even when that user is inactive or excluded from the current viewer's assignable option list. A disabled control may not translate a valid saved assignment into `Not Assigned`. Display completeness does not grant reassignment authority, broaden ROI access, or substitute the viewer's identity for the saved Primary SE.

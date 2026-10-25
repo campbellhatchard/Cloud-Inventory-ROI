@@ -893,9 +893,9 @@ async function saveScenario() {
     /* Three Whys are edited on the Exec view but aren't part of getVals(), so
        capture them here — otherwise Save (incl. the Exec view's Save button)
        would silently drop exec-view narrative edits. */
-    threeWhysAct: document.getElementById('why_act')?.value || (typeof threeWhys !== 'undefined' ? threeWhys.act : ''),
-    threeWhysCi:  document.getElementById('why_ci')?.value  || (typeof threeWhys !== 'undefined' ? threeWhys.ci : ''),
-    threeWhysNow: document.getElementById('why_now')?.value || (typeof threeWhys !== 'undefined' ? threeWhys.now : ''),
+    threeWhysAct: document.getElementById('why_act') ? document.getElementById('why_act').value : (typeof threeWhys !== 'undefined' ? threeWhys.act : ''),
+    threeWhysCi:  document.getElementById('why_ci')  ? document.getElementById('why_ci').value  : (typeof threeWhys !== 'undefined' ? threeWhys.ci : ''),
+    threeWhysNow: document.getElementById('why_now') ? document.getElementById('why_now').value : (typeof threeWhys !== 'undefined' ? threeWhys.now : ''),
     threeWhysMeta: typeof threeWhysMeta !== 'undefined' ? threeWhysMeta : {},
     fieldStates:        typeof fieldStates !== 'undefined' ? { ...fieldStates } : {},
     fieldProvenance:    typeof fieldProvenance !== 'undefined' ? { ...fieldProvenance } : {},

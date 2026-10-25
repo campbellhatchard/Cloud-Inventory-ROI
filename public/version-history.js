@@ -7,6 +7,16 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.47', date: '2026-10-25', tag: 'corrective-authority',
+    title: 'Executive clearing, custom application and Primary SE corrections',
+    summary: 'Corrects three certification defects without changing ROI Model v2.8, evidence provenance, Solution Fit authorization, or output methodology.',
+    highlights: [
+      'An intentional Three Why clear now persists as an explicit canonical unestablished state and cannot be refilled by stale legacy or discovery fallback data.',
+      'Customer-specific Solution Fit applications are added through an accessible application modal and are saved before the modal reports success.',
+      'The authoritative Primary Solution Engineer remains visible to every authorized viewer even when that person is outside the viewer-selectable assignment list.'
+    ]
+  },
+  {
     version: '6.9.46', date: '2026-10-24', tag: 'regression-stabilization',
     title: 'Cross-surface consistency and release stabilization',
     summary: 'Corrects six defects found in the v6.9.45 live regression without changing ROI Model v2.8, evidence provenance, authorization, or customer-output governance.',
