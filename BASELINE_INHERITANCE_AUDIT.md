@@ -1,12 +1,13 @@
-# Cloud Inventory ROI v6.9.47 Baseline Inheritance Audit
+# Cloud Inventory ROI v6.9.48 Baseline Inheritance Audit
 
 ## Authoritative package
 
-- Baseline archive: `cloud-inventory-roi-v6.9.46-render-ready.zip`
-- Baseline SHA-256: `7C7E582588B8C01AF7B612C7DF4642D6089F4767541118A2B5422542BF06EE72`
-- Baseline application version: `6.9.46`
-- Target application version: `6.9.47`
-- Baseline was extracted directly into a new v6.9.47 workspace. No earlier archive, branch, or reconstructed source was used.
+- Baseline archive: `cloud-inventory-roi-v6.9.47-render-ready.zip`
+- Baseline SHA-256: `99815FC362B98FA30E781944251CD02FDBC66B06F2C67DAE20F4E3D287E8D8E6`
+- Baseline application version: `6.9.47`
+- Target application version: `6.9.48`
+- `package.json` and `release-lineage.json` both identify the extracted source as 6.9.47. The release archive intentionally contains no `.git` directory.
+- The archive was extracted directly into a new `work/cloud-inventory-roi-v6.9.48` directory. No earlier archive, branch, reconstructed source, or existing working folder was substituted.
 
 ## Protected authorities
 
@@ -16,17 +17,28 @@
 - Christie Persona: 1.0
 - Database migration level: 045
 - Active output registry: 29 active production outputs, preserved
+- Existing automated test inventory: 110 `*.test.js` files before v6.9.48 changes
 - SE Solution Fit scope: Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.
+
+## Active production paths verified before change
+
+- Customer Business Case: `/api/business-case-shares` → `src/routes/business-case-shares.js` → frozen customer-safe publication.
+- Executive Web: `switchTab('exec')` → `public/executive-output-adapters.js::renderExec()` → `/api/scenarios/:id/executive-value-story` plus `/executive-output-readiness`.
+- Executive PDF/DOCX/PPTX: `/api/scenarios/:id/export-{pdf,docx,pptx}` → `executiveReportFor()` → `buildCustomerROIReportData()` → `buildExecutiveValueStory()` → format-specific export builder.
+- Champion Pack / role outputs: active internal controls remain in `public/deal-export.js` and consume governed Executive story data.
+- Approved Battlecard PDF/DOCX: authenticated `/api/export/battlecard-pdf` and `/api/export/battlecard-docx` routes require the current approved Battlecard revision.
+- Solution Fit: `public/solution-fit.js` → authenticated `/api/handoffs` routes; stable saved identity, Primary SE, private evidence, and PS Turnover paths remain active.
 
 ## Corrective scope
 
-The build is limited to three verified v6.9.46 certification findings:
+This release is limited to the verified v6.9.47 Executive Web stale-state blocker:
 
-1. An explicit seller clear must persist in the canonical Executive Narrative and must not be resurrected from a stale legacy mirror.
-2. Customer-specific Solution Fit application creation must use an application modal rather than browser `prompt()`.
-3. The read-only Primary SE control must display the authoritative assigned user even when that user is not in the viewer's selectable active-user list.
+1. Executive Web must consume one current server-owned Executive output model.
+2. Automatic browser fallback from an intentionally cleared Three Why to old Prospect evidence must be removed.
+3. Superseded, cross-scenario, BFCache-restored, and multi-tab Web state must not render as current.
+4. The save response must expose authoritative narrative revision metadata and the browser must refetch the current model before reporting a completed Executive View save.
 
-## Preserved v6.9.46 behavior
+## Preserved v6.9.47 behavior
 
 - Populated Three Why cross-format parity
 - ROI save/reload and ROI Model v2.8 calculations
@@ -41,11 +53,9 @@ The build is limited to three verified v6.9.46 certification findings:
 - SE cross-account Solution Fit and Rep+SE authorization boundaries
 - Legacy financial read-time normalization
 
-## Release blockers entering v6.9.47
+## Release blocker entering v6.9.48
 
-- REG-6945-01 explicit blank state does not replace the canonical saved sibling.
-- Customer-specific application workflow depends on browser `prompt()`.
-- Primary SE assignment is lost in one role-filtered read-only control.
+Live v6.9.47 certification proved that an intentional Why Now clear persisted correctly and appeared correctly in every tested server-generated file, while Executive Web could display the prior value after refresh/navigation. The exact browser-only divergence is documented in `EXECUTIVE_WEB_STATE_LIFECYCLE_AUDIT_v6.9.48.md`.
 
 ## Outstanding certification requirements
 
@@ -57,14 +67,16 @@ The build is limited to three verified v6.9.46 certification findings:
 
 ## Explicitly retired behavior
 
-- Truthy-only narrative merging that cannot distinguish omitted from explicitly cleared fields
-- Browser `prompt()` for customer-specific application creation
-- `Not Assigned` as a fallback when a real Primary SE is absent only from a filtered option list
+- Automatic `initializeThreeWhysFromEvidence()` fallback on Executive navigation
+- Web rendering from separate story/readiness requests
+- Same-scenario response acceptance without a request-generation check
+- Reuse of an old Executive document when the current canonical request fails
+- Unconditional persistence of stale editor state merely because an output is opened
 
 
 ## Deployment reconciliation against current main
 
-This supplied-archive report describes the package build. Before deployment, archive SHA-256 `99815fc362b98fa30e781944251cd02fdbc66b06f2c67dae20f4e3d287e8d8e6` was reconciled with deployed Git parent `cc93e516474160782a92f30d3a474a858d0d18ee`. Existing deployed corrections and permanent tests missing from the archive were preserved. `DEPLOYMENT_DIFFERENTIAL_v6.9.47.md` records the actual deployment differential and verification boundaries.
+The supplied v6.9.48 archive was reconciled with deployed Git parent `e7d231dc8e6071dc83b39239d90aebc752bdf11b`. Existing deployed corrections and permanent tests absent from the package ancestry were retained. See `DEPLOYMENT_DIFFERENTIAL_v6.9.48.md` for the actual deployment differential, the user's backup waiver and verification boundaries.
 
 SE Solution Fit Scope:
 Sales Engineers have cross-account access to all active customers for

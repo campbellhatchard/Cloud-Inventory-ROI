@@ -1563,7 +1563,7 @@
 <script src="companies.js"></script>
 <script src="customer-gate.js"></script>
 <script src="ux-enhancements.js"></script>
-<script>const APP_VERSION="6.9.47";</script>
+<script>const APP_VERSION="6.9.48";</script>
 <script src="version-history.js"></script>
 <script src="calc-wizard.js"></script>
 <script src="ai-session.js"></script>
@@ -1655,11 +1655,11 @@ function showConfidenceWarningBanner(pct) {
   if (execTab) execTab.insertBefore(banner, execTab.firstChild);
   setTimeout(() => banner?.remove(), 8000);
 }
-function refreshExec() {
+async function refreshExec() {
   document.getElementById('confWarningBanner')?.remove();
-  if (typeof saveThreeWhys === 'function') saveThreeWhys();
-  renderExec();
-  showToast('Presentation refreshed.');
+  if (typeof saveThreeWhys === 'function') saveThreeWhys({persist:false});
+  if (typeof persistThreeWhys === 'function' && !await persistThreeWhys()) { showToast('Presentation could not be refreshed because the narrative was not saved.'); return; }
+  if (await renderExec() !== false) showToast('Presentation refreshed.');
 }
 function applyDefaultsAndShowProof() {
   const ind = document.getElementById('industry')?.value;
@@ -1694,8 +1694,6 @@ window.switchTab = function(name) {
   if (name === 'calc' && typeof initCurrency === 'function') initCurrency();
   if (typeof updateContextHeader === 'function') updateContextHeader();
   if (name === 'exec') {
-    if (typeof initializeThreeWhysFromEvidence === 'function') initializeThreeWhysFromEvidence();
-    if (typeof window.renderExec === 'function') window.renderExec(); else showExecutiveValueStoryUnavailable();
     if (typeof SFDictation!=='undefined' && SFDictation.supported) SFDictation.enhanceAll(document.getElementById('tab-exec'));
     initDebriefSection();
   }  if (name === 'disc' && typeof renderDiscoveryTab === 'function') renderDiscoveryTab();

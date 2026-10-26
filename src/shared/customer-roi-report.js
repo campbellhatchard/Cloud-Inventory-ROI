@@ -9,9 +9,9 @@ const brand = require('./brand-system');
 const text = value => String(value == null ? '' : value).trim();
 const number = value => Number.isFinite(Number(value)) ? Number(value) : 0;
 
-function buildCustomerROIReportData(source = {}) {
+function buildCustomerROIReportData(source = {}, options = {}) {
   if (!source.scenario || !source.scenario.data) throw new Error('A saved scenario is required to build customer outputs.');
-  const story = buildExecutiveValueStory(source);
+  const story = options.story || buildExecutiveValueStory(source);
   const roi = story.reportEconomics;
   const currency = story.meta.currency || 'USD';
   const years = roi.contractYears.map(row => ({

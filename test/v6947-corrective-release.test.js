@@ -43,9 +43,9 @@ test('REG-6947-01 absent, populated, cleared and restored narrative states remai
 test('REG-6947-02 real narrative route preserves omitted siblings and returns authoritative canonical state',()=>{
  const route=read('src/routes/scenarios.js'),client=read('public/narrative.js'),scenarioSave=read('public/app.js');
  assert.match(route,/hasOwnProperty\.call\(body,field\)/);
- assert.match(route,/SELECT id,base_id,data FROM scenarios/);
+ assert.match(route,/SELECT id,base_id,version,data FROM scenarios/);
  assert.match(route,/persistExecutiveNarrative\(target\.rows\[0\]\.data\|\|\{\},narrative/);
- assert.match(route,/RETURNING s\.id, s\.updated_at, s\.data/);
+ assert.match(route,/RETURNING s\.id, s\.version, s\.updated_at, s\.data/);
  assert.match(route,/executiveNarrative:rows\[0\]\.data\?\.executiveNarrative/);
  assert.match(client,/threeWhys\.now=clean\(result\.threeWhysNow\)/);
  assert.doesNotMatch(scenarioSave,/why_now'\)\?\.value\s*\|\|/);
@@ -103,7 +103,7 @@ test('REG-6947-04 assigned Primary SE remains visible when absent from viewer-se
 });
 
 test('REG-6947-05 corrective scope preserves ROI, evidence and authorization authorities',()=>{
- const pkg=require('../package.json');assert.equal(pkg.version,'6.9.47');
+ const pkg=require('../package.json');assert.ok(Number(pkg.version.split('.')[2])>=47);
  assert.equal(require('../release-lineage.json').roiModelVersion,28);
  const handoffRoutes=read('src/routes/handoffs.js'),solution=read('public/solution-fit.js');
  assert.match(handoffRoutes,/solutionFitAccess\(user,customerId,mode==='write'\?'edit':'view'\)/);

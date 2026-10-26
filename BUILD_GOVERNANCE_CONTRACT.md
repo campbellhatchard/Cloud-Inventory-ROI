@@ -631,3 +631,15 @@ Customer-specific Solution Fit application creation must use an accessible appli
 ## PRIMARY SE DISPLAY COMPLETENESS INVARIANT
 
 Every authorized Solution Fit surface must display the identity represented by authoritative `handoffs.primary_se_id`, even when that user is inactive or excluded from the current viewer's assignable option list. A disabled control may not translate a valid saved assignment into `Not Assigned`. Display completeness does not grant reassignment authority, broaden ROI access, or substitute the viewer's identity for the saved Primary SE.
+
+## SERVER-OWNED EXECUTIVE OUTPUT MODEL INVARIANT
+
+Every Executive Web, PDF, Word, PowerPoint, Proposal Preview, Proposal PDF, and Proposal Word representation must consume the same server-owned Executive output model semantics for the same saved scenario revision. The model owns canonical narrative precedence, Executive Value Story facts, readiness, scenario identity, narrative revision, story revision, and model revision. A browser presenter may format an accepted model, but it may not resolve legacy fields, Discovery evidence, editor contents, DOM text, storage state, or a second readiness request as a competing fact source.
+
+## EXECUTIVE STALE-RESPONSE REJECTION INVARIANT
+
+Each Executive model request must be bound to an exact customer/scenario workspace and monotonically increasing request generation. Starting a newer request invalidates and, where supported, cancels the older request. A response may render only when its generation, scenario identity, story identity, readiness identity, and revision metadata still match the active workspace. Network failure, malformed identity, superseded response, scenario switch, BFCache restore, visibility restoration, or cross-tab narrative revision must clear or revalidate prior presentation state and may never display an old Executive document as current.
+
+## EXECUTIVE SAVE/RECONCILE INVARIANT
+
+Opening an Executive or Proposal output is a side-effect-free read and may not persist editor state. A narrative save must return the canonical narrative projection and revision metadata produced by that write. The initiating client may report completed Executive View save only after it invalidates any prior output model, adopts the save response without overwriting a newer edit, refetches the current server model, and renders the accepted revision. Other tabs receive revision invalidation only; no browser message or cache becomes narrative authority.

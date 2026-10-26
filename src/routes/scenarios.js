@@ -24,7 +24,6 @@ const { BUYCYCLE_MIN_STAGE, parseBuyCycleStage, getBuyCycleStageLabel } = requir
 const { parseOpportunityValue, validateOpportunityCurrency, buildOpportunityProfile } = require('../shared/opportunity-value');
 const { normalizeProposalDraft, proposalMeta } = require('../shared/proposal-state');
 const { validateSelection, resolveApproved, relevant } = require('../shared/customer-proof-catalog');
-const { buildExecutiveValueStory } = require('../shared/executive-value-story');
 const { buildCustomerROIReportData } = require('../shared/customer-roi-report');
 const { evaluateExecutiveOutputReadiness } = require('../shared/executive-output-readiness');
 const { buildExecutivePptx } = require('../exports/executive-pptx');
@@ -32,13 +31,14 @@ const { buildExecutivePdf } = require('../exports/executive-pdf');
 const { buildExecutiveDocx } = require('../exports/executive-docx');
 const { buildRoiAssumptionsReportBundle } = require('../shared/roi-assumptions-report');
 const { buildRoiAssumptionsPdf } = require('../exports/roi-assumptions-pdf');
-const { loadExecutiveSource, executiveStoryFor, executiveReportFor } = require('../shared/executive-source');
+const { loadExecutiveSource, executiveOutputModelFor, executiveReportFor } = require('../shared/executive-source');
 const { FINANCIAL_INPUTS, EVENT_TYPES, normalizeValue, sameValue, freshness, isFinancialInput, isCustomerEvent, unitFor, savedScenarioCurrency, buildSnapshotRows, enforceProvenance, summarize } = require('../shared/value-history');
 const { sendProblem, problem } = require('../shared/api-problem');
 const { scenarioDisplayValue, historicalSnapshotMatches } = require('../shared/scenario-input-storage');
 const { loadProspectEvidenceReview } = require('../shared/prospect-evidence-review');
 const { applyRoiValueEvent } = require('../shared/roi-value-application');
 const { persistExecutiveNarrative, resolveExecutiveNarrative } = require('../shared/executive-narrative');
+const { executiveNarrativeRevision } = require('../shared/executive-output-model');
 const { scenarioFinancialSummary } = require('../shared/scenario-financial-summary');
 
 const router = express.Router();
@@ -88,9 +88,11 @@ function normalizeNarrativeMeta(narrative,requestedMeta={},submittedAnswers=[]){
   return out;
 }
 
-router.get('/:id/executive-value-story',async(req,res)=>{try{const story=await executiveStoryFor(req.user,req.params.id);if(story.error)return res.status(story.status).json({error:story.error});res.json(story);}catch(err){console.error('Executive Value Story error:',err.message);res.status(500).json({error:'Failed to build Executive Value Story.'});}});
-router.get('/:id/executive-output-readiness',async(req,res)=>{try{const story=await executiveStoryFor(req.user,req.params.id);if(story.error)return res.status(story.status).json({error:story.error});res.json(evaluateExecutiveOutputReadiness(story,{outputType:String(req.query.output||'executive_view')}));}catch(err){res.status(err.status||500).json({error:err.message||'Failed to evaluate executive output readiness.'});}});
-router.post('/:id/executive-output-readiness/acknowledge',async(req,res)=>{try{const story=await executiveStoryFor(req.user,req.params.id);if(story.error)return res.status(story.status).json({error:story.error});const outputType=String(req.body?.outputType||'pptx'),readiness=evaluateExecutiveOutputReadiness(story,{outputType});if(readiness.status!=='review')return res.status(409).json({error:'Acknowledgement is only available for Review Before Sharing outputs.',readiness});await log({userId:req.user.id,action:'executive_output.review_acknowledged',entityType:'scenario',entityId:req.params.id,detail:{outputType,storyRevision:story.storyRevision,warningIds:readiness.warnings.map(x=>x.id)},ipAddress:req.ip});res.json({acknowledged:true,storyRevision:story.storyRevision});}catch(err){res.status(500).json({error:'Failed to record review acknowledgement.'});}});
+const executiveNoStore=res=>{res.set('Cache-Control','private, no-store, max-age=0');res.set('Pragma','no-cache');res.set('Expires','0');};
+router.get('/:id/executive-output-model',async(req,res)=>{const started=Date.now(),requestId=String(req.get('X-Executive-Request-Id')||'').slice(0,80)||null;try{const outputType=String(req.query.output||'executive_view'),model=await executiveOutputModelFor(req.user,req.params.id,{outputType});if(model.error)return res.status(model.status).json({error:model.error});executiveNoStore(res);res.set('X-Executive-Model-Revision',model.revision.modelRevision);console.info('executive_model.completed',{scenarioId:req.params.id,userId:req.user.id,scenarioVersion:model.revision.scenarioVersion,narrativeRevision:model.revision.narrativeRevision,modelRevision:model.revision.modelRevision,requestId,elapsedMs:Date.now()-started});res.json(model);}catch(err){console.error('executive_model.failed',{scenarioId:req.params.id,userId:req.user.id,requestId,elapsedMs:Date.now()-started,message:err.message});res.status(err.status||500).json({error:'Unable to load the current Executive Value Story. Please retry.'});}});
+router.get('/:id/executive-value-story',async(req,res)=>{try{const model=await executiveOutputModelFor(req.user,req.params.id,{outputType:'executive_view'});if(model.error)return res.status(model.status).json({error:model.error});executiveNoStore(res);res.json(model.story);}catch(err){console.error('Executive Value Story error:',err.message);res.status(500).json({error:'Failed to build Executive Value Story.'});}});
+router.get('/:id/executive-output-readiness',async(req,res)=>{try{const model=await executiveOutputModelFor(req.user,req.params.id,{outputType:String(req.query.output||'executive_view')});if(model.error)return res.status(model.status).json({error:model.error});executiveNoStore(res);res.json(model.readiness);}catch(err){res.status(err.status||500).json({error:err.message||'Failed to evaluate executive output readiness.'});}});
+router.post('/:id/executive-output-readiness/acknowledge',async(req,res)=>{try{const outputType=String(req.body?.outputType||'pptx'),model=await executiveOutputModelFor(req.user,req.params.id,{outputType});if(model.error)return res.status(model.status).json({error:model.error});const {story,readiness}=model;if(readiness.status!=='review')return res.status(409).json({error:'Acknowledgement is only available for Review Before Sharing outputs.',readiness});await log({userId:req.user.id,action:'executive_output.review_acknowledged',entityType:'scenario',entityId:req.params.id,detail:{outputType,storyRevision:story.storyRevision,warningIds:readiness.warnings.map(x=>x.id)},ipAddress:req.ip});res.json({acknowledged:true,storyRevision:story.storyRevision});}catch(err){res.status(500).json({error:'Failed to record review acknowledgement.'});}});
 
 const EXECUTIVE_EXPORT_SERVER_TIMEOUT_MS=25000;
 function withExecutiveExportTimeout(label,task){
@@ -116,10 +118,10 @@ router.get('/:id/export-pptx',async(req,res)=>{
   const started=Date.now(),scenarioId=String(req.params.id),internalDraft=req.query.internalDraft==='true',reviewAcknowledged=req.query.reviewAcknowledged==='true';
   console.info('executive_pptx.started',{scenarioId,internalDraft});
   try{
-    const report=await withExecutiveExportTimeout('PowerPoint',()=>executiveReportFor(req.user,scenarioId));
+    const report=await withExecutiveExportTimeout('PowerPoint',()=>executiveReportFor(req.user,scenarioId,{outputType:'pptx'}));
     if(report.error)return res.status(report.status).json({error:report.error});
     const story=report.story;
-    const readiness=evaluateExecutiveOutputReadiness(story,{outputType:'pptx'});
+    const readiness=report.outputModel.readiness;
     if(readiness.status==='draft_only'&&!internalDraft)return res.status(409).json({error:'This output is available only as an internal draft.',readiness});
     if(readiness.status==='review'&&!reviewAcknowledged)return res.status(409).json({error:'Review acknowledgement is required before export.',readiness});
     const buffer=await withExecutiveExportTimeout('PowerPoint',()=>buildExecutivePptx(report,{internalDraft:readiness.status==='draft_only'||internalDraft}));
@@ -140,9 +142,9 @@ async function exportReport(req,res,kind){
   const started=Date.now(),scenarioId=String(req.params.id),internalDraft=req.query.internalDraft==='true',reviewAcknowledged=req.query.reviewAcknowledged==='true';
   console.info(`executive_${kind}.started`,{scenarioId,userId:req.user.id,internalDraft});
   try{
-    const report=await withExecutiveExportTimeout(kind.toUpperCase(),()=>executiveReportFor(req.user,scenarioId));
+    const report=await withExecutiveExportTimeout(kind.toUpperCase(),()=>executiveReportFor(req.user,scenarioId,{outputType:kind}));
     if(report.error){console.warn(`executive_${kind}.denied`,{scenarioId,userId:req.user.id,status:report.status});return res.status(report.status).json({error:report.error});}
-    const readiness=evaluateExecutiveOutputReadiness(report.story,{outputType:kind});
+    const readiness=report.outputModel.readiness;
     if(readiness.status==='draft_only'&&!internalDraft)return res.status(409).json({error:'This output is available only as an internal draft.',readiness});
     if(readiness.status==='review'&&!reviewAcknowledged)return res.status(409).json({error:'Review acknowledgement is required before export.',readiness});
     const draft=readiness.status==='draft_only'||internalDraft;
@@ -207,10 +209,14 @@ function presentScenario(row) {
     financial_source: financialSource,
     ...scenario
   } = row;
+  const narrative=resolveExecutiveNarrative(scenario.data||{});
+  scenario.data={...(scenario.data||{}),threeWhysAct:narrative.whyChange.value||null,threeWhysNow:narrative.whyNow.value||null,threeWhysCi:narrative.whyCloudInventory.value||null,threeWhysMeta:{whyChange:narrative.whyChange.meta,whyNow:narrative.whyNow.meta,whyCloudInventory:narrative.whyCloudInventory.meta}};
+  const narrativeRevision=executiveNarrativeRevision(scenario.data);
   const financial=scenarioFinancialSummary(financialSource||{},{scenarioVersion:row.version});
   const stage = parseBuyCycleStage(row.current_buy_cycle_stage, BUYCYCLE_MIN_STAGE);
   return {
     ...scenario,
+    narrativeRevision,
     annual_benefit:financial.annualCustomerBenefit,
     roi:financial.contractROI,
     npv3:financial.NPV,
@@ -503,7 +509,7 @@ router.patch('/:id/narrative', async (req, res) => {
 
   try {
     const access=await authorizedScenario(req.user,req.params.id,'edit');if(access.error)return res.status(access.status).json({error:access.error});
-    const target=await query('SELECT id,base_id,data FROM scenarios WHERE base_id=$1 AND is_current=TRUE AND deleted_at IS NULL',[access.base_id]);if(!target.rows.length)return res.status(404).json({error:'Current scenario not found.'});
+    const target=await query('SELECT id,base_id,version,data FROM scenarios WHERE base_id=$1 AND is_current=TRUE AND deleted_at IS NULL',[access.base_id]);if(!target.rows.length)return res.status(404).json({error:'Current scenario not found.'});
     const submitted=await query(`SELECT a.question_id,a.answer_text,s.id submission_id,s.submission_number,s.submitted_at,s.source_scenario_id,s.source_scenario_version FROM discovery_submissions s JOIN discovery_submission_answers a ON a.submission_id=s.id WHERE s.id=(SELECT id FROM discovery_submissions WHERE base_id=$1 ORDER BY submitted_at DESC,submission_number DESC LIMIT 1)`,[access.base_id]);
     narrative.threeWhysMeta=normalizeNarrativeMeta(narrative,body.threeWhysMeta,submitted.rows);
     const narrativeProjection=persistExecutiveNarrative(target.rows[0].data||{},narrative,narrative.threeWhysMeta);
@@ -512,13 +518,18 @@ router.patch('/:id/narrative', async (req, res) => {
       `WITH current_target AS (SELECT id FROM scenarios WHERE id=$2 AND is_current=TRUE AND deleted_at IS NULL)
        UPDATE scenarios s SET data = s.data || $1::jsonb, updated_at = NOW()
        FROM current_target t WHERE s.id=t.id
-       RETURNING s.id, s.updated_at, s.data`,
+       RETURNING s.id, s.version, s.updated_at, s.data`,
       [JSON.stringify(governedProjection), target.rows[0].id]
     );
     if (!rows.length) return res.status(404).json({ error: 'Scenario not found or access denied.' });
-    res.set('Cache-Control','no-store');
+    executiveNoStore(res);
     const authoritative=resolveExecutiveNarrative(rows[0].data||{});
-    res.json({ saved: true, id: rows[0].id, updatedAt: rows[0].updated_at,
+    const outputModel=await executiveOutputModelFor(req.user,rows[0].id,{outputType:'executive_view'});
+    if(outputModel.error)return res.status(outputModel.status).json({error:outputModel.error});
+    res.json({ saved: true, id: rows[0].id, scenarioVersion:rows[0].version, updatedAt: rows[0].updated_at,
+      narrativeRevision:executiveNarrativeRevision(rows[0].data||{}),
+      modelRevision:outputModel.revision.modelRevision,outputModelRevision:outputModel.revision,
+      canonicalNarrative:outputModel.canonicalNarrative,
       executiveNarrative:rows[0].data?.executiveNarrative||null,
       threeWhysAct:authoritative.whyChange.value||null, threeWhysCi:authoritative.whyCloudInventory.value||null,
       threeWhysNow:authoritative.whyNow.value||null, threeWhysMeta:rows[0].data?.threeWhysMeta||{} });

@@ -1,6 +1,5 @@
 'use strict';
-const {buildExecutiveValueStory}=require('./executive-value-story');
-const {evaluateExecutiveOutputReadiness}=require('./executive-output-readiness');
+const {buildExecutiveOutputModel}=require('./executive-output-model');
 const str=v=>String(v??'');
 const arr=v=>Array.isArray(v)?v:[];
 // Explicit projection: no raw scenario, evidence, proposal or internal findings.
@@ -19,7 +18,7 @@ async function preparePublication({user,scenarioId,reviewAcknowledged,loadSource
  if(!source.scenario.customer_id)throw Object.assign(new Error('An authorized customer is required before publishing.'),{status:409});
  const access=await customerAccess(user,source.scenario.customer_id,'view');
  if(!access.exists||!access.allowed)throw Object.assign(new Error('Customer access denied.'),{status:403});
- const story=buildExecutiveValueStory(source),readiness=evaluateExecutiveOutputReadiness(story,{outputType:'share'});
+ const model=buildExecutiveOutputModel(source,{outputType:'share'}),story=model.story,readiness=model.readiness;
  if(readiness.status==='draft_only'||(readiness.status==='review'&&reviewAcknowledged!==true))throw Object.assign(new Error(readiness.status==='draft_only'?'Draft Only business cases cannot be published.':'Review acknowledgement is required before publication.'),{status:409,readiness});
  const publishedAt=new Date().toISOString();
  return {scenario:source.scenario,story,readiness,publishedAt,payload:customerPayload(story,readiness,publishedAt)};

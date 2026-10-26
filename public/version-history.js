@@ -7,6 +7,16 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.48', date: '2026-10-25', tag: 'narrative-authority',
+    title: 'Permanent Executive narrative authority and stale-state correction',
+    summary: 'Makes one server-owned model authoritative for Executive Web, files, and Proposal outputs while rejecting stale browser responses.',
+    highlights: [
+      'Executive Web now renders one server response containing the canonical story, readiness, and revision identity.',
+      'Opening Executive Outputs no longer restores or saves browser-side fallback evidence.',
+      'Narrative saves invalidate and refetch the authoritative model; out-of-order, cross-scenario, BFCache, and multi-tab state is revalidated.'
+    ]
+  },
+  {
     version: '6.9.47', date: '2026-10-25', tag: 'corrective-authority',
     title: 'Executive clearing, custom application and Primary SE corrections',
     summary: 'Corrects three certification defects without changing ROI Model v2.8, evidence provenance, Solution Fit authorization, or output methodology.',

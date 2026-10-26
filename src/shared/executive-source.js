@@ -1,8 +1,8 @@
 'use strict';
 const {query}=require('../db');
 const {scenarioAccess}=require('../authorization');
-const {buildExecutiveValueStory}=require('./executive-value-story');
 const {buildCustomerROIReportData}=require('./customer-roi-report');
+const {buildExecutiveOutputModel}=require('./executive-output-model');
 
 function createExecutiveSourceLoader(dependencies={query,scenarioAccess}){return async function load(user,id){
  const {query,scenarioAccess}=dependencies;
@@ -23,6 +23,7 @@ function createExecutiveSourceLoader(dependencies={query,scenarioAccess}){return
  return {scenario,governance:governance.rows[0]||{},stakeholders:stakeholders.rows,discovery:discovery.rows,solutionFit:handoff.rows[0]||null,jointProjectPlan:plans.rows[0]||null,proposal:scenario.data?.proposalDraft||null,valueHistory:valueHistory.rows};
 };}
 const loadExecutiveSource=createExecutiveSourceLoader();
-async function executiveStoryFor(user,id){const source=await loadExecutiveSource(user,id);return source.error?source:buildExecutiveValueStory(source);}
-async function executiveReportFor(user,id){const source=await loadExecutiveSource(user,id);return source.error?source:buildCustomerROIReportData(source);}
-module.exports={createExecutiveSourceLoader,loadExecutiveSource,executiveStoryFor,executiveReportFor};
+async function executiveOutputModelFor(user,id,options={}){const source=await loadExecutiveSource(user,id);return source.error?source:buildExecutiveOutputModel(source,options);}
+async function executiveStoryFor(user,id){const model=await executiveOutputModelFor(user,id,{outputType:'executive_view'});return model.error?model:model.story;}
+async function executiveReportFor(user,id,options={}){const source=await loadExecutiveSource(user,id);if(source.error)return source;const outputModel=buildExecutiveOutputModel(source,{outputType:options.outputType||'pdf'});return{...buildCustomerROIReportData(source,{story:outputModel.story}),outputModel};}
+module.exports={createExecutiveSourceLoader,loadExecutiveSource,executiveOutputModelFor,executiveStoryFor,executiveReportFor};

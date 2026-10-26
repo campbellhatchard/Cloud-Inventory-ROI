@@ -1,0 +1,22 @@
+<!doctype html><html><head><meta charset="utf-8"><title>RUNNING v6.9.48 production Executive authority test</title></head><body>
+<main><h1>v6.9.48 production Executive narrative authority</h1><div id="tab-exec" class="active"><div id="execDoc"></div></div><pre id="result">RUNNING</pre></main>
+<script>
+const pending=[],channels=[];let workspace='A',renders=0;
+class BroadcastChannel{constructor(){channels.push(this)}postMessage(){}}
+class MockResponse{constructor(model,ok=true){this.model=model;this.ok=ok}async json(){return this.model}}
+window._calcScenarioId='A';window.CIWorkspaceContext={capture:()=>({scenarioId:workspace}),isCurrent:t=>t.scenarioId===workspace};
+window.apiFetch=()=>new Promise((resolve,reject)=>pending.push({resolve,reject}));window.renderExec=()=>{renders++};window.showToast=()=>{};
+const model=(whyNow,revision='1',scenarioId='A')=>({revision:{scenarioId,scenarioVersion:8,narrativeRevision:'n-'+revision,modelRevision:'m-'+revision,storyRevision:'s-'+revision},canonicalNarrative:{whyNow:{value:whyNow==='To validate'?null:whyNow,explicitlyCleared:whyNow==='To validate'}},story:{meta:{scenarioId},storyRevision:'s-'+revision,threeWhys:{whyChange:{value:'A'},whyNow:{value:whyNow},whyCloudInventory:{value:'C'}}},readiness:{status:'ready',label:'Ready to Share',blockers:[],warnings:[],strengths:[],storyRevision:'s-'+revision}});
+</script>
+<script src="../../public/executive-story.js"></script>
+<script>
+(async()=>{const assert=(ok,message)=>{if(!ok)throw Error(message)};
+ window.executiveValueStory=model('STALE B','0').story;
+ const current=loadExecutiveOutputModel('executive_view');pending.shift().resolve(new MockResponse(model('To validate','1')));assert((await current).story.threeWhys.whyNow.value==='To validate','canonical clear wins stale browser value');
+ const old=loadExecutiveOutputModel('executive_view').catch(error=>error),fresh=loadExecutiveOutputModel('executive_view');const oldRequest=pending.shift(),freshRequest=pending.shift();freshRequest.resolve(new MockResponse(model('B2','2')));assert((await fresh).story.threeWhys.whyNow.value==='B2','new response accepted');oldRequest.resolve(new MockResponse(model('OLD B','1')));assert((await old).code==='STALE_WORKSPACE','late response rejected');assert(window.executiveValueStory.threeWhys.whyNow.value==='B2','late response cannot overwrite');
+ const switched=loadExecutiveOutputModel('executive_view').catch(error=>error),switchRequest=pending.shift();workspace='B';window._calcScenarioId='B';switchRequest.resolve(new MockResponse(model('A VALUE','3','A')));assert((await switched).code==='STALE_WORKSPACE','cross-scenario response rejected');assert(window.executiveValueStory===null,'cross-scenario state fails closed');
+ workspace='A';window._calcScenarioId='A';const failed=loadExecutiveOutputModel('executive_view').catch(error=>error),failedRequest=pending.shift();failedRequest.reject(Error('offline'));assert((await failed).message==='offline','network error surfaced');assert(window.executiveValueStory===null,'offline does not reuse stale story');
+ window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}));assert(renders===1,'BFCache restoration triggers authoritative revalidation');channels[0].onmessage({data:{scenarioId:'A',narrativeRevision:'other-tab'}});assert(renders===2,'cross-tab revision triggers authoritative revalidation');
+ document.title='PASS v6.9.48 production Executive authority test';document.getElementById('result').textContent='PASS\nCanonical clear beats stale state: PASS\nOut-of-order response: PASS\nScenario isolation: PASS\nNetwork fail-closed: PASS\nBFCache revalidation: PASS\nMulti-tab invalidation: PASS';
+})().catch(error=>{document.title='FAIL v6.9.48 production Executive authority test';document.getElementById('result').textContent='FAIL\n'+error.stack;console.error(error);});
+</script></body></html>
