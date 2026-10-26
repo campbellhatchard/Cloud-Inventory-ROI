@@ -71,7 +71,9 @@ test('guided Solution Fit uses server persistence, eight ordered steps, and no b
   assert.match(source,/data-sfpvalidation/);
   assert.match(source,/Exceptions and notes/);
   assert.ok(index.indexOf('solution-fit-state.js')<index.indexOf('solution-fit.js'));
-  assert.match(source,/method:\s*'PUT',\s*body:\s*JSON\.stringify\(\{\s*data:\s*S\s*\}\)/);
+  assert.match(source,/payload=cloneState\(S\)/);
+  assert.match(source,/method:\s*'PUT',\s*body:\s*JSON\.stringify\(\{\s*data:\s*payload\s*\}\)/);
+  assert.match(source,/hydrateAuthoritativeState\(result\.data\|\|payload\)/);
 });
 
 test('Professional Services turnover Word output is built from saved Solution Fit data',async()=>{

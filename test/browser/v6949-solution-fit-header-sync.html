@@ -1,0 +1,59 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>RUNNING v6.9.49 Solution Fit header synchronization</title></head>
+<body>
+<main><h1>v6.9.49 Solution Fit header synchronization</h1><pre id="result">RUNNING</pre><div id="sfGate"></div><div id="sfApp"></div></main>
+<script src="/public/solution-fit-state.js"></script>
+<script src="/public/solution-fit-scope.js"></script>
+<script src="/public/solution-fit-presentation.js"></script>
+<script src="/handoff-readiness.js"></script>
+<script src="/public/brand-system.js"></script>
+<script>
+'use strict';
+const packageNames=['Cycle Count - Directed','Inventory Transfer','Inventory Inquiry','Inventory Issue','Inventory Reclassification','Inventory Adjustment Negative','Inventory Adjustment Positive','Lot Status Update','Pack Confirmation','Pick Confirmation','Purchase Order Receipt','Receipt Routing','RMA Returns','Ship Confirmation','Inventory Cart Transfer'];
+const response=(body,status=200)=>({ok:status>=200&&status<300,status,json:async()=>body});
+let serverData={opportunity:{customer:'Header Sync QA',products:['MEP']},solutionScope:{primaryProduct:'MEP',additionalProducts:[],erp:'',erpVersion:'',packageMode:'custom',selectedAppIds:[],selectedApps:[]},architecture:{erp:'',version:''},processes:[],gaps:[],interfaces:[],inventoryConfiguration:{},turnover:{}};
+let failNextPut=false,putCount=0;
+window._sfSelectedCustomerId='customer-6949';window.currentScenarioCustomerId='customer-6949';window.confirm=()=>true;
+window.ciAuth={getUser:()=>({id:'se-a',role:'se',roles:['se'],roleKeys:['se']})};window.showToast=()=>{};window.switchTab=()=>{};window.getVals=()=>({});window.discoveryAnswers={};
+window.SolutionFitEvidence={load:async()=>{},controls:()=>'',wire:()=>{},validateState:()=>({queue:[]}),matching:()=>[]};
+window.apiFetch=async(path,options={})=>{
+  if(path==='/api/handoffs/customer-6949'&&(!options.method||options.method==='GET'))return response({exists:true,customerName:'Header Sync QA',primarySeId:'se-a',primarySeName:'SE-A',additionalSeIds:[],capabilities:{canView:true,canEdit:true,canCreate:false,canAssign:false},data:JSON.parse(JSON.stringify(serverData))});
+  if(path==='/api/handoffs/customer-6949'&&options.method==='PUT'){
+    putCount++;
+    if(failNextPut){failNextPut=false;return response({error:'Simulated save failure'},503);}
+    serverData=JSON.parse(options.body).data;
+    return response({ok:true,data:JSON.parse(JSON.stringify(serverData)),readiness:40,status:'not_ready',updatedAt:new Date().toISOString()});
+  }
+  if(path==='/api/solution-engineers')return response([{id:'se-a',name:'SE-A'}]);
+  if(path==='/api/solution-fit/catalog/mep-standard-apps')return response({catalogId:'mep-standard-apps',catalogVersion:'2026-08',source:'browser fixture',erps:{JDE:packageNames,SAP:packageNames},standardPackages:{JDE:packageNames,SAP:packageNames}});
+  if(path.startsWith('/api/stakeholders'))return response([]);
+  if(path.endsWith('/turnover-package/preview'))return response({turnoverReady:false,missingTurnoverFields:[],pendingAttachmentCount:0,summary:{},classification:{}});
+  return response({},404);
+};
+function check(value,message){if(!value)throw new Error(message);}
+function snapshot(){return window.SolutionFitCorrective.solutionFitSurfaceSnapshot();}
+function equalSurfaces(expected,erp){const view=snapshot();check(view.bodyCount===expected,`Body count ${view.bodyCount} != ${expected}`);check(view.progressCount===expected,`Progress count ${view.progressCount} != ${expected}`);check(view.state.applicationCount===expected,`State count ${view.state.applicationCount} != ${expected}`);check(view.header.includes(`${expected} app`),`Header did not show ${expected}: ${view.header}`);if(erp){check(view.bodyErp===erp,`Body ERP ${view.bodyErp} != ${erp}`);check(view.state.erp===erp,`State ERP ${view.state.erp} != ${erp}`);check(view.header.includes(`MEP ${erp}`),`Header ERP did not show ${erp}: ${view.header}`);}check(view.dirty===false,'State remained dirty after successful save');}
+async function clickAndSave(selector){const control=document.querySelector(selector);check(control,`Missing control ${selector}`);control.click();check(await window.flushSolutionFitSave()===true,`Save failed for ${selector}`);}
+</script>
+<script src="/public/solution-fit.js"></script>
+<script>
+(async()=>{try{
+  await window.initSolutionFit();equalSurfaces(0,'');check(snapshot().header.includes('ERP not selected'),'Initial unselected ERP state missing');
+
+  await clickAndSave('[data-sferp="JDE"]');equalSurfaces(0,'JDE');
+  await clickAndSave('[data-sfpackagemode="standard"]');equalSurfaces(15,'JDE');
+
+  async function addCustom(name){window.SolutionFitCorrective.openCustomApplicationModal();const modal=document.getElementById('sfCustomApplicationDialog');check(modal,'Custom application modal missing');modal.querySelector('[data-sfcustom-name]').value=name;check(await window.SolutionFitCorrective.submitCustomApplicationModal()===true,`${name} did not save`);}
+  await addCustom('Custom One');equalSurfaces(16,'JDE');
+  await addCustom('Custom Two');equalSurfaces(17,'JDE');
+
+  const customOne=[...document.querySelectorAll('.sf-application-card')].find(card=>card.textContent.includes('Custom One'));check(customOne,'Custom One card missing');const remove=customOne.querySelector('[data-sfpsel]');remove.checked=false;remove.dispatchEvent(new Event('change',{bubbles:true}));check(await window.flushSolutionFitSave()===true,'Custom removal did not save');equalSurfaces(16,'JDE');
+
+  await window.initSolutionFit();equalSurfaces(16,'JDE');
+  failNextPut=true;document.querySelector('[data-sferp="SAP"]').click();check(await window.flushSolutionFitSave()===false,'Simulated failure unexpectedly passed');equalSurfaces(16,'JDE');check(document.getElementById('sfSaveStateMini').textContent.includes('Save failed'),'Failure state was not visible');
+
+  check(serverData.processes.filter(item=>item.source==='standard_app'&&item.selected&&!item.historical).length===15,'Standard package membership changed');check(serverData.processes.filter(item=>item.source==='non_standard'&&item.selected&&!item.historical).length===1,'Custom selection did not persist after removal');
+  document.title='PASS v6.9.49 Solution Fit header synchronization';document.getElementById('result').textContent=`PASS\nERP immediate synchronization: PASS\nStandard Package 15/15/15: PASS\nCustom add 16 then 17: PASS\nCustom remove 16: PASS\nHard refresh parity: PASS\nSave failure rollback: PASS\nPUT requests: ${putCount}`;
+}catch(error){document.title='FAIL v6.9.49 Solution Fit header synchronization';document.getElementById('result').textContent='FAIL\n'+error.stack;console.error(error);}})();
+</script>
+</body></html>

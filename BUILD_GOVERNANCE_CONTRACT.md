@@ -643,3 +643,7 @@ Each Executive model request must be bound to an exact customer/scenario workspa
 ## EXECUTIVE SAVE/RECONCILE INVARIANT
 
 Opening an Executive or Proposal output is a side-effect-free read and may not persist editor state. A narrative save must return the canonical narrative projection and revision metadata produced by that write. The initiating client may report completed Executive View save only after it invalidates any prior output model, adopts the save response without overwriting a newer edit, refetches the current server model, and renders the accepted revision. Other tabs receive revision invalidation only; no browser message or cache becomes narrative authority.
+
+## SOLUTION FIT PRESENTATION SYNCHRONIZATION INVARIANT
+
+The saved Solution Fit is the sole authority for product, ERP, package, and application scope. After each successful scope save, the browser must adopt the server-returned normalized Solution Fit before deriving the header summary, application-scope body, and progress panel. Those presentations must use the same active-application selector and stable application identities. Scope saves are serialized so an older response cannot overwrite a newer edit; a failed save restores every presentation to the last server-confirmed state. No header-only business state, handler-specific text patch, arbitrary delay, or forced page reload may substitute for reconciliation.

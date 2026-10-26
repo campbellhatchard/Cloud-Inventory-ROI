@@ -39,9 +39,11 @@
     handoffType:'internal'
   });
   const blankCustomization = () => ({ module:'', description:'', impact:'None' });
+  const cloneState = value => JSON.parse(JSON.stringify(value));
 
   /* Module state */
   let S = blankState();
+  let lastSavedState = cloneState(S), stateRevision = 0, saveRunGeneration = 0, saveInFlight = null;
   let customerId = null, customerName = '', canWrite = false, exists = false;
   let primarySeId = null, primarySeName = '', additionalSeIds = [];
   let capabilities={canView:false,canEdit:false,canCreate:false,canRestore:false},mepCatalog=null,loadState='idle';
@@ -112,7 +114,8 @@
     document.getElementById('sfCustomerSwitchDialog')?.remove();
     document.getElementById('sfCustomApplicationDialog')?.remove();
     document.getElementById('solutionFitEvidenceModal')?.remove();
-    S=blankState();customerId=custId||null;customerName='';canWrite=false;exists=false;dirty=false;
+    saveRunGeneration++;saveInFlight=null;stateRevision=0;
+    S=blankState();lastSavedState=cloneState(S);customerId=custId||null;customerName='';canWrite=false;exists=false;dirty=false;
     primarySeId=null;primarySeName='';additionalSeIds=[];
     capabilities={canView:false,canEdit:false,canCreate:false,canRestore:false};
     knownSources={};knownStakeholders=[];lastEditedByName='';lastEditedAt='';openGapId=null;
@@ -160,6 +163,7 @@
       if(generation!==workspaceLoadGeneration)return false;
       await applyKnownData({ mutate:false, save:false });
       if(generation!==workspaceLoadGeneration)return false;
+      lastSavedState=cloneState(S);dirty=false;
       loadState='ready';
       return true;
     } catch (e) { if(generation!==workspaceLoadGeneration)return false;console.error('loadHandoff error:', e.message); renderGateState('error','Check your connection and try again.'); return false; }
@@ -361,33 +365,75 @@
     return extra ?? base;
   }
 
+  function hydrateAuthoritativeState(value){
+    const state=mergeState(blankState(),cloneState(value||{}));
+    migrateState(state);
+    return state;
+  }
+
+  function markDirty(){dirty=true;stateRevision++;}
+
+  function restoreLastSavedState(message){
+    clearTimeout(saveTimer);
+    S=hydrateAuthoritativeState(lastSavedState);
+    stateRevision++;
+    dirty=false;
+    lastSaveError=message||'Solution Fit could not be saved. Retry when the connection is restored.';
+    if(loadState==='ready')renderApp();
+    setSaveState('error');
+  }
+
   function scheduleSave() {
     if (!canWrite) return;
-    dirty = true;
+    markDirty();
     setSaveState('saving');
     refreshSolutionFitProgress();
     clearTimeout(saveTimer);
     saveTimer = setTimeout(saveHandoff, 800);
   }
-  async function saveHandoff() {
-    if (!canWrite) return true;
-    if (!customerId) return false;
-    try {
-      lastSaveError = '';
-      const resp = await apiFetch('/api/handoffs/' + encodeURIComponent(customerId), {
-        method: 'PUT', body: JSON.stringify({ data: S })
-      });
-      if (!resp || !resp.ok) { lastSaveError=(await safeError(resp))||'Solution Fit could not be saved. Retry when the connection is restored.';setSaveState('error'); return false; }
-      const r = await resp.json();
-      exists = true; dirty = false;
-      setSaveState('saved');
-      /* Reflect the server's authoritative readiness and saved-state status. */
-      renderReadinessBar(r.readiness, r.status);
-      refreshSolutionFitProgress();
-      return true;
-    } catch (e) { lastSaveError='Solution Fit could not be saved. Check your connection and retry.';console.error('saveHandoff error:', e.message); setSaveState('error'); return false; }
+  async function runSaveLoop(generation) {
+    while(canWrite&&customerId&&dirty&&generation===saveRunGeneration){
+      const targetCustomerId=customerId,requestRevision=stateRevision,payload=cloneState(S);
+      try{
+        lastSaveError='';
+        const resp=await apiFetch('/api/handoffs/'+encodeURIComponent(targetCustomerId),{method:'PUT',body:JSON.stringify({data:payload})});
+        if(generation!==saveRunGeneration||String(targetCustomerId)!==String(customerId))return false;
+        if(!resp||!resp.ok){restoreLastSavedState((await safeError(resp))||'Solution Fit could not be saved. Retry when the connection is restored.');return false;}
+        const result=await resp.json();
+        if(generation!==saveRunGeneration||String(targetCustomerId)!==String(customerId))return false;
+        const authoritative=hydrateAuthoritativeState(result.data||payload);
+        lastSavedState=cloneState(authoritative);exists=true;lastEditedAt=result.updatedAt||lastEditedAt;
+        if(stateRevision===requestRevision){
+          S=authoritative;dirty=false;
+          reconcileSolutionFitPresentations();
+          renderReadinessBar(result.readiness,result.status);
+          setSaveState('saved');
+        }
+        /* A newer local edit arrived while this request was in flight. The loop
+           serializes it behind the confirmed save so an older response can never
+           overwrite the newer scope. */
+      }catch(error){
+        if(generation!==saveRunGeneration)return false;
+        console.error('saveHandoff error:',error.message);
+        restoreLastSavedState('Solution Fit could not be saved. Check your connection and retry.');
+        return false;
+      }
+    }
+    return generation===saveRunGeneration;
   }
-  async function flushSolutionFitSave(){clearTimeout(saveTimer);if(!canWrite)return true;if(!dirty)return true;const ok=await saveHandoff();if(!ok&&typeof showToast==='function')showToast('Solution Fit changes could not be saved. Resolve the save issue before creating customer output.');return ok;}
+  function saveHandoff() {
+    if(!canWrite)return Promise.resolve(true);
+    if(!customerId)return Promise.resolve(false);
+    clearTimeout(saveTimer);
+    if(saveInFlight)return saveInFlight;
+    if(!dirty)return Promise.resolve(true);
+    const generation=saveRunGeneration,pending=runSaveLoop(generation);
+    let wrapped;
+    wrapped=pending.finally(()=>{if(saveInFlight===wrapped)saveInFlight=null;});
+    saveInFlight=wrapped;
+    return wrapped;
+  }
+  async function flushSolutionFitSave(){clearTimeout(saveTimer);if(!canWrite)return true;if(!dirty&&!saveInFlight)return true;const ok=await saveHandoff();if(!ok&&typeof showToast==='function')showToast('Solution Fit changes could not be saved. Resolve the save issue before creating customer output.');return ok;}
   function setSaveState(state) {
     const el = $('sfSaveState');
     if (!el) return;
@@ -552,7 +598,9 @@
   function currentScope(){return S.solutionScope||{};}
   function scopeProduct(){const p=currentScope().primaryProduct;return PRODUCTS.includes(p)?p:'';}
   function productLabel(p){return PRODUCT_LABELS[p]||({LEGACY_CPP:'Legacy CPP — review classification',LEGACY_PLATFORM:'Legacy Platform — review classification'}[p]||p||'Product not selected');}
-  function scopeSummary(){const x=currentScope(),count=(x.selectedApps||[]).length;return hasActiveProduct('MEP')?`${productLabel(x.primaryProduct)} · MEP ${x.erp||'ERP not selected'} · ${count} app${count===1?'':'s'} in scope`:productLabel(x.primaryProduct);}
+  function scopeSummary(){const view=SF_MODEL.scopePresentation(S),count=view.applicationCount;return view.mepActive?`${productLabel(view.primaryProduct)} · MEP ${view.erp||'ERP not selected'} · ${count} app${count===1?'':'s'} in scope`:productLabel(view.primaryProduct);}
+  function refreshScopeHeaderSummary(){const element=$('sfScopeSummary');if(element)element.textContent=scopeSummary();}
+  function reconcileSolutionFitPresentations(){refreshScopeHeaderSummary();rerenderScope();}
   async function openScopeWizard(mode){
     if(mode==='edit'&&dirty&&!await flushSolutionFitSave())return;
     scopeDraft=SF_SCOPE.createDraft(S,mode);
@@ -597,12 +645,11 @@
     const input=modal.querySelector('[data-sfcustom-name]'),error=modal.querySelector('[data-sfcustom-error]'),name=SF_PRESENTATION.normalizeCustomApplicationName(input?.value);
     if(!name){error.textContent='Application name is required.';input?.focus();return false;}
     customApplicationSubmitting=true;error.textContent='';modal.querySelectorAll('button,input').forEach(control=>control.disabled=true);
-    const wasDirty=dirty,created=SF_MODEL.createCustomProcess(S,{name,product:activeScopeProduct,erp:activeScopeProduct==='MEP'?currentScope().erp:'',group:'Customer-specific',source:'non_standard',selected:true});
-    syncSolutionScope();dirty=true;setSaveState('saving');clearTimeout(saveTimer);
+    SF_MODEL.createCustomProcess(S,{name,product:activeScopeProduct,erp:activeScopeProduct==='MEP'?currentScope().erp:'',group:'Customer-specific',source:'non_standard',selected:true});
+    syncSolutionScope();markDirty();setSaveState('saving');clearTimeout(saveTimer);
     const saved=await saveHandoff();
     if(!saved){
-      const index=S.processes.findIndex(process=>String(process.id)===String(created.id));if(index>=0)S.processes.splice(index,1);
-      syncSolutionScope();dirty=wasDirty;error.textContent=lastSaveError||'Application could not be saved. Retry when the connection is restored.';
+      error.textContent=lastSaveError||'Application could not be saved. Retry when the connection is restored.';
       modal.querySelectorAll('button,input').forEach(control=>control.disabled=false);input?.focus();customApplicationSubmitting=false;return false;
     }
     customApplicationSubmitting=false;document.getElementById('sfCustomApplicationDialog')?.remove();rerenderScope();window.showToast?.(`${name} was added and saved.`);return true;
@@ -658,7 +705,7 @@
           <span class="sf-customer-workspace-label">Customer workspace</span>
           <span class="sf-ctx-name">${esc(customerName || S.opportunity.customer || 'Customer')}</span>
           ${S.opportunity.stage ? `<span class="sf-stage-pill">${esc(S.opportunity.stage)}</span>` : ''}
-          ${productsSummary ? `<span class="sf-stage-pill">${esc(productsSummary)}</span>` : ''}
+          ${productsSummary ? `<span class="sf-stage-pill" id="sfScopeSummary" aria-live="polite">${esc(productsSummary)}</span>` : ''}
           ${!canWrite ? '<span class="sf-ro-badge">Read-only</span>' : ''}
           ${lastEditedByName ? `<span class="sf-last-edit">Last updated by ${esc(lastEditedByName)}${lastEditedAt?' · '+new Date(lastEditedAt).toLocaleString():''}</span>` : ''}
         </div>
@@ -945,7 +992,7 @@
     const catalogKeys=new Set(catalog.map(item=>SF_MODEL.catalogIdentity(descriptorFor(activeScopeProduct,item))));
     const preserved=S.processes.filter(process=>process.product===activeScopeProduct&&!catalogKeys.has(SF_MODEL.catalogIdentity(process))&&process.historical!==true).filter(process=>!query||`${process.name} ${process.group||''}`.toLowerCase().includes(query)).filter(process=>scopeFilter!=='selected'||process.selected).filter(process=>scopeFilter!=='missing'||(process.selected&&!applicationAssessmentComplete(process)));
     const legacy=S.processes.filter(process=>process.source==='legacy_process'&&process.historical!==true);
-    return `<div class="sf-step-intro"><div><span class="sf-step-kicker">Step 3</span><h2>Product and application scope</h2><p>Select the applications included in the solution, then capture demo status, fit, customer validation, and exceptions directly on each selected application.</p></div><span class="sf-step-count">${activeProcesses().length} selected</span></div>
+    return `<div class="sf-step-intro"><div><span class="sf-step-kicker">Step 3</span><h2>Product and application scope</h2><p>Select the applications included in the solution, then capture demo status, fit, customer validation, and exceptions directly on each selected application.</p></div><span class="sf-step-count" id="sfScopeSelectedCount">${activeProcesses().length} selected</span></div>
       <div class="sf-product-grid">${products.map((product,index)=>`<article class="sf-product-choice active"><span><strong>${product} · ${esc(PRODUCT_LABELS[product])}</strong><small>${index===0?'Primary product':'Additional product'} · ${product==='MEP'?'Mobile workflows connected to the customer ERP.':product==='CIP'?'Cloud-native inventory execution and visibility.':'Managed label and document printing.'}</small></span></article>`).join('')}</div>
       ${products.length?`<div class="sf-product-tabs">${products.map(product=>`<button class="${activeScopeProduct===product?'active':''}" data-sfproducttab="${product}">${esc(productLabel(product))}</button>`).join('')}</div>`:'<div class="sf-empty-state"><p>Select at least one product to define application scope.</p></div>'}
       ${products.includes(activeScopeProduct)?`${activeScopeProduct==='MEP'?renderMepScopeSetup(standardMode):''}<div class="sf-scope-tools"><input id="sfScopeSearch" value="${esc(scopeSearch)}" placeholder="Search ${activeScopeProduct} applications"><button class="btn btn-ghost btn-sm ${scopeFilter==='all'?'active':''}" data-sfscopefilter="all">All</button>${activeScopeProduct==='MEP'?`<button class="btn btn-ghost btn-sm ${scopeFilter==='standard'?'active':''}" data-sfscopefilter="standard">Package apps</button><button class="btn btn-ghost btn-sm ${scopeFilter==='additional'?'active':''}" data-sfscopefilter="additional">Additional</button>`:''}<button class="btn btn-ghost btn-sm ${scopeFilter==='selected'?'active':''}" data-sfscopefilter="selected">Selected</button><button class="btn btn-ghost btn-sm ${scopeFilter==='missing'?'active':''}" data-sfscopefilter="missing">Show missing only</button><span>${selectedCount} selected</span><button class="btn btn-ghost btn-sm" data-sfaction="addProcess">+ Add customer-specific application</button></div>${groups.map(group=>`<details class="sf-catalog-group" open><summary>${esc(group)} (${visible.filter(item=>item.group===group).length})</summary><div class="sf-application-grid">${visible.filter(item=>item.group===group).map(item=>renderApplicationCard(activeScopeProduct,item)).join('')}</div></details>`).join('')}${preserved.length?`<details class="sf-catalog-group" open><summary>Saved customer-specific applications (${preserved.length})</summary><div class="sf-application-grid">${preserved.map(renderStoredProcessCard).join('')}</div></details>`:''}${legacy.length?`<details class="sf-catalog-group" open><summary>LEGACY / UNCLASSIFIED HISTORICAL PROCESS (${legacy.length})</summary><div class="sf-application-grid">${legacy.map(renderStoredProcessCard).join('')}</div></details>`:''}${!groups.length&&!preserved.length&&!legacy.length?'<div class="sf-empty-state"><p>No applications match the current filter.</p></div>':''}`:''}`;
@@ -975,7 +1022,7 @@
 
   function renderProgressSummary(r){
     const selected=activeProcesses(),complete=selected.filter(applicationAssessmentComplete).length,inventory=SF_MODEL.inventoryStats(S),turnover=SF_MODEL.turnoverStats(S),openGaps=activeGaps().filter(g=>String(g.status||'Open')!=='Resolved'&&String(g.status||'Open')!=='Accepted exception').length;
-    return `<aside class="sf-progress-summary"><h3>Solution Fit progress</h3><div class="sf-summary-score">${r.score}%</div><div class="sf-progress"><div class="sf-progress-fill" style="width:${r.score}%"></div></div><dl><div><dt>Selected applications</dt><dd>${selected.length}</dd></div><div><dt>Complete assessments</dt><dd>${complete}</dd></div><div><dt>Configuration answered</dt><dd data-sfinventory-count="summary" aria-live="polite">${inventory.applicable?`${inventory.answered}/${inventory.total}`:'N/A'}</dd></div><div><dt>Open gaps</dt><dd>${openGaps}</dd></div><div><dt>Turnover fields</dt><dd>${turnover.complete}/${turnover.total}</dd></div></dl><p class="${dirty?'warn':''}">${dirty?'Unsaved changes are being sent to the server.':'Current browser state matches the last successful server save.'}</p></aside>`;
+    return `<aside class="sf-progress-summary"><h3>Solution Fit progress</h3><div class="sf-summary-score">${r.score}%</div><div class="sf-progress"><div class="sf-progress-fill" style="width:${r.score}%"></div></div><dl><div><dt>Selected applications</dt><dd data-sf-progress-app-count>${selected.length}</dd></div><div><dt>Complete assessments</dt><dd>${complete}</dd></div><div><dt>Configuration answered</dt><dd data-sfinventory-count="summary" aria-live="polite">${inventory.applicable?`${inventory.answered}/${inventory.total}`:'N/A'}</dd></div><div><dt>Open gaps</dt><dd>${openGaps}</dd></div><div><dt>Turnover fields</dt><dd>${turnover.complete}/${turnover.total}</dd></div></dl><p class="${dirty?'warn':''}">${dirty?'Unsaved changes are being sent to the server.':'Current browser state matches the last successful server save.'}</p></aside>`;
   }
 
   /* ── Gap register ───────────────────────────────────────────────── */
@@ -1662,7 +1709,13 @@
   });
   window.printRiskLedger = printRiskLedger;
   window.flushSolutionFitSave = flushSolutionFitSave;
-  window.SolutionFitCorrective=Object.freeze({openCustomApplicationModal,closeCustomApplicationModal,submitCustomApplicationModal});
+  function solutionFitSurfaceSnapshot(){
+    const bodyCount=parseInt(String($('sfScopeSelectedCount')?.textContent||'0'),10)||0;
+    const progressCount=parseInt(String(document.querySelector('[data-sf-progress-app-count]')?.textContent||'0'),10)||0;
+    const bodyErp=String(document.querySelector('[data-sferp].active')?.textContent||'').trim();
+    return Object.freeze({header:String($('sfScopeSummary')?.textContent||'').trim(),bodyErp,bodyCount,progressCount,state:SF_MODEL.scopePresentation(S),dirty});
+  }
+  window.SolutionFitCorrective=Object.freeze({openCustomApplicationModal,closeCustomApplicationModal,submitCustomApplicationModal,solutionFitSurfaceSnapshot});
 
   /* Expose entry point for the tab switch. */
   window.initSolutionFit = initSolutionFit;

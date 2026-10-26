@@ -26,6 +26,7 @@ const COMMANDS = [
   command('postgres-integration', 'npm run test:postgres', npm('run', 'test:postgres'), { databaseOnly: true }),
   command('r2-integration', 'npm run test:r2', npm('run', 'test:r2'), { r2Only: true }),
   command('full-test-suite', 'npm test', npm('test')),
+  command('v6949-solution-fit-header-sync', 'npm run test:v6949', npm('run', 'test:v6949')),
   command('v6948-executive-narrative-authority', 'npm run test:v6948', npm('run', 'test:v6948')),
   command('v6947-corrective-release', 'npm run test:v6947', npm('run', 'test:v6947')),
   command('v6946-release-stabilization', 'npm run test:v6946', npm('run', 'test:v6946')),

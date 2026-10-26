@@ -256,7 +256,7 @@ router.put('/:customerId', async (req, res) => {
       });
     }
 
-    res.json({ ok: true, id: rows[0].id, readiness: rows[0].readiness, status: rows[0].status, updatedAt: rows[0].updated_at });
+    res.json({ ok: true, id: rows[0].id, data: normalizeHandoffData(rows[0].data || {}), readiness: rows[0].readiness, status: rows[0].status, updatedAt: rows[0].updated_at });
   } catch (err) {
     console.error('Save handoff error:', err.message);
     res.status(500).json({ error: 'Failed to save handoff.' });

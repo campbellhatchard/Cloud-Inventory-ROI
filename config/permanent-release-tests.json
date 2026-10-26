@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "6.9.48",
+  "release": "6.9.49",
   "tests": [
     {"invariant":"Customer Business Case","path":"test/release-integrity.test.js"},
     {"invariant":"customer-safe payload","path":"test/release-integrity.test.js"},
@@ -74,5 +74,6 @@
     ,{"invariant":"v6.9.47 PostgreSQL narrative persistence, custom application identity and Primary SE reload","path":"test/v6947-postgres-corrective.test.js"}
     ,{"invariant":"v6.9.48 one server-owned Executive output model, explicit clears and stale-response rejection","path":"test/v6948-executive-narrative-authority.test.js"}
     ,{"invariant":"v6.9.48 PostgreSQL narrative save reconciliation and canonical Executive model retrieval","path":"test/v6948-postgres-executive-authority.test.js"}
+    ,{"invariant":"v6.9.49 server-authoritative Solution Fit scope reconciliation keeps header, body and progress synchronized and rolls back failed saves","path":"test/v6949-solution-fit-header-sync.test.js"}
   ]
 }

@@ -92,5 +92,8 @@ test('REG-6948-06 endpoint, save reconciliation and compatibility contracts are 
  assert.match(routes,/router\.get\('\/:id\/executive-output-model'/);assert.match(routes,/private, no-store, max-age=0/);assert.match(routes,/X-Executive-Model-Revision/);
  assert.match(routes,/modelRevision:outputModel\.revision\.modelRevision/);assert.match(routes,/canonicalNarrative:outputModel\.canonicalNarrative/);
  assert.match(sourceLoader,/buildExecutiveOutputModel/);assert.match(sourceLoader,/buildCustomerROIReportData\(source,\{story:outputModel\.story\}\)/);assert.match(proposal,/buildExecutiveOutputModel/);
- assert.equal(require('../package.json').version,'6.9.48');assert.equal(require('../release-lineage.json').roiModelVersion,28);
+ const packageVersion=require('../package.json').version,lineage=require('../release-lineage.json');
+ assert.equal(packageVersion,lineage.applicationVersion);
+ assert.ok(packageVersion.localeCompare('6.9.48',undefined,{numeric:true,sensitivity:'base'})>=0,'v6.9.48 Executive authority protection requires release 6.9.48 or later');
+ assert.equal(lineage.roiModelVersion,28);
 });

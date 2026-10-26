@@ -7,6 +7,16 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.49', date: '2026-10-26', tag: 'solution-fit-sync',
+    title: 'Solution Fit header synchronization correction',
+    summary: 'Keeps the Solution Fit header, application-scope body, and progress panel synchronized from the same server-confirmed saved state.',
+    highlights: [
+      'ERP, Standard Package, custom-application, and application-scope changes update the header immediately after a successful save.',
+      'Failed saves restore the last confirmed Solution Fit state consistently across the header, body, and progress panel.',
+      'Serialized save reconciliation prevents an older response from overwriting a newer scope change.'
+    ]
+  },
+  {
     version: '6.9.48', date: '2026-10-25', tag: 'narrative-authority',
     title: 'Permanent Executive narrative authority and stale-state correction',
     summary: 'Makes one server-owned model authoritative for Executive Web, files, and Proposal outputs while rejecting stale browser responses.',
