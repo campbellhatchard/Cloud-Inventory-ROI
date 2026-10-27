@@ -1,3 +1,11 @@
+# Cloud Inventory ROI v6.9.52 Differential Audit
+
+## v6.9.52 corrective differential
+
+The target is derived only from `cloud-inventory-roi-v6.9.51-render-ready.zip` (SHA-256 `791AD9298068A23EA95E6FB84A42385188C01A9B14AE145E942A3219D552FAAD`). The imported baseline commit is `4f237cee3cfa5537522121598a3a235e799e5567`.
+
+Production changes are limited to one strict JPP date-only helper, the All Plans date consumer, the public JPP date consumer, the prospect-link email date consumer, script load order, and version metadata. No persistence, authorization, sharing, database, ROI, Solution Fit, Executive narrative, Buyer Evidence, Sensitivity, or R2 behavior changed. The blank `+ New Joint Project Plan` form is confirmed expected behavior and was not modified.
+
 # Cloud Inventory ROI v6.9.51 Differential Audit
 
 ## Baseline and method
@@ -123,3 +131,8 @@ The verified v6.9.50 archive was applied to current production main `474e6708e75
 ## v6.9.51 deployed-baseline reconciliation
 
 Verified archive applied to current production main `1a428bbbab88e0b35ccb2e70954479ed77031fc0` on `deploy/v6.9.51`. Existing deployed corrections, PostgreSQL fixtures and historical evidence are preserved. See `DEPLOYMENT_DIFFERENTIAL_v6.9.51.md` for reconciliation and separately scoped local Node 22 verification.
+
+
+## v6.9.52 deployed-baseline reconciliation
+
+The verified v6.9.52 archive was applied to current production main `df710ceffee9476f57b1775f2651da6baeb8c6e0`, retaining existing deployed corrections, PostgreSQL fixtures and historical evidence. See `DEPLOYMENT_DIFFERENTIAL_v6.9.52.md` for reconciliation and separately scoped local Node 22 verification.

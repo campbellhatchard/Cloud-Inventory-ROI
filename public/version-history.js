@@ -7,6 +7,16 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.52', date: '2026-10-27', tag: 'jpp-date-integrity',
+    title: 'Joint Project Plan calendar-date correction',
+    summary: 'Keeps governed JPP target dates on the same calendar day in every browser timezone.',
+    highlights: [
+      'All Plans cards now display saved target dates without UTC-to-local day shifts.',
+      'The public JPP view and prospect-link email use the same validated date-only formatter.',
+      'JPP persistence, authorization, sharing, milestone hydration, and output architecture remain unchanged.'
+    ]
+  },
+  {
     version: '6.9.51', date: '2026-10-27', tag: 'jpp-capability',
     title: 'Joint Project Plan prospect-link capability correction',
     summary: 'Keeps prospect-link controls governed by the server-owned plan-edit capability through every menu render and readiness transition.',

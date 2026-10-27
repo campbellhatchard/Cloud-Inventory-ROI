@@ -168,9 +168,7 @@ function renderMapList() {
     const pct  = ms.length ? Math.round(done / ms.length * 100) : 0;
     const overdue = ms.filter(function(x){ return x.status !== 'done' && x.dueDate && new Date(x.dueDate) < new Date(); }).length;
     const progCls = pct >= 60 ? 'map-prog-hi' : pct >= 25 ? 'map-prog-mid' : 'map-prog-low';
-    const closeDate = m.target_close_date
-      ? new Date(m.target_close_date).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'})
-      : null;
+    const closeDate = window.CIJppDateOnly.formatDateOnly(m.target_close_date);
     const statusPill = overdue
       ? '<span class="map-status-pill map-status-overdue">' + overdue + ' overdue</span>'
       : (ms.length === 0
@@ -660,13 +658,14 @@ function copyMapLink() { navigator.clipboard.writeText(mapUrl()).then(() => show
 
 function emailMapLink() {
   const subject = 'Our Joint Project Plan — ' + (_mapCurrent.company || 'next steps');
+  const targetDate = window.CIJppDateOnly.formatDateOnly(_mapCurrent.target_close_date,{month:'long',year:false});
   const body = `Hi,
 
 Here's the live link to our shared Joint Project Plan for ${_mapCurrent.company || 'your evaluation'}:
 
 ${mapUrl()}
 
-It shows every step to ${_mapCurrent.target_close_date ? 'our target date of ' + new Date(_mapCurrent.target_close_date).toLocaleDateString('en-US',{month:'long',day:'numeric'}) : 'go-live'}, who owns each one, and where we are. It helps us validate the value case, remove dependencies early, and keep the evaluation focused on measurable operational improvement. You can check off items on your side as they complete — it updates in real time for both of us.
+It shows every step to ${targetDate ? 'our target date of ' + targetDate : 'go-live'}, who owns each one, and where we are. It helps us validate the value case, remove dependencies early, and keep the evaluation focused on measurable operational improvement. You can check off items on your side as they complete — it updates in real time for both of us.
 
 Looking forward to working through this together.
 `;

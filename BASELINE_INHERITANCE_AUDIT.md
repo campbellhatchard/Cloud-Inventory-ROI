@@ -1,3 +1,46 @@
+# Cloud Inventory ROI v6.9.52 Baseline Inheritance Audit
+
+## Authoritative v6.9.52 package
+
+- Baseline archive: `cloud-inventory-roi-v6.9.51-render-ready.zip`
+- Baseline SHA-256: `791AD9298068A23EA95E6FB84A42385188C01A9B14AE145E942A3219D552FAAD`
+- Baseline application version: `6.9.51`
+- Target application version: `6.9.52`
+- The exact named archive was extracted directly into a new `work/cloud-inventory-roi-v6.9.52` workspace before production edits. No earlier archive, branch, convenient worktree, or reconstructed source was substituted.
+
+## Protected authorities at inheritance
+
+- ROI authority remains ROI Model v2.8 / `modelVersion` 28; no formula, overlap, currency, payback, NPV, or provenance change is authorized.
+- Brand System 1.0, Application Knowledge 1.0, Christie Persona 1.0, database migration level 045, and all 29 active Output Registry entries are preserved.
+- The inherited regression inventory contains 116 `*.test.js` files, including the permanent v6.9.51 JPP owner/non-owner capability suite.
+- JPP persistence, owner authorization, non-owner read-only behavior, prospect-link capability, public-link policy, and PDF/PPTX output architecture remain unchanged.
+- SE Solution Fit Scope: Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.
+
+## Active production path entering correction
+
+- Saved `mutual_action_plans.target_close_date` is returned by `src/routes/maps.js` without date mutation.
+- `public/map.js` stores the API value on the plan model and renders the editor with the governed `YYYY-MM-DD` component.
+- The All Plans card independently passes `target_close_date` to JavaScript `Date` and formats it in the browser's local timezone.
+- JPP outputs remain registered server-side builders in `src/exports/operational-pdf.js` and `src/exports/operational-pptx.js`.
+
+## Correction-only scope
+
+The sole production correction is JPP-DATE-01: preserve a governed `YYYY-MM-DD` target close date as the same calendar year, month, and day in the All Plans card regardless of browser timezone. The build may add one canonical JPP date-only presentation helper and route vulnerable JPP date-only presentation consumers through it. It may not add offsets, mutate persistence, or broaden into timestamp formatting.
+
+## Explicit non-changes
+
+- No database migration, column change, stored-value conversion, or API-contract change.
+- No JPP authorization, sharing, public-link, hydration, milestone, or output architecture change.
+- No ROI, Prospect evidence, Solution Fit, Executive, Proposal, Buyer Evidence, Sensitivity, R2, or customer-workspace change.
+
+## Outstanding external certification
+
+- Disposable PostgreSQL integration remains required for final infrastructure certification when a safe non-production database is available.
+- R2 remains NOT TESTED without approved non-production credentials.
+- Live Chrome verification of the exact v6.9.52 deployed archive remains a post-deployment Product Owner gate.
+
+---
+
 # Cloud Inventory ROI v6.9.51 Baseline Inheritance Audit
 
 ## Authoritative v6.9.51 package
@@ -194,3 +237,8 @@ The verified v6.9.50 archive was applied to current production main `474e6708e75
 ## v6.9.51 deployed-baseline reconciliation
 
 Verified archive applied to current production main `1a428bbbab88e0b35ccb2e70954479ed77031fc0` on `deploy/v6.9.51`. Existing deployed corrections, PostgreSQL fixtures and historical evidence are preserved. See `DEPLOYMENT_DIFFERENTIAL_v6.9.51.md` for reconciliation and separately scoped local Node 22 verification.
+
+
+## v6.9.52 deployed-baseline reconciliation
+
+The verified v6.9.52 archive was applied to current production main `df710ceffee9476f57b1775f2651da6baeb8c6e0`, retaining existing deployed corrections, PostgreSQL fixtures and historical evidence. See `DEPLOYMENT_DIFFERENTIAL_v6.9.52.md` for reconciliation and separately scoped local Node 22 verification.

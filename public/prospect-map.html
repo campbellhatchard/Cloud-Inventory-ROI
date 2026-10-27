@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="brand-tokens.css"/>
 <script src="brand-system.js"></script>
+<script src="jpp-date-only.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{--navy:var(--ci-dark);--cyan:var(--ci-blue);--green:var(--ci-green);--red:var(--ci-deep-red);--amber:var(--ci-orange-dark);
@@ -110,10 +111,8 @@ async function load() {
 
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function fmtDate(d, long) {
-  if (!d) return '';
-  const raw = String(d).split('T')[0];
-  return new Date(raw + 'T12:00:00').toLocaleDateString('en-US', long
-    ? {month:'long',day:'numeric',year:'numeric'} : {month:'short',day:'numeric'});
+  return window.CIJppDateOnly.formatDateOnly(d, long
+    ? {month:'long'} : {month:'short',year:false});
 }
 function isOverdue(m) {
   if (!m.dueDate || m.status === 'done') return false;

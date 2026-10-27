@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "6.9.51",
+  "release": "6.9.52",
   "tests": [
     {"invariant":"Customer Business Case","path":"test/release-integrity.test.js"},
     {"invariant":"customer-safe payload","path":"test/release-integrity.test.js"},
@@ -78,5 +78,6 @@
     ,{"invariant":"v6.9.50 production integrity: deterministic cleanup dates, active evidence authority, JPP capability, empty sensitivity, readiness parity, output resilience, ownership and messaging semantics","path":"test/v6950-production-integrity.test.js"}
     ,{"invariant":"v6.9.50 PostgreSQL owner and multi-role non-owner JPP capability enforcement","path":"test/v6950-postgres-production-integrity.test.js"}
     ,{"invariant":"v6.9.51 server-owned JPP prospect-link capability survives UI state changes and independently denies non-owner mutation routes","path":"test/v6951-jpp-capability.test.js"}
+    ,{"invariant":"v6.9.52 JPP calendar dates remain stable across timezones, DST boundaries, roles and saved editor/list rendering","path":"test/v6952-jpp-date-only.test.js"}
   ]
 }
