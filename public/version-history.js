@@ -7,6 +7,16 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.51', date: '2026-10-27', tag: 'jpp-capability',
+    title: 'Joint Project Plan prospect-link capability correction',
+    summary: 'Keeps prospect-link controls governed by the server-owned plan-edit capability through every menu render and readiness transition.',
+    highlights: [
+      'Read-only non-owners can no longer have Share, Rotate, or Revoke re-enabled by output-control refreshes.',
+      'Plan owners retain normal saved-plan sharing behavior, editing, AI assistance, and link revocation.',
+      'Permitted JPP PDF and PowerPoint review outputs remain available independently of prospect-link mutation authority.'
+    ]
+  },
+  {
     version: '6.9.50', date: '2026-10-26', tag: 'production-integrity',
     title: 'Production integrity and cross-surface authority corrections',
     summary: 'Consolidates destructive cleanup, evidence, permissions, readiness, economics, and output behavior behind their governed sources without changing ROI Model v2.8.',

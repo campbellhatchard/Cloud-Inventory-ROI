@@ -98,7 +98,9 @@ test('JPP edit capability is server-owned and direct mutations check it',()=>{
   assert.match(route,/canEditPlan:canEditPlan\(user,plan\)/);
   assert.match(route,/Read-only plan — only the owner can make changes/);
   assert.ok((route.match(/if\(!await editablePlan\(req,res\)\)return;/g)||[]).length>=4);
-  assert.match(ui,/_mapReadOnly=m\.canEditPlan !== true/);
+  assert.match(ui,/_mapCanEditPlan=newPlan\|\|plan\?\.canEditPlan===true/);
+  assert.match(ui,/_mapReadOnly=!_mapCanEditPlan/);
+  assert.match(ui,/mapCanManageProspectLink\(\)\{return _mapCanEditPlan&&mapOutputReady\(\);\}/);
   assert.doesNotMatch(ui,/_mapReadOnly=String\(m\.owner_id/);
 });
 

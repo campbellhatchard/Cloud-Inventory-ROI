@@ -7,9 +7,14 @@
 let _maps = [];            // list cache
 let _mapCurrent = null;    // plan being edited
 let _mapDirty = false;     // customer outputs require an exact saved record
-let _mapReadOnly = false;  // team plans are view/export only for non-owners
+let _mapCanEditPlan = false; // projection of the server-owned canEditPlan capability
+let _mapReadOnly = true;     // rendering projection only; never business authority
 
-function mapCanMutate(){if(!_mapReadOnly)return true;showToast('Read-only plan — only the owner can change milestones or sharing.');return false;}
+function mapApplyCapability(plan,{newPlan=false}={}){
+  _mapCanEditPlan=newPlan||plan?.canEditPlan===true;
+  _mapReadOnly=!_mapCanEditPlan;
+}
+function mapCanMutate(){if(_mapCanEditPlan)return true;showToast('Read-only plan — only the owner can change milestones or sharing.');return false;}
 
 function mapDisplayTitle(value) {
   const title = String(value || '').trim() || 'Joint Project Plan';
@@ -17,8 +22,15 @@ function mapDisplayTitle(value) {
 }
 
 function mapOutputReady(){return !!(_mapCurrent&&_mapCurrent.id&&!_mapDirty);}
-function mapUpdateOutputControls(){for(const id of ['mapPdfIntBtn','mapPdfCustBtn','mapPptIntBtn','mapPptCustBtn','mapShareBtn']){const b=document.getElementById(id);if(b){b.disabled=!mapOutputReady();b.setAttribute('aria-disabled',String(!mapOutputReady()));}}}
-function mapMarkDirty(){if(_mapReadOnly)return;_mapDirty=true;mapUpdateOutputControls();}
+function mapCanManageProspectLink(){return _mapCanEditPlan&&mapOutputReady();}
+function mapSetControlAvailability(id,enabled){const b=document.getElementById(id);if(!b)return;b.disabled=!enabled;b.setAttribute('aria-disabled',String(!enabled));}
+function mapUpdateOutputControls(){
+  const outputReady=mapOutputReady();
+  for(const id of ['mapPdfIntBtn','mapPdfCustBtn','mapPptIntBtn','mapPptCustBtn'])mapSetControlAvailability(id,outputReady);
+  const canManageProspectLink=mapCanManageProspectLink();
+  for(const id of ['mapShareBtn','mapRotateShareBtn','mapRevokeShareBtn'])mapSetControlAvailability(id,canManageProspectLink);
+}
+function mapMarkDirty(){if(!_mapCanEditPlan)return;_mapDirty=true;mapUpdateOutputControls();}
 function getSavedMapForOutput(){if(!_mapCurrent?.id){showToast('Save the Joint Project Plan before creating a customer output.');return null;}if(_mapDirty){showToast('Save your Joint Project Plan changes before creating a customer output.');return null;}const saved=_maps.find(x=>String(x.id)===String(_mapCurrent.id));return saved?mapNormalizeStructure(JSON.parse(JSON.stringify(saved))):mapNormalizeStructure(JSON.parse(JSON.stringify(_mapCurrent)));}
 
 const MAP_PHASES = ['Evaluate', 'Validate', 'Business Case', 'Legal & Procurement', 'Launch'];
@@ -260,7 +272,7 @@ function renderMapList() {
 }
 
 function newMap() {
-  _mapReadOnly = false;
+  mapApplyCapability(null,{newPlan:true});
   const v = typeof getVals === 'function' ? getVals() : {};
   _mapCurrent = {
     id: null,
@@ -279,7 +291,7 @@ async function openMap(id) {
   const m = _maps.find(x => x.id === id);
   if (!m) return;
   _mapCurrent = mapNormalizeStructure(JSON.parse(JSON.stringify(m)));
-  _mapReadOnly=m.canEditPlan !== true;
+  mapApplyCapability(m);
   _mapDirty = false;
   renderMapEditor();
 }
@@ -309,8 +321,8 @@ function renderMapEditor() {
           <div style="display:flex;gap:6px;margin-top:6px;">
             <button class="btn btn-secondary btn-sm" onclick="copyMapLink()">Copy link</button>
             <button class="btn btn-ghost btn-sm" onclick="emailMapLink()">✉️ Email via my mail client</button>
-            <button class="btn btn-ghost btn-sm" onclick="shareMap()">🔄 Rotate</button>
-            <button class="btn btn-danger btn-sm" onclick="revokeMapLink()">Revoke</button>
+            <button class="btn btn-ghost btn-sm" id="mapRotateShareBtn" onclick="shareMap()">🔄 Rotate</button>
+            <button class="btn btn-danger btn-sm" id="mapRevokeShareBtn" onclick="revokeMapLink()">Revoke</button>
           </div>
           <div class="field-hint" style="margin-top:5px;">The prospect sees a live view and can check off their own items. Updates appear when you reopen the plan.</div>
         </div>`
@@ -369,7 +381,7 @@ function renderMapEditor() {
   if (mapInput) mapInput.value = m.company || '';
   mapUpdateGate();
   ed.querySelectorAll('input,select,textarea').forEach(el=>{el.addEventListener('input',mapMarkDirty);el.addEventListener('change',mapMarkDirty);});
-  if(_mapReadOnly){
+  if(!_mapCanEditPlan){
     ed.querySelectorAll('input,select,textarea').forEach(el=>{el.disabled=true;});
     ed.querySelectorAll('button[onclick]').forEach(button=>{
       const action=button.getAttribute('onclick')||'';
@@ -433,8 +445,8 @@ function mapUpdateGate() {
   const save = document.getElementById('mapSaveBtn');
   const ai   = document.getElementById('mapAiBtn');
   if (gate) gate.style.display = has ? 'none' : 'block';
-  if (save) save.disabled = !has || _mapReadOnly;
-  if (ai)   ai.disabled = !has || _mapReadOnly;
+  if (save) save.disabled = !has || !_mapCanEditPlan;
+  if (ai)   ai.disabled = !has || !_mapCanEditPlan;
 }
 
 function renderMilestones() {
@@ -620,6 +632,7 @@ async function saveMap() {
   await loadMaps();
   const fresh = _maps.find(x => x.id === saved.id);
   if (fresh) { _mapCurrent = mapNormalizeStructure(JSON.parse(JSON.stringify(fresh))); }
+  mapApplyCapability(fresh||saved);
   _mapDirty = false;
   renderMapEditor();
 }
