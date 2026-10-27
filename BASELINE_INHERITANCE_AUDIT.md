@@ -1,3 +1,77 @@
+# Cloud Inventory ROI v6.9.50 Baseline Inheritance Audit
+
+## Authoritative v6.9.50 package
+
+- Baseline archive: `cloud-inventory-roi-v6.9.49-render-ready.zip`
+- Baseline SHA-256: `A89C9A4979FDE31FCAA2B129EEEB08A9BCE8897165D66DC58D8206A95829128D`
+- Baseline application version: `6.9.49`
+- Target application version: `6.9.50`
+- The archive was extracted directly into a new `work/cloud-inventory-roi-v6.9.50` directory and committed as Git commit `62c1041` before this audit or any production-code change. No earlier archive, reconstructed source, or existing branch was substituted.
+
+## Protected authorities at inheritance
+
+- ROI authority: ROI Model v2.8 / `modelVersion` 28
+- Brand System: 1.0
+- Application Knowledge: 1.0
+- Christie Persona: 1.0
+- Database migration level: 045
+- Active output registry: 29 active production outputs, preserved
+- Existing automated test inventory: 123 `*.test.js` files inherited from v6.9.49
+- SE Solution Fit scope: Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario, opportunity, JPP, Buyer Evidence, Stakeholder, Proposal, Executive, or ROI access.
+
+## Active production paths verified before change
+
+- Customer Business Case: `/api/business-case-shares` -> `src/routes/business-case-shares.js` -> frozen, customer-safe publication.
+- Executive Web: governed browser rendering in `public/executive-output-adapters.js` backed by the server-owned Executive output model.
+- Executive PDF/DOCX/PPTX: scenario export routes -> canonical Executive source/value story -> `src/exports/executive-pdf.js`, `src/exports/executive-docx.js`, and `src/exports/executive-pptx.js`.
+- Champion Pack / role outputs: internal controls remain in `public/deal-export.js`; the Champion Pack registry entry remains intentionally inactive while the governed Role One-Pager remains active.
+- Approved Battlecard PDF/DOCX: authenticated server routes require the current approved Battlecard revision and use `src/exports/operational-pdf.js` / `src/exports/competitive-docx.js`.
+- Solution Fit: `public/solution-fit.js` -> authenticated `src/routes/handoffs.js`; stable saved identity, Primary SE, private evidence, and Professional Services turnover paths remain authoritative.
+
+## Correction-only scope entering v6.9.50
+
+This build is restricted to the ten verified production-integrity findings in the v6.9.50 owner prompt:
+
+1. Admin Cleanup date canonicalization and deterministic fingerprinting.
+2. Active-only Solution Fit attachment list/count/turnover/cleanup consistency.
+3. Stale ROI route fixture correction without ROI code or methodology change.
+4. Bounded Executive Word request lifecycle with timeout, reset, and retry.
+5. One server-owned JPP edit capability used consistently by route and UI enforcement.
+6. Shared Solution Fit readiness interpretation across selector and opened record.
+7. Explicit Sensitivity Analysis empty state when no authorized scenario exists.
+8. Warning/error severity for blocked Stakeholder export.
+9. Server-authoritative, multi-role-safe own-opportunity labeling.
+10. Buyer Evidence percentage and mandatory readiness-gate semantic separation.
+
+## Preserved behavior
+
+- ROI Model v2.8 formulas, overlap rules, null-versus-zero semantics, native currency, provenance, and saved results.
+- Immutable Prospect submission evidence and explicit per-value application.
+- Rep Confirmed immutable provenance and Value History semantics.
+- Executive, Proposal, Customer Business Case, Customer Email, and output audience governance.
+- Solution Fit saved identity, cross-account SE boundary, evidence privacy, attachment identity, and Professional Services turnover authority.
+- JPP saved-state output authority and server authorization.
+- Buyer Evidence content, mandatory evidence rules, and stage-readiness calculation.
+- Sales Manager, Sales Leader, Rep, SE, Admin, and mixed-role authorization boundaries.
+
+## Outstanding certification requirements
+
+- Supported Node 22/npm execution of the complete release gates.
+- Clean disposable PostgreSQL migrations and the complete registered PostgreSQL integration suite with zero skips.
+- Private R2 lifecycle only when safe non-production R2 credentials are available; otherwise it must remain `NOT TESTED`, never `PASS`.
+- Authenticated live browser and Render verification after deployment. Local source tests cannot certify the deployed version.
+
+## Prohibited substitutions
+
+- No change to ROI Model v2.8 or its expected numbers to resolve the stale fixture.
+- No client-derived authorization in place of server-owned facts.
+- No deleted attachment treated as active evidence.
+- No optimistic success notification for a blocked export.
+- No local-storage persistence or test-only production path.
+- No production database or production R2 credentials in automated tests.
+
+---
+
 # Cloud Inventory ROI v6.9.49 Baseline Inheritance Audit
 
 ## Authoritative package
@@ -75,3 +149,8 @@ SE Solution Fit Scope:
 Sales Engineers have cross-account access to all active customers for
 Solution Fit discovery/create/view/edit only. This does not confer general
 cross-account customer, scenario or opportunity access.
+
+
+## v6.9.50 deployed-baseline reconciliation
+
+The verified v6.9.50 archive was applied to current production main `474e6708e756a39444b03e637cae1ac90525341b`, preserving existing corrections and permanent regressions absent from its raw package ancestry. See `DEPLOYMENT_DIFFERENTIAL_v6.9.50.md` for the reconciliation and separately scoped Node 22 verification evidence.

@@ -186,9 +186,9 @@ async function printActionPlan(variant) {
    STAKEHOLDER MAP — PRINT / PDF
    ═══════════════════════════════════════════════════════════════════ */
 function requireSavedStakeholderMapForOutput() {
-  if(!window.CIOperationalOutputPreconditions){showToast('Select a saved customer stakeholder map before exporting PowerPoint or PDF.');return null;}
+  if(!window.CIOperationalOutputPreconditions){if(window.AppAlerts?.warning)window.AppAlerts.warning('Select a saved customer stakeholder map before exporting PowerPoint or PDF.',{key:'stakeholder-export-blocked'});else showToast('Select a saved customer stakeholder map before exporting PowerPoint or PDF.');return null;}
   const result=window.CIOperationalOutputPreconditions.stakeholderOutputContext({company:_stakeCompany,stakeholders:_stakeholders});
-  if(!result.ok){showToast(result.message);return null;}
+  if(!result.ok){if(window.AppAlerts?.warning)window.AppAlerts.warning(result.message,{key:'stakeholder-export-blocked'});else showToast(result.message);return null;}
   return result;
 }
 async function printStakeholderMap() {

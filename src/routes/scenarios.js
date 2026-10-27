@@ -144,11 +144,13 @@ async function exportReport(req,res,kind){
   try{
     const report=await withExecutiveExportTimeout(kind.toUpperCase(),()=>executiveReportFor(req.user,scenarioId,{outputType:kind}));
     if(report.error){console.warn(`executive_${kind}.denied`,{scenarioId,userId:req.user.id,status:report.status});return res.status(report.status).json({error:report.error});}
+    console.info(`executive_${kind}.source_ready`,{scenarioId,userId:req.user.id,elapsedMs:Date.now()-started});
     const readiness=report.outputModel.readiness;
     if(readiness.status==='draft_only'&&!internalDraft)return res.status(409).json({error:'This output is available only as an internal draft.',readiness});
     if(readiness.status==='review'&&!reviewAcknowledged)return res.status(409).json({error:'Review acknowledgement is required before export.',readiness});
     const draft=readiness.status==='draft_only'||internalDraft;
-    const buffer=kind==='pdf'?buildExecutivePdf(report,{internalDraft:draft}):await buildExecutiveDocx(report,{internalDraft:draft});
+    console.info(`executive_${kind}.generation_started`,{scenarioId,userId:req.user.id,status:readiness.status});
+    const buffer=await withExecutiveExportTimeout(kind.toUpperCase(),()=>kind==='pdf'?buildExecutivePdf(report,{internalDraft:draft}):buildExecutiveDocx(report,{internalDraft:draft}));
     if(!Buffer.isBuffer(buffer)||buffer.length<500)return res.status(500).json({error:`${kind.toUpperCase()} generation returned an invalid file.`});
     const customer=String(report.customer.name||'Prospect').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').slice(0,80)||'Prospect',date=new Date().toISOString().slice(0,10);
     if(kind==='pdf'){
@@ -159,7 +161,9 @@ async function exportReport(req,res,kind){
       res.set('Content-Disposition',`attachment; filename="Cloud-Inventory-ROI-${customer}-Business-Case-${date}.docx"`);
     }
     res.set('Cache-Control','private, no-store');res.set('X-Executive-Readiness',readiness.status);
-    console.info(`executive_${kind}.completed`,{scenarioId,userId:req.user.id,status:readiness.status,bytes:buffer.length,elapsedMs:Date.now()-started});
+    console.info(`executive_${kind}.generation_completed`,{scenarioId,userId:req.user.id,status:readiness.status,bytes:buffer.length,elapsedMs:Date.now()-started});
+    res.once('finish',()=>console.info(`executive_${kind}.response_completed`,{scenarioId,userId:req.user.id,status:readiness.status,bytes:buffer.length,elapsedMs:Date.now()-started}));
+    console.info(`executive_${kind}.response_started`,{scenarioId,userId:req.user.id,bytes:buffer.length});
     return res.send(buffer);
   }catch(err){const errorId=`${kind}-${Date.now().toString(36)}`;console.error(`executive_${kind}.failed`,{scenarioId,userId:req.user.id,errorId,elapsedMs:Date.now()-started,message:err.message});return res.status(err.status||500).json({error:err.status===504?`${kind.toUpperCase()} generation timed out. Please retry.`:`${kind.toUpperCase()} could not be generated. Please retry.`,errorId});}
 }

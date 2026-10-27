@@ -8,6 +8,7 @@ const { solutionFitAccess } = require('../authorization');
 const { log } = require('../audit');
 const { getEvidenceStorage, objectKey, safeFilename, StorageUnavailableError } = require('../storage/r2-storage');
 const { IMAGE_MAX_BYTES, DOCUMENT_MAX_BYTES, CATEGORIES, text, maxBytes, validateFile, normalizeContext, validateContextAgainstState } = require('../shared/solution-fit-evidence');
+const { activeAttachmentSql } = require('../shared/solution-fit-attachments');
 
 function present(row) {
   return {
@@ -55,7 +56,7 @@ router.get('/:customerId/attachments', async (req, res) => {
     if (!access.ok) return res.status(access.status).json({ error: access.error });
     const result = await query(`SELECT a.*,u.username uploaded_by_name
       FROM handoff_attachments a LEFT JOIN users u ON u.id=a.uploaded_by
-      WHERE a.handoff_id=$1 AND a.customer_id=$2 AND a.status='ACTIVE' AND a.removed_at IS NULL
+      WHERE a.handoff_id=$1 AND a.customer_id=$2 AND ${activeAttachmentSql('a')}
       ORDER BY a.created_at DESC,a.id`, [access.fit.id, req.params.customerId]);
     res.json({ solutionFitId: access.fit.id, attachments: result.rows.map(present), storage: getEvidenceStorage().publicConfig() });
   } catch (error) {

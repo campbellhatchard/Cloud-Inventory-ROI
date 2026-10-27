@@ -18,6 +18,7 @@ const {
   needsTypedConfirmation,
   filterSummary
 } = require('../shared/admin-cleanup');
+const { activeAttachmentSql } = require('../shared/solution-fit-attachments');
 
 const router = express.Router();
 const TYPE_TO_KEY = Object.freeze({ scenario: 'scenarios', discovery: 'discovery', customer: 'customers', handoff: 'handoffs' });
@@ -184,7 +185,7 @@ async function loadFilteredRecords(client, search, filters) {
         h.owner_id,h.created_by,h.created_at,h.updated_at,h.deleted_at removed_at,h.deleted_at IS NOT NULL already_removed,
         h.status handoff_status,ou.username owner,cu.username creator,ru.username removed_by,
         (SELECT COUNT(*)::int FROM handoff_change_history x WHERE x.handoff_id=h.id) handoff_history_count,
-        (SELECT COUNT(*)::int FROM handoff_attachments x WHERE x.handoff_id=h.id AND x.status='ACTIVE' AND x.removed_at IS NULL) handoff_attachment_count,
+        (SELECT COUNT(*)::int FROM handoff_attachments x WHERE x.handoff_id=h.id AND ${activeAttachmentSql('x')}) handoff_attachment_count,
         (SELECT COUNT(*)::int FROM audit_log x WHERE x.entity_id=h.id) audit_event_count,
         (SELECT COUNT(*)::int FROM customer_ownership_transfers x WHERE x.customer_id=h.customer_id) ownership_transfer_count
       FROM handoffs h JOIN customers c ON c.id=h.customer_id JOIN users ou ON ou.id=h.owner_id

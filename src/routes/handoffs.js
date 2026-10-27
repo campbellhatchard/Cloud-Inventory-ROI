@@ -13,14 +13,13 @@ const express = require('express');
 const { query, transaction } = require('../db');
 const { log, ACTIONS } = require('../audit');
 const { requireAuth } = require('../middleware/auth');
-const { readiness } = require('../shared/handoff-readiness');
+const { normalizeSolutionFitState, projectSolutionFitReadiness } = require('../shared/solution-fit-readiness');
 const { solutionFitAccess, hasPermission, rolesOf } = require('../authorization');
 const {buildSolutionFitPdf}=require('../exports/operational-pdf');
 const {buildSolutionFitTurnoverDocx}=require('../exports/solution-fit-turnover-docx');
 const {buildPhotoPreviews,buildPSTurnoverPackage,EvidenceUnavailableError}=require('../exports/solution-fit-turnover-package');
 const {loadPSTurnoverModel,TurnoverAccessError}=require('../services/ps-turnover-service');
 const {getEvidenceStorage}=require('../storage/r2-storage');
-const SolutionFitState=require('../../public/solution-fit-state');
 const {safeFile}=require('../shared/output-brand');
 const fs=require('fs');
 const path=require('path');
@@ -126,17 +125,11 @@ async function loadAccessibleCustomer(customerId, user, mode /* 'read' | 'write'
 function changes(before,after,prefix='') { const out=[];const keys=new Set([...Object.keys(before||{}),...Object.keys(after||{})]);for(const k of keys){const p=prefix?`${prefix}.${k}`:k,a=before?.[k],b=after?.[k];if(a&&b&&typeof a==='object'&&typeof b==='object'&&!Array.isArray(a)&&!Array.isArray(b))out.push(...changes(a,b,p));else if(JSON.stringify(a)!==JSON.stringify(b))out.push({path:p,before:a===undefined?null:a,after:b===undefined?null:b});}return out; }
 
 function normalizeHandoffData(input) {
-  const data=SolutionFitState.migrateState(JSON.parse(JSON.stringify(input||{})));
-  if(data.opportunity){
-    if(data.opportunity.solutionEngineer&&!data.opportunity.legacySolutionEngineerDisplay)data.opportunity.legacySolutionEngineerDisplay=data.opportunity.solutionEngineer;
-    delete data.opportunity.solutionEngineer;
-    delete data.opportunity.solutionEngineerId;
-  }
-  return SolutionFitState.synchronizeAuthority(data);
+  return normalizeSolutionFitState(input);
 }
 
 function scoreOf(data,primarySeId) {
-  try { const r = readiness(data || {},{primarySeId}); return { readiness: r.score, status: r.status }; }
+  try { const r = projectSolutionFitReadiness(data,{primarySeId}); return { readiness: r.readiness, status: r.status }; }
   catch (e) { return { readiness: 0, status: 'not_ready' }; }
 }
 
@@ -165,10 +158,11 @@ router.get('/:customerId', async (req, res) => {
       });
     }
     const h = rows[0];
+    const projection=projectSolutionFitReadiness(h.data || {},{primarySeId:h.primary_se_id});
     res.json({
       exists: true, id: h.id, customerId: h.customer_id, ownerId: h.owner_id,
       customerName: access.customer.name,
-      data: normalizeHandoffData(h.data || {}), readiness: h.readiness, status: h.status,
+      data: projection.data, readiness: projection.readiness, status: projection.status,
       createdBy:h.created_by,primarySeId:h.primary_se_id,primarySeName:h.primary_se_name||'',additionalSeIds:h.additional_se_ids||[],
       lastEditedBy: h.last_edited_by,lastEditedByName:h.last_edited_by_name,accessReasons:access.reasons,createdAt: h.created_at, updatedAt: h.updated_at,
       capabilities:{canView:true,canEdit:editAccess.ok,canCreate:false,canRestore:false,canAssign:hasPermission(req.user,'assign_solution_fit'),canSelfAssign:rolesOf(req.user).includes('se')}

@@ -113,8 +113,8 @@ function renderMapList() {
   }
 
   /* ── Separate my plans vs other reps' plans (rep view) ── */
-  const myMaps    = isAdmin ? _maps : _maps.filter(m => m.owner_username === me);
-  const otherMaps = isAdmin ? []    : _maps.filter(m => m.owner_username !== me);
+  const myMaps    = isAdmin ? _maps : _maps.filter(m => m.canEditPlan === true);
+  const otherMaps = isAdmin ? []    : _maps.filter(m => m.canEditPlan !== true);
 
   /* ── Stats ── */
   const allOverdue = _maps.reduce(function(acc, m) {
@@ -235,7 +235,7 @@ function renderMapList() {
       + adminFiltersHtml
       + (filtered.length === 0
         ? '<div class="empty-state"><p>No plans match the current filters.</p></div>'
-        : filtered.map(function(m){ return mapCard(m, true, true); }).join(''));
+        : filtered.map(function(m){ return mapCard(m, true, m.canEditPlan === true); }).join(''));
   } else {
     /* ── Rep: my plans + other reps (read-only) ── */
     el.innerHTML = '<div class="map-list-head">'
@@ -249,7 +249,7 @@ function renderMapList() {
       + '<div class="map-section-head"><span class="map-section-title">Your plans</span><span class="map-section-count">' + myMaps.length + '</span></div>'
       + (myMaps.length === 0
         ? '<div class="empty-state"><p>No plans yet. Create your first Joint Project Plan to get started.</p></div>'
-        : myMaps.map(function(m){ return mapCard(m, false, true); }).join(''))
+        : myMaps.map(function(m){ return mapCard(m, false, m.canEditPlan === true); }).join(''))
       + '</div>'
       + (otherMaps.length ? '<div class="map-section">'
         + '<div class="map-section-head"><span class="map-section-title">All reps\u2019 plans</span><span class="map-section-count">' + otherMaps.length + '</span></div>'
@@ -279,8 +279,7 @@ async function openMap(id) {
   const m = _maps.find(x => x.id === id);
   if (!m) return;
   _mapCurrent = mapNormalizeStructure(JSON.parse(JSON.stringify(m)));
-  const user=window.ciAuth?.getUser?.()||{};
-  _mapReadOnly=String(m.owner_id||'')!==String(user.id||'') && String(m.owner_username||'')!==String(user.username||'');
+  _mapReadOnly=m.canEditPlan !== true;
   _mapDirty = false;
   renderMapEditor();
 }

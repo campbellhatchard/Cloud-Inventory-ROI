@@ -1,3 +1,45 @@
+# Cloud Inventory ROI v6.9.50 Differential Audit
+
+## Baseline and method
+
+The target was created only from `cloud-inventory-roi-v6.9.49-render-ready.zip` (SHA-256 `A89C9A4979FDE31FCAA2B129EEEB08A9BCE8897165D66DC58D8206A95829128D`). The exact extracted baseline was committed as `62c1041` before production edits. The final review compares that commit with v6.9.50 and excludes unrelated feature work.
+
+## Approved production differential
+
+| Boundary | Files | Approved correction |
+|---|---|---|
+| Cleanup snapshot integrity | `src/shared/admin-cleanup.js`, `src/routes/admin-cleanup.js` | Canonicalizes valid Dates to UTC ISO, rejects invalid Dates, and counts only governed active attachments. |
+| Active evidence authority | `src/shared/solution-fit-attachments.js`, attachment route, PS turnover service | Provides one active-evidence predicate for SQL and in-memory consumers. |
+| JPP capability | `src/shared/jpp-capability.js`, `src/routes/maps.js`, `public/map.js` | Returns server-owned `canEditPlan`, disables every mutating control, and denies direct non-owner mutations. |
+| Solution Fit readiness | `src/shared/solution-fit-readiness.js`, handoff/customer selector routes | Recomputes selector and open-record readiness from the same normalized saved data. |
+| Output reliability | `public/executive-output-adapters.js`, `src/routes/scenarios.js` | Adds single-flight bounded Word generation, abort/retry/finalization, and non-sensitive phase logging. |
+| Presentation truth | `public/features.js`, `public/buyer-readiness.js`, `public/deal-export.js`, `public/ux-enhancements.js` | Fails Sensitivity closed without a case; separates evidence completion from stage gates; corrects warning severity and explicit ownership labeling. |
+| Ownership projection | `src/authorization.js`, `src/routes/customer-switcher.js` | Returns explicit server-derived ownership for mixed-role-safe labels. |
+
+## Test-only ROI correction
+
+`test/routes.test.js` now has two authoritative cases: legacy inputs without a qualified measured driver produce zero benefit, while a v2.8 fixture with explicit `laborWastePct` produces positive benefit. No ROI production file changed for this defect.
+
+## Governance and evidence differential
+
+- Versioned package, lineage, workflow artifact names, release runner, and Application Knowledge metadata to 6.9.50.
+- Registered `test/v6950-production-integrity.test.js` as a permanent release protection.
+- Added nested Date/null/zero/key-order coverage and PostgreSQL stale-preview/active-attachment fixtures.
+- Generated current machine evidence for release gates, output owners, PostgreSQL availability, and R2 availability.
+
+## Explicit non-changes
+
+- No migration or schema change; migration level remains 045.
+- No ROI formula, overlap rule, modelVersion, currency, NPV, payback, or provenance change.
+- No Executive narrative, questionnaire, Standard Package membership, attachment lifecycle, role permission, or stage-gate methodology change.
+- No framework/dependency upgrade, storage redesign, local-storage authority, or unrelated UI redesign.
+
+## Review conclusion
+
+Every production edit maps to one of the ten approved corrective defects. Local executable gates have zero failures. Safe PostgreSQL, private R2, supported Node 22, and deployed authenticated browser certification remain external gates and are not represented as PASS.
+
+---
+
 # Cloud Inventory ROI v6.9.49 Differential Audit
 
 ## Baseline and method
@@ -43,3 +85,8 @@ SE Solution Fit Scope:
 Sales Engineers have cross-account access to all active customers for
 Solution Fit discovery/create/view/edit only. This does not confer general
 cross-account customer, scenario or opportunity access.
+
+
+## v6.9.50 deployed-baseline reconciliation
+
+The verified v6.9.50 archive was applied to current production main `474e6708e756a39444b03e637cae1ac90525341b`, preserving existing corrections and permanent regressions absent from its raw package ancestry. See `DEPLOYMENT_DIFFERENTIAL_v6.9.50.md` for the reconciliation and separately scoped Node 22 verification evidence.

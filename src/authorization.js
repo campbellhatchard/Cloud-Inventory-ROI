@@ -94,7 +94,7 @@ async function searchAuthorizedCustomers(user,filters={}){
    COALESCE(g.current_stage,g.rep_assessed_stage,NULLIF(SUBSTRING(s.deal_stage FROM '(\\d+)'),'')::int) current_stage,
    2 evidence_stage,0 stage_readiness,
    NULLIF(s.data->>'targetCloseDate','') target_close,
-   h.readiness solution_fit_readiness,h.status solution_fit_status,h.primary_se_id,pse.username primary_se,
+   h.data solution_fit_data,h.readiness solution_fit_readiness,h.status solution_fit_status,h.primary_se_id,pse.username primary_se,
    COALESCE((SELECT COUNT(DISTINCT sx.base_id)::int FROM scenarios sx WHERE sx.customer_id=scoped.id AND sx.deleted_at IS NULL),0) opportunity_count,
    COALESCE((SELECT COUNT(*)::int FROM scenarios sx WHERE sx.customer_id=scoped.id AND sx.deleted_at IS NULL),0) version_count,
    COALESCE((SELECT ARRAY_AGG(DISTINCT t.name ORDER BY t.name) FROM sales_team_memberships om JOIN sales_teams t ON t.id=om.team_id AND t.status='active' WHERE om.user_id=scoped.owner_id AND om.is_active=TRUE AND om.effective_start<=CURRENT_DATE AND (om.effective_end IS NULL OR om.effective_end>=CURRENT_DATE)),'{}') team_names,

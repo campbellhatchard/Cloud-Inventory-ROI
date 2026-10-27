@@ -7,6 +7,16 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.50', date: '2026-10-26', tag: 'production-integrity',
+    title: 'Production integrity and cross-surface authority corrections',
+    summary: 'Consolidates destructive cleanup, evidence, permissions, readiness, economics, and output behavior behind their governed sources without changing ROI Model v2.8.',
+    highlights: [
+      'Cleanup fingerprints now preserve timestamps and active Solution Fit evidence uses one lifecycle definition across every consumer.',
+      'Joint Project Plan editability and Solution Fit readiness are server-owned, while empty Sensitivity and Buyer Evidence states describe their governed meaning accurately.',
+      'Executive Word has a bounded retryable lifecycle, and ownership and blocked-export messages now reflect the actual capability and severity.'
+    ]
+  },
+  {
     version: '6.9.49', date: '2026-10-26', tag: 'solution-fit-sync',
     title: 'Solution Fit header synchronization correction',
     summary: 'Keeps the Solution Fit header, application-scope body, and progress panel synchronized from the same server-confirmed saved state.',

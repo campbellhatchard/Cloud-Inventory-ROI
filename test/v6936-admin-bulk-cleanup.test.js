@@ -81,6 +81,17 @@ test('snapshot fingerprints preserve PostgreSQL timestamp changes represented as
   assert.notEqual(before, after);
 });
 
+test('snapshot fingerprints canonicalize Date values without collapsing them to empty objects', () => {
+  const instant = new Date('2026-10-26T15:04:05.000Z');
+  const asDate = cleanup.snapshotHash({ id:'x', zero:0, nullable:null, nested:{ updatedAt:instant }, history:[instant] });
+  const asIso = cleanup.snapshotHash({ history:['2026-10-26T15:04:05.000Z'], nested:{ updatedAt:'2026-10-26T15:04:05.000Z' }, nullable:null, zero:0, id:'x' });
+  const changed = cleanup.snapshotHash({ id:'x', zero:0, nullable:null, nested:{ updatedAt:new Date('2026-10-26T15:04:06.000Z') }, history:[instant] });
+  assert.equal(asDate, asIso);
+  assert.notEqual(asDate, changed);
+  assert.notEqual(cleanup.snapshotHash({ value:null }), cleanup.snapshotHash({ value:0 }));
+  assert.throws(() => cleanup.snapshotHash({ updatedAt:new Date('invalid') }), error => error.code === 'INVALID_SNAPSHOT_DATE');
+});
+
 test('migration adds nullable creator authority without fabricating legacy creators and immutable batch audit', () => {
   const migration = read('migrations/044_admin_bulk_cleanup.sql');
   assert.match(migration,/customers ADD COLUMN IF NOT EXISTS created_by/);

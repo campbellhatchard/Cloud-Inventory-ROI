@@ -57,6 +57,7 @@ if (!HAS_DB) {
     ids.valueEvent=(await db.query(`INSERT INTO roi_value_events(base_id,canonical_input,event_type,value_text,normalized_value,currency,unit,source_scenario_id,source_scenario_version,discovery_submission_id,evidence_source,evidence_date,actor_user_id,provenance_state) VALUES($1,'annualWriteOff','prospect_submitted','100000',100000,'USD','USD/year',$2,2,$3,'Prospect submission',CURRENT_DATE,NULL,'submitted') RETURNING id`,[ids.scenarioA2.base_id,ids.scenarioA2.id,ids.submission.id])).rows[0];
     ids.fit=(await db.query(`INSERT INTO handoffs(customer_id,owner_id,created_by,last_edited_by,primary_se_id,data,created_at,updated_at) VALUES($1,$2,$3,$3,$3,'{}'::jsonb,$4,$4) RETURNING id`,[ids.customerA.id,ids.repA.id,ids.se.id,recent])).rows[0];
     ids.fitC=(await db.query(`INSERT INTO handoffs(customer_id,owner_id,created_by,last_edited_by,primary_se_id,data,created_at,updated_at) VALUES($1,$2,$3,$3,$3,'{}'::jsonb,$4,$4) RETURNING id`,[ids.customerC.id,ids.repA.id,ids.se.id,recent])).rows[0];
+    for(const [index,status] of ['ACTIVE','ACTIVE','PENDING'].entries())await db.query(`INSERT INTO handoff_attachments(handoff_id,customer_id,file_name,original_filename,storage_key,content_type,file_size,status,uploaded_by) VALUES($1,$2,$3,$3,$4,'application/pdf',1,$5,$6)`,[ids.fit.id,ids.customerA.id,`cleanup-${index}.pdf`,`cleanup/${suffix}/${index}`,status,ids.se.id]);
     await db.query(`INSERT INTO scenario_stage_history(scenario_id,previous_stage,new_stage,evidence_supported_stage,readiness,roi_maturity,evidence_snapshot,stakeholder_coverage,commitment_strength,changed_by,change_type) VALUES($1,1,2,2,70,70,'{}','{}','moderate',$2,'rep_advance')`,[ids.scenarioA2.id,ids.repA.id]);
 
     const {app}=require('../server');server=await new Promise(resolve=>{const listener=app.listen(0,'127.0.0.1',()=>resolve(listener))});base=`http://127.0.0.1:${server.address().port}`;
@@ -106,9 +107,15 @@ if (!HAS_DB) {
 
   test('stale row fingerprint aborts the entire batch without partial removal',async()=>{
     const preview=await api('/api/admin/cleanup/preview',{method:'POST',body:{search:`QA StaleOpportunity ${suffix}`,filters:{types:['scenario'],status:'active'}}});assert.equal(preview.status,200);assert.equal(preview.json.summary.total,1);
-    await db.query(`UPDATE scenarios SET version_note='concurrent Admin edit',updated_at=NOW() WHERE id=$1`,[ids.scenarioStale.id]);
+    await db.query(`UPDATE scenarios SET updated_at=updated_at+INTERVAL '1 second' WHERE id=$1`,[ids.scenarioStale.id]);
     const run=await api('/api/admin/cleanup/execute',{method:'POST',body:{previewId:preview.json.previewId,mode:'selected',scenarioIds:[ids.scenarioStale.id],reason:'test_demo'}});assert.equal(run.status,409);assert.equal(run.json.code,'CLEANUP_PREVIEW_STALE');
     assert.equal((await db.query('SELECT deleted_at IS NULL active FROM scenarios WHERE id=$1',[ids.scenarioStale.id])).rows[0].active,true);
+  });
+
+  test('Cleanup dependency preview counts only governed ACTIVE Solution Fit attachments',async()=>{
+    const preview=await api('/api/admin/cleanup/preview',{method:'POST',body:{search:ids.customerA.name,filters:{types:['handoff'],status:'active'}}});
+    assert.equal(preview.status,200);assert.equal(preview.json.handoffs.length,1);
+    assert.equal(preview.json.handoffs[0].dependencies.solutionFitAttachments,2);
   });
 
   test('Customer removal expands all operational dependencies, preserves evidence and restores reassigned owner',async()=>{

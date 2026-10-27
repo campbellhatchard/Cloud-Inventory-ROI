@@ -4,6 +4,7 @@ const { transaction } = require('../db');
 const { solutionFitAccess } = require('../authorization');
 const SolutionFitState = require('../../public/solution-fit-state');
 const { buildPSTurnoverModel } = require('../shared/ps-turnover-model');
+const { isActiveAttachment, isPendingAttachment } = require('../shared/solution-fit-attachments');
 
 class TurnoverAccessError extends Error {
   constructor(message, status = 403, code = 'TURNOVER_ACCESS_DENIED') {
@@ -35,8 +36,8 @@ async function loadPSTurnoverModel({ customerId, user, queryImpl, accessImpl = s
     LEFT JOIN users u ON u.id=a.uploaded_by
     WHERE a.handoff_id=$1 AND a.customer_id=$2
     ORDER BY a.created_at,a.id`, [row.id, customerId]);
-    const active = attachmentResult.rows.filter(item => item.status === 'ACTIVE' && !item.removed_at);
-    const pendingAttachmentCount = attachmentResult.rows.filter(item => ['PENDING', 'FAILED'].includes(item.status) && !item.removed_at).length;
+    const active = attachmentResult.rows.filter(isActiveAttachment);
+    const pendingAttachmentCount = attachmentResult.rows.filter(isPendingAttachment).length;
     const model = buildPSTurnoverModel({
       data: row.data || {},
       attachments: active,

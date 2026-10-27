@@ -69,7 +69,32 @@ window.downloadPDF=async function(){
  }catch(err){const message=err.name==='AbortError'||err.name==='ExportTimeoutError'?'PDF generation timed out. Please retry.':(err.message||'PDF could not be generated.');console.error('executive_pdf.failed',{message});window.logClientError?.(message,'executive_pdf','error');showOutputRetry('executivePdfRetry',message,'Retry',window.downloadPDF);showToast?.(message);}
  finally{exportButton('pdf','Preparing PDF…',false);}
 };
-window.exportExecutiveWord=async function(){const btn=document.getElementById('executiveWordBtn'),old=btn?.innerHTML;if(btn){btn.disabled=true;btn.textContent='Building Word…';}try{const gate=await prepareExecutiveOutput('docx');if(!gate.proceed)return;const qs=new URLSearchParams({internalDraft:String(Boolean(gate.draft)),reviewAcknowledged:String(gate.result?.status==='review')});const res=await fetch(`/api/scenarios/${encodeURIComponent(window._calcScenarioId)}/export-docx?${qs}`,{credentials:'same-origin',headers:{Accept:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}});if(!res.ok){let detail={};try{detail=await res.json();}catch(_){}throw new Error(detail.error||`Word request failed (${res.status}).`);}const blob=await res.blob(),customer=(window.executiveValueStory?.meta?.customer||'Prospect').replace(/[^a-z0-9]+/gi,'-');downloadBlob(blob,`Cloud-Inventory-ROI-${customer}-Business-Case-${new Date().toISOString().slice(0,10)}.docx`);document.getElementById('executiveWordRetry')?.remove();showToast?.('Word document created.');}catch(err){console.error('executive_docx.failed',{message:err.message});showOutputRetry('executiveWordRetry',err.message||'Word document could not be generated.','Retry',window.exportExecutiveWord);showToast?.(err.message||'Word document could not be generated.');}finally{if(btn){btn.disabled=false;btn.innerHTML=old||'Executive business case';}}};
+let executiveWordInFlight=null;
+window.exportExecutiveWord=function(){
+ if(executiveWordInFlight)return executiveWordInFlight;
+ const operation=(async()=>{
+  const btn=document.getElementById('executiveWordBtn'),old=btn?.innerHTML;
+  if(btn){btn.disabled=true;btn.textContent='Building Word…';}
+  console.info('executive_docx.client_started',{savedScenario:Boolean(window._calcScenarioId)});
+  try{
+   const gate=await prepareExecutiveOutput('docx');if(!gate.proceed)return false;
+   await withExecutiveExportDeadline('Word document',async signal=>{
+    const qs=new URLSearchParams({internalDraft:String(Boolean(gate.draft)),reviewAcknowledged:String(gate.result?.status==='review')});
+    const res=await fetch(`/api/scenarios/${encodeURIComponent(window._calcScenarioId)}/export-docx?${qs}`,{credentials:'same-origin',headers:{Accept:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'},...(signal?{signal}:{})});
+    if(!res.ok){let detail={};try{detail=await res.json();}catch(_){}throw new Error(detail.error||`Word request failed (${res.status}).`);}
+    const blob=await res.blob(),customer=(window.executiveValueStory?.meta?.customer||'Prospect').replace(/[^a-z0-9]+/gi,'-');
+    downloadBlob(blob,`Cloud-Inventory-ROI-${customer}-Business-Case-${new Date().toISOString().slice(0,10)}.docx`);
+    document.getElementById('executiveWordRetry')?.remove();console.info('executive_docx.client_completed',{bytes:blob.size});showToast?.('Word document created.');
+   });
+   return true;
+  }catch(err){
+   const message=err.name==='AbortError'||err.name==='ExportTimeoutError'?'Word document generation timed out. Please retry.':(err.message||'Word document could not be generated.');
+   console.error('executive_docx.client_failed',{message});showOutputRetry('executiveWordRetry',message,'Retry',window.exportExecutiveWord);showToast?.(message);return false;
+  }finally{if(btn){btn.disabled=false;btn.innerHTML=old||'Executive business case';}}
+ })();
+ executiveWordInFlight=operation;
+ return operation.finally(()=>{if(executiveWordInFlight===operation)executiveWordInFlight=null;});
+};
 function showOutputRetry(id,message,label,handler){let box=document.getElementById(id);if(!box){box=document.createElement('div');box.id=id;box.className='proposal-review-notice';box.innerHTML=`<b>${esc(message)}</b> <button class="btn btn-secondary btn-sm" type="button">${esc(label)}</button>`;box.querySelector('button').onclick=handler;(document.getElementById('executiveReadinessBanner')||document.getElementById('proposalEditorWrap')||document.body).prepend(box);}}
 let proposalExportInFlight=null;
 async function prepareProposalFileExport(scenarioId,workspaceToken){

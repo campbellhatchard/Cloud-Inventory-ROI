@@ -122,12 +122,23 @@ describe('HTTP API integration', { skip: HAS_DB ? false : 'DATABASE_URL not set 
   });
 
   test('scenario round-trip: create → server-authoritative ROI → outcome → delete', async () => {
-    // Create a scenario with real inputs.
-    const inputs = {
-      name: 'Integration Test Co', company: 'Integration Test Co', industry: 'mfg',
-      users: 50, labor: 60000, laborWastePct: 0.2, mLabor: 0.25, invest: 120000, otc: 150000,
+    // A legacy/headcount-only payload must not manufacture labor benefit. The
+    // server projects current v2.8 authority regardless of incoming version.
+    const legacyInputs = {
+      name: 'No Driver Integration Test', company: 'No Driver Integration Test', industry: 'mfg',
+      users: 50, labor: 60000, mLabor: 0.25, invest: 120000, otc: 150000,
       revenue: 80000000, modelVersion: 27, implMonths: 3, ramp1: 0.4, ramp2: 0.75, ramp3: 1.0
     };
+    const noDriverCreated = await api('/api/scenarios', { method:'POST', token:adminToken, body:{data:legacyInputs,name:legacyInputs.name,company:legacyInputs.company} });
+    assert.ok([200,201].includes(noDriverCreated.status),`no-driver create status ${noDriverCreated.status}`);
+    const noDriverSaved=noDriverCreated.json&&(noDriverCreated.json.scenario||noDriverCreated.json),noDriverData=noDriverSaved.data||noDriverSaved;
+    assert.equal(Number(noDriverData.modelVersion),28,'server must project ROI Model v2.8 authority');
+    assert.equal(Number(noDriverData.annualBenefit||0),0,'headcount/labor without a measured driver must not create benefit');
+    await api(`/api/scenarios/${noDriverSaved.id}`,{method:'DELETE',token:adminToken});
+
+    // A current v2.8 payload with an explicit measured labor-waste driver does
+    // produce counted benefit through the governed formula.
+    const inputs = { ...legacyInputs, name:'Integration Test Co', company:'Integration Test Co', modelVersion:28, laborWastePct:0.20 };
     const created = await api('/api/scenarios', {
       method: 'POST', token: adminToken,
       body: { data: inputs, name: inputs.name, company: inputs.company }
@@ -171,7 +182,7 @@ describe('HTTP API integration', { skip: HAS_DB ? false : 'DATABASE_URL not set 
     const company = 'Customer Link Test ' + Date.now();
     const created = await api('/api/scenarios', {
       method: 'POST', token: adminToken,
-      body: { name: 'CL Test', company, data: { company, modelVersion: 27 } }
+      body: { name: 'CL Test', company, data: { company, modelVersion: 28 } }
     });
     assert.ok([200, 201].includes(created.status), `create status ${created.status}`);
     const saved = created.json && (created.json.scenario || created.json);
@@ -189,7 +200,7 @@ describe('HTTP API integration', { skip: HAS_DB ? false : 'DATABASE_URL not set 
     const company = 'Handoff Test ' + Date.now();
     const created = await api('/api/scenarios', {
       method: 'POST', token: adminToken,
-      body: { name: 'HO', company, data: { company, modelVersion: 27 } }
+      body: { name: 'HO', company, data: { company, modelVersion: 28 } }
     });
     const saved = created.json && (created.json.scenario || created.json);
     const customerId = saved && (saved.customer_id || saved.customerId);
@@ -247,7 +258,7 @@ describe('HTTP API integration', { skip: HAS_DB ? false : 'DATABASE_URL not set 
 
   test('retired outcome endpoint cannot mutate with any payload', async () => {
     // The retired endpoint returns 410 before payload validation or DB writes.
-    const created = await api('/api/scenarios', { method: 'POST', token: adminToken, body: { data: { name: 'Bad Outcome Co', company: 'Bad Outcome Co', modelVersion: 27 }, name: 'Bad Outcome Co' } });
+    const created = await api('/api/scenarios', { method: 'POST', token: adminToken, body: { data: { name: 'Bad Outcome Co', company: 'Bad Outcome Co', modelVersion: 28 }, name: 'Bad Outcome Co' } });
     const saved = created.json && (created.json.scenario || created.json);
     const baseId = saved && (saved.base_id || saved.baseId);
     const id = saved && saved.id;

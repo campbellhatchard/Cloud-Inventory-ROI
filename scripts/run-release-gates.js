@@ -26,6 +26,7 @@ const COMMANDS = [
   command('postgres-integration', 'npm run test:postgres', npm('run', 'test:postgres'), { databaseOnly: true }),
   command('r2-integration', 'npm run test:r2', npm('run', 'test:r2'), { r2Only: true }),
   command('full-test-suite', 'npm test', npm('test')),
+  command('v6950-production-integrity', 'npm run test:v6950', npm('run', 'test:v6950')),
   command('v6949-solution-fit-header-sync', 'npm run test:v6949', npm('run', 'test:v6949')),
   command('v6948-executive-narrative-authority', 'npm run test:v6948', npm('run', 'test:v6948')),
   command('v6947-corrective-release', 'npm run test:v6947', npm('run', 'test:v6947')),
@@ -100,7 +101,7 @@ function writePostgresResult(gates) {
   const suite = gates.find(gate => gate.name === 'postgres-integration');
   const identity = databaseIdentity();
   const available = identity.databaseUrlPresent;
-  const suites = ['test/routes.test.js', 'test/v653-postgres-integration.test.js', 'test/v663-postgres-authorization.test.js', 'test/v664-postgres-product-identity.test.js', 'test/v6930-postgres-value-application.test.js', 'test/v6934-postgres-customer-creation.test.js', 'test/v6935-postgres-ownership-transfer.test.js', 'test/v6936-postgres-admin-cleanup.test.js', 'test/v6937-postgres-roi-assumptions.test.js', 'test/v6941-postgres-solution-fit-stabilization.test.js', 'test/v6944-postgres-solution-fit-evidence.test.js', 'test/v6945-postgres-ps-turnover.test.js', 'test/v6947-postgres-corrective.test.js', 'test/v6948-postgres-executive-authority.test.js'];
+  const suites = ['test/routes.test.js', 'test/v653-postgres-integration.test.js', 'test/v663-postgres-authorization.test.js', 'test/v664-postgres-product-identity.test.js', 'test/v6930-postgres-value-application.test.js', 'test/v6934-postgres-customer-creation.test.js', 'test/v6935-postgres-ownership-transfer.test.js', 'test/v6936-postgres-admin-cleanup.test.js', 'test/v6937-postgres-roi-assumptions.test.js', 'test/v6941-postgres-solution-fit-stabilization.test.js', 'test/v6944-postgres-solution-fit-evidence.test.js', 'test/v6945-postgres-ps-turnover.test.js', 'test/v6947-postgres-corrective.test.js', 'test/v6948-postgres-executive-authority.test.js', 'test/v6950-postgres-production-integrity.test.js'];
   const notTested = available ? Number(suite?.notTested || 0) : suites.length;
   const result = { release, generatedAt: new Date().toISOString(), ...identity, node: process.version,
     migration: { executed: Boolean(available && migration?.executed), exitCode: available ? migration?.exitCode : null, result: available ? (migration?.exitCode === 0 ? 'PASS' : 'FAIL') : 'NOT TESTED' },

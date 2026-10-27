@@ -140,7 +140,8 @@ function updateContextHeader() {
   const g = _contextStageScenarioId === activeId ? _contextStageReadiness : null;
   const stageControl = activeId ? `<span class="ctx-sep">/</span><div class="ctx-stage-picker"><span>Current BuyCycle stage</span><strong>${g?`Stage ${g.currentStageNumber} — ${escapeHtmlUX(g.currentStage?.name||'')}`:'Loading…'}</strong><small id="contextStageStatus" class="${g&&g.stageGap>0?'has-gap':''}">${g ? (g.stageGap>0?`Evidence supports Stage ${g.evidenceStage}`:`${g.readiness}% ready`) : 'Loading evidence'}</small><button onclick="switchTab('readiness')">Review</button></div>` : '';
   const meta=window._activeCustomerMeta||null;
-  const attribution=meta&&meta.access!=='owner'?`<span class="ctx-attribution"><span>Viewing ${escapeHtmlUX(meta.owner||'another rep')}'s opportunity</span>${meta.solutionFit?.primarySe?`<b>Primary SE: ${escapeHtmlUX(meta.solutionFit.primarySe)}</b>`:''}${meta.teams?.length?`<b>${escapeHtmlUX(meta.teams.join(', '))}</b>`:''}</span>`:'';
+  const ownedByCurrentUser=meta&&(meta.isOwnedByCurrentUser===true||meta.access==='owner');
+  const attribution=meta&&!ownedByCurrentUser?`<span class="ctx-attribution"><span>Viewing ${escapeHtmlUX(meta.owner||'another rep')}'s opportunity</span>${meta.solutionFit?.primarySe?`<b>Primary SE: ${escapeHtmlUX(meta.solutionFit.primarySe)}</b>`:''}${meta.teams?.length?`<b>${escapeHtmlUX(meta.teams.join(', '))}</b>`:''}</span>`:'';
   bar.innerHTML = `<span class="ctx-icon" aria-hidden="true">${ctxInitialsUX(company)}</span>
     <span class="ctx-details"><span class="ctx-label">Customer workspace</span><span class="ctx-company">${escapeHtmlUX(company)}</span></span>` +
     attribution+(scenarioControl ? `<span class="ctx-sep">/</span>${scenarioControl}` : '') + stageControl +

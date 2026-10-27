@@ -233,6 +233,12 @@ function renderComparison() {
 function renderSensitivity() {
   const el = document.getElementById('sensitivityChart');
   if (!el) return;
+  const context=window.CIAppContext?.snapshot?.()||{};
+  const scenarioId=context.scenarioId||window._calcScenarioId;
+  if(!scenarioId){
+    el.innerHTML='<div class="empty-state sensitivity-empty"><h3>No Business Case</h3><p>Select or save an authorized customer scenario before running Sensitivity Analysis.</p><button class="btn btn-primary" type="button" onclick="openCustomerSwitcher?.({targetTab:\'calc\'})">Select customer</button></div>';
+    return;
+  }
   const v = getVals();
   const base = calcROI(v);
   const contractNpv = r => Number.isFinite(r.totalContractNpv) ? r.totalContractNpv : r.npv5;

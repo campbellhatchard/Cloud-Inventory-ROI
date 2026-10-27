@@ -11,11 +11,13 @@ const {hasPermission,scenarioAccess}=require('../authorization');
 const {buildJppPptx}=require('../exports/operational-pptx');
 const {buildJppPdf}=require('../exports/operational-pdf');
 const {safeFile}=require('../shared/output-brand');
+const {canEditPlan}=require('../shared/jpp-capability');
 
 const router = express.Router();
 const namedMilestones=value=>(Array.isArray(value)?value:[]).filter(m=>String(m?.title||m?.task||'').trim());
-const presentPlan=plan=>plan?{...plan,milestones:namedMilestones(plan.milestones)}:plan;
+const presentPlan=(plan,user)=>plan?{...plan,milestones:namedMilestones(plan.milestones),...(user?{canEditPlan:canEditPlan(user,plan)}:{})}:plan;
 function validateMilestones(value){if(value===undefined)return; if(!Array.isArray(value))throw Object.assign(new Error('Milestones must be an array.'),{status:400});if(value.some(m=>!String(m?.title||m?.task||'').trim()))throw Object.assign(new Error('Name each milestone before saving the Joint Project Plan.'),{status:400});}
+async function editablePlan(req,res){const {rows}=await query('SELECT id,owner_id FROM mutual_action_plans WHERE id=$1',[req.params.id]);if(!rows.length){res.status(404).json({error:'Plan not found.'});return null;}if(!canEditPlan(req.user,rows[0])){res.status(403).json({error:'Read-only plan — only the owner can make changes.'});return null;}return rows[0];}
 
 /* ── PUBLIC: prospect fetches the plan by token ── */
 router.get('/public/:token', async (req, res) => {
@@ -88,7 +90,7 @@ router.get('/', async (req, res) => {
       params = [req.user.id];
     }
     const { rows } = await query(sql, params);
-    res.json(rows.map(presentPlan));
+    res.json(rows.map(plan=>presentPlan(plan,req.user)));
   } catch (e) { res.status(500).json({ error: 'Failed to load plans.' }); }
 });
 
@@ -119,13 +121,14 @@ router.post('/', async (req, res) => {
     );
     await log({ userId: req.user.id, action: 'map.created', entityType: 'mutual_action_plan',
                 entityId: rows[0].id, detail: { company:authoritativeCompany, scenarioId:scenarioId||null }, ipAddress: req.ip });
-    res.status(201).json(presentPlan(rows[0]));
+    res.status(201).json(presentPlan({...rows[0],owner_id:authoritativeOwner},req.user));
   } catch (e) { console.error('MAP create:', e.message); res.status(e.status||500).json({ error: e.status?e.message:'Failed to create plan.' }); }
 });
 
 /* Update (title, date, milestones) */
 router.put('/:id', async (req, res) => {
   try {
+    if(!await editablePlan(req,res))return;
     const { company, title, targetCloseDate, milestones, groups } = req.body || {};
     validateMilestones(milestones);
     if (company !== undefined && !String(company).trim()) {
@@ -146,13 +149,14 @@ router.put('/:id', async (req, res) => {
        req.params.id, req.user.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'Plan not found.' });
-    res.json(presentPlan(rows[0]));
+    res.json(presentPlan({...rows[0],owner_id:req.user.id},req.user));
   } catch (e) { console.error('MAP update:', e.message); res.status(e.status||500).json({ error: e.status?e.message:'Failed to update plan.' }); }
 });
 
 /* Generate / rotate share token */
 router.post('/:id/share', async (req, res) => {
   try {
+    if(!await editablePlan(req,res))return;
     const token = crypto.randomBytes(24).toString('hex');
     const { rows } = await query(
       `UPDATE mutual_action_plans SET token = $1, is_active = TRUE
@@ -170,6 +174,7 @@ router.post('/:id/share', async (req, res) => {
 /* Revoke share link */
 router.delete('/:id/share', async (req, res) => {
   try {
+    if(!await editablePlan(req,res))return;
     const { rows } = await query(
       `UPDATE mutual_action_plans SET token = NULL WHERE id = $1 AND owner_id = $2 RETURNING id`,
       [req.params.id, req.user.id]
@@ -182,6 +187,7 @@ router.delete('/:id/share', async (req, res) => {
 /* Delete plan */
 router.delete('/:id', async (req, res) => {
   try {
+    if(!await editablePlan(req,res))return;
     const { rows } = await query(
       'DELETE FROM mutual_action_plans WHERE id = $1 AND owner_id = $2 RETURNING id',
       [req.params.id, req.user.id]
