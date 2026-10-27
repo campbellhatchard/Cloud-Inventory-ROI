@@ -1,3 +1,40 @@
+# Cloud Inventory ROI v6.9.53 Baseline Inheritance Audit
+
+## Authoritative v6.9.53 package
+
+- Exact baseline: `cloud-inventory-roi-v6.9.52-render-ready.zip`
+- Baseline SHA-256: `9C76181C3494DF47C3B254911326709716044D1FAB485593032993D29BD0D810`
+- Extraction target: a new `work/cloud-inventory-roi-v6.9.53` directory; no prior working folder was reused.
+- Baseline application version: `6.9.52`
+- Target application version: `6.9.53`
+- ROI Model: v2.8 / `modelVersion: 28`
+- Brand System: 1.0
+- Application Knowledge: 1.0
+- Christie Persona: 1.0
+- Output Registry: 31 entries, 29 active
+- Migration level: `045_solution_fit_evidence_attachments.sql`
+- Database schema migration for v6.9.53: none expected or authorized
+- Existing test files: 117
+
+## v6.9.53 active-path and inheritance checklist
+
+1. Customer Business Case and Executive outputs remain on authenticated scenario routes and the server-owned model/output adapters.
+2. Champion Pack remains intentionally disabled pending governed conversion.
+3. Governed Competitive Battlecard exports remain on the Competitive Intelligence route.
+4. Solution Fit remains server-authoritative through `/api/handoffs` and its dedicated attachment route.
+5. JPP remains `public/map.js` → `/api/maps` → `src/routes/maps.js` → `mutual_action_plans`; operational PDF/PPTX builders remain the registered generators.
+6. Preserve server-owned JPP `canEditPlan`, owner-only prospect-link mutation, read-only review/export, 14-milestone hydration, and customer/internal audience classification.
+7. Current release blocker: JPP-DATE-01 at the PostgreSQL DATE → node-postgres → API/output boundary.
+8. Preserve all permanent tests and prior corrections; do not weaken authorization, ROI, Executive narrative, Solution Fit, Admin Cleanup, evidence, or output protections.
+9. After packaging, deploy the exact v6.9.53 ZIP and repeat real-Chrome date/output/role certification.
+10. Retired or disabled compatibility functionality must not reappear.
+
+> SE Solution Fit Scope: Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.
+
+The exact Product Owner-named v6.9.52 archive was found, hashed, opened, and extracted successfully. The inherited v6.9.52 audit is retained below as baseline history.
+
+---
+
 # Cloud Inventory ROI v6.9.52 Baseline Inheritance Audit
 
 ## Authoritative v6.9.52 package
@@ -242,3 +279,8 @@ Verified archive applied to current production main `1a428bbbab88e0b35ccb2e70954
 ## v6.9.52 deployed-baseline reconciliation
 
 The verified v6.9.52 archive was applied to current production main `df710ceffee9476f57b1775f2651da6baeb8c6e0`, retaining existing deployed corrections, PostgreSQL fixtures and historical evidence. See `DEPLOYMENT_DIFFERENTIAL_v6.9.52.md` for reconciliation and separately scoped local Node 22 verification.
+
+
+## v6.9.53 deployed-baseline reconciliation
+
+The verified v6.9.53 archive was applied to current production main `52041bc14a21dcdb184baaadd06b83aab69b673f`, preserving existing deployed corrections, PostgreSQL fixtures and historical evidence. See `DEPLOYMENT_DIFFERENTIAL_v6.9.53.md` for reconciliation and separately scoped local Node 22 verification.

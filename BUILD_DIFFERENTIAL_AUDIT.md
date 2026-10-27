@@ -1,3 +1,17 @@
+# v6.9.53 differential — JPP PostgreSQL date-only boundary
+
+Authoritative parent: `cloud-inventory-roi-v6.9.52-render-ready.zip` (`9C76181C3494DF47C3B254911326709716044D1FAB485593032993D29BD0D810`).
+
+Production changes are limited to the PostgreSQL `DATE` adapter, the shared strict server/browser date-only contract, and JPP list/editor/public/PDF/PPTX consumers. No schema, authorization, ROI, Solution Fit, Executive narrative, Buyer Evidence, or R2 production logic changed. `.github/workflows/ci.yml` changed only to publish v6.9.53 evidence filenames. All remaining changes are version metadata, permanent tests, and release evidence.
+
+Changed production files: `src/db.js`, `src/shared/date-only.js`, `src/exports/operational-pdf.js`, `src/exports/operational-pptx.js`, `public/jpp-date-only.js`, `public/map.js`, `public/prospect-map.html`, and `public/deal-export.js`.
+
+No migration was added. The existing `mutual_action_plans.target_close_date DATE` schema remains authoritative.
+
+
+
+---
+
 # Cloud Inventory ROI v6.9.52 Differential Audit
 
 ## v6.9.52 corrective differential
@@ -136,3 +150,8 @@ Verified archive applied to current production main `1a428bbbab88e0b35ccb2e70954
 ## v6.9.52 deployed-baseline reconciliation
 
 The verified v6.9.52 archive was applied to current production main `df710ceffee9476f57b1775f2651da6baeb8c6e0`, retaining existing deployed corrections, PostgreSQL fixtures and historical evidence. See `DEPLOYMENT_DIFFERENTIAL_v6.9.52.md` for reconciliation and separately scoped local Node 22 verification.
+
+
+## v6.9.53 deployed-baseline reconciliation
+
+The verified v6.9.53 archive was applied to current production main `52041bc14a21dcdb184baaadd06b83aab69b673f`, preserving existing deployed corrections, PostgreSQL fixtures and historical evidence. See `DEPLOYMENT_DIFFERENTIAL_v6.9.53.md` for reconciliation and separately scoped local Node 22 verification.

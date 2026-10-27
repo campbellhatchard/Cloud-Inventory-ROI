@@ -1,0 +1,38 @@
+{
+  "release": "6.9.53",
+  "generatedAt": "2026-10-27T21:33:19.580Z",
+  "databaseUrlPresent": true,
+  "databaseName": "cloud_inventory_v6953_release",
+  "postgresqlVersion": "PostgreSQL 16.15, compiled by Visual C++ build 1944, 64-bit",
+  "node": "v24.22.1",
+  "migration": {
+    "executed": true,
+    "exitCode": 0,
+    "result": "PASS"
+  },
+  "command": "npm run test:postgres",
+  "suites": [
+    "test/routes.test.js",
+    "test/v653-postgres-integration.test.js",
+    "test/v663-postgres-authorization.test.js",
+    "test/v664-postgres-product-identity.test.js",
+    "test/v6930-postgres-value-application.test.js",
+    "test/v6934-postgres-customer-creation.test.js",
+    "test/v6935-postgres-ownership-transfer.test.js",
+    "test/v6936-postgres-admin-cleanup.test.js",
+    "test/v6937-postgres-roi-assumptions.test.js",
+    "test/v6941-postgres-solution-fit-stabilization.test.js",
+    "test/v6944-postgres-solution-fit-evidence.test.js",
+    "test/v6945-postgres-ps-turnover.test.js",
+    "test/v6947-postgres-corrective.test.js",
+    "test/v6948-postgres-executive-authority.test.js",
+    "test/v6950-postgres-production-integrity.test.js",
+    "test/v6953-postgres-jpp-date-boundary.test.js"
+  ],
+  "passed": 41,
+  "failed": 7,
+  "skipped": 0,
+  "notTested": 0,
+  "durationMs": 291980,
+  "result": "FAIL"
+}

@@ -43,10 +43,10 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cloud-inventory-roi-v6.9.52-certification-evidence
+          name: cloud-inventory-roi-v6.9.53-certification-evidence
           if-no-files-found: error
           path: |
-            POSTGRES_INTEGRATION_RESULTS_v6.9.52.json
-            R2_INTEGRATION_RESULTS_v6.9.52.json
-            RELEASE_GATE_RESULTS_v6.9.52.json
-            OUTPUT_RUNTIME_RESULTS_v6.9.52.json
+            POSTGRES_INTEGRATION_RESULTS_v6.9.53.json
+            R2_INTEGRATION_RESULTS_v6.9.53.json
+            RELEASE_GATE_RESULTS_v6.9.53.json
+            OUTPUT_RUNTIME_RESULTS_v6.9.53.json

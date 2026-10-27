@@ -67,6 +67,7 @@ function createMapHarness() {
     document,
     console,
     Date,
+    Intl,
     JSON,
     Math,
     Promise,
@@ -84,6 +85,7 @@ function createMapHarness() {
   context.window.location = { origin: 'https://example.invalid', href: '' };
   context.window.ciAuth = { getUser: () => ({ username: 'qa' }) };
   vm.createContext(context);
+  vm.runInContext(fs.readFileSync(path.join(root, 'public/jpp-date-only.js'), 'utf8'), context, { filename: 'public/jpp-date-only.js' });
   vm.runInContext(fs.readFileSync(path.join(root, 'public/map.js'), 'utf8'), context, { filename: 'public/map.js' });
   return {
     context,

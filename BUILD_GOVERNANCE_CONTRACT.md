@@ -651,3 +651,7 @@ The saved Solution Fit is the sole authority for product, ERP, package, and appl
 ## SERVER-OWNED JPP PROSPECT-LINK CAPABILITY INVARIANT
 
 Joint Project Plan edit and prospect-link mutation authority is a server-owned capability represented by `canEditPlan`; `_mapReadOnly` is a rendering projection only. Share, rotate, revoke, replace, and equivalent prospect-link controls may be available only when `canEditPlan` is true and the existing saved-plan/share-readiness requirements are satisfied. Re-rendering, menu refresh, dirty/clean transitions, or output-readiness changes may never grant that capability. Every mutation route independently enforces the same owner-only authority and denied requests cause zero state change. Permitted read-only PDF/PPTX review access is a separate capability and must not be removed by prospect-link governance.
+
+## POSTGRESQL DATE-ONLY BOUNDARY INVARIANT
+
+Every PostgreSQL `DATE` column represents a calendar fact and must cross the database adapter as an exact `YYYY-MM-DD` string or `null`, never as a JavaScript `Date`, timestamp, localized date, or timezone-adjusted instant. API and domain code preserve that wire value. Browser and server outputs use the canonical strict date-only normalizer and formatter; output-specific string splitting, truncation, offset compensation, and direct `Date` stringification are prohibited. A permanent real-PostgreSQL integration test must prove the database-to-API contract and at least one production browser and file-output path.

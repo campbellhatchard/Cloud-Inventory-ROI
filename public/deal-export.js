@@ -22,11 +22,8 @@ function deEsc(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 function deDate(d, opts) {
-  if (!d) return '';
-  const raw = String(d);
-  const date = /^\d{4}-\d{2}-\d{2}(?:T00:00:00(?:\.000)?Z)?$/.test(raw)
-    ? new Date(raw.slice(0, 10) + 'T12:00:00') : new Date(d);
-  return date.toLocaleDateString('en-US', opts || { month: 'short', day: 'numeric', year: 'numeric' });
+  if (!d || !window.CIJppDateOnly) return '';
+  return window.CIJppDateOnly.formatDateOnly(d, opts || { month: 'short', day: 'numeric', year: 'numeric' });
 }
 function deMapGroups(map, milestones) {
   const saved = Array.isArray(map.groups) ? map.groups.filter(g => g && g.id && g.name) : [];
@@ -153,7 +150,7 @@ async function printActionPlan(variant) {
     rowsHtml += `<h2>${deEsc(phase.name)}</h2><table>
       <thead><tr><th style="width:46%;">Milestone</th><th style="width:18%;">Owner</th><th style="width:18%;">Due</th><th style="width:18%;">Status</th></tr></thead><tbody>`;
     deMilestonesInGroup(ms, phase).forEach(x => {
-      const overdue = x.status !== 'done' && x.dueDate && new Date(x.dueDate) < new Date();
+      const overdue = x.status !== 'done' && window.CIJppDateOnly.isBeforeLocalToday(x.dueDate);
       rowsHtml += `<tr class="${x.status==='done'?'done':''}">
         <td>${deEsc(x.title)}</td>
         <td>${deEsc(ownerLabels[x.owner] || x.owner)}</td>
@@ -174,7 +171,7 @@ async function printActionPlan(variant) {
       <div class="ht">${headTag}</div>
     </div>
     <h1>${deEsc(String(m.title||'Joint Project Plan').replace(/^Mutual Action Plan\b/i,'Joint Project Plan'))}</h1>
-    <div class="sub">${deEsc(m.company || '')}${m.target_close_date ? ' · Target close: ' + deDate(m.target_close_date, {month:'long',day:'numeric',year:'numeric'}) : ''}</div>
+    <div class="sub">${deEsc(m.company || '')}${m.target_close_date ? ' · Target close: ' + deDate(m.target_close_date, {month:'short',day:'numeric',year:'numeric'}) : ''}</div>
     ${customerPurpose}
     <div class="meta-line"><strong>Progress:</strong> ${done} of ${ms.length} complete (${pct}%)</div>
     <div class="prog-wrap"><div class="prog-fill" style="width:${pct}%;"></div></div>

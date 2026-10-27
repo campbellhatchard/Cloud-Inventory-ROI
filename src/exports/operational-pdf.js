@@ -2,6 +2,7 @@
 
 const {buildTextPdf}=require('./executive-pdf');
 const SolutionFitState=require('../../public/solution-fit-state');
+const {formatDateOnlyDisplay}=require('../shared/date-only');
 
 const clean=value=>String(value==null?'':value).trim();
 const line=(label,value)=>`${label}: ${clean(value)||'Not yet established'}`;
@@ -14,8 +15,8 @@ function buildJppPdf(plan,{audience='customer'}={}){
     subtitle:line('Customer',plan.company),audience,
     sections:[
       {heading:'Why we are sharing this plan',lines:['This joint plan creates a shared path from validation through approval and launch. It makes ownership, dates, dependencies, and decisions visible so both teams can protect time-to-value.']},
-      {heading:'Plan summary',lines:[line('Target close date',plan.target_close_date),line('Open milestones',milestones.filter(x=>x.status!=='done').length),line('Completed milestones',milestones.filter(x=>x.status==='done').length)]},
-      {heading:'Milestones',lines:milestones.map((m,i)=>`${i+1}. ${clean(m.title||m.task)||'Untitled milestone'} | ${clean(m.owner)||'Owner not assigned'} | ${clean(m.dueDate||m.due_date)||'Date not set'} | ${clean(m.status)||'pending'}`)}
+      {heading:'Plan summary',lines:[line('Target close date',formatDateOnlyDisplay(plan.target_close_date)),line('Open milestones',milestones.filter(x=>x.status!=='done').length),line('Completed milestones',milestones.filter(x=>x.status==='done').length)]},
+      {heading:'Milestones',lines:milestones.map((m,i)=>`${i+1}. ${clean(m.title||m.task)||'Untitled milestone'} | ${clean(m.owner)||'Owner not assigned'} | ${formatDateOnlyDisplay(m.dueDate||m.due_date)||'Date not set'} | ${clean(m.status)||'pending'}`)}
     ]
   });
 }

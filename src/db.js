@@ -4,7 +4,16 @@
    anywhere else — always import { query, pool } from this file.
    ═══════════════════════════════════════════════════════════════════ */
 
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
+
+// PostgreSQL DATE (OID 1082) is a calendar fact, not a timestamp. Keep the
+// wire value as YYYY-MM-DD so JSON serialization and process timezones cannot
+// move it to another day. See POSTGRES_DATE_BOUNDARY_AUDIT_v6.9.53.md.
+const POSTGRES_DATE_OID = types.builtins?.DATE || 1082;
+function configureDateOnlyParser(pgTypes = types) {
+  pgTypes.setTypeParser(POSTGRES_DATE_OID, value => value);
+}
+configureDateOnlyParser();
 
 if (!process.env.DATABASE_URL) {
   console.warn('⚠️  DATABASE_URL is not set — database features will fail.');
@@ -82,4 +91,4 @@ async function testConnection() {
   return result.rows[0]?.db_time;
 }
 
-module.exports = { query, transaction, pool, testConnection };
+module.exports = { query, transaction, pool, testConnection, POSTGRES_DATE_OID, configureDateOnlyParser };

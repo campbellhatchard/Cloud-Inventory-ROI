@@ -7,6 +7,16 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.53', date: '2026-10-27', tag: 'postgres-date-boundary',
+    title: 'Joint Project Plan PostgreSQL date-boundary correction',
+    summary: 'Preserves every PostgreSQL calendar date as an exact date-only value through the API, browser, PDF, and PowerPoint.',
+    highlights: [
+      'PostgreSQL DATE values now cross the Node database boundary as YYYY-MM-DD strings instead of JavaScript timestamps.',
+      'All Plans, the editor, public JPP, PDF, and PowerPoint use one strict, timezone-independent date contract.',
+      'Real PostgreSQL integration and actual PDF/PPTX content tests permanently cover the production failure path.'
+    ]
+  },
+  {
     version: '6.9.52', date: '2026-10-27', tag: 'jpp-date-integrity',
     title: 'Joint Project Plan calendar-date correction',
     summary: 'Keeps governed JPP target dates on the same calendar day in every browser timezone.',

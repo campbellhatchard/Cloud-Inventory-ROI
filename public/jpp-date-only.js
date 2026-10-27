@@ -44,5 +44,18 @@
     return new Intl.DateTimeFormat(options.locale || 'en-US', format).format(parsed.date);
   }
 
-  return Object.freeze({ parseDateOnly, formatDateOnly });
+  function normalizeDateOnly(value) {
+    const parsed = parseDateOnly(value);
+    if (!parsed) return null;
+    return `${String(parsed.year).padStart(4, '0')}-${String(parsed.month).padStart(2, '0')}-${String(parsed.day).padStart(2, '0')}`;
+  }
+
+  function isBeforeLocalToday(value, now = new Date()) {
+    const normalized = normalizeDateOnly(value);
+    if (!normalized || !(now instanceof Date) || Number.isNaN(now.getTime())) return false;
+    const today = `${String(now.getFullYear()).padStart(4, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    return normalized < today;
+  }
+
+  return Object.freeze({ parseDateOnly, normalizeDateOnly, formatDateOnly, isBeforeLocalToday });
 });

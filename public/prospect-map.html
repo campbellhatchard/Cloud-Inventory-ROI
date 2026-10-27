@@ -112,13 +112,10 @@ async function load() {
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function fmtDate(d, long) {
   return window.CIJppDateOnly.formatDateOnly(d, long
-    ? {month:'long'} : {month:'short',year:false});
+    ? {month:'short'} : {month:'short',year:false});
 }
 function isOverdue(m) {
-  if (!m.dueDate || m.status === 'done') return false;
-  const today = new Date();
-  const local = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
-  return String(m.dueDate).split('T')[0] < local;
+  return m.status !== 'done' && window.CIJppDateOnly.isBeforeLocalToday(m.dueDate);
 }
 function planGroups(ms) {
   const saved = Array.isArray(plan.groups) ? plan.groups.filter(g => g && g.id && g.name) : [];

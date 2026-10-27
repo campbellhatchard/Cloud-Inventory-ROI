@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "6.9.52",
+  "release": "6.9.53",
   "tests": [
     {"invariant":"Customer Business Case","path":"test/release-integrity.test.js"},
     {"invariant":"customer-safe payload","path":"test/release-integrity.test.js"},
@@ -79,5 +79,7 @@
     ,{"invariant":"v6.9.50 PostgreSQL owner and multi-role non-owner JPP capability enforcement","path":"test/v6950-postgres-production-integrity.test.js"}
     ,{"invariant":"v6.9.51 server-owned JPP prospect-link capability survives UI state changes and independently denies non-owner mutation routes","path":"test/v6951-jpp-capability.test.js"}
     ,{"invariant":"v6.9.52 JPP calendar dates remain stable across timezones, DST boundaries, roles and saved editor/list rendering","path":"test/v6952-jpp-date-only.test.js"}
+    ,{"invariant":"v6.9.53 PostgreSQL DATE OID 1082 remains an exact YYYY-MM-DD calendar fact through JPP browser and binary output rendering","path":"test/v6953-jpp-date-boundary.test.js"}
+    ,{"invariant":"v6.9.53 real PostgreSQL DATE insertion returns an exact date-only value through /api/maps, public JPP, browser rendering and export routes","path":"test/v6953-postgres-jpp-date-boundary.test.js"}
   ]
 }

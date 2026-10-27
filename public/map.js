@@ -130,16 +130,16 @@ function renderMapList() {
 
   /* ── Stats ── */
   const allOverdue = _maps.reduce(function(acc, m) {
-    return acc + (m.milestones||[]).filter(function(x){ return x.status !== 'done' && x.dueDate && new Date(x.dueDate) < new Date(); }).length;
+    return acc + (m.milestones||[]).filter(function(x){ return x.status !== 'done' && window.CIJppDateOnly.isBeforeLocalToday(x.dueDate); }).length;
   }, 0);
   const sharedCount = _maps.filter(function(m){ return !!m.token; }).length;
   const repCount    = isAdmin ? new Set(_maps.map(function(m){ return m.owner_username; }).filter(Boolean)).size : 0;
 
   /* ── Overdue alert — always on ── */
   const overdueDetails = myMaps.filter(function(m){
-    return (m.milestones||[]).some(function(x){ return x.status !== 'done' && x.dueDate && new Date(x.dueDate) < new Date(); });
+    return (m.milestones||[]).some(function(x){ return x.status !== 'done' && window.CIJppDateOnly.isBeforeLocalToday(x.dueDate); });
   }).map(function(m){
-    const ov = (m.milestones||[]).filter(function(x){ return x.status !== 'done' && x.dueDate && new Date(x.dueDate) < new Date(); }).length;
+    const ov = (m.milestones||[]).filter(function(x){ return x.status !== 'done' && window.CIJppDateOnly.isBeforeLocalToday(x.dueDate); }).length;
     return escapeHtml(m.company || m.title) + ' (' + ov + ' overdue)';
   });
   const overdueAlertHtml = overdueDetails.length
@@ -151,11 +151,11 @@ function renderMapList() {
   const reps = isAdmin ? [...new Set(_maps.map(function(m){ return m.owner_username; }).filter(Boolean))].sort() : [];
   const filtered = _maps.filter(function(m) {
     if (_mapRepFilter && m.owner_username !== _mapRepFilter) return false;
-    if (_mapStatusFilter === 'overdue' && !(m.milestones||[]).some(function(x){ return x.status!=='done'&&x.dueDate&&new Date(x.dueDate)<new Date(); })) return false;
+    if (_mapStatusFilter === 'overdue' && !(m.milestones||[]).some(function(x){ return x.status!=='done'&&window.CIJppDateOnly.isBeforeLocalToday(x.dueDate); })) return false;
     if (_mapStatusFilter === 'shared' && !m.token) return false;
     if (_mapStatusFilter === 'draft' && m.token) return false;
     if (_mapStatusFilter === 'on-track' && (
-      (m.milestones||[]).some(function(x){ return x.status!=='done'&&x.dueDate&&new Date(x.dueDate)<new Date(); }) || !m.token
+      (m.milestones||[]).some(function(x){ return x.status!=='done'&&window.CIJppDateOnly.isBeforeLocalToday(x.dueDate); }) || !m.token
     )) return false;
     if (_mapSearchFilter && !(m.company||'').toLowerCase().includes(_mapSearchFilter.toLowerCase())
         && !(m.title||'').toLowerCase().includes(_mapSearchFilter.toLowerCase())) return false;
@@ -166,7 +166,7 @@ function renderMapList() {
     const ms = m.milestones || [];
     const done = ms.filter(function(x){ return x.status === 'done'; }).length;
     const pct  = ms.length ? Math.round(done / ms.length * 100) : 0;
-    const overdue = ms.filter(function(x){ return x.status !== 'done' && x.dueDate && new Date(x.dueDate) < new Date(); }).length;
+    const overdue = ms.filter(function(x){ return x.status !== 'done' && window.CIJppDateOnly.isBeforeLocalToday(x.dueDate); }).length;
     const progCls = pct >= 60 ? 'map-prog-hi' : pct >= 25 ? 'map-prog-mid' : 'map-prog-low';
     const closeDate = window.CIJppDateOnly.formatDateOnly(m.target_close_date);
     const statusPill = overdue
@@ -310,6 +310,7 @@ function renderMapEditor() {
   ed.style.display = 'block';
   const m = _mapCurrent;
   mapNormalizeStructure(m);
+  const closeInputValue = window.CIJppDateOnly.normalizeDateOnly(m.target_close_date) || '';
 
   const shareBlock = m.id
     ? (m.token
@@ -347,7 +348,7 @@ function renderMapEditor() {
         <div class="field" style="margin:0;"><label>Plan title</label>
           <input type="text" id="mapTitle" value="${escapeHtml(mapDisplayTitle(m.title))}"/></div>
         <div class="field" style="margin:0;"><label>Target close date</label>
-          <input type="date" id="mapCloseDate" value="${m.target_close_date ? String(m.target_close_date).split('T')[0] : ''}"/></div>
+          <input type="date" id="mapCloseDate" value="${escapeHtml(closeInputValue)}"/></div>
       </div>
       <div id="mapCompanyGate" class="field-hint" style="color:var(--amber);display:${m.company ? 'none' : 'block'};margin-top:6px;">Select or create a company before saving this plan.</div>
       <div class="btn-row" style="margin-top:.85rem;align-items:center;flex-wrap:wrap;">
@@ -465,7 +466,7 @@ function renderMilestones() {
         </div>
       </div>
       <div class="map-group-body">${groupMs.length ? groupMs.map((x, itemIndex) => {
-      const overdue = x.status !== 'done' && x.dueDate && new Date(x.dueDate) < new Date();
+      const overdue = x.status !== 'done' && window.CIJppDateOnly.isBeforeLocalToday(x.dueDate);
       return `<div class="map-ms-row ${x.status === 'done' ? 'map-ms-done' : ''}">
         <div class="map-ms-move">
           <button onclick="moveMilestone('${x.id}',-1)" ${itemIndex===0?'disabled':''} aria-label="Move milestone up">↑</button>
