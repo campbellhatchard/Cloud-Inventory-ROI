@@ -1,3 +1,31 @@
+# Cloud Inventory ROI v6.9.51 Differential Audit
+
+## Baseline and method
+
+The target was created only from `cloud-inventory-roi-v6.9.50-render-ready.zip` (SHA-256 `A43C5B5008841B2B932716E7950B5D72902595C3ED7EC04FCAA1AD97BE99201C`). The exact extracted baseline was committed as `ae5e7e4762fc3cdd5f384b9eda06608946ba8526`. Final review compares that commit with v6.9.51.
+
+## Approved production differential
+
+| Boundary | Files | Approved correction |
+|---|---|---|
+| JPP capability projection | `public/map.js` | Uses server-returned `canEditPlan` as the client capability, combines it with existing saved/output readiness only for prospect-link management, and keeps output availability separate. |
+| Prospect-link controls | `public/map.js` | Gives Rotate/Revoke stable IDs and applies the same capability rule to Share, Rotate, and Revoke after render, reload, and dirty/clean transitions. |
+
+## Test and governance differential
+
+- Adds `test/v6951-jpp-capability.test.js`, which executes the real browser script in a DOM harness and mounts the real JPP router in Express.
+- Permanently registers the capability invariant, focused package gate, release runner gate, lineage, Application Knowledge version, CI evidence names, and Version History entry.
+- Adds no dependency, migration, route, API, data-model, ROI-model, or output-registry change.
+
+## Explicit non-changes
+
+- Server owner-only authorization remains unchanged and is verified, not replaced.
+- Plan owners retain Save, Add/Remove, AI, Share, Rotate, and Revoke behavior subject to existing readiness.
+- Authorized read-only internal/customer PDF and PowerPoint outputs remain available.
+- No unrelated feature or refactor is included.
+
+---
+
 # Cloud Inventory ROI v6.9.50 Differential Audit
 
 ## Baseline and method
@@ -90,3 +118,8 @@ cross-account customer, scenario or opportunity access.
 ## v6.9.50 deployed-baseline reconciliation
 
 The verified v6.9.50 archive was applied to current production main `474e6708e756a39444b03e637cae1ac90525341b`, preserving existing corrections and permanent regressions absent from its raw package ancestry. See `DEPLOYMENT_DIFFERENTIAL_v6.9.50.md` for the reconciliation and separately scoped Node 22 verification evidence.
+
+
+## v6.9.51 deployed-baseline reconciliation
+
+Verified archive applied to current production main `1a428bbbab88e0b35ccb2e70954479ed77031fc0` on `deploy/v6.9.51`. Existing deployed corrections, PostgreSQL fixtures and historical evidence are preserved. See `DEPLOYMENT_DIFFERENTIAL_v6.9.51.md` for reconciliation and separately scoped local Node 22 verification.

@@ -1,3 +1,38 @@
+# Cloud Inventory ROI v6.9.51 Baseline Inheritance Audit
+
+## Authoritative v6.9.51 package
+
+- Baseline archive: `cloud-inventory-roi-v6.9.50-render-ready.zip`
+- Baseline SHA-256: `A43C5B5008841B2B932716E7950B5D72902595C3ED7EC04FCAA1AD97BE99201C`
+- Baseline application version: `6.9.50`
+- Target application version: `6.9.51`
+- The exact archive was extracted into a new release workspace and committed without modification as `ae5e7e4762fc3cdd5f384b9eda06608946ba8526` before production edits. No earlier archive, branch, or reconstructed source was substituted.
+
+## Protected authorities at inheritance
+
+- ROI authority remains ROI Model v2.8 / `modelVersion` 28; no formula, overlap, currency, payback, NPV, or provenance change is authorized.
+- Brand System 1.0, Application Knowledge 1.0, Christie Persona 1.0, database migration level 045, and all 29 active Output Registry entries are preserved.
+- The existing server-owned JPP capability remains `canEditPlan`, derived from authenticated user and saved plan ownership in `src/shared/jpp-capability.js` and enforced independently by `src/routes/maps.js`.
+- Read-only JPP PDF/PPTX review access remains separate from prospect-link mutation authority.
+
+## Correction-only scope
+
+The sole production correction is to prevent the JPP More-menu output refresh from re-enabling Share, Rotate, or Revoke for a user whose server-returned `canEditPlan` capability is false. The browser may project this authority into read-only presentation state, but it may not derive or broaden it. Permanent behavioral tests cover actual DOM controls and actual Express mutation routes.
+
+## Explicit non-changes
+
+- No database migration or schema change.
+- No authorization broadening, JPP ownership rule change, output-readiness change, or PDF/PPTX restriction.
+- No ROI, Prospect evidence, Solution Fit, Executive, Proposal, Buyer Evidence, or customer-workspace change.
+
+## Outstanding external certification
+
+- Supported Node 22 execution in GitHub Actions.
+- Disposable PostgreSQL 16 integration with zero failures/skips/NOT TESTED.
+- Authenticated live owner/non-owner acceptance after the exact package is deployed.
+
+---
+
 # Cloud Inventory ROI v6.9.50 Baseline Inheritance Audit
 
 ## Authoritative v6.9.50 package
@@ -154,3 +189,8 @@ cross-account customer, scenario or opportunity access.
 ## v6.9.50 deployed-baseline reconciliation
 
 The verified v6.9.50 archive was applied to current production main `474e6708e756a39444b03e637cae1ac90525341b`, preserving existing corrections and permanent regressions absent from its raw package ancestry. See `DEPLOYMENT_DIFFERENTIAL_v6.9.50.md` for the reconciliation and separately scoped Node 22 verification evidence.
+
+
+## v6.9.51 deployed-baseline reconciliation
+
+Verified archive applied to current production main `1a428bbbab88e0b35ccb2e70954479ed77031fc0` on `deploy/v6.9.51`. Existing deployed corrections, PostgreSQL fixtures and historical evidence are preserved. See `DEPLOYMENT_DIFFERENTIAL_v6.9.51.md` for reconciliation and separately scoped local Node 22 verification.
