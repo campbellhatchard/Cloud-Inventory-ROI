@@ -30,3 +30,10 @@ SE Solution Fit Scope:
 Sales Engineers have cross-account access to all active customers for
 Solution Fit discovery/create/view/edit only. This does not confer general
 cross-account customer, scenario or opportunity access.
+
+
+## PostgreSQL fixture correction after first CI run
+
+Initial deployment commit `ff056d8597d2fecf4c5ed15130369ad25a79c6ea` became Live and health reported version 6.9.50 with a connected database. Its CI PostgreSQL run failed one stale-preview assertion and two teardown hooks. The timestamp-only UPDATE supplied in v6.9.50 was intentionally neutralized by migration 043's existing owner/timestamp-only preservation trigger. The fixture now edits an unhashed saved-content field and explicitly asserts that the persisted timestamp actually changed before expecting `409 CLEANUP_PREVIEW_STALE` and an untouched active row. The production fingerprint is still tested through real HTTP and PostgreSQL, with no trigger bypass and no assertion removed.
+
+The v6.9.47 and v6.9.48 integration fixture teardowns now delete their exact owned scenario before deleting their exact customer and user records, matching the existing foreign-key contract (`customer_id ON DELETE SET NULL`, `owner_id ON DELETE RESTRICT`). No production code, migration, database configuration or workflow gate changes are made by this follow-up. Local PostgreSQL execution remains unavailable because the restricted runtime cannot switch to the unprivileged account required by PostgreSQL. Exact-commit CI remains the verification authority for these three fixture corrections.

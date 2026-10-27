@@ -22,7 +22,7 @@ else describe('v6.9.47 corrective persistence against disposable PostgreSQL',{co
   async function login(user){const result=await api('/api/auth/login',{method:'POST',token:null,body:{username:user.username,password}});assert.equal(result.status,200);return result.json.token;}
   adminToken=await login(ids.admin);seBToken=await login(ids.seB);
  });
- after(async()=>{if(server)await new Promise(resolve=>server.close(resolve));if(db){await db.query('DELETE FROM customers WHERE id=$1',[ids.customer.id]);await db.query('DELETE FROM users WHERE id=ANY($1::uuid[])',[[ids.admin.id,ids.rep.id,ids.seA.id,ids.seB.id]]);await db.pool?.end?.();}});
+ after(async()=>{if(server)await new Promise(resolve=>server.close(resolve));if(db){await db.query('DELETE FROM scenarios WHERE id=$1',[ids.scenario.id]);await db.query('DELETE FROM customers WHERE id=$1',[ids.customer.id]);await db.query('DELETE FROM users WHERE id=ANY($1::uuid[])',[[ids.admin.id,ids.rep.id,ids.seA.id,ids.seB.id]]);await db.pool?.end?.();}});
 
  test('real narrative PATCH preserves omitted siblings, persists clear and supports restoration',async()=>{
   let response=await api(`/api/scenarios/${ids.scenario.id}/narrative`,{method:'PATCH',body:{threeWhysAct:'A2'}});assert.equal(response.status,200);

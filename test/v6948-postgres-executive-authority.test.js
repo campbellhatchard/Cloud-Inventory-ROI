@@ -19,7 +19,7 @@ else describe('v6.9.48 Executive authority against disposable PostgreSQL',{concu
   const {app}=require('../server');server=await new Promise(resolve=>{const listener=app.listen(0,'127.0.0.1',()=>resolve(listener));});base=`http://127.0.0.1:${server.address().port}`;
   const login=await fetch(base+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:ids.admin.username,password})});assert.equal(login.status,200);token=(await login.json()).token;
  });
- after(async()=>{if(server)await new Promise(resolve=>server.close(resolve));if(db){await db.query('DELETE FROM customers WHERE id=$1',[ids.customer.id]);await db.query('DELETE FROM users WHERE id=$1',[ids.admin.id]);await db.pool?.end?.();}});
+ after(async()=>{if(server)await new Promise(resolve=>server.close(resolve));if(db){await db.query('DELETE FROM scenarios WHERE id=$1',[ids.scenario.id]);await db.query('DELETE FROM customers WHERE id=$1',[ids.customer.id]);await db.query('DELETE FROM users WHERE id=$1',[ids.admin.id]);await db.pool?.end?.();}});
 
  test('save response and canonical model agree after explicit clear and restore',async()=>{
   const cleared=await api(`/api/scenarios/${ids.scenario.id}/narrative`,{method:'PATCH',body:{threeWhysNow:null}});assert.equal(cleared.status,200);assert.equal(cleared.json.threeWhysNow,null);assert.equal(cleared.json.canonicalNarrative.whyNow.explicitlyCleared,true);assert.ok(cleared.json.narrativeRevision);assert.ok(cleared.json.modelRevision);

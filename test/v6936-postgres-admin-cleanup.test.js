@@ -107,7 +107,12 @@ if (!HAS_DB) {
 
   test('stale row fingerprint aborts the entire batch without partial removal',async()=>{
     const preview=await api('/api/admin/cleanup/preview',{method:'POST',body:{search:`QA StaleOpportunity ${suffix}`,filters:{types:['scenario'],status:'active'}}});assert.equal(preview.status,200);assert.equal(preview.json.summary.total,1);
-    await db.query(`UPDATE scenarios SET updated_at=updated_at+INTERVAL '1 second' WHERE id=$1`,[ids.scenarioStale.id]);
+    // Migration 043 preserves updated_at for timestamp-only/owner-only updates.
+    // Change saved content so its trigger advances the timestamp; data itself is
+    // not part of the Cleanup fingerprint, so the rejection still proves Date integrity.
+    const before=(await db.query('SELECT updated_at FROM scenarios WHERE id=$1',[ids.scenarioStale.id])).rows[0];
+    const changed=(await db.query(`UPDATE scenarios SET data=data || '{"cleanupFixtureEdit":true}'::jsonb WHERE id=$1 RETURNING updated_at`,[ids.scenarioStale.id])).rows[0];
+    assert.notEqual(changed.updated_at.toISOString(),before.updated_at.toISOString(),'the stale fixture must actually advance its persisted timestamp');
     const run=await api('/api/admin/cleanup/execute',{method:'POST',body:{previewId:preview.json.previewId,mode:'selected',scenarioIds:[ids.scenarioStale.id],reason:'test_demo'}});assert.equal(run.status,409);assert.equal(run.json.code,'CLEANUP_PREVIEW_STALE');
     assert.equal((await db.query('SELECT deleted_at IS NULL active FROM scenarios WHERE id=$1',[ids.scenarioStale.id])).rows[0].active,true);
   });
