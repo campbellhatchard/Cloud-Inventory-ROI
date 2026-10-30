@@ -39,6 +39,8 @@ else describe('v6.9.45 PS Turnover saved-state, authorization, and evidence isol
     ids.ownerA = await addUser('turnover_owner_a', 'rep');
     ids.ownerB = await addUser('turnover_owner_b', 'rep');
     ids.outsider = await addUser('turnover_outsider', 'rep');
+    // Sales Manager is an additive capability; the canonical primary role
+    // remains rep under the production users_role_check constraint.
     ids.leader = await addUser('turnover_leader', 'rep', ['sales_manager']);
     ids.multi = await addUser('turnover_multi', 'rep', ['rep', 'se']);
     ids.customerA = (await db.query(`INSERT INTO customers(name,owner_id,created_by,status) VALUES($1,$2,$2,'active') RETURNING id,name`, [fitState.opportunity.customer, ids.ownerA.id])).rows[0];

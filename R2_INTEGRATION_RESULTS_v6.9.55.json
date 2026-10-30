@@ -1,0 +1,27 @@
+{
+  "release": "6.9.55",
+  "generatedAt": "2026-10-30T21:49:55.488Z",
+  "endpointHost": null,
+  "bucket": null,
+  "region": "auto",
+  "credentialsPresent": false,
+  "command": "npm run test:r2",
+  "suites": [
+    "test/v6944-r2-integration.test.js",
+    "test/v6945-r2-turnover-package.test.js"
+  ],
+  "operations": [
+    "PUT",
+    "HEAD",
+    "GET",
+    "DELETE",
+    "PS Turnover ZIP stream"
+  ],
+  "executed": false,
+  "passed": 0,
+  "failed": 0,
+  "skipped": 0,
+  "notTested": 2,
+  "durationMs": 0,
+  "result": "NOT TESTED"
+}

@@ -641,10 +641,12 @@ router.post('/', async (req, res) => {
       }
 
       /* Mark all previous versions as not-current */
+      await client.query(`SELECT set_config('cloud_inventory.preserve_updated_at','on',TRUE)`);
       await client.query(
         'UPDATE scenarios SET is_current = FALSE WHERE base_id = $1',
         [resolvedBaseId]
       );
+      await client.query(`SELECT set_config('cloud_inventory.preserve_updated_at','off',TRUE)`);
 
       /* ── Server-authoritative ROI recompute ──
          Recompute metrics from the submitted inputs using the SAME shared

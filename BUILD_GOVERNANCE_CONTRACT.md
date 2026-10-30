@@ -659,3 +659,15 @@ Every PostgreSQL `DATE` column represents a calendar fact and must cross the dat
 ## BUYER EVIDENCE PROPOSAL-ALIGNMENT INVARIANT
 
 “Proposal aligns to value and criteria” is satisfied by qualifying criterion-specific Buyer Evidence under the stable `proposal_alignment` key. All governed strength, source, stakeholder, date, freshness, and customer-validation rules remain mandatory. A saved Cloud Inventory Proposal artifact may support the evidence trail, but it is neither required nor sufficient by itself to prove buyer alignment.
+
+## BUYER EVIDENCE REQUIREMENT TRANSPARENCY INVARIANT
+
+Every active Buyer Evidence criterion has exactly one server-owned proof type: `DERIVED`, `CUSTOMER_EVIDENCE`, or `HYBRID`. The authoritative server projection must expose the proof type, governed source, exact required fields, prerequisites, current source status, evidence status, exact blocking reasons, next action, and navigation target. The browser, Help, Christie, dashboards, and manager views consume that projection and may not recreate completion rules or hide a prerequisite. Derived requirements do not present redundant evidence forms. Hybrid requirements keep qualifying customer evidence and system prerequisites visibly separate. A seller-authored artifact may support context but may not be silently required or treated as customer proof unless the criterion contract expressly says so.
+
+## BUYER EVIDENCE EXPLICIT SAVE AND REUSE INVARIANT
+
+Buyer Evidence is saved one criterion at a time through the authorized server route. “Use recent evidence” is restricted to the current opportunity, provides prefill only, and never completes, applies, or reclassifies another criterion automatically. The user must review and explicitly save the target requirement. Customer confirmation remains an independent evidence attribute and may not be implied by the Save action. Completed requirements open as compact evidence summaries with an explicit Edit action. “Next incomplete requirement” remains within the current BuyCycle stage and never advances the opportunity.
+
+## COMMERCIAL BUYER EVIDENCE INVARIANT
+
+“Commercial scope agreed” is satisfied by current, strong, customer-confirmed, criterion-specific evidence containing the governed commercial term. A Proposal artifact is neither required nor sufficient. The Proposal remains the contextual source surface, but completion belongs to the `commercial` evidence record and its normal strength, stakeholder, source, date, freshness, and customer-confirmation rules.

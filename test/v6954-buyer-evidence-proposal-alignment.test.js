@@ -119,7 +119,7 @@ test('proposalDraft alone is not buyer evidence', () => {
   const result = evaluate({ scenarioData: { proposalDraft: { title: 'Seller-created Proposal' } } });
   assert.equal(result.matched, false);
   assert.equal(result.complete, false);
-  assert.match(result.blockedBy.join(' '), /Criterion-specific evidence/);
+  assert.match(result.blockedBy.join(' '), /Customer confirmation is required/);
 });
 
 test('invalid, unconfirmed, stale, and unrelated evidence remain incomplete', () => {
@@ -154,11 +154,12 @@ test('authoritative service naturally recalculates 4/5 to 5/5 and 80% to 100%', 
   assert.equal(deriveStageReadiness(afterContext, { now: NOW }).readiness, 80, 'removing qualifying evidence must recalculate rather than latch completion');
 });
 
-test('proposal_alignment no longer contains a proposalDraft gate and commercial remains unchanged', () => {
+test('proposal_alignment remains free of a proposalDraft gate after the later commercial correction', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'shared', 'criterion-evidence.js'), 'utf8');
   const proposalRule = /case 'proposal_alignment':([^\n]+)/.exec(source)?.[1] || '';
   const commercialRule = /case 'commercial':([^\n]+)/.exec(source)?.[1] || '';
   assert.doesNotMatch(proposalRule, /proposalDraft|componentRequired/);
   assert.match(proposalRule, /fromStructured\(criterion,ctx\)/);
-  assert.match(commercialRule, /proposalDraft/);
+  assert.doesNotMatch(commercialRule, /proposalDraft|componentRequired/);
+  assert.match(commercialRule, /fromStructured\(criterion,ctx\)/);
 });
