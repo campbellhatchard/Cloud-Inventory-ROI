@@ -7,6 +7,16 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.54', date: '2026-10-30', tag: 'buyer-evidence-proposal-alignment',
+    title: 'Buyer Evidence proposal-alignment correction',
+    summary: 'Recognizes qualifying customer evidence of proposal alignment without requiring a separately saved Cloud Inventory Proposal artifact.',
+    highlights: [
+      'Strong, current, customer-validated evidence mapped to Proposal aligns to value and criteria now owns the requirement result.',
+      'A seller-created Proposal artifact alone still cannot prove buyer alignment.',
+      'Existing evidence standards, percentage arithmetic, stage gates, persistence, and browser reconciliation remain unchanged.'
+    ]
+  },
+  {
     version: '6.9.53', date: '2026-10-27', tag: 'postgres-date-boundary',
     title: 'Joint Project Plan PostgreSQL date-boundary correction',
     summary: 'Preserves every PostgreSQL calendar date as an exact date-only value through the API, browser, PDF, and PowerPoint.',

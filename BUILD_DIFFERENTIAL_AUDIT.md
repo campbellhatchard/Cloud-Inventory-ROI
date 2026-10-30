@@ -1,3 +1,17 @@
+# Cloud Inventory ROI v6.9.54 Differential Audit
+
+## v6.9.54 corrective differential
+
+The target derives only from `cloud-inventory-roi-v6.9.53-render-ready.zip` (SHA-256 `56636B522C27DADECE38AA793E180C2A442E0AC6F72343A821F7155BDFFE63A4`). The sole production behavior change is in `src/shared/criterion-evidence.js`: `proposal_alignment` no longer adds `scenario.data.proposalDraft` as a second hidden component requirement after qualifying Buyer Evidence.
+
+All evidence qualification fields and lifecycle behavior remain in the shared evaluator. `proposalDraft` is retained everywhere it legitimately supports Proposal persistence, generation, preview, and output. Percentage arithmetic, stage methodology, browser refresh, evidence persistence, database schema, authorization, ROI Model v2.8, JPP, Solution Fit, Prospect evidence, and output architecture are unchanged.
+
+All other changed files are focused tests, version/lineage metadata, permanent-test/release-runner registration, generated Application Knowledge metadata, Version History, governance documentation, and release evidence.
+
+---
+
+## Historical v6.9.53 differential
+
 # v6.9.53 differential — JPP PostgreSQL date-only boundary
 
 Authoritative parent: `cloud-inventory-roi-v6.9.52-render-ready.zip` (`9C76181C3494DF47C3B254911326709716044D1FAB485593032993D29BD0D810`).
@@ -155,3 +169,13 @@ The verified v6.9.52 archive was applied to current production main `df710ceffee
 ## v6.9.53 deployed-baseline reconciliation
 
 The verified v6.9.53 archive was applied to current production main `52041bc14a21dcdb184baaadd06b83aab69b673f`, preserving existing deployed corrections, PostgreSQL fixtures and historical evidence. See `DEPLOYMENT_DIFFERENTIAL_v6.9.53.md` for reconciliation and separately scoped local Node 22 verification.
+
+
+## v6.9.54 deployed-baseline reconciliation
+
+The supplied v6.9.54 archive (SHA-256 `C9A1665F16393E421E181727F04C6FAABBF6D35E4427F3CFF7716B1DC62B0915`) was applied to clean, freshly pulled production main `d779e646adfb91927e8294faeb599a77c134acdb`. The raw v6.9.53 archive is a comparison ancestor only. Existing deployed corrections, fixture repairs, historical evidence, Node 22.22.0 CI pin, migrations, and Render YAML are preserved. See `DEPLOYMENT_DIFFERENTIAL_v6.9.54.md` for the exact differential and separately scoped verification evidence. Source-package historical test and readiness statements describe that package's execution, not the reconciled deployment's CI or Product Owner approval.
+
+SE Solution Fit Scope:
+Sales Engineers have cross-account access to all active customers for
+Solution Fit discovery/create/view/edit only. This does not confer general
+cross-account customer, scenario or opportunity access.

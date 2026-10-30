@@ -1,3 +1,41 @@
+# Cloud Inventory ROI v6.9.54 Baseline Inheritance Audit
+
+## Authoritative v6.9.54 package
+
+- Exact baseline: `cloud-inventory-roi-v6.9.53-render-ready.zip`
+- Baseline SHA-256: `56636B522C27DADECE38AA793E180C2A442E0AC6F72343A821F7155BDFFE63A4`
+- Extraction target: a new `work/cloud-inventory-roi-v6.9.54` directory; no prior working folder was reused.
+- Baseline application version: `6.9.53`
+- Target application version: `6.9.54`
+- Archive Git indicator: none; the release archive intentionally excludes `.git`.
+- ROI Model: v2.8 / `modelVersion: 28`
+- Brand System: 1.0
+- Application Knowledge: 1.0
+- Christie Persona: 1.0
+- Output Registry: 31 entries, 29 active
+- Migration level: `045_solution_fit_evidence_attachments.sql`
+- Database schema migration for v6.9.54: none expected or authorized
+- Existing test files: 119
+
+## Active paths and protected inheritance
+
+1. Buyer Evidence remains `public/buyer-readiness.js` → authenticated `/api/stage-readiness/:id` routes → `src/shared/stage-readiness-service.js` → `src/shared/criterion-evidence.js`.
+2. The proven defect is isolated to `proposal_alignment`, where valid structured evidence is currently combined with an additional `scenario.data.proposalDraft` predicate.
+3. Evidence persistence, current-stage `done / required` percentage arithmetic, UI reconciliation, stage advancement, ROI, Proposal generation, output architecture, and authorization are preserved.
+4. JPP PostgreSQL DATE boundary protection from v6.9.53, JPP capability protection from v6.9.51, production-integrity protections from v6.9.50, Solution Fit synchronization from v6.9.49, and Executive narrative authority from v6.9.48 remain mandatory.
+5. Customer Business Case and Executive outputs remain on their registered server-authoritative routes and builders.
+6. Champion Pack remains intentionally inactive; governed Competitive Battlecard, Solution Fit, JPP, Proposal, and other active outputs remain registered and unchanged.
+7. All inherited permanent tests remain present; the v6.9.54 test must be additive.
+8. No migration, data rewrite, Proposal persistence change, or browser-only completion logic is authorized.
+9. The outstanding external gates inherited from v6.9.53 remain: aggregate historical PostgreSQL suites contain documented unrelated defects, R2 requires approved non-production credentials, and live deployment certification follows packaging.
+10. Retired compatibility behavior and hidden artifact-as-buyer-evidence logic must not be introduced elsewhere.
+
+> SE Solution Fit Scope: Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.
+
+The exact Product Owner-named v6.9.53 archive was found, hashed, opened, and extracted successfully before production code changes. The inherited v6.9.53 audit is retained below as baseline history.
+
+---
+
 # Cloud Inventory ROI v6.9.53 Baseline Inheritance Audit
 
 ## Authoritative v6.9.53 package
@@ -284,3 +322,13 @@ The verified v6.9.52 archive was applied to current production main `df710ceffee
 ## v6.9.53 deployed-baseline reconciliation
 
 The verified v6.9.53 archive was applied to current production main `52041bc14a21dcdb184baaadd06b83aab69b673f`, preserving existing deployed corrections, PostgreSQL fixtures and historical evidence. See `DEPLOYMENT_DIFFERENTIAL_v6.9.53.md` for reconciliation and separately scoped local Node 22 verification.
+
+
+## v6.9.54 deployed-baseline reconciliation
+
+The supplied v6.9.54 archive (SHA-256 `C9A1665F16393E421E181727F04C6FAABBF6D35E4427F3CFF7716B1DC62B0915`) was applied to clean, freshly pulled production main `d779e646adfb91927e8294faeb599a77c134acdb`. The raw v6.9.53 archive is a comparison ancestor only. Existing deployed corrections, fixture repairs, historical evidence, Node 22.22.0 CI pin, migrations, and Render YAML are preserved. See `DEPLOYMENT_DIFFERENTIAL_v6.9.54.md` for the exact differential and separately scoped verification evidence. Source-package historical test and readiness statements describe that package's execution, not the reconciled deployment's CI or Product Owner approval.
+
+SE Solution Fit Scope:
+Sales Engineers have cross-account access to all active customers for
+Solution Fit discovery/create/view/edit only. This does not confer general
+cross-account customer, scenario or opportunity access.

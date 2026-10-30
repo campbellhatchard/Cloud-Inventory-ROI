@@ -655,3 +655,7 @@ Joint Project Plan edit and prospect-link mutation authority is a server-owned c
 ## POSTGRESQL DATE-ONLY BOUNDARY INVARIANT
 
 Every PostgreSQL `DATE` column represents a calendar fact and must cross the database adapter as an exact `YYYY-MM-DD` string or `null`, never as a JavaScript `Date`, timestamp, localized date, or timezone-adjusted instant. API and domain code preserve that wire value. Browser and server outputs use the canonical strict date-only normalizer and formatter; output-specific string splitting, truncation, offset compensation, and direct `Date` stringification are prohibited. A permanent real-PostgreSQL integration test must prove the database-to-API contract and at least one production browser and file-output path.
+
+## BUYER EVIDENCE PROPOSAL-ALIGNMENT INVARIANT
+
+“Proposal aligns to value and criteria” is satisfied by qualifying criterion-specific Buyer Evidence under the stable `proposal_alignment` key. All governed strength, source, stakeholder, date, freshness, and customer-validation rules remain mandatory. A saved Cloud Inventory Proposal artifact may support the evidence trail, but it is neither required nor sufficient by itself to prove buyer alignment.

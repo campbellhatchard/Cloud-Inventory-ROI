@@ -1,0 +1,23 @@
+{
+  "release": "6.9.54",
+  "generatedAt": "2026-10-30T19:12:52.698Z",
+  "databaseUrlPresent": true,
+  "databaseName": "cloud_inventory_roi_test_v6954_focused",
+  "postgresqlVersion": "PostgreSQL 16.14, compiled by Visual C++ build 1944, 64-bit",
+  "migration": {
+    "executed": true,
+    "applied": 45,
+    "expected": 45,
+    "result": "PASS"
+  },
+  "command": "node --test --test-concurrency=1 test/v6954-postgres-buyer-evidence.test.js",
+  "suites": [
+    "test/v6954-postgres-buyer-evidence.test.js"
+  ],
+  "passed": 1,
+  "failed": 0,
+  "skipped": 0,
+  "notTested": 0,
+  "durationMs": 7070,
+  "result": "PASS"
+}
