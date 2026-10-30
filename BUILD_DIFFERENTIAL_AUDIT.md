@@ -1,3 +1,19 @@
+# Cloud Inventory ROI v6.9.55 Differential Audit
+
+## v6.9.55 corrective differential
+
+The target derives only from `cloud-inventory-roi-v6.9.54-render-ready.zip` (SHA-256 `C9A1665F16393E421E181727F04C6FAABBF6D35E4427F3CFF7716B1DC62B0915`). The correction removes the hidden Proposal-artifact prerequisite from `commercial`, classifies all 28 active Stage 2–6 requirements as Derived, Customer Evidence, or Hybrid, and exposes one server-owned requirement projection for fields, prerequisites, blockers, source status, next action, and navigation.
+
+The Buyer Evidence drawer now renders adaptive fields from that projection, keeps customer evidence separate from Hybrid system prerequisites, offers opportunity-scoped prefill without automatic application, uses explicit Save/Update semantics, opens complete evidence in a compact summary, and navigates only to the next incomplete criterion in the current stage. Help and Christie consume the same exact blockers. Sales Manager summaries retain the authoritative proof and prerequisite metadata.
+
+No ROI formula, ROI input, BuyCycle stage definition, percentage arithmetic, authorization rule, Buyer Evidence schema, output generator, Prospect evidence boundary, Solution Fit method, JPP behavior, or Executive narrative authority changed. ROI Model v2.8 / `modelVersion: 28` remains locked.
+
+Tests are additive: a 28-requirement contract suite, adaptive-browser renderer coverage, retained v6.9.54 Proposal Alignment protection, and a real disposable-PostgreSQL Commercial persistence/evaluator test. Version, lineage, Application Knowledge, Help, Version History, governance, and release evidence are updated to v6.9.55.
+
+The complete clean-PostgreSQL gate also proved two inherited integrity defects. Admin Cleanup now includes PostgreSQL row-version identity in its preview fingerprint so an intervening update cannot reuse a stale preview. Migration 046 and transaction-local preservation calls prevent owner-only customer transfer and prior-scenario version promotion from rewriting historical operational timestamps while preserving normal `updated_at` behavior for ordinary writes. The migration is not required by, and does not alter, Buyer Evidence storage; it was retained because the registered full release gate must complete with zero database failures.
+
+---
+
 # Cloud Inventory ROI v6.9.54 Differential Audit
 
 ## v6.9.54 corrective differential
@@ -174,6 +190,16 @@ The verified v6.9.53 archive was applied to current production main `52041bc14a2
 ## v6.9.54 deployed-baseline reconciliation
 
 The supplied v6.9.54 archive (SHA-256 `C9A1665F16393E421E181727F04C6FAABBF6D35E4427F3CFF7716B1DC62B0915`) was applied to clean, freshly pulled production main `d779e646adfb91927e8294faeb599a77c134acdb`. The raw v6.9.53 archive is a comparison ancestor only. Existing deployed corrections, fixture repairs, historical evidence, Node 22.22.0 CI pin, migrations, and Render YAML are preserved. See `DEPLOYMENT_DIFFERENTIAL_v6.9.54.md` for the exact differential and separately scoped verification evidence. Source-package historical test and readiness statements describe that package's execution, not the reconciled deployment's CI or Product Owner approval.
+
+SE Solution Fit Scope:
+Sales Engineers have cross-account access to all active customers for
+Solution Fit discovery/create/view/edit only. This does not confer general
+cross-account customer, scenario or opportunity access.
+
+
+## v6.9.55 deployment preparation against current main
+
+Verified the supplied v6.9.55 ZIP SHA-256 `E5A7D5B09391AF43A739691CA29849EE70193D8A715F9FE499E0D2DAB06F9DD8` and reconciled its contents forward against clean production main `8c6bcc630355a5773cb22ddfbb7c9a36e50abad5`. Raw v6.9.54 is used only as a comparison ancestor. Existing deployed corrections and PostgreSQL fixture repairs are preserved. Migration 046 is added exactly as supplied; prior migrations remain byte-identical. See `DEPLOYMENT_DIFFERENTIAL_v6.9.55.md` for separately scoped local verification and the pending production-backup prerequisite.
 
 SE Solution Fit Scope:
 Sales Engineers have cross-account access to all active customers for

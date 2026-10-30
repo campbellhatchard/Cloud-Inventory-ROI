@@ -236,11 +236,17 @@ async function updateOperationalOwnership(client, customer, newOwnerId) {
   );
   updates.driverResonanceRecords = result.rowCount;
 
+  /* scenarios.updated_at describes business-case content freshness. Customer
+     reassignment changes operational scope only, so preserve that historical
+     timestamp through the transaction-scoped trigger contract from migration
+     046. This setting never escapes the current transaction. */
+  await client.query(`SELECT set_config('cloud_inventory.preserve_updated_at','on',TRUE)`);
   result = await client.query(
     `UPDATE scenarios SET owner_id=$2
       WHERE customer_id=$1 AND owner_id IS DISTINCT FROM $2`,
     scoped
   );
+  await client.query(`SELECT set_config('cloud_inventory.preserve_updated_at','off',TRUE)`);
   updates.scenarioVersions = result.rowCount;
 
   result = await client.query(

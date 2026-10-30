@@ -7,6 +7,16 @@
 
 const VERSION_HISTORY = [
   {
+    version: '6.9.55', date: '2026-10-30', tag: 'buyer-evidence-requirement-transparency',
+    title: 'Buyer Evidence requirement transparency',
+    summary: 'Makes every Buyer Evidence requirement explain its proof type, exact blockers, source, and next action while removing the unrelated Proposal gate from Commercial scope.',
+    highlights: [
+      'Derived, Customer Evidence, and Hybrid requirements now use one server-owned requirement projection.',
+      'Commercial scope can be completed by qualifying customer-confirmed evidence without a saved Proposal; a Proposal alone remains insufficient.',
+      'Adaptive evidence forms, recent-evidence prefill, compact completion summaries, and contextual source navigation reduce duplicate entry without weakening governance.'
+    ]
+  },
+  {
     version: '6.9.54', date: '2026-10-30', tag: 'buyer-evidence-proposal-alignment',
     title: 'Buyer Evidence proposal-alignment correction',
     summary: 'Recognizes qualifying customer evidence of proposal alignment without requiring a separately saved Cloud Inventory Proposal artifact.',
