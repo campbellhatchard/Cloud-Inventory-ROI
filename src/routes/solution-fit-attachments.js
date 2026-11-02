@@ -97,13 +97,13 @@ router.post('/:customerId/attachments/initiate', async (req, res) => {
       VALUES($1,$2,$3,$4,$4,$5,$6,0,$6,$7,$8,$9,$10,$11,'PENDING',$12,NOW()+INTERVAL '10 minutes')`,
       [attachmentId, access.fit.id, req.params.customerId, file.filename, key, file.contentType, file.sizeBytes, context.type, context.id, caption, category || null, req.user.id]);
     let signed;
-    try { signed = await storage.createUploadUrl({ key, contentType: file.contentType }); }
+    try { signed = await storage.createUploadUrl({ key }); }
     catch (error) {
       await query(`UPDATE handoff_attachments SET status='FAILED',updated_at=NOW() WHERE id=$1 AND status='PENDING'`, [attachmentId]);
       throw error;
     }
     await log({ userId: req.user.id, action: 'handoff.attachment_initiated', entityType: 'handoff_attachment', entityId: attachmentId, detail: { handoffId: access.fit.id, customerId: req.params.customerId, contextType: context.type, contextId: context.id, contentType: file.contentType, sizeBytes: file.sizeBytes }, ipAddress: req.ip });
-    res.status(201).json({ attachmentId, solutionFitId: access.fit.id, uploadUrl: signed.url, expiresIn: signed.expiresSeconds, requiredHeaders: signed.requiredHeaders });
+    res.status(201).json({ attachmentId, solutionFitId: access.fit.id, uploadUrl: signed.url, expiresIn: signed.expiresSeconds, requiredHeaders: { 'Content-Type': file.contentType } });
   } catch (error) {
     if (storageFailure(res, error)) return;
     console.error('solution_fit_evidence.initiate_failed', { userId: req.user.id, customerId: req.params.customerId, attachmentId, message: error.message });
@@ -132,8 +132,7 @@ async function completeAttachment(req, res, row, fit) {
     return res.status(422).json({ error: 'The uploaded object did not match the approved file. Choose the file again.', code: 'EVIDENCE_OBJECT_MISMATCH' });
   }
   const updated = await query(`UPDATE handoff_attachments SET status='ACTIVE',file_size=$2,content_type=$3,object_etag=$4,completed_at=NOW(),updated_at=NOW(),deletion_error=NULL WHERE id=$1 AND status IN ('PENDING','FAILED') AND removed_at IS NULL RETURNING *`, [row.id, metadata.sizeBytes, metadata.contentType, metadata.etag || null]);
-  const attachment = updated.rows[0];
-  if (!attachment) return res.status(409).json({ error: 'This upload can no longer be completed.' });
+  const attachment = updated.rows[0] || row;
   await log({ userId: req.user.id, action: 'handoff.attachment_completed', entityType: 'handoff_attachment', entityId: row.id, detail: { handoffId: fit.id, customerId: req.params.customerId, contextType: row.context_type, contextId: row.context_id, sizeBytes: metadata.sizeBytes }, ipAddress: req.ip });
   return res.json({ ok: true, attachment: present(attachment) });
 }
@@ -162,11 +161,9 @@ router.post('/:customerId/attachments/:attachmentId/retry', async (req, res) => 
       const metadata = await getEvidenceStorage().verifyObject({ key: row.storage_key });
       if (metadata.sizeBytes === Number(row.expected_size_bytes) && metadata.contentType === row.expected_content_type) return completeAttachment(req, res, row, access.fit);
     } catch (_) { /* object is absent or incomplete; issue a fresh short-lived URL */ }
-    const signed = await getEvidenceStorage().createUploadUrl({ key: row.storage_key, contentType: row.expected_content_type });
-    const renewed = await query(`UPDATE handoff_attachments SET status='PENDING',upload_expires_at=NOW()+INTERVAL '10 minutes',updated_at=NOW()
-      WHERE id=$1 AND status IN ('PENDING','FAILED') AND removed_at IS NULL RETURNING id`, [row.id]);
-    if (!renewed.rows.length) return res.status(409).json({ error: 'This evidence can no longer be retried.' });
-    res.json({ attachmentId: row.id, uploadUrl: signed.url, expiresIn: signed.expiresSeconds, requiredHeaders: signed.requiredHeaders });
+    const signed = await getEvidenceStorage().createUploadUrl({ key: row.storage_key });
+    await query(`UPDATE handoff_attachments SET status='PENDING',upload_expires_at=NOW()+INTERVAL '10 minutes',updated_at=NOW() WHERE id=$1`, [row.id]);
+    res.json({ attachmentId: row.id, uploadUrl: signed.url, expiresIn: signed.expiresSeconds, requiredHeaders: { 'Content-Type': row.expected_content_type } });
   } catch (error) {
     if (storageFailure(res, error)) return;
     res.status(500).json({ error: 'Evidence upload could not be retried.' });
@@ -236,3 +233,4 @@ module.exports.present = present;
 module.exports.IMAGE_MAX_BYTES = IMAGE_MAX_BYTES;
 module.exports.DOCUMENT_MAX_BYTES = DOCUMENT_MAX_BYTES;
 module.exports.safeFilename = safeFilename;
+

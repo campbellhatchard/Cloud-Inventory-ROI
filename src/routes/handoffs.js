@@ -65,31 +65,24 @@ router.get('/:customerId/turnover-package/preview',async(req,res)=>{
 
 router.get('/:customerId/turnover-package',async(req,res)=>{
   const started=Date.now();
-  let generated,stream,cleanupPromise;
-  const controller=new AbortController();
-  const cleanup=()=>generated?(cleanupPromise||=(Promise.resolve().then(()=>generated.cleanup?.()).catch(()=>{}))):Promise.resolve();
-  res.once('close',()=>{if(!res.writableFinished)controller.abort();if(stream)stream.destroy();else cleanup();});
-  if(res.destroyed)controller.abort();
+  let generated;
   try{
     const {model,turnover}=await loadPSTurnoverModel({customerId:req.params.customerId,user:req.user});
-    if(controller.signal.aborted)return;
     if(turnover.missing.length)return res.status(409).json({error:`Complete the required turnover fields before generating the package: ${turnover.missing.join(', ')}.`});
     const phaseLog=[];
-    generated=await buildPSTurnoverPackage({model,storage:getEvidenceStorage(),logoData:fs.readFileSync(logoPath),signal:controller.signal,onPhase:phase=>phaseLog.push({phase,atMs:Date.now()-started})});
-    if(res.destroyed){await cleanup();return;}
+    generated=await buildPSTurnoverPackage({model,storage:getEvidenceStorage(),logoData:fs.readFileSync(logoPath),onPhase:phase=>phaseLog.push({phase,atMs:Date.now()-started})});
     await log({userId:req.user.id,action:'handoff.turnover_package_generated',entityType:'handoff',entityId:model.solutionFitId,detail:{customerId:req.params.customerId,includedAttachmentIds:generated.includedAttachmentIds,evidenceCount:generated.evidenceCount,sizeBytes:generated.sizeBytes,durationMs:Date.now()-started,phases:phaseLog},ipAddress:req.ip});
-    if(res.destroyed){await cleanup();return;}
     res.set('Content-Type','application/zip');
     res.set('Content-Length',String(generated.sizeBytes));
     res.set('Content-Disposition',`attachment; filename="${generated.filename}"`);
     res.set('Cache-Control','private, no-store');
-    stream=fs.createReadStream(generated.filePath);
-    stream.once('close',cleanup);
-    stream.on('error',error=>{console.error('solution_fit_turnover_package.stream_failed',{customerId:req.params.customerId,message:error.message});if(res.destroyed)return;if(!res.headersSent)turnoverFailure(res,error,'Professional Services turnover package could not be downloaded.');else res.destroy(error);});
+    const stream=fs.createReadStream(generated.filePath);
+    const cleanup=()=>generated?.cleanup?.().catch(()=>{});
+    stream.on('error',error=>{console.error('solution_fit_turnover_package.stream_failed',{customerId:req.params.customerId,message:error.message});if(!res.headersSent)turnoverFailure(res,error,'Professional Services turnover package could not be downloaded.');else res.destroy(error);cleanup();});
+    res.on('close',cleanup);
     stream.pipe(res);
   }catch(error){
-    await cleanup();
-    if(res.destroyed)return;
+    generated?.cleanup?.().catch(()=>{});
     console.error('solution_fit_turnover_package.failed',{errorId:`solution-turnover-package-${Date.now().toString(36)}`,customerId:req.params.customerId,userId:req.user.id,attachmentId:error.attachmentId||null,durationMs:Date.now()-started,message:error.message});
     turnoverFailure(res,error,'Professional Services turnover package could not be generated.');
   }

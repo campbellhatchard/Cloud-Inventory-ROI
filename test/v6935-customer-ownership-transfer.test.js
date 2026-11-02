@@ -100,6 +100,7 @@ function harness(initial = fixture()) {
     if (q.startsWith('UPDATE stakeholders')) return mutate(state.stakeholders, row => state.scenarios.some(s => s.customer_id === params[0] && s.id === row.scenario_id) || (!row.scenario_id && row.owner_id === params[2] && row.company.toLowerCase() === params[3].toLowerCase()), params[1]);
     if (q.startsWith('UPDATE handoffs')) return mutate(state.handoffs, row => row.customer_id === params[0], params[1]);
     if (q.startsWith('UPDATE driver_resonance')) return mutate(state.resonance, row => state.scenarios.some(s => s.customer_id === params[0] && s.id === row.scenario_id), params[1]);
+    if (q.startsWith("SELECT set_config('cloud_inventory.preserve_updated_at'")) return { rows: [{ set_config: q.includes("'on'") ? 'on' : 'off' }], rowCount: 1 };
     if (q.startsWith('UPDATE scenarios SET owner_id')) return mutate(state.scenarios, row => row.customer_id === params[0], params[1]);
     if (q.startsWith('UPDATE customers SET owner_id')) {
       if (state.customer.id !== params[0] || state.customer.owner_id !== params[2]) return { rows: [], rowCount: 0 };

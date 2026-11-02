@@ -6,10 +6,6 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { Readable } = require('stream');
-const vm = require('node:vm');
-const { spawnSync } = require('node:child_process');
-const { validateHeaderValue } = require('node:http');
-const { EventEmitter } = require('node:events');
 const JSZip = require('jszip');
 const {
   MANIFEST_COLUMNS,
@@ -145,93 +141,6 @@ test('duplicate filenames remain separate and deterministic inside a valid turno
   assert.ok(names.some(name => /Evidence\/MEP\/JDE\/Inventory\/Cycle-Count-PROC-MEP-CYCLE\/photo\.png$/.test(name)));
   assert.deepEqual(await zip.file('Evidence/General/same.pdf').async('nodebuffer'), rows[0].body);
   assert.equal(generated.includedAttachmentIds.length, 3);
-});
-
-test('generated suffixes and case collisions preserve every attachment and its bytes', async t => {
-  const rows = ['same.pdf','same.pdf','same-2.pdf','SAME.PDF'].map((name,index) => row(`COLLISION-${index}`, 'GENERAL_SOLUTION_FIT', null, name));
-  const result = model(rows);
-  assert.equal(new Set(result.attachments.map(item => item.packagePath.toLowerCase())).size, rows.length);
-  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-turnover-collisions-'));
-  t.after(() => fs.rmSync(temp, { recursive:true, force:true }));
-  const generated = await buildPSTurnoverPackage({ model:result, storage:fakeStorage(rows), tempDirectory:temp });
-  for (const attachment of result.attachments) {
-    const zip = await JSZip.loadAsync(fs.readFileSync(generated.filePath));
-    assert.deepEqual(await zip.file(attachment.packagePath).async('nodebuffer'), rows.find(item => item.id === attachment.id).body);
-  }
-});
-
-test('output sink failures reach the caller without terminating the server process', () => {
-  const script = "const path=require('node:path'),os=require('node:os'),crypto=require('node:crypto');const {buildPSTurnoverModel}=require('./src/shared/ps-turnover-model');const {buildPSTurnoverPackage}=require('./src/exports/solution-fit-turnover-package');buildPSTurnoverPackage({model:buildPSTurnoverModel({data:{}}),storage:{},tempDirectory:path.join(os.tmpdir(),'nonexistent-turnover-'+crypto.randomUUID()),docxBuilder:async()=>Buffer.from('docx')}).then(()=>{process.exitCode=3;},e=>{console.log('HANDLED',e.code);process.exitCode=e.code==='ENOENT'?0:2;});";
-  const child = spawnSync(process.execPath, ['--unhandled-rejections=strict','-e',script], { cwd:root, encoding:'utf8', timeout:10000 });
-  assert.equal(child.error, undefined);
-  assert.equal(child.status, 0, child.stderr);
-  assert.match(child.stdout, /HANDLED ENOENT/);
-});
-
-test('valid Unicode customer names produce a safe HTTP download filename', async t => {
-  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-turnover-unicode-'));
-  t.after(() => fs.rmSync(temp, { recursive:true, force:true }));
-  const result = { ...model([]), customerName:'O’Reilly 日本' };
-  const generated = await buildPSTurnoverPackage({ model:result, storage:fakeStorage([]), tempDirectory:temp });
-  assert.doesNotThrow(() => validateHeaderValue('Content-Disposition', `attachment; filename="${generated.filename}"`));
-});
-
-test('a sink failure aborts a pending object request and discards a late stream', async () => {
-  const rows=[row('PENDING-GET','GENERAL_SOLUTION_FIT',null,'pending.pdf')],pending=deferredResult();let signal;
-  const storage={...fakeStorage(rows),getObjectStream:options=>{signal=options.signal;return pending.promise;}};
-  await assert.rejects(()=>buildPSTurnoverPackage({model:model(rows),storage,tempDirectory:path.join(os.tmpdir(),`absent-turnover-${require('crypto').randomUUID()}`)}),error=>error instanceof EvidenceUnavailableError);
-  assert.equal(signal.aborted,true);
-  const stream=Readable.from(Buffer.from('late'));pending.resolve({stream});
-  await new Promise(setImmediate);assert.equal(stream.destroyed,true);
-});
-
-function deferredResult() { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; }
-function browserFunction(file, start, end) { const source = fs.readFileSync(path.join(root,'public',file),'utf8'); return source.slice(source.indexOf(start),source.indexOf(end,source.indexOf(start))); }
-function previewHarness(apiFetch) {
-  const context = { apiFetch };
-  const source = browserFunction('solution-fit.js','  async function loadTurnoverPackagePreview(){','  /* Tolerate handoffs');
-  vm.runInNewContext("let customerId='A',workspaceLoadGeneration=1,turnoverPreviewRevision=0,turnoverPackagePreview=null;"+source+"this.preview={load:loadTurnoverPackagePreview,change:id=>{customerId=id;workspaceLoadGeneration++;turnoverPackagePreview=null;},value:()=>turnoverPackagePreview};",context);
-  return context.preview;
-}
-
-test('late turnover previews cannot replace another customer or a newer preview', async () => {
-  const requests = [];
-  const browser = previewHarness(() => { const pending=deferredResult(); requests.push(pending); return pending.promise; });
-  const payload = id => ({ ok:true, json:async()=>({ customerId:id }) });
-  const first=browser.load(); browser.change('B'); const second=browser.load();
-  requests[1].resolve(payload('B')); await second; requests[0].resolve(payload('A')); await first;
-  assert.equal(browser.value().customerId,'B');
-  const older=browser.load(),newer=browser.load(); requests[3].resolve(payload('new')); await newer; requests[2].resolve(payload('old')); await older;
-  assert.equal(browser.value().customerId,'new');
-});
-
-test('switching customers while save is pending cancels the old package action', async () => {
-  const saved=deferredResult(),calls=[];
-  const context={flushSolutionFitSave:()=>saved.promise,loadTurnoverPackagePreview:async()=>{},renderApp:()=>{},window:{deServerDownload:async url=>{calls.push(url);return true;},SolutionFitEvidence:{validateState:()=>({queue:[]})}}};
-  const source=browserFunction('solution-fit.js','  async function downloadTurnoverPackage(){','  function setDocType');
-  vm.runInNewContext("let customerId='A',workspaceLoadGeneration=1,turnoverPackagePreview=null,turnoverPackageBusy=false;"+source+"this.action={download:downloadTurnoverPackage,change:()=>{customerId='B';workspaceLoadGeneration++;}};",context);
-  const downloading=context.action.download();context.action.change();saved.resolve(true);await downloading;
-  assert.deepEqual(calls,[]);
-});
-
-test('server download discards completed bytes after its workspace is invalidated', async () => {
-  const body=deferredResult(),downloads=[];let current=true;
-  const context={AbortController,setTimeout,clearTimeout,Blob,console,fetch:async()=>({ok:true,headers:new Headers(),blob:()=>body.promise}),deDownloadBlob:blob=>downloads.push(blob),showToast:()=>{}};
-  vm.runInNewContext(browserFunction('deal-export.js','async function deServerDownload(','/* Open a clean print window'),context);
-  const downloading=context.deServerDownload('/package','package.zip','Package',{isCurrent:()=>current});
-  await Promise.resolve();current=false;body.resolve(new Blob(['zip'],{type:'application/zip'}));
-  assert.equal(await downloading,false);assert.equal(downloads.length,0);
-});
-
-test('disconnecting during package generation aborts it and cleans a late generated file', async () => {
-  const pending=deferredResult(),started=deferredResult();let handler,cleanupCalls=0,signal,headerWrites=0;
-  const context={router:{get:(_path,fn)=>{handler=fn;}},Date,AbortController,loadPSTurnoverModel:async()=>({model:{solutionFitId:'fit'},turnover:{missing:[]}}),buildPSTurnoverPackage:options=>{signal=options.signal;started.resolve();return pending.promise;},getEvidenceStorage:()=>({}),fs:{readFileSync:()=>Buffer.alloc(0),createReadStream:()=>Readable.from(Buffer.from('zip'))},logoPath:'logo',log:async()=>{},console:{error:()=>{}},turnoverFailure:()=>{throw new Error('must not write a disconnected response');}};
-  const source=fs.readFileSync(path.join(root,'src/routes/handoffs.js'),'utf8');
-  vm.runInNewContext(source.slice(source.indexOf("router.get('/:customerId/turnover-package',"),source.indexOf("router.get('/:customerId/export-pdf',")),context);
-  const res=new EventEmitter();res.destroyed=false;res.writableFinished=false;res.set=()=>{headerWrites++;return res;};
-  const handling=handler({params:{customerId:'A'},user:{id:'U'}},res);await started.promise;
-  res.destroyed=true;res.emit('close');pending.resolve({sizeBytes:3,filename:'x.zip',filePath:'tmp',cleanup:async()=>{cleanupCalls++;},includedAttachmentIds:[],evidenceCount:0});await handling;
-  assert.equal(cleanupCalls,1);assert.equal(headerWrites,0);assert.equal(signal.aborted,true);
 });
 
 test('zero-evidence package still contains a turnover document and manifest', async t => {

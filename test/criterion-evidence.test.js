@@ -6,7 +6,7 @@ const {evaluateCriterionEvidence}=require('../src/shared/criterion-evidence');
 
 const now='2026-08-30';
 const criterion=(id,extra={})=>({id,source:'evidence',minQuality:'moderate',customerValidation:false,freshnessDays:90,...extra});
-const record=(id,extra={})=>({[id]:{evidence:`Customer confirmed ${id}`,stakeholder:'Pat Buyer',source:'Customer meeting',evidenceDate:'2026-08-20',quality:'strong',customerValidated:true,...extra}});
+const record=(id,extra={})=>({[id]:{evidence:`Customer confirmed ${id}`,stakeholder:'Pat Buyer',source:'Customer conversation',evidenceDate:'2026-08-20',quality:'strong',customerValidated:true,amount:'USD 300,000',timing:'Q1 2027',targetDate:'2027-01-31',term:'36 months',...extra}});
 const evaluate=(id,extra={},config={})=>evaluateCriterionEvidence({criterion:criterion(id,config),now,...extra});
 const process=(id,validation='Customer validated')=>({id,name:`Workflow ${id}`,product:'MEP',erp:'ERP',source:'standard_app',selected:true,demoStatus:'Demonstrated',fit:'Fit',customerValidation:validation});
 const inventoryConfiguration=Object.fromEntries([
@@ -76,7 +76,7 @@ test('stage readiness uses the criterion service and contains no broad source ma
   const service=fs.readFileSync(path.join(__dirname,'..','src','shared','stage-readiness-service.js'),'utf8');
   assert.match(service,/evaluateCriterionEvidence/);assert.doesNotMatch(service,/sourceMatch/);assert.doesNotMatch(service,/handoff\.readiness\s*>=\s*50/);
 });
-test('buyer-readiness UI displays proof summaries and persists mapped stakeholder ids',()=>{
-  const ui=fs.readFileSync(path.join(__dirname,'..','public','buyer-readiness.js'),'utf8');
-  assert.match(ui,/sourceSummary/);assert.match(ui,/bevStakeholderMap/);assert.match(ui,/stakeholderId:/);
+test('buyer-readiness UI displays proof summaries and persists one mapped stakeholder selection',()=>{
+  const ui=fs.readFileSync(path.join(__dirname,'..','public','buyer-readiness.js'),'utf8'),drawer=fs.readFileSync(path.join(__dirname,'..','public','buyer-evidence-drawer.js'),'utf8');
+  assert.match(ui,/sourceSummary/);assert.match(drawer,/bevStakeholderChoice/);assert.match(ui,/stakeholderId/);assert.doesNotMatch(drawer,/Validating stakeholder/);
 });

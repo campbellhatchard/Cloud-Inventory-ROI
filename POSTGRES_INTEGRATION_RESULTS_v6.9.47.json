@@ -1,10 +1,10 @@
 {
   "release": "6.9.47",
-  "generatedAt": "2026-10-25T23:43:37.105Z",
+  "generatedAt": "2026-10-25T21:56:48.497Z",
   "databaseUrlPresent": false,
   "databaseName": null,
   "postgresqlVersion": "NOT TESTED",
-  "node": "v22.22.0",
+  "node": "v24.19.0",
   "migration": {
     "executed": false,
     "exitCode": null,

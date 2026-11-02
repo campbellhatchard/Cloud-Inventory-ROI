@@ -150,14 +150,15 @@ function folderFor(attachment) {
 }
 
 function assignPackagePaths(attachments) {
-  const allocated = new Set();
+  const collisions = new Map();
   return attachments.map(attachment => {
     const folder = folderFor(attachment);
     const baseName = safeAttachmentFilename(attachment.originalFilename);
     const parsed = path.posix.parse(baseName);
-    let filename = baseName, suffix = 2;
-    while (allocated.has(`${folder}/${filename}`.toLowerCase())) filename = `${parsed.name}-${suffix++}${parsed.ext}`;
-    allocated.add(`${folder}/${filename}`.toLowerCase());
+    const collisionKey = `${folder}/${baseName}`.toLowerCase();
+    const count = (collisions.get(collisionKey) || 0) + 1;
+    collisions.set(collisionKey, count);
+    const filename = count === 1 ? baseName : `${parsed.name}-${count}${parsed.ext}`;
     return { ...attachment, packagePath: `${folder}/${filename}` };
   });
 }

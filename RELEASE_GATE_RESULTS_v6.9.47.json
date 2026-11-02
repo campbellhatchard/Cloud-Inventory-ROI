@@ -4,11 +4,11 @@
     "archive": "cloud-inventory-roi-v6.9.46-render-ready.zip",
     "sha256": "7C7E582588B8C01AF7B612C7DF4642D6089F4767541118A2B5422542BF06EE72"
   },
-  "generatedAt": "2026-10-25T23:43:37.106Z",
+  "generatedAt": "2026-10-25T21:56:48.499Z",
   "environment": {
-    "node": "v22.22.0",
-    "npm": "11.9.0",
-    "platform": "linux-x64",
+    "node": "v24.19.0",
+    "npm": "NOT AVAILABLE — direct Node script fallback",
+    "platform": "win32-x64",
     "databaseAvailable": false,
     "databaseIntegrationRequired": false,
     "r2Available": false,
@@ -18,15 +18,15 @@
     {
       "name": "production-dependencies",
       "command": "npm ci --omit=dev --no-audit --no-fund",
-      "executedCommand": "npm ci --omit=dev --no-audit --no-fund",
-      "executed": true,
-      "exitCode": 0,
+      "executed": false,
+      "exitCode": null,
       "passed": 0,
       "failed": 0,
       "skipped": 0,
-      "notTested": 0,
-      "durationMs": 6161,
-      "result": "PASS"
+      "notTested": 1,
+      "durationMs": 0,
+      "result": "NOT TESTED",
+      "note": "npm is unavailable in this local execution environment; dependency modules were load-checked separately."
     },
     {
       "name": "database-migrations",
@@ -67,274 +67,274 @@
     {
       "name": "full-test-suite",
       "command": "npm test",
-      "executedCommand": "npm test",
+      "executedCommand": "node scripts/run-node-package-script.js test",
       "executed": true,
       "exitCode": 0,
-      "passed": 726,
+      "passed": 716,
       "failed": 0,
       "skipped": 3,
       "notTested": 0,
-      "durationMs": 10117,
+      "durationMs": 6577,
       "result": "PASS"
     },
     {
       "name": "v6947-corrective-release",
       "command": "npm run test:v6947",
-      "executedCommand": "npm run test:v6947",
+      "executedCommand": "node scripts/run-node-package-script.js test:v6947",
       "executed": true,
       "exitCode": 0,
-      "passed": 222,
+      "passed": 206,
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 9362,
+      "durationMs": 1932,
       "result": "PASS"
     },
     {
       "name": "v6946-release-stabilization",
       "command": "npm run test:v6946",
-      "executedCommand": "npm run test:v6946",
+      "executedCommand": "node scripts/run-node-package-script.js test:v6946",
       "executed": true,
       "exitCode": 0,
-      "passed": 216,
+      "passed": 200,
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 7560,
+      "durationMs": 1923,
       "result": "PASS"
     },
     {
       "name": "v6945-ps-turnover-evidence",
       "command": "npm run test:v6945",
-      "executedCommand": "npm run test:v6945",
+      "executedCommand": "node scripts/run-node-package-script.js test:v6945",
       "executed": true,
       "exitCode": 0,
-      "passed": 196,
+      "passed": 181,
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 7818,
+      "durationMs": 1938,
       "result": "PASS"
     },
     {
       "name": "v6944-solution-fit-evidence",
       "command": "npm run test:v6944",
-      "executedCommand": "npm run test:v6944",
+      "executedCommand": "node scripts/run-node-package-script.js test:v6944",
       "executed": true,
       "exitCode": 0,
-      "passed": 145,
+      "passed": 138,
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 2469,
+      "durationMs": 673,
       "result": "PASS"
     },
     {
       "name": "v6943-live-regression-corrections",
       "command": "npm run test:v6943",
-      "executedCommand": "npm run test:v6943",
+      "executedCommand": "node scripts/run-node-package-script.js test:v6943",
       "executed": true,
       "exitCode": 0,
       "passed": 141,
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 2379,
+      "durationMs": 792,
       "result": "PASS"
     },
     {
       "name": "v6942-solution-fit-inventory-ui",
       "command": "npm run test:v6942",
-      "executedCommand": "npm run test:v6942",
+      "executedCommand": "node scripts/run-node-package-script.js test:v6942",
       "executed": true,
       "exitCode": 0,
       "passed": 164,
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 4165,
+      "durationMs": 1518,
       "result": "PASS"
     },
     {
       "name": "v6941-solution-fit-workflow-stabilization",
       "command": "npm run test:v6941",
-      "executedCommand": "npm run test:v6941",
+      "executedCommand": "node scripts/run-node-package-script.js test:v6941",
       "executed": true,
       "exitCode": 0,
       "passed": 158,
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 3110,
+      "durationMs": 1410,
       "result": "PASS"
     },
     {
       "name": "v6939-solution-fit-guided-workflow",
       "command": "npm run test:v6939",
-      "executedCommand": "npm run test:v6939",
+      "executedCommand": "node scripts/run-node-package-script.js test:v6939",
       "executed": true,
       "exitCode": 0,
       "passed": 85,
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 3673,
+      "durationMs": 1315,
       "result": "PASS"
     },
     {
       "name": "v6938-roi-assumptions-corrections",
       "command": "npm run test:v6938",
-      "executedCommand": "npm run test:v6938",
+      "executedCommand": "node scripts/run-node-package-script.js test:v6938",
       "executed": true,
       "exitCode": 0,
       "passed": 47,
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 1993,
+      "durationMs": 789,
       "result": "PASS"
     },
     {
       "name": "v6937-roi-assumptions-results",
       "command": "npm run test:v6937",
-      "executedCommand": "npm run test:v6937",
+      "executedCommand": "node scripts/run-node-package-script.js test:v6937",
       "executed": true,
       "exitCode": 0,
-      "passed": 117,
+      "passed": 116,
       "failed": 0,
       "skipped": 1,
       "notTested": 0,
-      "durationMs": 2713,
+      "durationMs": 1341,
       "result": "PASS"
     },
     {
       "name": "v6936-admin-bulk-cleanup",
       "command": "npm run test:v6936",
-      "executedCommand": "npm run test:v6936",
+      "executedCommand": "node scripts/run-node-package-script.js test:v6936",
       "executed": true,
       "exitCode": 0,
-      "passed": 100,
+      "passed": 99,
       "failed": 0,
       "skipped": 1,
       "notTested": 0,
-      "durationMs": 1253,
+      "durationMs": 596,
       "result": "PASS"
     },
     {
       "name": "v6935-customer-ownership-transfer",
       "command": "npm run test:v6935",
-      "executedCommand": "npm run test:v6935",
+      "executedCommand": "node scripts/run-node-package-script.js test:v6935",
       "executed": true,
       "exitCode": 0,
       "passed": 89,
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 1024,
+      "durationMs": 539,
       "result": "PASS"
     },
     {
       "name": "v6934-customer-alert-workflow",
       "command": "npm run test:v6934",
-      "executedCommand": "npm run test:v6934",
+      "executedCommand": "node scripts/run-node-package-script.js test:v6934",
       "executed": true,
       "exitCode": 0,
       "passed": 71,
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 1053,
+      "durationMs": 410,
       "result": "PASS"
     },
     {
       "name": "v6933-proposal-pdf-timeout-correction",
       "command": "npm run test:v6933",
-      "executedCommand": "npm run test:v6933",
+      "executedCommand": "node scripts/run-node-package-script.js test:v6933",
       "executed": true,
       "exitCode": 0,
       "passed": 39,
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 2779,
+      "durationMs": 1346,
       "result": "PASS"
     },
     {
       "name": "v6932-prospect-evidence-count-consistency",
       "command": "npm run test:v6932",
-      "executedCommand": "npm run test:v6932",
+      "executedCommand": "node scripts/run-node-package-script.js test:v6932",
       "executed": true,
       "exitCode": 0,
       "passed": 51,
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 770,
+      "durationMs": 405,
       "result": "PASS"
     },
     {
       "name": "v6931-final-two-defects",
       "command": "npm run test:v6931",
-      "executedCommand": "npm run test:v6931",
+      "executedCommand": "node scripts/run-node-package-script.js test:v6931",
       "executed": true,
       "exitCode": 0,
       "passed": 99,
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 1171,
+      "durationMs": 623,
       "result": "PASS"
     },
     {
       "name": "v6930-server-authoritative-prospect-values",
       "command": "npm run test:v6930",
-      "executedCommand": "npm run test:v6930",
+      "executedCommand": "node scripts/run-node-package-script.js test:v6930",
       "executed": true,
       "exitCode": 0,
       "passed": 31,
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 1375,
+      "durationMs": 444,
       "result": "PASS"
     },
     {
       "name": "production-locks",
       "command": "npm run test:production-locks",
-      "executedCommand": "npm run test:production-locks",
+      "executedCommand": "node scripts/run-node-package-script.js test:production-locks",
       "executed": true,
       "exitCode": 0,
-      "passed": 395,
+      "passed": 378,
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 7973,
+      "durationMs": 4558,
       "result": "PASS"
     },
     {
       "name": "routes",
       "command": "npm run test:routes",
-      "executedCommand": "npm run test:routes",
+      "executedCommand": "node scripts/run-node-package-script.js test:routes",
       "executed": true,
       "exitCode": null,
       "passed": 0,
       "failed": 0,
       "skipped": 0,
       "notTested": 1,
-      "durationMs": 688,
+      "durationMs": 319,
       "result": "NOT TESTED"
     },
     {
       "name": "brand-tests",
       "command": "npm run test:brand",
-      "executedCommand": "npm run test:brand",
+      "executedCommand": "node scripts/run-node-package-script.js test:brand",
       "executed": true,
       "exitCode": 0,
       "passed": 19,
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 847,
+      "durationMs": 422,
       "result": "PASS"
     },
     {
@@ -347,7 +347,7 @@
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 110,
+      "durationMs": 89,
       "result": "PASS"
     },
     {
@@ -360,7 +360,7 @@
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 388,
+      "durationMs": 147,
       "result": "PASS"
     },
     {
@@ -373,7 +373,7 @@
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 112,
+      "durationMs": 123,
       "result": "PASS"
     },
     {
@@ -386,7 +386,7 @@
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 109,
+      "durationMs": 168,
       "result": "PASS"
     },
     {
@@ -399,7 +399,7 @@
       "failed": 0,
       "skipped": 0,
       "notTested": 0,
-      "durationMs": 3582,
+      "durationMs": 1187,
       "result": "PASS",
       "outputResults": [
         {
@@ -411,7 +411,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 116,
+          "durationMs": 47,
           "error": null
         },
         {
@@ -423,7 +423,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 762,
+          "durationMs": 31,
           "error": null
         },
         {
@@ -435,7 +435,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 27,
+          "durationMs": 5,
           "error": null
         },
         {
@@ -447,7 +447,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 41,
+          "durationMs": 16,
           "error": null
         },
         {
@@ -459,7 +459,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 479,
+          "durationMs": 39,
           "error": null
         },
         {
@@ -471,7 +471,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 137,
+          "durationMs": 24,
           "error": null
         },
         {
@@ -483,7 +483,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 209,
+          "durationMs": 29,
           "error": null
         },
         {
@@ -495,7 +495,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 26,
+          "durationMs": 3,
           "error": null
         },
         {
@@ -507,7 +507,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 105,
+          "durationMs": 16,
           "error": null
         },
         {
@@ -519,7 +519,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 102,
+          "durationMs": 18,
           "error": null
         },
         {
@@ -531,7 +531,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 72,
+          "durationMs": 11,
           "error": null
         },
         {
@@ -543,7 +543,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 74,
+          "durationMs": 20,
           "error": null
         },
         {
@@ -555,7 +555,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 33,
+          "durationMs": 12,
           "error": null
         },
         {
@@ -567,7 +567,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 67,
+          "durationMs": 15,
           "error": null
         },
         {
@@ -579,7 +579,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 66,
+          "durationMs": 21,
           "error": null
         },
         {
@@ -591,7 +591,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 6,
+          "durationMs": 1,
           "error": null
         },
         {
@@ -603,7 +603,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 10,
+          "durationMs": 1,
           "error": null
         },
         {
@@ -615,7 +615,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 46,
+          "durationMs": 18,
           "error": null
         },
         {
@@ -627,7 +627,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 10,
+          "durationMs": 3,
           "error": null
         },
         {
@@ -639,7 +639,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 45,
+          "durationMs": 23,
           "error": null
         },
         {
@@ -651,7 +651,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 23,
+          "durationMs": 11,
           "error": null
         },
         {
@@ -663,7 +663,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 18,
+          "durationMs": 7,
           "error": null
         },
         {
@@ -675,7 +675,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 42,
+          "durationMs": 23,
           "error": null
         },
         {
@@ -687,7 +687,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 33,
+          "durationMs": 17,
           "error": null
         },
         {
@@ -699,7 +699,7 @@
           "passed": true,
           "audience": "customer",
           "artifactValidated": true,
-          "durationMs": 29,
+          "durationMs": 16,
           "error": null
         },
         {
@@ -711,7 +711,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 74,
+          "durationMs": 31,
           "error": null
         },
         {
@@ -723,7 +723,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 130,
+          "durationMs": 49,
           "error": null
         },
         {
@@ -735,7 +735,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 40,
+          "durationMs": 16,
           "error": null
         },
         {
@@ -747,7 +747,7 @@
           "passed": true,
           "audience": "internal",
           "artifactValidated": true,
-          "durationMs": 14,
+          "durationMs": 5,
           "error": null
         }
       ]
@@ -755,11 +755,11 @@
   ],
   "postgresIntegration": {
     "release": "6.9.47",
-    "generatedAt": "2026-10-25T23:43:37.105Z",
+    "generatedAt": "2026-10-25T21:56:48.497Z",
     "databaseUrlPresent": false,
     "databaseName": null,
     "postgresqlVersion": "NOT TESTED",
-    "node": "v22.22.0",
+    "node": "v24.19.0",
     "migration": {
       "executed": false,
       "exitCode": null,
@@ -790,7 +790,7 @@
   },
   "r2Integration": {
     "release": "6.9.47",
-    "generatedAt": "2026-10-25T23:43:37.106Z",
+    "generatedAt": "2026-10-25T21:56:48.499Z",
     "endpointHost": null,
     "bucket": null,
     "region": "auto",

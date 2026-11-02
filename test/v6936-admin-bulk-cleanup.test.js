@@ -75,12 +75,6 @@ test('snapshot fingerprints are stable but change when owner or record state cha
   assert.notEqual(first,transferred);
 });
 
-test('snapshot fingerprints preserve PostgreSQL timestamp changes represented as Date objects', () => {
-  const before = cleanup.snapshotHash({ id:'x', updatedAt:new Date('2026-10-09T15:22:37.113Z') });
-  const after = cleanup.snapshotHash({ id:'x', updatedAt:new Date('2026-10-09T15:22:37.767Z') });
-  assert.notEqual(before, after);
-});
-
 test('snapshot fingerprints canonicalize Date values without collapsing them to empty objects', () => {
   const instant = new Date('2026-10-26T15:04:05.000Z');
   const asDate = cleanup.snapshotHash({ id:'x', zero:0, nullable:null, nested:{ updatedAt:instant }, history:[instant] });

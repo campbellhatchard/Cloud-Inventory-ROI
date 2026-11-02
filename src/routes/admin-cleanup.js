@@ -72,6 +72,7 @@ function fingerprint(type, row) {
     id: String(row.id),
     ownerId: row.owner_id && String(row.owner_id),
     createdBy: row.created_by && String(row.created_by),
+    rowVersion: row.row_version && String(row.row_version),
     updatedAt: row.updated_at || null,
     removedAt: row.removed_at || null,
     current: type === 'scenario' ? row.is_current === true : null,
@@ -122,7 +123,7 @@ async function loadFilteredRecords(client, search, filters) {
   if (filters.types.includes('scenario')) {
     const where = whereFor({ type: 'scenario', alias: 's', searchColumns: ['s.company', 's.name', 'ou.username', 'cu.username'], ownerColumn: 's.owner_id', creatorColumn: 's.created_by', createdColumn: 's.created_at', updatedColumn: 's.updated_at', removedColumn: 's.deleted_at', filters, search });
     where.params.push(limit);
-    const rows = await client.query(`SELECT s.id,s.base_id,s.customer_id,s.name,s.company,s.owner_id,s.created_by,s.created_at,s.updated_at,s.deleted_at removed_at,
+    const rows = await client.query(`SELECT s.id,s.xmin::text row_version,s.base_id,s.customer_id,s.name,s.company,s.owner_id,s.created_by,s.created_at,s.updated_at,s.deleted_at removed_at,
         s.deleted_at IS NOT NULL already_removed,s.version,s.is_current,s.outcome,ou.username rep,cu.username creator,ru.username removed_by,
         (SELECT COUNT(*)::int FROM scenario_shares x WHERE x.scenario_id=s.id AND x.is_active=TRUE) scenario_share_count,
         (SELECT COUNT(*)::int FROM business_case_shares x WHERE x.scenario_id=s.id AND x.is_active=TRUE) business_share_count,
@@ -143,7 +144,7 @@ async function loadFilteredRecords(client, search, filters) {
   if (filters.types.includes('discovery') && filters.status !== 'closed') {
     const where = whereFor({ type: 'discovery', alias: 'ds', searchColumns: ['ds.company', "COALESCE(s.name,'')", 'ou.username', 'cu.username'], ownerColumn: 'ds.owner_id', creatorColumn: 'ds.created_by', createdColumn: 'ds.created_at', updatedColumn: 'ds.updated_at', removedColumn: 'ds.cleanup_removed_at', filters, search });
     where.params.push(limit);
-    const rows = await client.query(`SELECT ds.id,ds.scenario_id,ds.base_id,s.customer_id,ds.company,COALESCE(s.name,'Unlinked Prospect session') opportunity,
+    const rows = await client.query(`SELECT ds.id,ds.xmin::text row_version,ds.scenario_id,ds.base_id,s.customer_id,ds.company,COALESCE(s.name,'Unlinked Prospect session') opportunity,
         ds.owner_id,ds.created_by,ds.created_at,ds.updated_at,ds.cleanup_removed_at removed_at,ds.cleanup_removed_at IS NOT NULL already_removed,
         ds.submitted_at IS NOT NULL submitted,ds.answer_count,ds.is_active,ou.username rep,cu.username creator,ru.username removed_by,
         (SELECT COUNT(*)::int FROM discovery_submissions x WHERE x.discovery_session_id=ds.id) immutable_submission_count,
@@ -158,7 +159,7 @@ async function loadFilteredRecords(client, search, filters) {
   if (filters.types.includes('customer') && filters.status !== 'closed') {
     const where = whereFor({ type: 'customer', alias: 'c', searchColumns: ['c.name', 'ou.username', 'cu.username'], ownerColumn: 'c.owner_id', creatorColumn: 'c.created_by', createdColumn: 'c.created_at', updatedColumn: 'c.updated_at', removedColumn: 'c.deleted_at', filters, search });
     where.params.push(limit);
-    const rows = await client.query(`SELECT c.id,c.name,c.owner_id,c.created_by,c.created_at,c.updated_at,c.deleted_at removed_at,c.deleted_at IS NOT NULL already_removed,
+    const rows = await client.query(`SELECT c.id,c.xmin::text row_version,c.name,c.owner_id,c.created_by,c.created_at,c.updated_at,c.deleted_at removed_at,c.deleted_at IS NOT NULL already_removed,
         c.status customer_status,ou.username owner,cu.username creator,ru.username removed_by,
         (SELECT COUNT(*)::int FROM scenarios x WHERE x.customer_id=c.id AND x.deleted_at IS NULL) dependent_scenarios,
         (SELECT COUNT(*)::int FROM discovery_sessions x WHERE x.base_id IN (SELECT sx.base_id FROM scenarios sx WHERE sx.customer_id=c.id) AND x.cleanup_removed_at IS NULL) dependent_discovery,
@@ -181,7 +182,7 @@ async function loadFilteredRecords(client, search, filters) {
   if (filters.types.includes('handoff') && filters.status !== 'closed') {
     const where = whereFor({ type: 'handoff', alias: 'h', searchColumns: ['c.name', "COALESCE(h.data->'opportunity'->>'name','')", 'ou.username', 'cu.username'], ownerColumn: 'h.owner_id', creatorColumn: 'h.created_by', createdColumn: 'h.created_at', updatedColumn: 'h.updated_at', removedColumn: 'h.deleted_at', filters, search });
     where.params.push(limit);
-    const rows = await client.query(`SELECT h.id,h.customer_id,c.name customer,COALESCE(h.data->'opportunity'->>'name',c.name||' Solution Fit') opportunity,
+    const rows = await client.query(`SELECT h.id,h.xmin::text row_version,h.customer_id,c.name customer,COALESCE(h.data->'opportunity'->>'name',c.name||' Solution Fit') opportunity,
         h.owner_id,h.created_by,h.created_at,h.updated_at,h.deleted_at removed_at,h.deleted_at IS NOT NULL already_removed,
         h.status handoff_status,ou.username owner,cu.username creator,ru.username removed_by,
         (SELECT COUNT(*)::int FROM handoff_change_history x WHERE x.handoff_id=h.id) handoff_history_count,
@@ -200,11 +201,11 @@ async function customerDependencies(client, customerRows) {
   const ids = customerRows.filter(row => !row.already_removed).map(row => String(row.id));
   if (!ids.length) return {};
   const [scenarios, discovery, handoffs] = await Promise.all([
-    client.query(`SELECT id,customer_id,owner_id,created_by,updated_at,deleted_at removed_at,is_current,outcome FROM scenarios WHERE customer_id=ANY($1::uuid[]) AND deleted_at IS NULL`, [ids]),
-    client.query(`SELECT ds.id,s.customer_id,ds.owner_id,ds.created_by,ds.updated_at,ds.cleanup_removed_at removed_at,ds.is_active
+    client.query(`SELECT id,xmin::text row_version,customer_id,owner_id,created_by,updated_at,deleted_at removed_at,is_current,outcome FROM scenarios WHERE customer_id=ANY($1::uuid[]) AND deleted_at IS NULL`, [ids]),
+    client.query(`SELECT ds.id,ds.xmin::text row_version,s.customer_id,ds.owner_id,ds.created_by,ds.updated_at,ds.cleanup_removed_at removed_at,ds.is_active
       FROM discovery_sessions ds JOIN scenarios s ON s.base_id=ds.base_id
       WHERE s.customer_id=ANY($1::uuid[]) AND ds.cleanup_removed_at IS NULL`, [ids]),
-    client.query(`SELECT id,customer_id,owner_id,created_by,updated_at,deleted_at removed_at FROM handoffs WHERE customer_id=ANY($1::uuid[]) AND deleted_at IS NULL`, [ids])
+    client.query(`SELECT id,xmin::text row_version,customer_id,owner_id,created_by,updated_at,deleted_at removed_at FROM handoffs WHERE customer_id=ANY($1::uuid[]) AND deleted_at IS NULL`, [ids])
   ]);
   const out = Object.fromEntries(ids.map(id => [id, { scenarioIds: [], discoveryIds: [], handoffIds: [], fingerprints: {} }]));
   const addRow = (type, row) => {
@@ -267,19 +268,19 @@ async function loadCurrentFingerprints(client, selected, { lock = false } = {}) 
   /* Customer first matches ownership-transfer lock order and avoids a cleanup /
      transfer deadlock. Remaining record classes use one stable order. */
   if (selected.customerIds.length) {
-    const rows = await client.query(`SELECT id,owner_id,created_by,updated_at,deleted_at removed_at,status customer_status FROM customers WHERE id=ANY($1::uuid[]) ORDER BY id${suffix}`, [selected.customerIds]);
+    const rows = await client.query(`SELECT id,xmin::text row_version,owner_id,created_by,updated_at,deleted_at removed_at,status customer_status FROM customers WHERE id=ANY($1::uuid[]) ORDER BY id${suffix}`, [selected.customerIds]);
     rows.rows.forEach(row => { result[`customer:${row.id}`] = fingerprint('customer', row); });
   }
   if (selected.scenarioIds.length) {
-    const rows = await client.query(`SELECT id,owner_id,created_by,updated_at,deleted_at removed_at,is_current,outcome FROM scenarios WHERE id=ANY($1::uuid[]) ORDER BY id${suffix}`, [selected.scenarioIds]);
+    const rows = await client.query(`SELECT id,xmin::text row_version,owner_id,created_by,updated_at,deleted_at removed_at,is_current,outcome FROM scenarios WHERE id=ANY($1::uuid[]) ORDER BY id${suffix}`, [selected.scenarioIds]);
     rows.rows.forEach(row => { result[`scenario:${row.id}`] = fingerprint('scenario', row); });
   }
   if (selected.discoveryIds.length) {
-    const rows = await client.query(`SELECT id,owner_id,created_by,updated_at,cleanup_removed_at removed_at,is_active FROM discovery_sessions WHERE id=ANY($1::uuid[]) ORDER BY id${suffix}`, [selected.discoveryIds]);
+    const rows = await client.query(`SELECT id,xmin::text row_version,owner_id,created_by,updated_at,cleanup_removed_at removed_at,is_active FROM discovery_sessions WHERE id=ANY($1::uuid[]) ORDER BY id${suffix}`, [selected.discoveryIds]);
     rows.rows.forEach(row => { result[`discovery:${row.id}`] = fingerprint('discovery', row); });
   }
   if (selected.handoffIds.length) {
-    const rows = await client.query(`SELECT id,owner_id,created_by,updated_at,deleted_at removed_at FROM handoffs WHERE id=ANY($1::uuid[]) ORDER BY id${suffix}`, [selected.handoffIds]);
+    const rows = await client.query(`SELECT id,xmin::text row_version,owner_id,created_by,updated_at,deleted_at removed_at FROM handoffs WHERE id=ANY($1::uuid[]) ORDER BY id${suffix}`, [selected.handoffIds]);
     rows.rows.forEach(row => { result[`handoff:${row.id}`] = fingerprint('handoff', row); });
   }
   return result;

@@ -54,7 +54,7 @@
   let lastEditedByName = '', lastEditedAt = '';
   let pendingCreate = false, customerSearchTimer = null, customerPickerController = null;
   let workspaceLoadGeneration = 0, customerSwitchCoordinator = null;
-  let turnoverPackagePreview = null, turnoverPackageBusy = false, turnoverPreviewRevision = 0;
+  let turnoverPackagePreview = null, turnoverPackageBusy = false;
   let lastSaveError = '', customApplicationSubmitting = false;
 
   const SOLUTION_TEMPLATES = {
@@ -109,7 +109,6 @@
   /* ── Server load / save ─────────────────────────────────────────── */
   function clearWorkspaceForLoad(custId){
     clearTimeout(saveTimer);
-    window.SolutionFitEvidence?.reset?.();
     document.getElementById('sfScopeWizard')?.remove();
     document.getElementById('sfCustomerSwitchDialog')?.remove();
     document.getElementById('sfCustomApplicationDialog')?.remove();
@@ -119,7 +118,7 @@
     primarySeId=null;primarySeName='';additionalSeIds=[];
     capabilities={canView:false,canEdit:false,canCreate:false,canRestore:false};
     knownSources={};knownStakeholders=[];lastEditedByName='';lastEditedAt='';openGapId=null;
-    turnoverPackagePreview=null;turnoverPackageBusy=false;turnoverPreviewRevision++;
+    turnoverPackagePreview=null;turnoverPackageBusy=false;
     activeTab='context';activeScopeProduct='MEP';scopeSearch='';scopeFilter='all';loadState='idle';
   }
   async function loadHandoff(custId) {
@@ -172,16 +171,11 @@
   async function safeError(resp){try{const b=await resp.json();return b&&b.error?b.error:'';}catch(_){return '';}}
 
   async function loadTurnoverPackagePreview(){
-    const selectedCustomer=customerId,generation=workspaceLoadGeneration,revision=++turnoverPreviewRevision;
     turnoverPackagePreview=null;
-    if(!selectedCustomer)return null;
+    if(!customerId)return null;
     try{
-      const response=await apiFetch(`/api/handoffs/${encodeURIComponent(selectedCustomer)}/turnover-package/preview`);
-      if(response?.ok){
-        const preview=await response.json();
-        if(generation!==workspaceLoadGeneration||selectedCustomer!==customerId||revision!==turnoverPreviewRevision)return null;
-        turnoverPackagePreview=preview;
-      }
+      const response=await apiFetch(`/api/handoffs/${encodeURIComponent(customerId)}/turnover-package/preview`);
+      if(response?.ok)turnoverPackagePreview=await response.json();
     }catch(_){/* output action reports the actionable server error */}
     return turnoverPackagePreview;
   }
@@ -1320,11 +1314,8 @@
 
   async function downloadTurnoverPackage(){
     if(turnoverPackageBusy)return false;
-    const selectedCustomer=customerId,generation=workspaceLoadGeneration;
-    const isCurrent=()=>generation===workspaceLoadGeneration&&selectedCustomer===customerId;
-    if(!selectedCustomer||!await flushSolutionFitSave()||!isCurrent())return false;
+    if(!await flushSolutionFitSave())return false;
     await loadTurnoverPackagePreview();
-    if(!isCurrent())return false;
     if(turnoverPackagePreview&&!turnoverPackagePreview.turnoverReady){window.showToast?.(`Complete the required turnover fields first: ${(turnoverPackagePreview.missingTurnoverFields||[]).join(', ')}.`);return false;}
     const evidenceState=window.SolutionFitEvidence?.validateState?.()||{};
     const browserPending=(evidenceState.queue||[]).filter(item=>!['Complete'].includes(item.state)).length;
@@ -1334,9 +1325,9 @@
     if(!customerId||!window.deServerDownload){window.showToast?.('Professional Services turnover package service is unavailable.');return false;}
     turnoverPackageBusy=true;renderApp();
     try{
-      return await window.deServerDownload(`/api/handoffs/${encodeURIComponent(selectedCustomer)}/turnover-package`,'Cloud-Inventory-PS-Turnover.zip','Professional Services Turnover Package',{accept:'application/zip',types:['application/zip','application/x-zip-compressed','application/octet-stream'],timeoutMs:300000,isCurrent});
+      return await window.deServerDownload(`/api/handoffs/${encodeURIComponent(customerId)}/turnover-package`,'Cloud-Inventory-PS-Turnover.zip','Professional Services Turnover Package',{accept:'application/zip',types:['application/zip','application/x-zip-compressed','application/octet-stream'],timeoutMs:300000});
     }finally{
-      if(isCurrent()){turnoverPackageBusy=false;await loadTurnoverPackagePreview();if(isCurrent())renderApp();}
+      turnoverPackageBusy=false;await loadTurnoverPackagePreview();renderApp();
     }
   }
 

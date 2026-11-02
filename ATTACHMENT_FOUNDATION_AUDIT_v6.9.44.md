@@ -22,3 +22,4 @@
 | Legacy attachment code | No active legacy upload or public-link implementation was found. | **NO REMOVAL REQUIRED**. |
 
 The v6.9.43 Admin Cleanup reference to attachments was a valid schema dependency foundation, not a complete evidence feature.
+

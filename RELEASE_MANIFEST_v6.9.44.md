@@ -28,3 +28,4 @@ See `SOLUTION_FIT_EVIDENCE_ATTACHMENTS_REPORT_v6.9.44.md`, `QA_RESULTS_v6.9.44.m
 ## SE Solution Fit Scope
 
 Sales Engineers have cross-account access to all active customers for Solution Fit discovery/create/view/edit only. This does not confer general cross-account customer, scenario or opportunity access.
+

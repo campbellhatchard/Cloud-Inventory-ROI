@@ -59,3 +59,4 @@ The proven cause is a browser authority violation composed of truthy fallback, n
 - Explicit Save reconciles the canonical response, invalidates prior output state, refetches the model, and only then reports completion.
 - Current-model failure clears old browser content and fails closed.
 - BFCache/page visibility and cross-tab save notifications trigger authoritative revalidation; they never provide facts.
+

@@ -38,8 +38,6 @@ function deMilestonesInGroup(milestones, group) {
 }
 function deDownloadBlob(blob,fileName){if(!(blob instanceof Blob)||blob.size===0)throw new Error('The generated file was empty.');const a=document.createElement('a'),url=URL.createObjectURL(blob);a.href=url;a.download=fileName;a.rel='noopener';a.style.display='none';document.body.appendChild(a);a.click();setTimeout(()=>{a.remove();URL.revokeObjectURL(url);},30000);}
 async function deServerDownload(url,fallbackName,label,options={}){
-  const isCurrent=()=>typeof options.isCurrent!=='function'||options.isCurrent();
-  if(!isCurrent())return false;
   const extension=String(fallbackName||'').toLowerCase().split('.').pop();
   const defaults={
     pdf:{accept:'application/pdf',types:['application/pdf']},
@@ -51,13 +49,11 @@ async function deServerDownload(url,fallbackName,label,options={}){
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),Number(options.timeoutMs)||30000);
   try{
     const response=await fetch(url,{credentials:'same-origin',headers:{Accept:options.accept||defaults.accept},signal:controller.signal});
-    if(!isCurrent())return false;
     if(!response.ok){let detail='';try{detail=(await response.json()).error||'';}catch(_){}throw new Error(detail||`${label} could not be generated.`);}
-    const blob=await response.blob();if(!isCurrent())return false;
-    const responseType=String(blob.type||'').toLowerCase().split(';')[0].trim();if(responseType&&!expected.includes(responseType))throw new Error(`${label} returned an unexpected file type.`);
+    const blob=await response.blob(),responseType=String(blob.type||'').toLowerCase().split(';')[0].trim();if(responseType&&!expected.includes(responseType))throw new Error(`${label} returned an unexpected file type.`);
     const disposition=response.headers.get('Content-Disposition')||'',match=disposition.match(/filename="?([^";]+)"?/i);
     deDownloadBlob(blob,match?.[1]||fallbackName);showToast?.(`${label} downloaded.`);return true;
-  }catch(error){if(!isCurrent())return false;console.error('server_download.failed',{label,message:error.message});showToast?.(error.name==='AbortError'?`${label} timed out. Please retry.`:error.message);return false;}finally{clearTimeout(timer);}
+  }catch(error){console.error('server_download.failed',{label,message:error.message});showToast?.(error.name==='AbortError'?`${label} timed out. Please retry.`:error.message);return false;}finally{clearTimeout(timer);}
 }
 /* Open a clean print window with branded HTML and trigger print */
 function dePrintWindow(title, innerHtml, extraCss, audience = 'customer') {

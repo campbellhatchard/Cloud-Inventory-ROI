@@ -34,8 +34,8 @@ test('real private R2 evidence is streamed unchanged into the governed PS Turnov
   });
 
   for (const item of objects) {
-    const signed = await storage.createUploadUrl({ key: item.key, contentType: item.type, expiresSeconds: 120 });
-    const put = await fetch(signed.url, { method: 'PUT', headers: signed.requiredHeaders, body: item.body });
+    const signed = await storage.createUploadUrl({ key: item.key, expiresSeconds: 120 });
+    const put = await fetch(signed.url, { method: 'PUT', headers: { 'Content-Type': item.type }, body: item.body });
     assert.equal(put.ok, true, `R2 PUT failed with ${put.status}`);
     uploaded.push(item);
   }

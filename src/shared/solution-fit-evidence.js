@@ -48,3 +48,4 @@ function validateContextAgainstState(stateInput, context) {
 }
 
 module.exports = { IMAGE_MAX_BYTES, DOCUMENT_MAX_BYTES, CONTEXTS, CATEGORIES, ALLOWED, text, isImage, maxBytes, validateFile, normalizeContext, validateContextAgainstState };
+

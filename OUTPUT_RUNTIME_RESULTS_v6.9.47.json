@@ -1,6 +1,6 @@
 {
   "release": "6.9.47",
-  "generatedAt": "2026-10-25T23:43:37.063Z",
+  "generatedAt": "2026-10-26T03:59:05.236Z",
   "results": [
     {
       "outputId": "competitive-docx",
@@ -11,7 +11,7 @@
       "passed": true,
       "audience": "internal",
       "artifactValidated": true,
-      "durationMs": 116,
+      "durationMs": 127,
       "error": null
     },
     {
@@ -23,7 +23,7 @@
       "passed": true,
       "audience": "internal",
       "artifactValidated": true,
-      "durationMs": 762,
+      "durationMs": 73,
       "error": null
     },
     {
@@ -35,7 +35,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 27,
+      "durationMs": 16,
       "error": null
     },
     {
@@ -47,7 +47,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 41,
+      "durationMs": 39,
       "error": null
     },
     {
@@ -59,7 +59,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 479,
+      "durationMs": 118,
       "error": null
     },
     {
@@ -71,7 +71,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 137,
+      "durationMs": 113,
       "error": null
     },
     {
@@ -83,7 +83,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 209,
+      "durationMs": 60,
       "error": null
     },
     {
@@ -95,7 +95,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 26,
+      "durationMs": 10,
       "error": null
     },
     {
@@ -107,7 +107,7 @@
       "passed": true,
       "audience": "internal",
       "artifactValidated": true,
-      "durationMs": 105,
+      "durationMs": 34,
       "error": null
     },
     {
@@ -119,7 +119,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 102,
+      "durationMs": 33,
       "error": null
     },
     {
@@ -131,7 +131,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 72,
+      "durationMs": 22,
       "error": null
     },
     {
@@ -143,7 +143,7 @@
       "passed": true,
       "audience": "internal",
       "artifactValidated": true,
-      "durationMs": 74,
+      "durationMs": 31,
       "error": null
     },
     {
@@ -155,7 +155,7 @@
       "passed": true,
       "audience": "internal",
       "artifactValidated": true,
-      "durationMs": 33,
+      "durationMs": 17,
       "error": null
     },
     {
@@ -167,7 +167,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 67,
+      "durationMs": 38,
       "error": null
     },
     {
@@ -179,7 +179,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 66,
+      "durationMs": 35,
       "error": null
     },
     {
@@ -191,7 +191,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 6,
+      "durationMs": 2,
       "error": null
     },
     {
@@ -203,7 +203,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 10,
+      "durationMs": 2,
       "error": null
     },
     {
@@ -215,7 +215,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 46,
+      "durationMs": 35,
       "error": null
     },
     {
@@ -227,7 +227,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 10,
+      "durationMs": 5,
       "error": null
     },
     {
@@ -239,7 +239,7 @@
       "passed": true,
       "audience": "internal",
       "artifactValidated": true,
-      "durationMs": 45,
+      "durationMs": 35,
       "error": null
     },
     {
@@ -251,7 +251,7 @@
       "passed": true,
       "audience": "internal",
       "artifactValidated": true,
-      "durationMs": 23,
+      "durationMs": 39,
       "error": null
     },
     {
@@ -263,7 +263,7 @@
       "passed": true,
       "audience": "internal",
       "artifactValidated": true,
-      "durationMs": 18,
+      "durationMs": 49,
       "error": null
     },
     {
@@ -275,7 +275,7 @@
       "passed": true,
       "audience": "internal",
       "artifactValidated": true,
-      "durationMs": 42,
+      "durationMs": 38,
       "error": null
     },
     {
@@ -287,7 +287,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 33,
+      "durationMs": 43,
       "error": null
     },
     {
@@ -299,7 +299,7 @@
       "passed": true,
       "audience": "customer",
       "artifactValidated": true,
-      "durationMs": 29,
+      "durationMs": 43,
       "error": null
     },
     {
@@ -311,7 +311,7 @@
       "passed": true,
       "audience": "internal",
       "artifactValidated": true,
-      "durationMs": 74,
+      "durationMs": 102,
       "error": null
     },
     {
@@ -323,7 +323,7 @@
       "passed": true,
       "audience": "internal",
       "artifactValidated": true,
-      "durationMs": 130,
+      "durationMs": 109,
       "error": null
     },
     {
@@ -335,7 +335,7 @@
       "passed": true,
       "audience": "internal",
       "artifactValidated": true,
-      "durationMs": 40,
+      "durationMs": 37,
       "error": null
     },
     {
@@ -347,7 +347,7 @@
       "passed": true,
       "audience": "internal",
       "artifactValidated": true,
-      "durationMs": 14,
+      "durationMs": 9,
       "error": null
     }
   ]

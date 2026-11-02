@@ -11,7 +11,6 @@ services:
     runtime: node
     plan: starter
     buildCommand: npm ci --omit=dev --no-audit --no-fund
-    preDeployCommand: npm run migrate
     startCommand: node server.js
     healthCheckPath: /health
     autoDeployTrigger: commit

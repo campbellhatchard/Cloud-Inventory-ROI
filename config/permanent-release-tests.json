@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "6.9.54",
+  "release": "6.9.55",
   "tests": [
     {"invariant":"Customer Business Case","path":"test/release-integrity.test.js"},
     {"invariant":"customer-safe payload","path":"test/release-integrity.test.js"},
@@ -83,5 +83,8 @@
     ,{"invariant":"v6.9.53 real PostgreSQL DATE insertion returns an exact date-only value through /api/maps, public JPP, browser rendering and export routes","path":"test/v6953-postgres-jpp-date-boundary.test.js"}
     ,{"invariant":"v6.9.54 proposal alignment is governed by qualifying criterion-specific Buyer Evidence without a hidden Proposal artifact prerequisite","path":"test/v6954-buyer-evidence-proposal-alignment.test.js"}
     ,{"invariant":"v6.9.54 real PostgreSQL confirmation route persists and reevaluates proposal-alignment evidence independently of Proposal artifact state","path":"test/v6954-postgres-buyer-evidence.test.js"}
+    ,{"invariant":"v6.9.55 every active Buyer Evidence requirement has one server-owned proof type, adaptive field projection, explicit blockers and governed navigation","path":"test/v6955-buyer-evidence-requirements.test.js"}
+    ,{"invariant":"v6.9.55 qualifying Commercial scope customer evidence completes without a Proposal artifact while artifact-only state remains incomplete","path":"test/v6955-buyer-evidence-requirements.test.js"}
+    ,{"invariant":"v6.9.55 real PostgreSQL adaptive Commercial evidence validates required fields, persists, reloads and remains independent of Proposal artifact state","path":"test/v6955-postgres-buyer-evidence.test.js"}
   ]
 }

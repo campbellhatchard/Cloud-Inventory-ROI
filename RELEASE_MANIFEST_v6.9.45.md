@@ -5,8 +5,6 @@
 - Authoritative parent: `cloud-inventory-roi-v6.9.44-render-ready.zip`
 - Parent SHA-256: `6bd4f6a2f51037c5b794d2f5ae2d5d29fd1516f49008b2fc1f23a520de770df9`
 - Target: `6.9.45`
-- Deployment Git parent: `d133998e94308845cfb1356bc968084effcf51c1`; backup tag: `production-before-v6.9.45`.
-- Supplied v6.9.45 ZIP SHA-256: `dece15e61fab898350166e5279a3c5eb53d522218e3d6ba2158ee4aa6c8aea31`; forward deployment reconciliation is documented in `BUILD_DIFFERENTIAL_AUDIT.md`.
 - ROI Model: v2.8 / modelVersion 28 (unchanged)
 - Brand System: v1.0 (unchanged)
 - Application Knowledge: v1.0 (unchanged)

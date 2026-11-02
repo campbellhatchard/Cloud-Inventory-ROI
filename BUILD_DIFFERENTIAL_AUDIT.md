@@ -1,3 +1,19 @@
+# Cloud Inventory ROI v6.9.55 Differential Audit
+
+## v6.9.55 corrective differential
+
+The target derives only from `cloud-inventory-roi-v6.9.54-render-ready.zip` (SHA-256 `C9A1665F16393E421E181727F04C6FAABBF6D35E4427F3CFF7716B1DC62B0915`). The correction removes the hidden Proposal-artifact prerequisite from `commercial`, classifies all 28 active Stage 2–6 requirements as Derived, Customer Evidence, or Hybrid, and exposes one server-owned requirement projection for fields, prerequisites, blockers, source status, next action, and navigation.
+
+The Buyer Evidence drawer now renders adaptive fields from that projection, keeps customer evidence separate from Hybrid system prerequisites, offers opportunity-scoped prefill without automatic application, uses explicit Save/Update semantics, opens complete evidence in a compact summary, and navigates only to the next incomplete criterion in the current stage. Help and Christie consume the same exact blockers. Sales Manager summaries retain the authoritative proof and prerequisite metadata.
+
+No ROI formula, ROI input, BuyCycle stage definition, percentage arithmetic, authorization rule, Buyer Evidence schema, output generator, Prospect evidence boundary, Solution Fit method, JPP behavior, or Executive narrative authority changed. ROI Model v2.8 / `modelVersion: 28` remains locked.
+
+Tests are additive: a 28-requirement contract suite, adaptive-browser renderer coverage, retained v6.9.54 Proposal Alignment protection, and a real disposable-PostgreSQL Commercial persistence/evaluator test. Version, lineage, Application Knowledge, Help, Version History, governance, and release evidence are updated to v6.9.55.
+
+The complete clean-PostgreSQL gate also proved two inherited integrity defects. Admin Cleanup now includes PostgreSQL row-version identity in its preview fingerprint so an intervening update cannot reuse a stale preview. Migration 046 and transaction-local preservation calls prevent owner-only customer transfer and prior-scenario version promotion from rewriting historical operational timestamps while preserving normal `updated_at` behavior for ordinary writes. The migration is not required by, and does not alter, Buyer Evidence storage; it was retained because the registered full release gate must complete with zero database failures.
+
+---
+
 # Cloud Inventory ROI v6.9.54 Differential Audit
 
 ## v6.9.54 corrective differential
@@ -10,22 +26,6 @@ All other changed files are focused tests, version/lineage metadata, permanent-t
 
 ---
 
-## Historical v6.9.53 differential
-
-# v6.9.53 differential — JPP PostgreSQL date-only boundary
-
-Authoritative parent: `cloud-inventory-roi-v6.9.52-render-ready.zip` (`9C76181C3494DF47C3B254911326709716044D1FAB485593032993D29BD0D810`).
-
-Production changes are limited to the PostgreSQL `DATE` adapter, the shared strict server/browser date-only contract, and JPP list/editor/public/PDF/PPTX consumers. No schema, authorization, ROI, Solution Fit, Executive narrative, Buyer Evidence, or R2 production logic changed. `.github/workflows/ci.yml` changed only to publish v6.9.53 evidence filenames. All remaining changes are version metadata, permanent tests, and release evidence.
-
-Changed production files: `src/db.js`, `src/shared/date-only.js`, `src/exports/operational-pdf.js`, `src/exports/operational-pptx.js`, `public/jpp-date-only.js`, `public/map.js`, `public/prospect-map.html`, and `public/deal-export.js`.
-
-No migration was added. The existing `mutual_action_plans.target_close_date DATE` schema remains authoritative.
-
-
-
----
-
 # Cloud Inventory ROI v6.9.52 Differential Audit
 
 ## v6.9.52 corrective differential
@@ -34,7 +34,7 @@ The target is derived only from `cloud-inventory-roi-v6.9.51-render-ready.zip` (
 
 Production changes are limited to one strict JPP date-only helper, the All Plans date consumer, the public JPP date consumer, the prospect-link email date consumer, script load order, and version metadata. No persistence, authorization, sharing, database, ROI, Solution Fit, Executive narrative, Buyer Evidence, Sensitivity, or R2 behavior changed. The blank `+ New Joint Project Plan` form is confirmed expected behavior and was not modified.
 
-# Cloud Inventory ROI v6.9.51 Differential Audit
+## Historical v6.9.51 audit
 
 ## Baseline and method
 
@@ -62,7 +62,7 @@ The target was created only from `cloud-inventory-roi-v6.9.50-render-ready.zip` 
 
 ---
 
-# Cloud Inventory ROI v6.9.50 Differential Audit
+## Historical v6.9.50 differential audit (retained)
 
 ## Baseline and method
 
@@ -104,6 +104,8 @@ Every production edit maps to one of the ten approved corrective defects. Local 
 
 ---
 
+## Historical v6.9.49 differential audit (retained)
+
 # Cloud Inventory ROI v6.9.49 Differential Audit
 
 ## Baseline and method
@@ -139,43 +141,13 @@ The target was created only from `cloud-inventory-roi-v6.9.48-render-ready.zip` 
 ## Review conclusion
 
 Every production edit maps to Solution Fit save reconciliation, derived scope presentation, failure rollback, or direct version/governance support. No unrelated feature or core-calculation change is present.
+# v6.9.53 differential — JPP PostgreSQL date-only boundary
 
+Authoritative parent: `cloud-inventory-roi-v6.9.52-render-ready.zip` (`9C76181C3494DF47C3B254911326709716044D1FAB485593032993D29BD0D810`).
 
-## Deployment reconciliation against current main
+Production changes are limited to the PostgreSQL `DATE` adapter, the shared strict server/browser date-only contract, and JPP list/editor/public/PDF/PPTX consumers. No schema, authorization, ROI, Solution Fit, Executive narrative, Buyer Evidence, or R2 production logic changed. `.github/workflows/ci.yml` changed only to publish v6.9.53 evidence filenames. All remaining changes are version metadata, permanent tests, and release evidence.
 
-The supplied v6.9.49 archive was reconciled against deployed Git parent `f5a7882cfc180ab2b966267052e4309b3b342038`. Existing deployed fixes and permanent tests missing from package ancestry were retained; `public/solution-fit.js` and `src/routes/handoffs.js` merged cleanly with the supplied changes. See `DEPLOYMENT_DIFFERENTIAL_v6.9.49.md` for the actual deployment differential and verification boundaries.
+Changed production files: `src/db.js`, `src/shared/date-only.js`, `src/exports/operational-pdf.js`, `src/exports/operational-pptx.js`, `public/jpp-date-only.js`, `public/map.js`, `public/prospect-map.html`, and `public/deal-export.js`.
 
-SE Solution Fit Scope:
-Sales Engineers have cross-account access to all active customers for
-Solution Fit discovery/create/view/edit only. This does not confer general
-cross-account customer, scenario or opportunity access.
+No migration was added. The existing `mutual_action_plans.target_close_date DATE` schema remains authoritative.
 
-
-## v6.9.50 deployed-baseline reconciliation
-
-The verified v6.9.50 archive was applied to current production main `474e6708e756a39444b03e637cae1ac90525341b`, preserving existing corrections and permanent regressions absent from its raw package ancestry. See `DEPLOYMENT_DIFFERENTIAL_v6.9.50.md` for the reconciliation and separately scoped Node 22 verification evidence.
-
-
-## v6.9.51 deployed-baseline reconciliation
-
-Verified archive applied to current production main `1a428bbbab88e0b35ccb2e70954479ed77031fc0` on `deploy/v6.9.51`. Existing deployed corrections, PostgreSQL fixtures and historical evidence are preserved. See `DEPLOYMENT_DIFFERENTIAL_v6.9.51.md` for reconciliation and separately scoped local Node 22 verification.
-
-
-## v6.9.52 deployed-baseline reconciliation
-
-The verified v6.9.52 archive was applied to current production main `df710ceffee9476f57b1775f2651da6baeb8c6e0`, retaining existing deployed corrections, PostgreSQL fixtures and historical evidence. See `DEPLOYMENT_DIFFERENTIAL_v6.9.52.md` for reconciliation and separately scoped local Node 22 verification.
-
-
-## v6.9.53 deployed-baseline reconciliation
-
-The verified v6.9.53 archive was applied to current production main `52041bc14a21dcdb184baaadd06b83aab69b673f`, preserving existing deployed corrections, PostgreSQL fixtures and historical evidence. See `DEPLOYMENT_DIFFERENTIAL_v6.9.53.md` for reconciliation and separately scoped local Node 22 verification.
-
-
-## v6.9.54 deployed-baseline reconciliation
-
-The supplied v6.9.54 archive (SHA-256 `C9A1665F16393E421E181727F04C6FAABBF6D35E4427F3CFF7716B1DC62B0915`) was applied to clean, freshly pulled production main `d779e646adfb91927e8294faeb599a77c134acdb`. The raw v6.9.53 archive is a comparison ancestor only. Existing deployed corrections, fixture repairs, historical evidence, Node 22.22.0 CI pin, migrations, and Render YAML are preserved. See `DEPLOYMENT_DIFFERENTIAL_v6.9.54.md` for the exact differential and separately scoped verification evidence. Source-package historical test and readiness statements describe that package's execution, not the reconciled deployment's CI or Product Owner approval.
-
-SE Solution Fit Scope:
-Sales Engineers have cross-account access to all active customers for
-Solution Fit discovery/create/view/edit only. This does not confer general
-cross-account customer, scenario or opportunity access.

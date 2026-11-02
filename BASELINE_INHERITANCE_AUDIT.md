@@ -1,3 +1,43 @@
+# Cloud Inventory ROI v6.9.55 Baseline Inheritance Audit
+
+## Authoritative v6.9.55 package
+
+- Exact baseline: `cloud-inventory-roi-v6.9.54-render-ready.zip`
+- Baseline SHA-256: `C9A1665F16393E421E181727F04C6FAABBF6D35E4427F3CFF7716B1DC62B0915`
+- Extraction target: a new `work/cloud-inventory-roi-v6.9.55` directory; no prior working folder was reused.
+- Baseline application version: `6.9.54`
+- Target application version: `6.9.55`
+- ROI Model: v2.8 / `modelVersion: 28`
+- Brand System: 1.0
+- Application Knowledge: 1.0
+- Christie Persona: 1.0
+- Output Registry: 31 entries, 29 active
+- Inherited migration level: `045_solution_fit_evidence_attachments.sql`
+- Certified migration level: `046_preserve_operational_transfer_timestamps.sql`
+- Buyer Evidence schema migration for v6.9.55: none; adaptive requirement metadata and evidence extras remain code/JSONB based
+- Existing test files: 121
+
+## Active paths and protected inheritance
+
+1. Buyer Evidence remains `public/buyer-readiness.js` → authenticated `/api/stage-readiness/:id` routes → `src/shared/stage-readiness-service.js` → `src/shared/criterion-evidence.js`.
+2. All 28 active criteria across BuyCycle Stages 2–6 were traced from the active configuration and evaluator before production edits.
+3. The verified defect is isolated to `commercial`, where qualifying criterion-specific evidence is combined with an unrelated `scenario.data.proposalDraft` predicate.
+4. Stage definitions, stage arithmetic, advancement, ROI Maturity, Buyer Commitment, Stakeholder Coverage, evidence freshness, persistence, authorization, ROI Model v2.8, Proposal architecture, Solution Fit, JPP, and Value History remain protected.
+5. v6.9.54 Proposal Alignment behavior remains permanent: qualifying customer evidence can complete the criterion without a Proposal artifact, while an artifact alone cannot complete it.
+6. The v6.9.55 requirement registry/projection is configuration and code only. It exposes proof type, field requirements, governed source, prerequisites, blockers, and navigation without a Buyer Evidence database migration.
+7. Adaptive browser presentation must consume the server projection; it may not recreate criterion completion rules.
+8. Existing evidence JSON remains readable and editable. No customer record, evidence record, scenario, or historical snapshot may be rewritten.
+9. Every inherited permanent test remains present; v6.9.55 tests are additive.
+10. External PostgreSQL, object-storage, and live deployment gates must be reported exactly as executed and must never be inferred as passing.
+
+## Full-gate integrity correction
+
+Clean PostgreSQL certification exposed an inherited timestamp-integrity defect outside the Buyer Evidence data model: owner-only transfers and scenario-version promotion could rewrite operational `updated_at` values, and Admin Cleanup fingerprints could miss intervening updates when timestamps collided. Migration 046 adds a transaction-scoped preservation switch to the existing timestamp trigger; the ownership-transfer and version-promotion paths use it only for the governed operational updates, while normal writes retain automatic timestamp behavior. Admin Cleanup fingerprints also include PostgreSQL row-version identity. This is a narrowly justified integrity correction required by the complete release gate; it adds no Buyer Evidence table, column, formula, stage rule, or authorization change.
+
+The exact Product Owner-named v6.9.54 archive was hashed and extracted before any production change. The inherited v6.9.54 audit is retained below as baseline history.
+
+---
+
 # Cloud Inventory ROI v6.9.54 Baseline Inheritance Audit
 
 ## Authoritative v6.9.54 package
@@ -73,7 +113,7 @@ The exact Product Owner-named v6.9.52 archive was found, hashed, opened, and ext
 
 ---
 
-# Cloud Inventory ROI v6.9.52 Baseline Inheritance Audit
+# Inherited v6.9.52 Baseline Audit
 
 ## Authoritative v6.9.52 package
 
@@ -151,7 +191,7 @@ The sole production correction is to prevent the JPP More-menu output refresh fr
 
 ---
 
-# Cloud Inventory ROI v6.9.50 Baseline Inheritance Audit
+## Historical v6.9.50 baseline audit (retained)
 
 ## Authoritative v6.9.50 package
 
@@ -225,7 +265,7 @@ This build is restricted to the ten verified production-integrity findings in th
 
 ---
 
-# Cloud Inventory ROI v6.9.49 Baseline Inheritance Audit
+## Historical v6.9.49 inheritance record (retained)
 
 ## Authoritative package
 
@@ -292,43 +332,3 @@ Live v6.9.48 certification proved that ERP and application membership persisted 
 - Save success that refreshes body/progress but leaves the header snapshot untouched
 - Failed scope save that leaves optimistic, unsaved scope visible as if governed
 - Concurrent scope saves whose completion order can overwrite newer presentation state
-
-
-## Deployment reconciliation against current main
-
-The supplied v6.9.49 archive was reconciled against deployed Git parent `f5a7882cfc180ab2b966267052e4309b3b342038`. Existing deployed fixes and permanent tests missing from package ancestry were retained; `public/solution-fit.js` and `src/routes/handoffs.js` merged cleanly with the supplied changes. See `DEPLOYMENT_DIFFERENTIAL_v6.9.49.md` for the actual deployment differential and verification boundaries.
-
-SE Solution Fit Scope:
-Sales Engineers have cross-account access to all active customers for
-Solution Fit discovery/create/view/edit only. This does not confer general
-cross-account customer, scenario or opportunity access.
-
-
-## v6.9.50 deployed-baseline reconciliation
-
-The verified v6.9.50 archive was applied to current production main `474e6708e756a39444b03e637cae1ac90525341b`, preserving existing corrections and permanent regressions absent from its raw package ancestry. See `DEPLOYMENT_DIFFERENTIAL_v6.9.50.md` for the reconciliation and separately scoped Node 22 verification evidence.
-
-
-## v6.9.51 deployed-baseline reconciliation
-
-Verified archive applied to current production main `1a428bbbab88e0b35ccb2e70954479ed77031fc0` on `deploy/v6.9.51`. Existing deployed corrections, PostgreSQL fixtures and historical evidence are preserved. See `DEPLOYMENT_DIFFERENTIAL_v6.9.51.md` for reconciliation and separately scoped local Node 22 verification.
-
-
-## v6.9.52 deployed-baseline reconciliation
-
-The verified v6.9.52 archive was applied to current production main `df710ceffee9476f57b1775f2651da6baeb8c6e0`, retaining existing deployed corrections, PostgreSQL fixtures and historical evidence. See `DEPLOYMENT_DIFFERENTIAL_v6.9.52.md` for reconciliation and separately scoped local Node 22 verification.
-
-
-## v6.9.53 deployed-baseline reconciliation
-
-The verified v6.9.53 archive was applied to current production main `52041bc14a21dcdb184baaadd06b83aab69b673f`, preserving existing deployed corrections, PostgreSQL fixtures and historical evidence. See `DEPLOYMENT_DIFFERENTIAL_v6.9.53.md` for reconciliation and separately scoped local Node 22 verification.
-
-
-## v6.9.54 deployed-baseline reconciliation
-
-The supplied v6.9.54 archive (SHA-256 `C9A1665F16393E421E181727F04C6FAABBF6D35E4427F3CFF7716B1DC62B0915`) was applied to clean, freshly pulled production main `d779e646adfb91927e8294faeb599a77c134acdb`. The raw v6.9.53 archive is a comparison ancestor only. Existing deployed corrections, fixture repairs, historical evidence, Node 22.22.0 CI pin, migrations, and Render YAML are preserved. See `DEPLOYMENT_DIFFERENTIAL_v6.9.54.md` for the exact differential and separately scoped verification evidence. Source-package historical test and readiness statements describe that package's execution, not the reconciled deployment's CI or Product Owner approval.
-
-SE Solution Fit Scope:
-Sales Engineers have cross-account access to all active customers for
-Solution Fit discovery/create/view/edit only. This does not confer general
-cross-account customer, scenario or opportunity access.

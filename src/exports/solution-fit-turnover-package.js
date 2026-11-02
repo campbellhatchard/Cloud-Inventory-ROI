@@ -5,12 +5,11 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { Readable } = require('stream');
-const { pipeline } = require('stream/promises');
+const { once } = require('events');
 const archiver = require('archiver');
 const sharp = require('sharp');
 const { buildSolutionFitTurnoverDocx } = require('./solution-fit-turnover-docx');
-const { buildAttachmentManifestCsv } = require('../shared/ps-turnover-model');
-const { safeFile } = require('../shared/output-brand');
+const { buildAttachmentManifestCsv, sanitizeZipSegment } = require('../shared/ps-turnover-model');
 
 const PREVIEWS_PER_CONTEXT = 2;
 const PREVIEW_SOURCE_LIMIT_BYTES = 5 * 1024 * 1024;
@@ -33,20 +32,16 @@ function nodeStream(stream) {
   throw new Error('Evidence object is not a readable stream.');
 }
 
-function timedController(timeoutMs = OBJECT_TIMEOUT_MS, signal) {
+function timedController(timeoutMs = OBJECT_TIMEOUT_MS) {
   const controller = new AbortController();
-  const abort = () => controller.abort(signal.reason);
-  if (signal?.aborted) abort();
-  else signal?.addEventListener('abort', abort, { once: true });
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   timer.unref?.();
-  return { controller, stop: () => { clearTimeout(timer); signal?.removeEventListener('abort', abort); } };
+  return { controller, stop: () => clearTimeout(timer) };
 }
 
-async function preflightEvidence(model, storage, { signal } = {}) {
+async function preflightEvidence(model, storage) {
   for (const attachment of model.attachments) {
-    signal?.throwIfAborted();
-    const timed = timedController(OBJECT_TIMEOUT_MS, signal);
+    const timed = timedController();
     try {
       const metadata = await storage.verifyObject({ key: attachment.storageKey, signal: timed.controller.signal });
       if (Number(metadata.sizeBytes) !== attachment.sizeBytes || (metadata.contentType && metadata.contentType !== attachment.contentType)) {
@@ -72,13 +67,12 @@ async function streamToBuffer(stream, limitBytes) {
   return Buffer.concat(chunks, total);
 }
 
-async function buildPhotoPreviews(model, storage, { signal } = {}) {
+async function buildPhotoPreviews(model, storage) {
   const previews = new Map();
   for (const group of model.groups) {
     const images = group.attachments.filter(item => /^image\/(jpeg|png)$/.test(item.contentType)).slice(0, PREVIEWS_PER_CONTEXT);
     for (const attachment of images) {
-      signal?.throwIfAborted();
-      const timed = timedController(OBJECT_TIMEOUT_MS, signal);
+      const timed = timedController();
       try {
         const object = await storage.getObjectStream({ key: attachment.storageKey, signal: timed.controller.signal });
         const source = await streamToBuffer(object.stream, PREVIEW_SOURCE_LIMIT_BYTES);
@@ -123,8 +117,7 @@ async function buildPSTurnoverPackage({
   logoData,
   tempDirectory = os.tmpdir(),
   onPhase = () => {},
-  docxBuilder = buildSolutionFitTurnoverDocx,
-  signal
+  docxBuilder = buildSolutionFitTurnoverDocx
 } = {}) {
   if (!model || !storage) throw new TypeError('Turnover model and evidence storage are required.');
   let phaseStarted = Date.now();
@@ -136,53 +129,42 @@ async function buildPSTurnoverPackage({
     onPhase(name);
   };
 
-  signal?.throwIfAborted();
-  await preflightEvidence(model, storage, { signal });
+  await preflightEvidence(model, storage);
   phase('attachment-metadata');
-  const previews = await buildPhotoPreviews(model, storage, { signal });
+  const previews = await buildPhotoPreviews(model, storage);
   phase('photo-previews');
   const turnoverDoc = await docxBuilder({ model, logoData, previews });
-  signal?.throwIfAborted();
   const manifest = buildAttachmentManifestCsv(model);
   phase('document-generation');
 
-  const safeCustomer = safeFile(model.customerName);
+  const safeCustomer = sanitizeZipSegment(model.customerName, 'Customer');
   const filename = `Cloud-Inventory-PS-Turnover-${safeCustomer}.zip`;
   const filePath = path.join(tempDirectory, `cloud-inventory-turnover-${crypto.randomUUID()}.zip`);
   const output = fs.createWriteStream(filePath, { flags: 'wx' });
   const archive = archiver('zip', { zlib: { level: 6 }, forceZip64: model.summary.totalEvidenceSizeBytes >= 0xffffffff });
-  const outputDone = pipeline(archive, output);
-  outputDone.catch(() => {});
-  let activeSource;
-  const abort = () => { activeSource?.destroy(signal.reason); archive.destroy(signal.reason); output.destroy(signal.reason); };
-  signal?.addEventListener('abort', abort, { once: true });
-  if (signal?.aborted) abort();
+  const outputClosed = once(output, 'close');
+  const archiveError = new Promise((_, reject) => archive.once('error', reject));
+  archive.pipe(output);
   archive.append(turnoverDoc, { name: 'PS-Turnover.docx' });
   archive.append(manifest, { name: 'Attachment-Manifest.csv' });
 
   try {
     for (const attachment of model.attachments) {
-      signal?.throwIfAborted();
-      const timed = timedController(OBJECT_TIMEOUT_MS, signal);
+      const timed = timedController();
       try {
-        const objectRequest = storage.getObjectStream({ key: attachment.storageKey, signal: timed.controller.signal });
-        objectRequest.then(object => { if (timed.controller.signal.aborted && object?.stream) nodeStream(object.stream).destroy(); }).catch(() => {});
-        const object = await Promise.race([objectRequest, outputDone]);
+        const object = await storage.getObjectStream({ key: attachment.storageKey, signal: timed.controller.signal });
         if (object.sizeBytes && Number(object.sizeBytes) !== attachment.sizeBytes) throw new Error('Stored object size changed after package snapshot.');
         if (object.contentType && object.contentType !== attachment.contentType) throw new Error('Stored object type changed after package snapshot.');
         if (attachment.objectEtag && object.etag && object.etag !== attachment.objectEtag) throw new Error('Stored object identity changed after package snapshot.');
-        activeSource = nodeStream(object.stream);
-        await Promise.race([appendStream(archive, activeSource, attachment.packagePath), outputDone]);
-        activeSource = undefined;
+        await appendStream(archive, nodeStream(object.stream), attachment.packagePath);
       } catch (error) {
-        timed.controller.abort();
         throw new EvidenceUnavailableError(attachment.id, error.message);
       } finally {
         timed.stop();
       }
     }
-    await Promise.race([archive.finalize(), outputDone]);
-    await outputDone;
+    await archive.finalize();
+    await Promise.race([outputClosed, archiveError]);
     phase('zip-stream');
     const stats = await fs.promises.stat(filePath);
     return {
@@ -196,14 +178,9 @@ async function buildPSTurnoverPackage({
     };
   } catch (error) {
     archive.abort();
-    activeSource?.destroy();
-    archive.destroy();
     output.destroy();
-    await outputDone.catch(() => {});
     await fs.promises.rm(filePath, { force: true }).catch(() => {});
     throw error;
-  } finally {
-    signal?.removeEventListener('abort', abort);
   }
 }
 

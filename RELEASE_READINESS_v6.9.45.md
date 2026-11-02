@@ -1,9 +1,5 @@
 # Release Readiness — Cloud Inventory ROI v6.9.45
 
-## Deployment reconciliation
-
-The supplied archive was checksum-verified and reconciled forward with the exact live v6.9.44 commit. Existing deployed corrections and cumulative tests are preserved. Eight new behavioral regressions cover turnover ZIP filename collisions, sink failures, Unicode download names, stale customer previews/downloads, cancellation cleanup and pending object reads. The final focused run passes 39 tests with zero failures. Local full-suite execution also has zero failures. The final CI and deployed verification evidence is recorded separately in the deployment receipt; historical pre-deployment certification below is retained with its original context. No final readiness colour is assigned by this deployment work.
-
 ## Implemented and locally verified
 
 - One canonical saved-state PS turnover model consumes the existing `handoff_attachments` repository.

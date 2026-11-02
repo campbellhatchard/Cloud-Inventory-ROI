@@ -77,17 +77,6 @@ test('REG-6945-05 legacy scenario financial summary preserves authoritative valu
  const routes=read('src/routes/scenarios.js'),app=read('public/app.js');assert.match(routes,/scenarioFinancialSummary\(financialSource/);assert.doesNotMatch(app,/annualBenefit:\s*parseFloat\(r\.annual_benefit\)\s*\|\|\s*0/);
 });
 
-test('canonical null economics remain unavailable even when legacy aliases have values',()=>{
- const {projectScenarioData}=require('../src/shared/scenario-roi-projection');
- const data=projectScenarioData({users:10,labor:50000,laborWastePct:.5,mLabor:.4,invest:20000,psvc:100000,contractMonths:12,implMonths:6});
- assert.equal(data.contractPayback,null);
- assert.equal(data.paybackFromSigning,24);
- assert.equal(scenarioFinancialSummary(data).paybackMonths,null);
- const summary=scenarioFinancialSummary({totalContractRoi:null,roi:100,totalContractNpv:null,npv5:1000,annualBenefit:null,annualCustomerBenefit:100});
- assert.equal(summary.contractROI,null);assert.equal(summary.NPV,null);assert.equal(summary.annualCustomerBenefit,null);
- assert.equal(scenarioFinancialSummary({paybackFromSigning:24}).paybackMonths,24);
-});
-
 test('REG-6945-06 structured application labels remove only duplicate semantic tokens',()=>{
  assert.equal(SF.formatApplicationContext({product:'MEP',erp:'JDE',group:'JDE',name:'Inventory Transfer'}),'MEP · JDE · Inventory Transfer');
  assert.equal(SF.formatApplicationContext({product:'MEP',erp:'SAP',group:'Standard Package',name:'Inventory Transfer'}),'MEP · SAP · Standard Package · Inventory Transfer');

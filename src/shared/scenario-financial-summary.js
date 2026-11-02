@@ -1,7 +1,7 @@
 'use strict';
 
 const present=value=>value!==null&&value!==undefined&&value!=='';
-const first=(source,keys)=>{for(const key of keys){if(!Object.prototype.hasOwnProperty.call(source||{},key))continue;if(!present(source[key]))return null;const value=Number(source[key]);return Number.isFinite(value)?value:null;}return null;};
+const first=(source,keys)=>{for(const key of keys){if(!present(source?.[key]))continue;const value=Number(source[key]);if(Number.isFinite(value))return value;}return null;};
 
 /* Read-time compatibility only. This never recalculates economics and never
    turns a genuinely missing value into zero. */

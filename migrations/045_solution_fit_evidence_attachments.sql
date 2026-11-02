@@ -64,3 +64,4 @@ CREATE INDEX IF NOT EXISTS idx_handoff_attachments_pending
   WHERE status IN ('PENDING','FAILED');
 CREATE INDEX IF NOT EXISTS idx_handoff_attachments_customer
   ON handoff_attachments(customer_id,created_at DESC);
+

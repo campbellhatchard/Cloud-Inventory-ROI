@@ -64,3 +64,4 @@ This visual QA used deterministic production-builder fixtures. It does not repla
 ## QA conclusion
 
 Local source, calculation, output-owner, and rendered-artifact gates pass with zero local failures. Certification is incomplete because database and deployed-browser gates are mandatory and NOT TESTED.
+
